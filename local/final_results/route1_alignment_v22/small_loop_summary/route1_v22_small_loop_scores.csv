@@ -1,0 +1,4 @@
+method,receiver,sharer,alignment_strategy,confidence_gate,train_samples,final_train_loss,mid_eval_loss,final_eval_loss,mmlu_redux,ai2_arc_challenge,openbookqa,mean,delta_mean_vs_v21_entropy050
+v2.1_adaptive_entropy050,Qwen/Qwen3-0.6B,TinyLlama/TinyLlama-1.1B-Chat-v1.0,soft_span_overlap_v2,static_entropy_alpha050,2048,0.3779,0.1337,0.1336,45.83,54.09,49.40,49.77,0.00
+v2.2_token_mlp_entropy050,Qwen/Qwen3-0.6B,TinyLlama/TinyLlama-1.1B-Chat-v1.0,soft_span_overlap_v2,token_mlp,2048,0.3731,0.1714,0.1694,47.07,54.78,50.60,50.82,1.05
+v2.2_learned_affine_entropy050,Qwen/Qwen3-0.6B,TinyLlama/TinyLlama-1.1B-Chat-v1.0,soft_span_overlap_v2,learned_affine,2048,0.3822,0.1254,0.1243,45.03,51.65,42.80,46.49,-3.28

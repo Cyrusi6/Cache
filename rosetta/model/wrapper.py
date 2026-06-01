@@ -2,7 +2,7 @@
 The ensemble of multiple standard transformers LLM models, with automatic kv-cache projection. It shares the same interface as the standard transformers LLM models.
 """
 
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 import torch
 from torch import nn
 from transformers.cache_utils import Cache, DynamicCache
@@ -13,18 +13,24 @@ import json
 from rosetta.model.projector import Projector
 from rosetta.model.sampling import sample_token
 from transformers.utils import ModelOutput
+
 try:
-    from transformers.generation.utils import GreedySearchDecoderOnlyOutput, SampleDecoderOnlyOutput
+    from transformers.generation.utils import (
+        GreedySearchDecoderOnlyOutput,
+        SampleDecoderOnlyOutput,
+    )
 except Exception:
     GreedySearchDecoderOnlyOutput = None
     SampleDecoderOnlyOutput = None
 
+
 def clone_kv_cache(kv_cache: DynamicCache) -> DynamicCache:
-        new_cache = DynamicCache()
-        for k, v in zip(kv_cache.key_cache, kv_cache.value_cache):
-            new_cache.key_cache.append(k.clone().detach())
-            new_cache.value_cache.append(v.clone().detach())
-        return new_cache
+    new_cache = DynamicCache()
+    for k, v in zip(kv_cache.key_cache, kv_cache.value_cache):
+        new_cache.key_cache.append(k.clone().detach())
+        new_cache.value_cache.append(v.clone().detach())
+    return new_cache
+
 
 def hybrid_to_dynamic(hybrid_cache):
     if hybrid_cache is None:
@@ -43,11 +49,20 @@ def hybrid_to_dynamic(hybrid_cache):
 
     raise TypeError(f"Unsupported cache type: {type(hybrid_cache)}")
 
+
 class RosettaModel(nn.Module):
     """
     Drop in replacement for the standard transformers LLM models, like Qwen3ForCausalLM
     """
-    def __init__(self, model_list: List[PreTrainedModel], base_model_idx = 0, projector_list: List[Projector] = [], include_response: bool = False, multi_source_fusion_mode: str = "parallel"):
+
+    def __init__(
+        self,
+        model_list: List[PreTrainedModel],
+        base_model_idx=0,
+        projector_list: List[Projector] = [],
+        include_response: bool = False,
+        multi_source_fusion_mode: str = "parallel",
+    ):
         super().__init__()
         # model list: a list of model, model 0 by default is the base model
         # projector list: a list of projector
@@ -60,24 +75,28 @@ class RosettaModel(nn.Module):
 
         device = model_list[base_model_idx].device
         dtype = model_list[base_model_idx].dtype
-        self.projector_list = nn.ModuleList(projector_list).to(device=device, dtype=dtype)
+        self.projector_list = nn.ModuleList(projector_list).to(
+            device=device, dtype=dtype
+        )
 
         self.projector_dict = {}
         self.kv_cache_dict = {}
         self._generation_hook_handlers = []
 
-        # Multi-source fusion mode: 
+        # Multi-source fusion mode:
         # "sequential" (default): each source updates base cache iteratively
         # "parallel": all sources project from clean base cache, then sum projections
         self.include_response = include_response
         if multi_source_fusion_mode not in ["sequential", "parallel"]:
-            raise ValueError(f"multi_source_fusion_mode must be 'sequential' or 'parallel', got '{multi_source_fusion_mode}'")
+            raise ValueError(
+                f"multi_source_fusion_mode must be 'sequential' or 'parallel', got '{multi_source_fusion_mode}'"
+            )
         self.multi_source_fusion_mode = multi_source_fusion_mode
 
     @property
     def device(self):
         return self.model_list[self.base_model_idx].device
-    
+
     def to(self, device):
         """
         Move the RosettaModel and all underlying models and projectors to the specified device.
@@ -88,14 +107,16 @@ class RosettaModel(nn.Module):
         for projector in self.projector_list:
             projector.to(device)
         return self
-        
-    # set projector 
-    def set_projector_config(self, 
-                        source_model_idx: int, 
-                        source_model_layer_idx: int, 
-                        target_model_idx: int,
-                        target_model_layer_idx: int, 
-                        projector_idx: int):
+
+    # set projector
+    def set_projector_config(
+        self,
+        source_model_idx: int,
+        source_model_layer_idx: int,
+        target_model_idx: int,
+        target_model_layer_idx: int,
+        projector_idx: int,
+    ):
         """
         Set the projector configuration
         Args:
@@ -122,22 +143,29 @@ class RosettaModel(nn.Module):
         if source_model_idx not in self.projector_dict[target_model_idx].keys():
             self.projector_dict[target_model_idx][source_model_idx] = {}
         # Accumulate list of (source_layer, projector_idx) for this target layer
-        layer_entry = self.projector_dict[target_model_idx][source_model_idx].get(target_model_layer_idx)
+        layer_entry = self.projector_dict[target_model_idx][source_model_idx].get(
+            target_model_layer_idx
+        )
         if layer_entry is None:
-            self.projector_dict[target_model_idx][source_model_idx][target_model_layer_idx] = [(source_model_layer_idx, projector_idx)]
+            self.projector_dict[target_model_idx][source_model_idx][
+                target_model_layer_idx
+            ] = [(source_model_layer_idx, projector_idx)]
         else:
             layer_entry.append((source_model_layer_idx, projector_idx))
-
 
     def load_projector(self, projector_list):
         self.projector_list: List[Projector] = projector_list
 
-    def get_projector(self, 
-                        source_model_idx, 
-                        source_model_layer_idx, 
-                        target_model_idx,
-                        target_model_layer_idx):
-        pair_list = self.projector_dict[target_model_idx][source_model_idx][target_model_layer_idx]
+    def get_projector(
+        self,
+        source_model_idx,
+        source_model_layer_idx,
+        target_model_idx,
+        target_model_layer_idx,
+    ):
+        pair_list = self.projector_dict[target_model_idx][source_model_idx][
+            target_model_layer_idx
+        ]
         if len(pair_list) == 0:
             raise ValueError("No projector configured for the given target layer")
         # Prefer exact source layer match
@@ -152,7 +180,7 @@ class RosettaModel(nn.Module):
         with open(file_name, "r") as f:
             result = json.load(f)
         return result
-    
+
     @staticmethod
     def _convert_dict_keys_to_ints(obj):
         """
@@ -162,7 +190,7 @@ class RosettaModel(nn.Module):
         if isinstance(obj, dict):
             new_obj = {}
             for key, value in obj.items():
-                if isinstance(key, str) and key.lstrip('-').isdigit():
+                if isinstance(key, str) and key.lstrip("-").isdigit():
                     new_key = int(key)
                 else:
                     new_key = key
@@ -171,13 +199,11 @@ class RosettaModel(nn.Module):
         if isinstance(obj, list):
             return [RosettaModel._convert_dict_keys_to_ints(v) for v in obj]
         return obj
-    
-    
+
     def save_projector_config(self, file_name):
         with open(file_name, "w") as f:
             json.dump(self.projector_dict, f)
 
-    
     def load_projector_config(self, config_path):
         if config_path.endswith(".json"):
             loaded = RosettaModel.load_json(config_path)
@@ -188,7 +214,9 @@ class RosettaModel(nn.Module):
             self.kv_cache_dict[target_model_idx] = {}
         if cache is None:
             # Initialize with a DynamicCache instead of RosettaCache for now
-            self.kv_cache_dict[target_model_idx][source_model_idx] = DynamicCache() # noqa, maybe we should use RosettaCache here
+            self.kv_cache_dict[target_model_idx][
+                source_model_idx
+            ] = DynamicCache()  # noqa, maybe we should use RosettaCache here
         else:
             self.kv_cache_dict[target_model_idx][source_model_idx] = cache
 
@@ -228,12 +256,18 @@ class RosettaModel(nn.Module):
             input_shape = hidden_states.shape[:-1]
             hidden_shape = (*input_shape, -1, self.head_dim)
 
-            query_states = self.q_norm(self.q_proj(hidden_states).view(hidden_shape)).transpose(1, 2)
-            key_states = self.k_norm(self.k_proj(hidden_states).view(hidden_shape)).transpose(1, 2)
+            query_states = self.q_norm(
+                self.q_proj(hidden_states).view(hidden_shape)
+            ).transpose(1, 2)
+            key_states = self.k_norm(
+                self.k_proj(hidden_states).view(hidden_shape)
+            ).transpose(1, 2)
             value_states = self.v_proj(hidden_states).view(hidden_shape).transpose(1, 2)
 
             cos, sin = position_embeddings
-            query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+            query_states, key_states = apply_rotary_pos_emb(
+                query_states, key_states, cos, sin
+            )
 
             # === Injection point (before cache update & attention) ===
             # Replace current-token key/value with provided cache-space tensors.
@@ -247,16 +281,26 @@ class RosettaModel(nn.Module):
                     value_states = new_v_cache
 
             if past_key_value is not None:
-                cache_kwargs = {"sin": sin, "cos": cos, "cache_position": cache_position}
-                key_states, value_states = past_key_value.update(key_states, value_states, self.layer_idx, cache_kwargs)
+                cache_kwargs = {
+                    "sin": sin,
+                    "cos": cos,
+                    "cache_position": cache_position,
+                }
+                key_states, value_states = past_key_value.update(
+                    key_states, value_states, self.layer_idx, cache_kwargs
+                )
 
             attention_interface = eager_attention_forward
             if self.config._attn_implementation != "eager":
-                if self.config._attn_implementation == "sdpa" and kwargs.get("output_attentions", False):
+                if self.config._attn_implementation == "sdpa" and kwargs.get(
+                    "output_attentions", False
+                ):
                     # fall back to eager, same as upstream behavior (warning omitted here)
                     attention_interface = eager_attention_forward
                 else:
-                    attention_interface = ALL_ATTENTION_FUNCTIONS[self.config._attn_implementation]
+                    attention_interface = ALL_ATTENTION_FUNCTIONS[
+                        self.config._attn_implementation
+                    ]
 
             attn_output, attn_weights = attention_interface(
                 self,
@@ -277,32 +321,50 @@ class RosettaModel(nn.Module):
         attn_module.forward = types.MethodType(patched_forward, attn_module)
         return orig_forward
 
-    def register_hooks(self, input_ids, attention_mask, position_ids, base_kv_cache, source_model_idx, source_kv_cache):
+    def register_hooks(
+        self,
+        input_ids,
+        attention_mask,
+        position_ids,
+        base_kv_cache,
+        source_model_idx,
+        source_kv_cache,
+    ):
 
         base_kv_copy = clone_kv_cache(base_kv_cache)
         source_kv_copy = clone_kv_cache(source_kv_cache)
 
         new_length = input_ids.shape[1]
 
-        base_output_kv_cache = self.model_list[self.base_model_idx].forward(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask, 
-                    position_ids=position_ids,
-                    past_key_values=base_kv_copy,
-                    labels=None,
-                    use_cache=True, 
-                ).past_key_values
-        source_output_kv_cache = self.model_list[source_model_idx].forward(
-                    input_ids=input_ids,
-                    attention_mask=attention_mask, 
-                    position_ids=position_ids,
-                    past_key_values=source_kv_copy,
-                    labels=None,
-                    use_cache=True, 
-                ).past_key_values        
+        base_output_kv_cache = (
+            self.model_list[self.base_model_idx]
+            .forward(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                past_key_values=base_kv_copy,
+                labels=None,
+                use_cache=True,
+            )
+            .past_key_values
+        )
+        source_output_kv_cache = (
+            self.model_list[source_model_idx]
+            .forward(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                position_ids=position_ids,
+                past_key_values=source_kv_copy,
+                labels=None,
+                use_cache=True,
+            )
+            .past_key_values
+        )
         fused_kv_cache = clone_kv_cache(base_output_kv_cache)
 
-        for target_layer_idx, entry in self.projector_dict[self.base_model_idx][source_model_idx].items():
+        for target_layer_idx, entry in self.projector_dict[self.base_model_idx][
+            source_model_idx
+        ].items():
             base_key_cache, base_value_cache = base_output_kv_cache[target_layer_idx]
             new_base_key_cache = base_key_cache[:, :, -new_length:, :]
             new_base_value_cache = base_value_cache[:, :, -new_length:, :]
@@ -313,13 +375,17 @@ class RosettaModel(nn.Module):
             projected_kv_list = []
             source_kv_list = []
             for source_model_layer_idx, projector_idx in pair_list:
-                source_key_cache, source_value_cache = source_output_kv_cache[source_model_layer_idx]
+                source_key_cache, source_value_cache = source_output_kv_cache[
+                    source_model_layer_idx
+                ]
                 new_source_key_cache = source_key_cache[:, :, -new_length:, :]
                 new_source_value_cache = source_value_cache[:, :, -new_length:, :]
                 new_source_kv_cache = (new_source_key_cache, new_source_value_cache)
-                projected_key, projected_value = self.projector_list[projector_idx].forward(
-                    new_source_kv_cache, # tuple of (key, value), each of shape (B, N, H, D)
-                    new_base_kv_cache
+                projected_key, projected_value = self.projector_list[
+                    projector_idx
+                ].forward(
+                    new_source_kv_cache,  # tuple of (key, value), each of shape (B, N, H, D)
+                    new_base_kv_cache,
                 )
                 projected_kv_list.append((projected_key, projected_value))
                 source_kv_list.append(new_source_kv_cache)
@@ -329,7 +395,9 @@ class RosettaModel(nn.Module):
 
             # Update cache
             fused_kv_cache.key_cache[target_layer_idx][:, :, -new_length:, :] = agg_key
-            fused_kv_cache.value_cache[target_layer_idx][:, :, -new_length:, :] = agg_value
+            fused_kv_cache.value_cache[target_layer_idx][
+                :, :, -new_length:, :
+            ] = agg_value
 
         # Monkeypatch attention forward so the modified KV is used in *this* forward pass.
         hook_handlers = []  # list of (attn_module, orig_forward)
@@ -337,15 +405,165 @@ class RosettaModel(nn.Module):
             attn = self.model_list[self.base_model_idx].model.layers[i].self_attn
             new_k = fused_kv_cache.key_cache[i][:, :, -new_length:, :]
             new_v = fused_kv_cache.value_cache[i][:, :, -new_length:, :]
-            orig_forward = RosettaModel._monkeypatch_qwen3_attention_forward(attn, new_k, new_v)
+            orig_forward = RosettaModel._monkeypatch_qwen3_attention_forward(
+                attn, new_k, new_v
+            )
             hook_handlers.append((attn, orig_forward))
 
         return hook_handlers, base_output_kv_cache, source_output_kv_cache
-    
+
     def remove_hooks(self, hook_handlers):
         # Restore monkeypatched forwards
         for attn, orig_forward in hook_handlers:
             attn.forward = orig_forward
+
+    def _prefill_soft_source_caches(
+        self,
+        input_ids: List[torch.LongTensor],
+        attention_mask: Optional[Union[torch.Tensor, List[torch.Tensor]]],
+    ) -> None:
+        """Build full source-model KV caches for soft cross-token alignment."""
+        if self.base_model_idx not in self.kv_cache_dict:
+            self.kv_cache_dict[self.base_model_idx] = {}
+
+        for source_model_idx in range(1, len(self.model_list)):
+            source_input_ids = input_ids[source_model_idx]
+            source_attention_mask = None
+            if isinstance(attention_mask, list):
+                source_attention_mask = attention_mask[source_model_idx]
+
+            model = self.model_list[source_model_idx]
+            was_training = model.training
+            had_gc = getattr(model, "is_gradient_checkpointing", False)
+
+            try:
+                if was_training:
+                    model.eval()
+                if had_gc:
+                    model.gradient_checkpointing_disable()
+
+                with torch.no_grad():
+                    out = model(
+                        input_ids=source_input_ids,
+                        attention_mask=source_attention_mask,
+                        use_cache=True,
+                        return_dict=True,
+                    )
+                    source_cache = hybrid_to_dynamic(out.past_key_values)
+            finally:
+                if had_gc:
+                    model.gradient_checkpointing_enable()
+                if was_training:
+                    model.train()
+
+            self.kv_cache_dict[self.base_model_idx][source_model_idx] = clone_kv_cache(
+                source_cache
+            )
+
+    @staticmethod
+    def _weighted_source_kv_from_indices(
+        source_key_cache: torch.Tensor,
+        source_value_cache: torch.Tensor,
+        source_indices: torch.Tensor,
+        source_weights: torch.Tensor,
+    ) -> tuple:
+        """
+        Gather source KV by top-k token indices and reduce them with source_weights.
+        source cache: (B, H, S, D), indices/weights: (B, N, K).
+        """
+        B, H, S, D = source_key_cache.shape
+        if S == 0:
+            raise ValueError(
+                "Cannot gather weighted source KV from an empty source cache"
+            )
+
+        source_indices = source_indices.to(source_key_cache.device)
+        source_weights = source_weights.to(
+            source_key_cache.device, dtype=source_key_cache.dtype
+        )
+        valid = (source_indices >= 0) & (source_indices < S)
+        safe_indices = source_indices.clamp(min=0, max=S - 1)
+
+        row_sums = source_weights.masked_fill(~valid, 0.0).sum(dim=-1, keepdim=True)
+        source_weights = torch.where(
+            row_sums > 0,
+            source_weights.masked_fill(~valid, 0.0) / row_sums.clamp_min(1e-12),
+            torch.zeros_like(source_weights),
+        )
+
+        _, N, K = safe_indices.shape
+        gather_index = safe_indices[:, None, :, :, None].expand(B, H, N, K, D)
+        expanded_key = source_key_cache[:, :, None, :, :].expand(B, H, N, S, D)
+        expanded_value = source_value_cache[:, :, None, :, :].expand(B, H, N, S, D)
+        gathered_key = torch.gather(expanded_key, dim=3, index=gather_index)
+        gathered_value = torch.gather(expanded_value, dim=3, index=gather_index)
+        weights = source_weights[:, None, :, :, None]
+
+        return (
+            (gathered_key * weights).sum(dim=3),
+            (gathered_value * weights).sum(dim=3),
+        )
+
+    @staticmethod
+    def _source_kv_candidates_from_indices(
+        source_key_cache: torch.Tensor,
+        source_value_cache: torch.Tensor,
+        source_indices: torch.Tensor,
+    ) -> tuple:
+        """
+        Gather source KV candidates without reducing the top-k dimension.
+        source cache: (B, H, S, D), indices: (B, N, K).
+        returns key/value candidates (B, H, N, K, D) and valid mask (B, N, K).
+        """
+        B, H, S, D = source_key_cache.shape
+        if S == 0:
+            raise ValueError("Cannot gather source KV candidates from an empty cache")
+
+        source_indices = source_indices.to(source_key_cache.device)
+        valid = (source_indices >= 0) & (source_indices < S)
+        safe_indices = source_indices.clamp(min=0, max=S - 1)
+
+        _, N, K = safe_indices.shape
+        gather_index = safe_indices[:, None, :, :, None].expand(B, H, N, K, D)
+        expanded_key = source_key_cache[:, :, None, :, :].expand(B, H, N, S, D)
+        expanded_value = source_value_cache[:, :, None, :, :].expand(B, H, N, S, D)
+        gathered_key = torch.gather(expanded_key, dim=3, index=gather_index)
+        gathered_value = torch.gather(expanded_value, dim=3, index=gather_index)
+        valid_expanded = valid[:, None, :, :, None].to(dtype=gathered_key.dtype)
+        return gathered_key * valid_expanded, gathered_value * valid_expanded, valid
+
+    @staticmethod
+    def _apply_source_confidence_to_projected_kv(
+        projected_key: torch.Tensor,
+        projected_value: torch.Tensor,
+        base_key: torch.Tensor,
+        base_value: torch.Tensor,
+        soft_section: dict,
+    ) -> tuple:
+        """Scale the projector residual by optional per-token source confidence."""
+        source_confidence = soft_section.get("source_confidence")
+        if source_confidence is None:
+            return projected_key, projected_value
+
+        confidence = source_confidence.to(
+            projected_key.device,
+            dtype=projected_key.dtype,
+        )
+        if confidence.dim() == 2:
+            confidence = confidence[:, None, :, None]
+        elif confidence.dim() == 3:
+            confidence = confidence[:, None, :, :]
+        else:
+            raise ValueError(
+                "source_confidence must have shape (B, N) or (B, N, 1), "
+                f"got {tuple(confidence.shape)}"
+            )
+        confidence = confidence.clamp(min=0.0, max=1.0)
+
+        return (
+            base_key + confidence * (projected_key - base_key),
+            base_value + confidence * (projected_value - base_value),
+        )
 
     def forward(
         self,
@@ -361,28 +579,35 @@ class RosettaModel(nn.Module):
         output_hidden_states: Optional[bool] = None,
         cache_position: Optional[torch.LongTensor] = None,
         logits_to_keep: Union[int, torch.Tensor] = 0,
+        soft_alignment: Optional[List[Dict[str, torch.Tensor]]] = None,
         # **kwargs: Unpack[KwargsForCausalLM],
         *args,
         **kwargs,
     ) -> CausalLMOutputWithPast:
         """
         Forward pass
-        
+
         kv_cache_index: List of tensors with shape (B, sec_seq_len, 2).
             The first element [i][0][0][0] controls sharer selection:
             - -1: No projection (receiver only, skip all sharers)
             - 0: Self projection (receiver projects from itself) - not currently used
             - >0: Bitmask selecting sharers (1 (001)=sharer1, 2 (010)=sharer2, 3 (011)=both, 7 (111)=all three)
             Each bit corresponds to a sharer: bit i selects sharer at model_list[i+1].
-        
+
         input_ids: If LongTensor, same input for all models. If List, per-model inputs.
         """
 
         # Handle different input formats: if input_ids is a list, use per-model inputs
         if isinstance(input_ids, list):
             # Use list format: different input_ids and attention_mask for each model
-            base_input_ids = input_ids[self.base_model_idx] if input_ids is not None else None
-            base_attention_mask = attention_mask[self.base_model_idx] if attention_mask is not None else None
+            base_input_ids = (
+                input_ids[self.base_model_idx] if input_ids is not None else None
+            )
+            base_attention_mask = (
+                attention_mask[self.base_model_idx]
+                if attention_mask is not None
+                else None
+            )
             _, seqlen = base_input_ids.size() if base_input_ids is not None else (0, 0)
         else:
             # Use tensor format: same input_ids and attention_mask for all models (backward compatibility)
@@ -392,120 +617,179 @@ class RosettaModel(nn.Module):
 
         if seqlen > 1:
             self.kv_cache_dict = dict()
-            
-        num_sections = len(kv_cache_index) if kv_cache_index is not None else 1
 
-        section_lengths = [kv_cache_index[i].shape[1] for i in range(num_sections)] if kv_cache_index is not None else [seqlen]
+        num_sections = len(kv_cache_index) if kv_cache_index is not None else 1
+        use_soft_alignment = soft_alignment is not None
+        if use_soft_alignment:
+            if not isinstance(input_ids, list):
+                raise ValueError("soft_alignment requires per-model input_ids")
+            if len(soft_alignment) != num_sections:
+                raise ValueError(
+                    f"soft_alignment section count {len(soft_alignment)} does not match "
+                    f"kv_cache_index section count {num_sections}"
+                )
+            if seqlen > 1:
+                self._prefill_soft_source_caches(input_ids, attention_mask)
+
+        section_lengths = (
+            [kv_cache_index[i].shape[1] for i in range(num_sections)]
+            if kv_cache_index is not None
+            else [seqlen]
+        )
         section_starts = [0]
         for l in section_lengths:
             section_starts.append(section_starts[-1] + l)
-        
+
         curr_base_kv_cache = past_key_values
 
         for i in range(num_sections):
             start = section_starts[i]
             end = section_starts[i + 1]
-            prefill_input_ids = base_input_ids[:, start:end] if base_input_ids is not None else None
-            prefill_attention_mask = base_attention_mask[:, :end] if base_attention_mask is not None else None
-            prefill_position_ids = position_ids[:, start:end] if position_ids is not None else None
+            prefill_input_ids = (
+                base_input_ids[:, start:end] if base_input_ids is not None else None
+            )
+            prefill_attention_mask = (
+                base_attention_mask[:, :end]
+                if base_attention_mask is not None
+                else None
+            )
+            prefill_position_ids = (
+                position_ids[:, start:end] if position_ids is not None else None
+            )
             prefill_labels = labels[:, start:end] if labels is not None else None
 
             if i == num_sections - 1:
 
                 if self.include_response:
-                    hook_handlers, base_output_kv_cache, source_output_kv_cache = self.register_hooks(input_ids=prefill_input_ids, attention_mask=prefill_attention_mask, position_ids=prefill_position_ids,
-                                                        base_kv_cache=self.kv_cache_dict[self.base_model_idx][self.base_model_idx],
-                                                        source_model_idx=1, 
-                                                        source_kv_cache=self.kv_cache_dict[self.base_model_idx][1])
+                    hook_handlers, base_output_kv_cache, source_output_kv_cache = (
+                        self.register_hooks(
+                            input_ids=prefill_input_ids,
+                            attention_mask=prefill_attention_mask,
+                            position_ids=prefill_position_ids,
+                            base_kv_cache=self.kv_cache_dict[self.base_model_idx][
+                                self.base_model_idx
+                            ],
+                            source_model_idx=1,
+                            source_kv_cache=self.kv_cache_dict[self.base_model_idx][1],
+                        )
+                    )
 
                 # calculate target model kvcache
                 output = self.model_list[self.base_model_idx].forward(
                     input_ids=prefill_input_ids,
-                    attention_mask=prefill_attention_mask, 
+                    attention_mask=prefill_attention_mask,
                     position_ids=prefill_position_ids,
                     past_key_values=curr_base_kv_cache,
                     labels=prefill_labels,
-                    use_cache=True, 
+                    use_cache=True,
                     output_attentions=output_attentions,
                     output_hidden_states=output_hidden_states,
                     *args,
-                    **kwargs
+                    **kwargs,
                 )
 
                 if self.include_response:
                     self.remove_hooks(hook_handlers)
 
-                    self.kv_cache_dict[self.base_model_idx][self.base_model_idx] = clone_kv_cache(base_output_kv_cache)
-                    self.kv_cache_dict[self.base_model_idx][1] = clone_kv_cache(source_output_kv_cache)
+                    self.kv_cache_dict[self.base_model_idx][self.base_model_idx] = (
+                        clone_kv_cache(base_output_kv_cache)
+                    )
+                    self.kv_cache_dict[self.base_model_idx][1] = clone_kv_cache(
+                        source_output_kv_cache
+                    )
 
             else:
 
                 output = self.model_list[self.base_model_idx].forward(
                     input_ids=prefill_input_ids,
-                    attention_mask=prefill_attention_mask, 
+                    attention_mask=prefill_attention_mask,
                     position_ids=prefill_position_ids,
                     past_key_values=curr_base_kv_cache,
                     labels=prefill_labels,
-                    use_cache=use_cache, 
+                    use_cache=use_cache,
                     output_attentions=output_attentions,
                     output_hidden_states=output_hidden_states,
                     *args,
-                    **kwargs
+                    **kwargs,
                 )
 
                 if self.base_model_idx not in self.kv_cache_dict:
                     self.kv_cache_dict[self.base_model_idx] = {}
                 if self.base_model_idx not in self.kv_cache_dict[self.base_model_idx]:
                     self.kv_cache_dict[self.base_model_idx][self.base_model_idx] = None
-                self.kv_cache_dict[self.base_model_idx][self.base_model_idx] = clone_kv_cache(output.past_key_values)
+                self.kv_cache_dict[self.base_model_idx][self.base_model_idx] = (
+                    clone_kv_cache(output.past_key_values)
+                )
 
                 curr_base_kv_cache: DynamicCache = output.past_key_values
-            
-                for source_model_idx in range(1, len(self.model_list)):
-                    if self.base_model_idx not in self.kv_cache_dict:
-                        self.kv_cache_dict[self.base_model_idx] = {}
-                    if source_model_idx not in self.kv_cache_dict[self.base_model_idx]:
-                        self.kv_cache_dict[self.base_model_idx][source_model_idx] = None
 
-                    # Get model-specific input_ids and attention_mask
-                    if isinstance(input_ids, list):
-                        source_input_ids = input_ids[source_model_idx]
-                        source_attention_mask = attention_mask[source_model_idx] if attention_mask is not None else None
-                        source_prefill_input_ids = source_input_ids[:, start:end] if source_input_ids is not None else None
-                        source_prefill_attention_mask = source_attention_mask[:, :end] if source_attention_mask is not None else None
-                    else:
-                        # Backward compatibility: use same input for all models
-                        source_prefill_input_ids = prefill_input_ids
-                        source_prefill_attention_mask = prefill_attention_mask
+                if not use_soft_alignment:
+                    for source_model_idx in range(1, len(self.model_list)):
+                        if self.base_model_idx not in self.kv_cache_dict:
+                            self.kv_cache_dict[self.base_model_idx] = {}
+                        if (
+                            source_model_idx
+                            not in self.kv_cache_dict[self.base_model_idx]
+                        ):
+                            self.kv_cache_dict[self.base_model_idx][
+                                source_model_idx
+                            ] = None
 
-                    model = self.model_list[source_model_idx]
-                    was_training = model.training
-                    had_gc = getattr(model, "is_gradient_checkpointing", False)
-
-                    try:
-                        if was_training:
-                            model.eval()
-                        if had_gc:
-                            model.gradient_checkpointing_disable()
-
-                        with torch.no_grad():
-                            out = model(
-                                input_ids=source_prefill_input_ids,
-                                attention_mask=source_prefill_attention_mask,
-                                position_ids=prefill_position_ids,
-                                past_key_values=self.kv_cache_dict[self.base_model_idx][source_model_idx],
-                                use_cache=True,
-                                return_dict=True,
+                        # Get model-specific input_ids and attention_mask
+                        if isinstance(input_ids, list):
+                            source_input_ids = input_ids[source_model_idx]
+                            source_attention_mask = (
+                                attention_mask[source_model_idx]
+                                if attention_mask is not None
+                                else None
                             )
-                            curr_source_kv_cache = out.past_key_values
-                    finally:
-                        if had_gc:
-                            model.gradient_checkpointing_enable()
-                        if was_training:
-                            model.train()
-                    
-                    curr_source_kv_cache = hybrid_to_dynamic(curr_source_kv_cache)
-                    self.kv_cache_dict[self.base_model_idx][source_model_idx] = clone_kv_cache(curr_source_kv_cache)
+                            source_prefill_input_ids = (
+                                source_input_ids[:, start:end]
+                                if source_input_ids is not None
+                                else None
+                            )
+                            source_prefill_attention_mask = (
+                                source_attention_mask[:, :end]
+                                if source_attention_mask is not None
+                                else None
+                            )
+                        else:
+                            # Backward compatibility: use same input for all models
+                            source_prefill_input_ids = prefill_input_ids
+                            source_prefill_attention_mask = prefill_attention_mask
+
+                        model = self.model_list[source_model_idx]
+                        was_training = model.training
+                        had_gc = getattr(model, "is_gradient_checkpointing", False)
+
+                        try:
+                            if was_training:
+                                model.eval()
+                            if had_gc:
+                                model.gradient_checkpointing_disable()
+
+                            with torch.no_grad():
+                                out = model(
+                                    input_ids=source_prefill_input_ids,
+                                    attention_mask=source_prefill_attention_mask,
+                                    position_ids=prefill_position_ids,
+                                    past_key_values=self.kv_cache_dict[
+                                        self.base_model_idx
+                                    ][source_model_idx],
+                                    use_cache=True,
+                                    return_dict=True,
+                                )
+                                curr_source_kv_cache = out.past_key_values
+                        finally:
+                            if had_gc:
+                                model.gradient_checkpointing_enable()
+                            if was_training:
+                                model.train()
+
+                        curr_source_kv_cache = hybrid_to_dynamic(curr_source_kv_cache)
+                        self.kv_cache_dict[self.base_model_idx][source_model_idx] = (
+                            clone_kv_cache(curr_source_kv_cache)
+                        )
 
                 # calculate source model kvcache and apply projections
                 if self.base_model_idx in self.projector_dict:
@@ -515,10 +799,14 @@ class RosettaModel(nn.Module):
                         base_cache = clone_kv_cache(curr_base_kv_cache)
 
                         # For parallel mode, accumulate residuals for each target layer
-                        parallel_delta_cache = {} if self.multi_source_fusion_mode == "parallel" else None
-                        
+                        parallel_delta_cache = (
+                            {} if self.multi_source_fusion_mode == "parallel" else None
+                        )
+
                         # Compute and apply projections (shared logic for both modes)
-                        for source_model_idx in self.projector_dict[self.base_model_idx].keys():
+                        for source_model_idx in self.projector_dict[
+                            self.base_model_idx
+                        ].keys():
                             # Check if this sharer is selected: bit (source_model_idx - 1)
                             if not (sharer_mask & (1 << (source_model_idx - 1))):
                                 continue
@@ -528,27 +816,139 @@ class RosettaModel(nn.Module):
                                 # Parallel: always project from the clean cloned base cache
                                 base_cache_ref = base_cache
 
-                            for target_layer_idx, entry in self.projector_dict[self.base_model_idx][source_model_idx].items():
+                            for target_layer_idx, entry in self.projector_dict[
+                                self.base_model_idx
+                            ][source_model_idx].items():
                                 # Get base KV cache slice for projection
-                                base_key_cache, base_value_cache = base_cache_ref[target_layer_idx]
+                                base_key_cache, base_value_cache = base_cache_ref[
+                                    target_layer_idx
+                                ]
                                 new_base_key_cache = base_key_cache[:, :, start:end, :]
-                                new_base_value_cache = base_value_cache[:, :, start:end, :]
-                                new_base_kv_cache = (new_base_key_cache, new_base_value_cache)
+                                new_base_value_cache = base_value_cache[
+                                    :, :, start:end, :
+                                ]
+                                new_base_kv_cache = (
+                                    new_base_key_cache,
+                                    new_base_value_cache,
+                                )
 
                                 pair_list = entry
 
                                 projected_kv_list = []
                                 source_kv_list = []
                                 for source_model_layer_idx, projector_idx in pair_list:
-                                    source_key_cache, source_value_cache = self.kv_cache_dict[self.base_model_idx][source_model_idx][source_model_layer_idx]
-                                    new_source_key_cache = source_key_cache[:, :, start:end, :]
-                                    new_source_value_cache = source_value_cache[:, :, start:end, :]
-                                    new_source_kv_cache = (new_source_key_cache, new_source_value_cache)
-                                    projected_key, projected_value = self.projector_list[projector_idx].forward(
-                                        new_source_kv_cache,
-                                        new_base_kv_cache
+                                    source_key_cache, source_value_cache = (
+                                        self.kv_cache_dict[self.base_model_idx][
+                                            source_model_idx
+                                        ][source_model_layer_idx]
                                     )
-                                    projected_kv_list.append((projected_key, projected_value))
+                                    projector = self.projector_list[projector_idx]
+                                    if use_soft_alignment:
+                                        soft_section = soft_alignment[i]
+                                        source_weights = soft_section["source_weights"]
+                                        projector_uses_learned_alignment = (
+                                            hasattr(
+                                                projector,
+                                                "uses_learned_source_alignment",
+                                            )
+                                            and projector.uses_learned_source_alignment()
+                                        )
+                                        if projector_uses_learned_alignment:
+                                            (
+                                                source_key_candidates,
+                                                source_value_candidates,
+                                                valid_mask,
+                                            ) = self._source_kv_candidates_from_indices(
+                                                source_key_cache=source_key_cache,
+                                                source_value_cache=source_value_cache,
+                                                source_indices=soft_section[
+                                                    "source_indices"
+                                                ],
+                                            )
+                                            new_source_kv_cache = (
+                                                projector.align_source_kv(
+                                                    source_kv_candidates=(
+                                                        source_key_candidates,
+                                                        source_value_candidates,
+                                                    ),
+                                                    target_kv=new_base_kv_cache,
+                                                    valid_mask=valid_mask,
+                                                    source_weights=source_weights,
+                                                )
+                                            )
+                                        else:
+                                            if hasattr(
+                                                projector, "calibrate_source_weights"
+                                            ):
+                                                source_weights = (
+                                                    projector.calibrate_source_weights(
+                                                        source_weights=source_weights,
+                                                        source_indices=soft_section[
+                                                            "source_indices"
+                                                        ],
+                                                        source_confidence=soft_section.get(
+                                                            "source_confidence"
+                                                        ),
+                                                    )
+                                                )
+                                            new_source_kv_cache = (
+                                                self._weighted_source_kv_from_indices(
+                                                    source_key_cache=source_key_cache,
+                                                    source_value_cache=source_value_cache,
+                                                    source_indices=soft_section[
+                                                        "source_indices"
+                                                    ],
+                                                    source_weights=source_weights,
+                                                )
+                                            )
+                                    else:
+                                        new_source_key_cache = source_key_cache[
+                                            :, :, start:end, :
+                                        ]
+                                        new_source_value_cache = source_value_cache[
+                                            :, :, start:end, :
+                                        ]
+                                        new_source_kv_cache = (
+                                            new_source_key_cache,
+                                            new_source_value_cache,
+                                        )
+                                    projector_uses_confidence = (
+                                        use_soft_alignment
+                                        and hasattr(
+                                            projector,
+                                            "uses_internal_source_confidence",
+                                        )
+                                        and projector.uses_internal_source_confidence()
+                                    )
+                                    projector_kwargs = {}
+                                    if projector_uses_confidence:
+                                        projector_kwargs = {
+                                            "source_confidence": soft_section.get(
+                                                "source_confidence"
+                                            ),
+                                            "source_weights": source_weights,
+                                        }
+                                    projected_key, projected_value = projector.forward(
+                                        new_source_kv_cache,
+                                        new_base_kv_cache,
+                                        **projector_kwargs,
+                                    )
+                                    if (
+                                        use_soft_alignment
+                                        and not projector_uses_confidence
+                                    ):
+                                        projected_key, projected_value = (
+                                            self._apply_source_confidence_to_projected_kv(
+                                                projected_key=projected_key,
+                                                projected_value=projected_value,
+                                                base_key=new_base_key_cache,
+                                                base_value=new_base_value_cache,
+                                                soft_section=soft_section,
+                                            )
+                                        )
+                                    projected_kv_list.append(
+                                        (projected_key, projected_value)
+                                    )
                                     source_kv_list.append(new_source_kv_cache)
 
                                 # Use first projector result
@@ -557,8 +957,12 @@ class RosettaModel(nn.Module):
                                 # Collect or apply projection based on mode
                                 if self.multi_source_fusion_mode == "sequential":
                                     # Sequential: apply immediately so next source sees updated cache
-                                    curr_base_kv_cache.key_cache[target_layer_idx][:, :, start:end, :] = agg_key
-                                    curr_base_kv_cache.value_cache[target_layer_idx][:, :, start:end, :] = agg_value
+                                    curr_base_kv_cache.key_cache[target_layer_idx][
+                                        :, :, start:end, :
+                                    ] = agg_key
+                                    curr_base_kv_cache.value_cache[target_layer_idx][
+                                        :, :, start:end, :
+                                    ] = agg_value
                                 else:
                                     # Parallel: accumulate residuals (agg - base) for this target layer
                                     if target_layer_idx not in parallel_delta_cache:
@@ -566,24 +970,42 @@ class RosettaModel(nn.Module):
                                             torch.zeros_like(new_base_key_cache),
                                             torch.zeros_like(new_base_value_cache),
                                         )
-                                    delta_key, delta_value = parallel_delta_cache[target_layer_idx]
-                                    delta_key = delta_key + (agg_key - new_base_key_cache)
-                                    delta_value = delta_value + (agg_value - new_base_value_cache)
-                                    parallel_delta_cache[target_layer_idx] = (delta_key, delta_value)
+                                    delta_key, delta_value = parallel_delta_cache[
+                                        target_layer_idx
+                                    ]
+                                    delta_key = delta_key + (
+                                        agg_key - new_base_key_cache
+                                    )
+                                    delta_value = delta_value + (
+                                        agg_value - new_base_value_cache
+                                    )
+                                    parallel_delta_cache[target_layer_idx] = (
+                                        delta_key,
+                                        delta_value,
+                                    )
 
                         # For parallel mode, apply all accumulated residuals in one shot
                         if self.multi_source_fusion_mode == "parallel":
-                            for target_layer_idx, (delta_key, delta_value) in parallel_delta_cache.items():
-                                base_key_cache, base_value_cache = base_cache[target_layer_idx]
+                            for target_layer_idx, (
+                                delta_key,
+                                delta_value,
+                            ) in parallel_delta_cache.items():
+                                base_key_cache, base_value_cache = base_cache[
+                                    target_layer_idx
+                                ]
                                 base_key_slice = base_key_cache[:, :, start:end, :]
                                 base_value_slice = base_value_cache[:, :, start:end, :]
-                                curr_base_kv_cache.key_cache[target_layer_idx][:, :, start:end, :] = base_key_slice + delta_key
-                                curr_base_kv_cache.value_cache[target_layer_idx][:, :, start:end, :] = base_value_slice + delta_value
+                                curr_base_kv_cache.key_cache[target_layer_idx][
+                                    :, :, start:end, :
+                                ] = (base_key_slice + delta_key)
+                                curr_base_kv_cache.value_cache[target_layer_idx][
+                                    :, :, start:end, :
+                                ] = (base_value_slice + delta_value)
 
                 output.past_key_values = curr_base_kv_cache
-                                                                             
+
         return output
-    
+
     @torch.no_grad()
     def generate(
         self,
@@ -606,7 +1028,7 @@ class RosettaModel(nn.Module):
         output_scores: Optional[bool] = None,
         max_length: Optional[int] = None,
         use_cache: bool = True,
-        streamer = None,
+        streamer=None,
         *args,
         **kwargs,
     ):
@@ -618,6 +1040,7 @@ class RosettaModel(nn.Module):
         """
 
         self.kv_cache_dict = dict()
+        prefill_soft_alignment = kwargs.pop("soft_alignment", None)
 
         # Derive number of tokens to generate
         # If max_new_tokens not provided, infer from max_length
@@ -630,13 +1053,17 @@ class RosettaModel(nn.Module):
         # Default eos/pad from base model tokenizer/config if not provided
         base_model = self.model_list[self.base_model_idx]
         gen_cfg = getattr(base_model, "generation_config", None)
-        cfg_obj = gen_cfg if gen_cfg is not None else getattr(base_model, "config", None)
+        cfg_obj = (
+            gen_cfg if gen_cfg is not None else getattr(base_model, "config", None)
+        )
         if eos_token_id is None and cfg_obj is not None:
             eos_token_id = getattr(cfg_obj, "eos_token_id", None)
         if pad_token_id is None and cfg_obj is not None:
             pad_token_id = getattr(cfg_obj, "pad_token_id", None)
         if pad_token_id is None and eos_token_id is not None:
-            pad_token_id = eos_token_id if isinstance(eos_token_id, int) else eos_token_id[0]
+            pad_token_id = (
+                eos_token_id if isinstance(eos_token_id, int) else eos_token_id[0]
+            )
 
         if max_new_tokens is None:
             if max_length is not None:
@@ -652,13 +1079,19 @@ class RosettaModel(nn.Module):
         # Resolve base inputs
         if isinstance(input_ids, list):
             base_input_ids = input_ids[self.base_model_idx]
-            base_attention_mask = attention_mask[self.base_model_idx] if attention_mask is not None else None
+            base_attention_mask = (
+                attention_mask[self.base_model_idx]
+                if attention_mask is not None
+                else None
+            )
         else:
             base_input_ids = input_ids
             base_attention_mask = attention_mask
 
         if base_attention_mask is None:
-            base_attention_mask = torch.ones_like(base_input_ids, dtype=torch.long, device=base_input_ids.device)
+            base_attention_mask = torch.ones_like(
+                base_input_ids, dtype=torch.long, device=base_input_ids.device
+            )
 
         batch_size = base_input_ids.size(0)
 
@@ -669,6 +1102,7 @@ class RosettaModel(nn.Module):
             attention_mask=attention_mask,
             position_ids=position_ids,
             past_key_values=past_key_values,
+            soft_alignment=prefill_soft_alignment,
             use_cache=use_cache,
             *args,
             **kwargs,
@@ -685,8 +1119,12 @@ class RosettaModel(nn.Module):
         # EOS handling setup
         eos_set = None
         if eos_token_id is not None:
-            eos_set = set(eos_token_id if isinstance(eos_token_id, list) else [eos_token_id])
-        finished = torch.zeros(batch_size, dtype=torch.bool, device=all_input_ids.device)
+            eos_set = set(
+                eos_token_id if isinstance(eos_token_id, list) else [eos_token_id]
+            )
+        finished = torch.zeros(
+            batch_size, dtype=torch.bool, device=all_input_ids.device
+        )
 
         # Start from last prefill logits
         last_logits = prefill_output.logits[:, -1, :]
@@ -706,9 +1144,9 @@ class RosettaModel(nn.Module):
             # Apply repetition/presence/frequency penalties to logits before sampling
             adjusted_logits = last_logits
             if (
-                (repetition_penalty is not None and repetition_penalty != 1.0) or
-                (presence_penalty is not None and presence_penalty != 0.0) or
-                (frequency_penalty is not None and frequency_penalty != 0.0)
+                (repetition_penalty is not None and repetition_penalty != 1.0)
+                or (presence_penalty is not None and presence_penalty != 0.0)
+                or (frequency_penalty is not None and frequency_penalty != 0.0)
             ):
                 adjusted_logits = last_logits.clone()
                 vocab_size = adjusted_logits.size(-1)
@@ -724,10 +1162,14 @@ class RosettaModel(nn.Module):
                     if presence_penalty and presence_penalty != 0.0:
                         presence_mask = counts > 0
                         if presence_mask.any():
-                            adjusted_logits[b, presence_mask] = adjusted_logits[b, presence_mask] - presence_penalty
+                            adjusted_logits[b, presence_mask] = (
+                                adjusted_logits[b, presence_mask] - presence_penalty
+                            )
                     # Frequency penalty: penalize proportionally to frequency
                     if frequency_penalty and frequency_penalty != 0.0:
-                        adjusted_logits[b] = adjusted_logits[b] - frequency_penalty * counts
+                        adjusted_logits[b] = (
+                            adjusted_logits[b] - frequency_penalty * counts
+                        )
                     # Repetition penalty (HF-style): divide positive logits, multiply negative logits
                     if repetition_penalty and repetition_penalty != 1.0:
                         rep_mask = counts > 0
@@ -735,25 +1177,40 @@ class RosettaModel(nn.Module):
                             pos_mask = rep_mask & (adjusted_logits[b] > 0)
                             neg_mask = rep_mask & ~pos_mask
                             if pos_mask.any():
-                                adjusted_logits[b, pos_mask] = adjusted_logits[b, pos_mask] / repetition_penalty
+                                adjusted_logits[b, pos_mask] = (
+                                    adjusted_logits[b, pos_mask] / repetition_penalty
+                                )
                             if neg_mask.any():
-                                adjusted_logits[b, neg_mask] = adjusted_logits[b, neg_mask] * repetition_penalty
+                                adjusted_logits[b, neg_mask] = (
+                                    adjusted_logits[b, neg_mask] * repetition_penalty
+                                )
 
             # Sample next token
-            next_token = sample_token(adjusted_logits, temperature=effective_temperature, top_p=top_p, top_k=top_k)
+            next_token = sample_token(
+                adjusted_logits,
+                temperature=effective_temperature,
+                top_p=top_p,
+                top_k=top_k,
+            )
             if not isinstance(next_token, torch.Tensor):
-                next_token = torch.tensor([next_token], device=all_input_ids.device, dtype=torch.long).repeat(batch_size)
+                next_token = torch.tensor(
+                    [next_token], device=all_input_ids.device, dtype=torch.long
+                ).repeat(batch_size)
 
             # Apply EOS logic
             if eos_set is not None:
                 just_finished = torch.zeros_like(finished)
                 for eid in eos_set:
-                    just_finished |= (next_token == eid)
+                    just_finished |= next_token == eid
                 finished = finished | just_finished
                 if pad_token_id is not None:
                     next_token = torch.where(
                         finished,
-                        torch.tensor(pad_token_id, device=next_token.device, dtype=next_token.dtype),
+                        torch.tensor(
+                            pad_token_id,
+                            device=next_token.device,
+                            dtype=next_token.dtype,
+                        ),
                         next_token,
                     )
 
@@ -763,7 +1220,11 @@ class RosettaModel(nn.Module):
             current_attention_mask = torch.cat(
                 [
                     current_attention_mask,
-                    torch.ones((batch_size, 1), device=current_attention_mask.device, dtype=current_attention_mask.dtype),
+                    torch.ones(
+                        (batch_size, 1),
+                        device=current_attention_mask.device,
+                        dtype=current_attention_mask.dtype,
+                    ),
                 ],
                 dim=1,
             )
@@ -777,7 +1238,12 @@ class RosettaModel(nn.Module):
                 break
 
             # Decode one step using cached states; pass base-stream tensors
-            kv_cache_index = [torch.tensor([-1, 0], dtype=torch.long).repeat(1, 1).unsqueeze(0).to(all_input_ids.device)]
+            kv_cache_index = [
+                torch.tensor([-1, 0], dtype=torch.long)
+                .repeat(1, 1)
+                .unsqueeze(0)
+                .to(all_input_ids.device)
+            ]
 
             decode_output = self.forward(
                 kv_cache_index=kv_cache_index,
@@ -797,7 +1263,10 @@ class RosettaModel(nn.Module):
 
         # Return style compatible with HF generate
         if return_dict_in_generate:
-            if GreedySearchDecoderOnlyOutput is not None and SampleDecoderOnlyOutput is not None:
+            if (
+                GreedySearchDecoderOnlyOutput is not None
+                and SampleDecoderOnlyOutput is not None
+            ):
                 if do_sample:
                     return SampleDecoderOnlyOutput(
                         sequences=all_input_ids,

@@ -1,0 +1,30 @@
+model:
+  model_name: Rosetta
+  rosetta_config:
+    base_model: Qwen/Qwen3-0.6B
+    teacher_model: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+    checkpoints_dir: local/checkpoints/route1_alignment_v22/qwen3_0.6b+tinyllama1.1b_soft_span_overlap_v22_token_mlp_entropy050_small2048/final
+    is_do_alignment: true
+    alignment_strategy: soft_span_overlap_v2
+    soft_alignment_top_k: 4
+    soft_alignment_score_mode: uniform
+    soft_alignment_boundary_bonus: 0.5
+    soft_alignment_boundary_tolerance: 1
+    soft_alignment_min_weight: 0.0
+    soft_alignment_confidence_mode: entropy
+    soft_alignment_confidence_alpha: 0.5
+    soft_alignment_confidence_floor: 0.5
+    soft_alignment_fallback_confidence: 0.25
+  generation_config:
+    do_sample: false
+    max_new_tokens: 64
+output:
+  output_dir: local/final_results/route1_alignment_v22/qwen3_tinyllama_token_mlp_entropy050_small2048/openbookqa
+eval:
+  dataset: openbookqa
+  gpu_ids: [2, 3]
+  answer_method: generate
+  use_cot: false
+  use_template: true
+  sample_interval: 1
+  math_grading_method: comprehensive

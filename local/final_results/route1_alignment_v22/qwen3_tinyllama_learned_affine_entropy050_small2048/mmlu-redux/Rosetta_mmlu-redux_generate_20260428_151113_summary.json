@@ -1,0 +1,213 @@
+{
+  "model": "Rosetta",
+  "dataset": "mmlu-redux",
+  "answer_method": "generate",
+  "overall_accuracy": 0.4502840909090909,
+  "subjects": {
+    "abstract_algebra": 0.21649484536082475,
+    "astronomy": 0.47474747474747475,
+    "clinical_knowledge": 0.51,
+    "college_chemistry": 0.4489795918367347,
+    "college_mathematics": 0.35,
+    "college_physics": 0.38,
+    "conceptual_physics": 0.3711340206185567,
+    "electrical_engineering": 0.52,
+    "formal_logic": 0.4387755102040816,
+    "high_school_biology": 0.5454545454545454,
+    "high_school_computer_science": 0.44,
+    "high_school_geography": 0.48,
+    "high_school_macroeconomics": 0.5,
+    "high_school_microeconomics": 0.54,
+    "high_school_psychology": 0.72,
+    "high_school_us_history": 0.49,
+    "human_aging": 0.3939393939393939,
+    "international_law": 0.51,
+    "logical_fallacies": 0.4791666666666667,
+    "management": 0.5757575757575758,
+    "medical_genetics": 0.44,
+    "moral_disputes": 0.36,
+    "nutrition": 0.5151515151515151,
+    "prehistory": 0.4,
+    "professional_law": 0.28,
+    "professional_psychology": 0.3939393939393939,
+    "security_studies": 0.47,
+    "us_foreign_policy": 0.57,
+    "world_religions": 0.43,
+    "anatomy": 0.4,
+    "business_ethics": 0.4444444444444444,
+    "college_biology": 0.48,
+    "college_computer_science": 0.45918367346938777,
+    "college_medicine": 0.4888888888888889,
+    "computer_security": 0.47,
+    "econometrics": 0.35,
+    "elementary_mathematics": 0.36,
+    "global_facts": 0.23958333333333334,
+    "high_school_chemistry": 0.42,
+    "high_school_european_history": 0.55,
+    "high_school_government_and_politics": 0.51,
+    "high_school_mathematics": 0.34,
+    "high_school_physics": 0.36363636363636365,
+    "high_school_statistics": 0.55,
+    "high_school_world_history": 0.49,
+    "human_sexuality": 0.5,
+    "jurisprudence": 0.5,
+    "machine_learning": 0.28,
+    "marketing": 0.68,
+    "miscellaneous": 0.4895833333333333,
+    "moral_scenarios": 0.3,
+    "philosophy": 0.38202247191011235,
+    "professional_accounting": 0.3763440860215054,
+    "professional_medicine": 0.46,
+    "public_relations": 0.46,
+    "sociology": 0.63,
+    "virology": 0.4270833333333333
+  },
+  "categories": {
+    "STEM": 0.4152210408505876,
+    "other (business, health, misc.)": 0.46086320409656184,
+    "humanities": 0.4318004676539361,
+    "social sciences": 0.5104602510460251
+  },
+  "subcategories": {
+    "math": 0.3641851106639839,
+    "physics": 0.39746835443037976,
+    "health": 0.45408163265306123,
+    "chemistry": 0.43434343434343436,
+    "engineering": 0.52,
+    "philosophy": 0.3979416809605489,
+    "biology": 0.5125628140703518,
+    "computer science": 0.4120603015075377,
+    "geography": 0.48,
+    "economics": 0.4633333333333333,
+    "psychology": 0.5577889447236181,
+    "history": 0.4825,
+    "law": 0.43,
+    "business": 0.5671140939597316,
+    "politics": 0.5025,
+    "other": 0.3684210526315789,
+    "culture": 0.5663265306122449
+  },
+  "length_statistics": {
+    "subcategories": {
+      "math": {
+        "avg_input_length": 161.85915492957747,
+        "avg_gen_length": 7.0,
+        "avg_length_ratio": 0.045206796169773446,
+        "accuracy": 0.3641851106639839,
+        "total_samples": 497
+      },
+      "physics": {
+        "avg_input_length": 153.3392405063291,
+        "avg_gen_length": 7.0,
+        "avg_length_ratio": 0.047659360954956854,
+        "accuracy": 0.39746835443037976,
+        "total_samples": 395
+      },
+      "health": {
+        "avg_input_length": 156.8201530612245,
+        "avg_gen_length": 6.983418367346939,
+        "avg_length_ratio": 0.04863421057756894,
+        "accuracy": 0.45408163265306123,
+        "total_samples": 784
+      },
+      "chemistry": {
+        "avg_input_length": 160.64141414141415,
+        "avg_gen_length": 7.0,
+        "avg_length_ratio": 0.04571870229093844,
+        "accuracy": 0.43434343434343436,
+        "total_samples": 198
+      },
+      "engineering": {
+        "avg_input_length": 123.9,
+        "avg_gen_length": 7.0,
+        "avg_length_ratio": 0.05718910864261614,
+        "accuracy": 0.52,
+        "total_samples": 100
+      },
+      "philosophy": {
+        "avg_input_length": 152.76500857632934,
+        "avg_gen_length": 6.9674099485420244,
+        "avg_length_ratio": 0.047875292841991754,
+        "accuracy": 0.3979416809605489,
+        "total_samples": 583
+      },
+      "biology": {
+        "avg_input_length": 156.2110552763819,
+        "avg_gen_length": 6.939698492462312,
+        "avg_length_ratio": 0.04629032170957102,
+        "accuracy": 0.5125628140703518,
+        "total_samples": 199
+      },
+      "computer science": {
+        "avg_input_length": 167.3467336683417,
+        "avg_gen_length": 6.9874371859296485,
+        "avg_length_ratio": 0.04501082919774206,
+        "accuracy": 0.4120603015075377,
+        "total_samples": 398
+      },
+      "geography": {
+        "avg_input_length": 125.66,
+        "avg_gen_length": 7.0,
+        "avg_length_ratio": 0.05624227335883724,
+        "accuracy": 0.48,
+        "total_samples": 100
+      },
+      "economics": {
+        "avg_input_length": 154.26,
+        "avg_gen_length": 6.97,
+        "avg_length_ratio": 0.046752231185164264,
+        "accuracy": 0.4633333333333333,
+        "total_samples": 300
+      },
+      "psychology": {
+        "avg_input_length": 145.7286432160804,
+        "avg_gen_length": 6.8793969849246235,
+        "avg_length_ratio": 0.04912556956310408,
+        "accuracy": 0.5577889447236181,
+        "total_samples": 199
+      },
+      "history": {
+        "avg_input_length": 340.45,
+        "avg_gen_length": 6.905,
+        "avg_length_ratio": 0.026369603941357248,
+        "accuracy": 0.4825,
+        "total_samples": 400
+      },
+      "law": {
+        "avg_input_length": 208.49666666666667,
+        "avg_gen_length": 7.0,
+        "avg_length_ratio": 0.03902400069877163,
+        "accuracy": 0.43,
+        "total_samples": 300
+      },
+      "business": {
+        "avg_input_length": 134.73154362416108,
+        "avg_gen_length": 6.929530201342282,
+        "avg_length_ratio": 0.05257554887315855,
+        "accuracy": 0.5671140939597316,
+        "total_samples": 298
+      },
+      "politics": {
+        "avg_input_length": 162.015,
+        "avg_gen_length": 6.9875,
+        "avg_length_ratio": 0.046903446275222666,
+        "accuracy": 0.5025,
+        "total_samples": 400
+      },
+      "other": {
+        "avg_input_length": 146.9438596491228,
+        "avg_gen_length": 7.0,
+        "avg_length_ratio": 0.050166852842527844,
+        "accuracy": 0.3684210526315789,
+        "total_samples": 285
+      },
+      "culture": {
+        "avg_input_length": 139.72448979591837,
+        "avg_gen_length": 6.908163265306122,
+        "avg_length_ratio": 0.05049706785174474,
+        "accuracy": 0.5663265306122449,
+        "total_samples": 196
+      }
+    }
+  }
+}

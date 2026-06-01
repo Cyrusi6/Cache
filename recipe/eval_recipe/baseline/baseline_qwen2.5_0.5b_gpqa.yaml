@@ -1,0 +1,17 @@
+model:
+  model_name: Qwen/Qwen2.5-0.5B-Instruct
+  generation_config:
+    do_sample: false
+    max_new_tokens: 64
+
+output:
+  output_dir: local/final_results/baseline_qwen2.5_0.5b_instruct/gpqa
+
+eval:
+  dataset: gpqa
+  gpu_ids: [3]
+  answer_method: generate
+  use_cot: false
+  use_template: true
+  sample_interval: 1
+  math_grading_method: "comprehensive"
