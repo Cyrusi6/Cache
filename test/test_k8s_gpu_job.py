@@ -113,6 +113,7 @@ def test_manifest_contains_expected_mounts_uid_and_management_labels() -> None:
         "huggingface-cache",
         "huggingface-cache-host-view",
         "c2c-datasets",
+        "c2c-models",
         "pip-cache",
         "shm",
     }
@@ -122,6 +123,7 @@ def test_manifest_contains_expected_mounts_uid_and_management_labels() -> None:
         "huggingface-cache",
         "huggingface-cache-host-view",
         "c2c-datasets",
+        "c2c-models",
         "pip-cache",
         "shm",
     }
@@ -140,9 +142,18 @@ def test_manifest_contains_expected_mounts_uid_and_management_labels() -> None:
         "mountPath": "/datasets",
         "readOnly": True,
     }
+    assert mounts["c2c-models"] == {
+        "name": "c2c-models",
+        "mountPath": "/models/c2c",
+        "readOnly": True,
+    }
     volumes = {item["name"]: item for item in pod_spec["volumes"]}
     assert volumes["c2c-datasets"]["hostPath"] == {
         "path": str(gpu_job.DATASETS_ROOT),
+        "type": "Directory",
+    }
+    assert volumes["c2c-models"]["hostPath"] == {
+        "path": str(gpu_job.C2C_MODELS_ROOT),
         "type": "Directory",
     }
     env = {item["name"]: item["value"] for item in container["env"]}
@@ -152,6 +163,7 @@ def test_manifest_contains_expected_mounts_uid_and_management_labels() -> None:
     assert env["HF_ENDPOINT"] == "https://hf-mirror.com"
     assert env["HF_HUB_DOWNLOAD_TIMEOUT"] == "600"
     assert env["C2C_DATA_ROOT"] == "/datasets/c2c"
+    assert env["C2C_MODEL_ROOT"] == "/models/c2c"
 
 
 def test_init_dataset_links_are_complete_idempotent_and_portable(
@@ -198,6 +210,15 @@ def test_submit_requires_initialized_dataset_root(
 
     with pytest.raises(gpu_job.GpuJobError, match="统一数据目录不存在"):
         gpu_job.require_dataset_root()
+
+
+def test_submit_requires_initialized_model_root(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(gpu_job, "C2C_MODELS_ROOT", tmp_path / "missing")
+
+    with pytest.raises(gpu_job.GpuJobError, match="统一模型目录不存在"):
+        gpu_job.require_model_root()
 
 
 def test_no_bootstrap_executes_image_command_directly() -> None:

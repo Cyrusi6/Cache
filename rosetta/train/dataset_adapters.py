@@ -13,6 +13,7 @@ import hashlib
 import json
 from rosetta.model.aligner import AlignmentStrategy
 from rosetta.utils.dataset_loading import load_c2c_dataset
+from rosetta.utils.model_loading import resolve_model_path
 
 # Dataset Registry System
 DATASET_REGISTRY = {}
@@ -849,7 +850,9 @@ class MMLUChatDataset(Dataset):
         # Apply total token length filtering on full chat (user + assistant)
         if max_word_count is not None:
             # Use a small tokenizer for speed; total token length = chat(user+assistant)
-            self._mmlu_tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+            self._mmlu_tokenizer = AutoTokenizer.from_pretrained(
+                resolve_model_path("Qwen/Qwen3-0.6B")
+            )
             extractor = lambda sample: self._build_chat_messages(sample)
             filters = [
                 create_text_length_filter(
@@ -971,7 +974,9 @@ class LLMGeneratedChatDataset(Dataset):
         else:
             raise ValueError(f"Unexpected dataset type: {type(dataset)}")
 
-        tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+        tokenizer = AutoTokenizer.from_pretrained(
+            resolve_model_path("Qwen/Qwen3-0.6B")
+        )
 
         if max_word_count is not None:
             original_len = len(self.dataset)
@@ -1204,7 +1209,9 @@ class OpenHermesChatDataset(Dataset):
 
         # Apply conversation-level token count filtering (all messages combined <= max_word_count)
         if max_word_count is not None:
-            tokenizer = AutoTokenizer.from_pretrained("Qwen/Qwen3-0.6B")
+            tokenizer = AutoTokenizer.from_pretrained(
+                resolve_model_path("Qwen/Qwen3-0.6B")
+            )
             extractor = lambda sample: extract_openhermes_messages(
                 sample, "conversations"
             )

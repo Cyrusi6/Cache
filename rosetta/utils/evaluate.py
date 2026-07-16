@@ -17,6 +17,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from rosetta.model.projector import load_projector
 from rosetta.model.wrapper import RosettaModel
 from rosetta.model.oracle import OracleRosettaModel
+from rosetta.utils.model_loading import model_matches, resolve_model_path
 
 def build_prompt(dataset: str, locale: str, question: str, choices: str, use_cot: bool, use_template: bool = True) -> str:
     """
@@ -290,8 +291,9 @@ def load_hf_model(model_name: str, device: torch.device, generation_config: Opti
     Returns:
         Tuple of (model, tokenizer)
     """
+    model_path = resolve_model_path(model_name)
     tokenizer = AutoTokenizer.from_pretrained(
-        str(model_name),
+        model_path,
         trust_remote_code=True,
         padding_side='left'
     )
@@ -302,17 +304,17 @@ def load_hf_model(model_name: str, device: torch.device, generation_config: Opti
     # Check and set chat template
     set_default_chat_template(tokenizer, model_name)
 
-    if model_name == "google/gemma-3-1b-it":
+    if model_matches(model_name, "gemma-3-1b-it"):
         torch._dynamo.config.cache_size_limit = 64
         model = AutoModelForCausalLM.from_pretrained(
-            str(model_name),
+            model_path,
             torch_dtype=torch.bfloat16,
             device_map={"": device},
             sliding_window=4096
         ).eval()
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            str(model_name),
+            model_path,
             torch_dtype=torch.bfloat16,
             device_map={"": device}
     ).eval()
@@ -341,6 +343,7 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
     rosetta_config = model_config["rosetta_config"]
     slm_model_path = rosetta_config["base_model"]
     teacher_model_config = rosetta_config["teacher_model"]
+    resolved_slm_model_path = resolve_model_path(slm_model_path)
 
     # Dict of models with list of checkpoints: {"model_name": "model_path", ...} + ckpt: ["ckpt1", "ckpt2"]
     
@@ -365,12 +368,12 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
             llm_configs.append((model_path, ckpt_dir))
 
     # Load tokenizer
-    slm_tokenizer = AutoTokenizer.from_pretrained(str(slm_model_path))
+    slm_tokenizer = AutoTokenizer.from_pretrained(resolved_slm_model_path)
     set_default_chat_template(slm_tokenizer, slm_model_path)
     
     # Load SLM model
     slm_model = AutoModelForCausalLM.from_pretrained(
-        str(slm_model_path),
+        resolved_slm_model_path,
         torch_dtype=torch.bfloat16,
         device_map={"": device}
     ).eval()
@@ -381,16 +384,17 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
     # Load LLM models
     llm_models = []
     for llm_model_path, _ in llm_configs:
-        if llm_model_path == "google/gemma-3-1b-it":
+        resolved_llm_model_path = resolve_model_path(llm_model_path)
+        if model_matches(llm_model_path, "gemma-3-1b-it"):
             llm_model = AutoModelForCausalLM.from_pretrained(
-                str(llm_model_path),
+                resolved_llm_model_path,
                 torch_dtype=torch.bfloat16,
                 device_map={"": device},
                 sliding_window=4096
             ).eval()
         else:
             llm_model = AutoModelForCausalLM.from_pretrained(
-                str(llm_model_path),
+                resolved_llm_model_path,
                 torch_dtype=torch.bfloat16,
                 device_map={"": device}
             ).eval()
@@ -515,20 +519,22 @@ def load_oracle_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[st
         raise KeyError("checkpoints_dir must be provided under model.rosetta_config (preferred) or eval config (legacy)")
     slm_model_path = rosetta_config["base_model"]
     llm_model_path = rosetta_config["teacher_model"]
+    resolved_slm_model_path = resolve_model_path(slm_model_path)
+    resolved_llm_model_path = resolve_model_path(llm_model_path)
 
     # Load tokenizer
-    slm_tokenizer = AutoTokenizer.from_pretrained(str(slm_model_path))
+    slm_tokenizer = AutoTokenizer.from_pretrained(resolved_slm_model_path)
     set_default_chat_template(slm_tokenizer, slm_model_path)
     
     # Load models
     slm_model = AutoModelForCausalLM.from_pretrained(
-        str(slm_model_path),
+        resolved_slm_model_path,
         torch_dtype=torch.bfloat16,
         device_map={"": device}
     ).eval()
     
     llm_model = AutoModelForCausalLM.from_pretrained(
-        str(llm_model_path),
+        resolved_llm_model_path,
         torch_dtype=torch.bfloat16,
         device_map={"": device}
     ).eval()
@@ -719,4 +725,3 @@ def generate_answer_with_generate(model, tokenizer, prompt: str, device: torch.d
     gen_length = generated_ids.shape[0]
 
     return pred, probs, input_length, gen_length, content
-

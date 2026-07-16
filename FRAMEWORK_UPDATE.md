@@ -160,3 +160,35 @@
 ### 结论与下一步
 
 本地与 Kubernetes 已共享统一数据入口，现有 Route-1 v2.2 无需修改 recipe 即可优先使用本地数据。后续下载 C-Eval 后重新执行 `gpu_job.sh init`，再补齐论文四项主评测。
+
+## 2026-07-16：统一 C2C 模型目录与 Kubernetes 挂载
+
+### 研究目标
+
+让训练和评测任务直接复用已下载的 C2C 论文模型与官方 Fuser，避免重复下载和模型版本漂移。
+
+### 核心改动
+
+- 将宿主机 `/home/lijunsi/projects/KVcache/models/c2c` 只读挂载到 Pod `/models/c2c`。
+- 设置 `C2C_MODEL_ROOT=/models/c2c`，`init` 和 `submit` 在模型根缺失时提前失败。
+- 新增模型路径解析器，将 Hugging Face ID 或旧绝对路径映射到统一目录，不存在时回退原路径。
+- SFT、Oracle、统一评测、数据 tokenizer 和多阶段加载入口接入本地优先解析。
+- 公共底座及官方 Fuser 与项目 `local/checkpoints/` 实验产物继续分层保存。
+
+### 实验配置
+
+- Namespace：`c2c-research`。
+- 节点：`4090-24gx4`，1 GPU smoke。
+- 模型根：宿主机 `/home/lijunsi/projects/KVcache/models/c2c`，Pod `/models/c2c`。
+- 验证对象：Qwen2.5-0.5B、Qwen3-0.6B 软链接、Qwen3-8B 路径解析和 C2C_Fuser。
+
+### 验证结果
+
+- 模型挂载聚焦测试 31 passed；项目全量测试 102 passed，保留 2 个已知 Pydantic warning。
+- 1 卡与 4 卡 Job 均通过 Kubernetes server-side dry-run。
+- 真实 Pod 中模型配置、Fuser 和跨挂载软链接均可读取，Qwen3-8B 本地路径解析正确。
+- 模型目录写入返回 `EROFS`，只读约束生效；两个 smoke Job 均完成并已删除。
+
+### 结论与下一步
+
+统一模型库已同时供本地与 Kubernetes 使用，正式任务可继续在 recipe 中保留标准 Hugging Face ID。后续新增模型只需放入统一目录，并保持目录名与模型 ID basename 一致。

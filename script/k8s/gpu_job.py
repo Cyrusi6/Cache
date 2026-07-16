@@ -38,6 +38,9 @@ DATASETS_ROOT = Path("/home/lijunsi/projects/KVcache/datasets")
 C2C_DATASETS_ROOT = DATASETS_ROOT / "c2c"
 CONTAINER_DATASETS_ROOT = Path("/datasets")
 CONTAINER_C2C_DATA_ROOT = CONTAINER_DATASETS_ROOT / "c2c"
+MODELS_ROOT = Path("/home/lijunsi/projects/KVcache/models")
+C2C_MODELS_ROOT = MODELS_ROOT / "c2c"
+CONTAINER_C2C_MODEL_ROOT = Path("/models/c2c")
 
 HF_DATASET_LINKS = {
     "OpenHermes-2.5": "datasets--teknium--OpenHermes-2.5",
@@ -157,6 +160,13 @@ def require_dataset_root() -> None:
     if not C2C_DATASETS_ROOT.is_dir():
         raise GpuJobError(
             f"统一数据目录不存在：{C2C_DATASETS_ROOT}；请先运行 `gpu_job.sh init`"
+        )
+
+
+def require_model_root() -> None:
+    if not C2C_MODELS_ROOT.is_dir():
+        raise GpuJobError(
+            f"统一模型目录不存在：{C2C_MODELS_ROOT}；请先准备模型权重"
         )
 
 
@@ -365,6 +375,10 @@ def build_job_manifest(
                                     "name": "C2C_DATA_ROOT",
                                     "value": str(CONTAINER_C2C_DATA_ROOT),
                                 },
+                                {
+                                    "name": "C2C_MODEL_ROOT",
+                                    "value": str(CONTAINER_C2C_MODEL_ROOT),
+                                },
                                 {"name": "PIP_CACHE_DIR", "value": "/cache/pip"},
                                 {"name": "C2C_RUNTIME_IMAGE", "value": image},
                             ],
@@ -394,6 +408,11 @@ def build_job_manifest(
                                 {
                                     "name": "c2c-datasets",
                                     "mountPath": str(CONTAINER_DATASETS_ROOT),
+                                    "readOnly": True,
+                                },
+                                {
+                                    "name": "c2c-models",
+                                    "mountPath": str(CONTAINER_C2C_MODEL_ROOT),
                                     "readOnly": True,
                                 },
                                 {
@@ -437,6 +456,13 @@ def build_job_manifest(
                             "name": "c2c-datasets",
                             "hostPath": {
                                 "path": str(DATASETS_ROOT),
+                                "type": "Directory",
+                            },
+                        },
+                        {
+                            "name": "c2c-models",
+                            "hostPath": {
+                                "path": str(C2C_MODELS_ROOT),
                                 "type": "Directory",
                             },
                         },
@@ -505,6 +531,7 @@ def apply_manifest(
 def init_command(args: argparse.Namespace) -> None:
     ensure_local_paths()
     dataset_links = ensure_c2c_dataset_links()
+    require_model_root()
     require_local_node(args.node)
     capacity = node_capacity(args.context, args.node)
     if capacity < 1:
@@ -534,6 +561,7 @@ def init_command(args: argparse.Namespace) -> None:
     print(f"runtime={RUNTIME_ROOT}")
     print(f"manifests={MANIFEST_ROOT}")
     print(f"datasets={C2C_DATASETS_ROOT}")
+    print(f"models={C2C_MODELS_ROOT}")
     for name, target in dataset_links.items():
         status = target if target is not None else "missing"
         print(f"dataset_link[{name}]={status}")
@@ -542,6 +570,7 @@ def init_command(args: argparse.Namespace) -> None:
 def submit_command(args: argparse.Namespace) -> None:
     ensure_local_paths()
     require_dataset_root()
+    require_model_root()
     require_local_node(args.node)
     if not namespace_exists(args.context, args.namespace):
         raise GpuJobError(

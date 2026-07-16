@@ -32,6 +32,7 @@ from rosetta.model.wrapper import RosettaModel
 from rosetta.model.projector import create_projector, save_projector, TrivialProjector
 from rosetta.train.dataset_adapters import ChatDataset, RosettaDataCollator, create_dataset
 from rosetta.train.model_utils import k_nearest_sources, last_aligned_sources
+from rosetta.utils.model_loading import resolve_model_path
 
 torch.autograd.set_detect_anomaly(True)
 
@@ -129,20 +130,22 @@ def build_shared_mlp(source_dim: int, hidden_dim: int, target_dim: int, num_laye
     
 def setup_models(model_config: Dict[str, Any], device: str = "cuda", dtype: torch.dtype = torch.bfloat16, chosen_target_layer_idx: int = None):
     """Setup base and teacher models with projectors"""
-    
-    tokenizer = AutoTokenizer.from_pretrained(model_config["base_model"])
+
+    base_model_path = resolve_model_path(model_config["base_model"])
+    teacher_model_path = resolve_model_path(model_config["teacher_model"])
+    tokenizer = AutoTokenizer.from_pretrained(base_model_path)
 
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
     
     base_model = AutoModelForCausalLM.from_pretrained(
-        model_config["base_model"],
+        base_model_path,
         torch_dtype=dtype,
         output_hidden_states=True  # Enable hidden states output
     )
     
     teacher_model = AutoModelForCausalLM.from_pretrained(
-        model_config["teacher_model"],
+        teacher_model_path,
         torch_dtype=dtype,
         output_hidden_states=True  # Enable hidden states output
     )

@@ -13,6 +13,7 @@
 - manifest：`local/k8s/manifests/<完整任务名>.json`
 - Hugging Face：默认使用 `https://hf-mirror.com`，下载超时 600 秒
 - 统一数据目录：宿主机 `/home/lijunsi/projects/KVcache/datasets/c2c`，Pod 内 `/datasets/c2c`
+- 统一模型目录：宿主机 `/home/lijunsi/projects/KVcache/models/c2c`，Pod 内 `/models/c2c`
 
 任务名会自动追加时间戳。提交后保存输出中的 `job=...`，后续查看日志、等待和删除均使用这个完整名称。
 
@@ -28,7 +29,7 @@
 bash bash/k8s/gpu_job.sh init
 ```
 
-该命令创建 `c2c-research` namespace 和本地缓存目录，补齐 C2C 数据软链接，并检查节点状态、GPU 数量与 Job 权限。首次执行后无需每次重复运行；只有 namespace、缓存目录或数据链接被删除时才需重新执行。
+该命令创建 `c2c-research` namespace 和本地缓存目录，补齐 C2C 数据软链接，检查统一模型目录、节点状态、GPU 数量与 Job 权限。首次执行后无需每次重复运行；只有 namespace、缓存目录或数据链接被删除时才需重新执行。
 
 ## 统一数据目录
 
@@ -62,6 +63,29 @@ ls -l /home/lijunsi/projects/KVcache/datasets/c2c
 ```
 
 数据源挂载为只读；训练输出仍必须写入项目的 `local/`。当前 C-Eval 尚未下载，因此 `ceval-exam` 链接暂不存在，首次使用会回退到 `ceval/ceval-exam`。
+
+## 统一模型目录
+
+论文底座模型、项目扩展模型和官方 Fuser 统一保存在：
+
+```text
+/home/lijunsi/projects/KVcache/models/c2c/
+├── Qwen3-0.6B
+├── Qwen2.5-0.5B-Instruct
+├── TinyLlama-1.1B-Chat-v1.0
+├── ...
+└── C2C_Fuser
+```
+
+Kubernetes 将该目录只读挂载到 `/models/c2c`，并设置：
+
+```bash
+C2C_MODEL_ROOT=/models/c2c
+```
+
+SFT、Oracle 和统一评测入口会把 Hugging Face ID 或旧绝对路径解析为该目录中的同名模型；本地目录不存在时才回退原始 ID。例如 `Qwen/Qwen3-8B` 会优先使用 `/models/c2c/Qwen3-8B`。官方 Fuser 位于 `/models/c2c/C2C_Fuser/<pair>/final`。
+
+模型根挂载保持只读。本项目训练产生的 projector/checkpoint 继续写入 `/workspace/Cache/local/checkpoints/`，不得混入公共模型目录。Hugging Face cache 仍为补充下载保留可写挂载，不应将其作为实验输出目录。
 
 ## 提交任务
 

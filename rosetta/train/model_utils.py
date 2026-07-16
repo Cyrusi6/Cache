@@ -8,6 +8,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from rosetta.model.wrapper import RosettaModel
 from rosetta.model.projector import create_projector
+from rosetta.utils.model_loading import resolve_model_path
 
 """
 Mapping strategies
@@ -103,18 +104,21 @@ def setup_models(
 ):
     """Setup RosettaModel with base model, teacher model, and projectors"""
 
+    base_model_path = resolve_model_path(model_config["base_model"])
+    teacher_model_path = resolve_model_path(model_config["teacher_model"])
+
     # Load tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(model_config["base_model"])
+    tokenizer = AutoTokenizer.from_pretrained(base_model_path)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
     # Load models
     base_model = AutoModelForCausalLM.from_pretrained(
-        model_config["base_model"], torch_dtype=dtype, device_map=device
+        base_model_path, torch_dtype=dtype, device_map=device
     )
 
     teacher_model = AutoModelForCausalLM.from_pretrained(
-        model_config["teacher_model"], torch_dtype=dtype, device_map=device
+        teacher_model_path, torch_dtype=dtype, device_map=device
     )
 
     # Create projector

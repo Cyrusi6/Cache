@@ -36,6 +36,7 @@ from rosetta.model.aligner import TokenAligner, AlignmentStrategy
 from rosetta.train.dataset_adapters import generate_kv_cache_index
 from transformers import AutoTokenizer
 from rosetta.utils.evaluate import set_default_chat_template
+from rosetta.utils.model_loading import resolve_model_path
 
 
 # Dataset-specific configurations
@@ -651,7 +652,9 @@ class UnifiedEvaluator:
             llm_tokenizer = None
             if is_do_alignment and llm_model_path:
                 try:
-                    llm_tokenizer = AutoTokenizer.from_pretrained(str(llm_model_path))
+                    llm_tokenizer = AutoTokenizer.from_pretrained(
+                        resolve_model_path(llm_model_path)
+                    )
                     if llm_tokenizer.pad_token is None:
                         llm_tokenizer.pad_token = llm_tokenizer.eos_token
                     set_default_chat_template(llm_tokenizer, llm_model_path)

@@ -45,6 +45,7 @@ from rosetta.train.dataset_adapters import generate_kv_cache_index
 from transformers import AutoTokenizer
 from rosetta.utils.evaluate import set_default_chat_template
 from rosetta.utils.dataset_loading import load_c2c_dataset
+from rosetta.utils.model_loading import resolve_model_path
 from rosetta.baseline.multi_stage import TwoStageInference, TwoStageRosetta
 
 # Dataset-specific configurations
@@ -2175,7 +2176,9 @@ class UnifiedEvaluator:
                 generation_config=self.generation_config,
             )
             # Use the answer model's tokenizer for consistency
-            tokenizer = AutoTokenizer.from_pretrained(self.answer_model_path)
+            tokenizer = AutoTokenizer.from_pretrained(
+                resolve_model_path(self.answer_model_path)
+            )
             model_type = "two_stage"
             llm_tokenizer = None
             print(f"Initialized two-stage pipeline on GPU {gpu_id}")
@@ -2195,7 +2198,9 @@ class UnifiedEvaluator:
             llm_tokenizer = None
             if is_do_alignment and llm_model_path:
                 try:
-                    llm_tokenizer = AutoTokenizer.from_pretrained(str(llm_model_path))
+                    llm_tokenizer = AutoTokenizer.from_pretrained(
+                        resolve_model_path(llm_model_path)
+                    )
                     if llm_tokenizer.pad_token is None:
                         llm_tokenizer.pad_token = llm_tokenizer.eos_token
                     set_default_chat_template(llm_tokenizer, llm_model_path)

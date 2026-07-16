@@ -15,6 +15,7 @@ from transformers import (
     AutoModelForCausalLM,
 )
 from rosetta.utils.evaluate import set_default_chat_template, apply_generation_config
+from rosetta.utils.model_loading import model_matches, resolve_model_path
 
 try:
     from qwen_vl_utils import process_vision_info
@@ -53,25 +54,27 @@ class TwoStageInference:
     
     def _load_models(self, context_path: str, answer_path: str):
         """Load both LLM models."""
+        resolved_context_path = resolve_model_path(context_path)
+        resolved_answer_path = resolve_model_path(answer_path)
         # Load context LLM
-        self.context_tokenizer = AutoTokenizer.from_pretrained(context_path)
+        self.context_tokenizer = AutoTokenizer.from_pretrained(resolved_context_path)
         # for gemma, set sliding_window=4096
-        if context_path == "google/gemma-3-1b-it":
+        if model_matches(context_path, "gemma-3-1b-it"):
             torch._dynamo.config.cache_size_limit = 64
             self.context_model = AutoModelForCausalLM.from_pretrained(
-                context_path, torch_dtype=torch.bfloat16, device_map={"": self.device}, sliding_window=4096
+                resolved_context_path, torch_dtype=torch.bfloat16, device_map={"": self.device}, sliding_window=4096
             )
         else:
             self.context_model = AutoModelForCausalLM.from_pretrained(
-                context_path, torch_dtype=torch.bfloat16, device_map={"": self.device}
+                resolved_context_path, torch_dtype=torch.bfloat16, device_map={"": self.device}
             )
         # Apply generation config to context model
         apply_generation_config(self.context_model, self.generation_config)
         
         # Load answer LLM
-        self.answer_tokenizer = AutoTokenizer.from_pretrained(answer_path)
+        self.answer_tokenizer = AutoTokenizer.from_pretrained(resolved_answer_path)
         self.answer_model = AutoModelForCausalLM.from_pretrained(
-            answer_path, torch_dtype=torch.bfloat16, device_map={"": self.device}
+            resolved_answer_path, torch_dtype=torch.bfloat16, device_map={"": self.device}
         )
         # Apply generation config to answer model
         apply_generation_config(self.answer_model, self.generation_config)
@@ -407,9 +410,10 @@ class TwoStageRosetta(TwoStageInference):
         We only load the context model here, and the Rosetta model is loaded separately.
         """
         # Only load context LLM (answer model is replaced by Rosetta)
-        self.context_tokenizer = AutoTokenizer.from_pretrained(context_path)
+        resolved_context_path = resolve_model_path(context_path)
+        self.context_tokenizer = AutoTokenizer.from_pretrained(resolved_context_path)
         self.context_model = AutoModelForCausalLM.from_pretrained(
-            context_path, torch_dtype=torch.bfloat16, device_map={"": self.device}
+            resolved_context_path, torch_dtype=torch.bfloat16, device_map={"": self.device}
         )
         # Apply generation config to context model
         apply_generation_config(self.context_model, self.generation_config)
@@ -479,7 +483,9 @@ class TwoStageRosetta(TwoStageInference):
         
         if is_do_alignment and llm_model_path:
             try:
-                self.llm_tokenizer = AutoTokenizer.from_pretrained(str(llm_model_path))
+                self.llm_tokenizer = AutoTokenizer.from_pretrained(
+                    resolve_model_path(llm_model_path)
+                )
                 if self.llm_tokenizer.pad_token is None:
                     self.llm_tokenizer.pad_token = self.llm_tokenizer.eos_token
                 set_default_chat_template(self.llm_tokenizer, llm_model_path)
@@ -826,20 +832,22 @@ class MultiModalInference:
     
     def _load_models(self, vlm_path: str, llm_path: str):
         """Load VLM and LLM models."""
+        resolved_vlm_path = resolve_model_path(vlm_path)
+        resolved_llm_path = resolve_model_path(llm_path)
         # Load VLM
         self.vlm_model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
-            vlm_path,
+            resolved_vlm_path,
             torch_dtype=torch.bfloat16,
             device_map={"": self.device},
         )
         # Apply generation config to VLM model
         apply_generation_config(self.vlm_model, self.generation_config)
-        self.vlm_processor = AutoProcessor.from_pretrained(vlm_path)
+        self.vlm_processor = AutoProcessor.from_pretrained(resolved_vlm_path)
         
         # Load LLM
-        self.llm_tokenizer = AutoTokenizer.from_pretrained(llm_path)
+        self.llm_tokenizer = AutoTokenizer.from_pretrained(resolved_llm_path)
         self.llm_model = AutoModelForCausalLM.from_pretrained(
-            llm_path, torch_dtype=torch.bfloat16, device_map={"": self.device}
+            resolved_llm_path, torch_dtype=torch.bfloat16, device_map={"": self.device}
         )
         # Apply generation config to LLM model
         apply_generation_config(self.llm_model, self.generation_config)

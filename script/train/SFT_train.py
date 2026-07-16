@@ -46,6 +46,7 @@ from rosetta.model.aligner import TokenAligner, AlignmentStrategy
 from rosetta.train.model_utils import k_nearest_sources, last_aligned_sources
 from rosetta.model.projector import AllInOneProjector
 from rosetta.utils.evaluate import set_default_chat_template
+from rosetta.utils.model_loading import model_matches, resolve_model_path
 
 # PEFT imports for LoRA (baseline mode)
 try:
@@ -1062,9 +1063,10 @@ def setup_models(
     if training_mode == "baseline":
         # Baseline mode: single model training
         model_name = model_config["baseline_model"]
+        model_path = resolve_model_path(model_name)
 
         # Load tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
+        tokenizer = AutoTokenizer.from_pretrained(model_path)
         if tokenizer.pad_token is None:
             tokenizer.pad_token = tokenizer.eos_token
             tokenizer.pad_token_id = tokenizer.eos_token_id
@@ -1072,7 +1074,7 @@ def setup_models(
 
         # Load baseline model
         model = AutoModelForCausalLM.from_pretrained(
-            model_name,
+            model_path,
             torch_dtype=dtype,
             attn_implementation=model_config.get("attn_implementation", None),
         )
@@ -1080,41 +1082,46 @@ def setup_models(
         return model, tokenizer, None, None
 
     else:  # rosetta mode
+        base_model_name = model_config["base_model"]
+        teacher_model_name = model_config["teacher_model"]
+        base_model_path = resolve_model_path(base_model_name)
+        teacher_model_path = resolve_model_path(teacher_model_name)
+
         # Load tokenizer (use base model tokenizer)
-        slm_tokenizer = AutoTokenizer.from_pretrained(model_config["base_model"])
+        slm_tokenizer = AutoTokenizer.from_pretrained(base_model_path)
 
         if slm_tokenizer.pad_token is None:
             slm_tokenizer.pad_token = slm_tokenizer.eos_token
             slm_tokenizer.pad_token_id = slm_tokenizer.eos_token_id
-        set_default_chat_template(slm_tokenizer, model_config["base_model"])
+        set_default_chat_template(slm_tokenizer, base_model_name)
 
         # Load LLM tokenizer if alignment is enabled
         llm_tokenizer = None
         if model_config.get("is_do_alignment", False):
-            llm_tokenizer = AutoTokenizer.from_pretrained(model_config["teacher_model"])
+            llm_tokenizer = AutoTokenizer.from_pretrained(teacher_model_path)
             if llm_tokenizer.pad_token is None:
                 llm_tokenizer.pad_token = llm_tokenizer.eos_token
                 llm_tokenizer.pad_token_id = llm_tokenizer.eos_token_id
-            set_default_chat_template(llm_tokenizer, model_config["teacher_model"])
+            set_default_chat_template(llm_tokenizer, teacher_model_name)
 
         # Load base model
         base_model = AutoModelForCausalLM.from_pretrained(
-            model_config["base_model"],
+            base_model_path,
             torch_dtype=dtype,
             attn_implementation=model_config.get("attn_implementation", None),
         )
 
         # Load teacher model
-        if model_config["teacher_model"] == "google/gemma-3-1b-it":
+        if model_matches(teacher_model_name, "gemma-3-1b-it"):
             teacher_model = AutoModelForCausalLM.from_pretrained(
-                model_config["teacher_model"],
+                teacher_model_path,
                 torch_dtype=dtype,
                 attn_implementation=model_config.get("attn_implementation", None),
                 sliding_window=4096,
             )
         else:
             teacher_model = AutoModelForCausalLM.from_pretrained(
-                model_config["teacher_model"],
+                teacher_model_path,
                 torch_dtype=dtype,
                 attn_implementation=model_config.get("attn_implementation", None),
             )

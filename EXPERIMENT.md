@@ -70,3 +70,30 @@ bash bash/k8s/gpu_job.sh submit \
 ### 结论
 
 统一数据目录已在真实 Kubernetes 任务中验证可用；后续训练和评测可直接沿用原命令，由代码自动选择本地数据，C-Eval 缺失时回退 Hugging Face。
+
+## 2026-07-16：Kubernetes 统一模型目录 Smoke
+
+### 研究目标
+
+验证 C2C 底座模型和官方 Fuser 的只读挂载、环境变量及本地优先路径解析在真实 Pod 中可用。
+
+### 实验配置
+
+- Namespace：`c2c-research`。
+- 节点：`4090-24gx4`。
+- GPU：1 × RTX 4090。
+- 宿主机模型根：`/home/lijunsi/projects/KVcache/models/c2c`。
+- Pod 模型根：`/models/c2c`。
+- Jobs：`model-mount-smoke-20260716-202557-004837`、`model-readonly-smoke-20260716-202659-775799`。
+
+### 验证结果
+
+- Pod 内 `C2C_MODEL_ROOT=/models/c2c`。
+- Qwen2.5-0.5B 配置、C2C_Fuser 目录和 Qwen3-0.6B 跨挂载软链接均可读取。
+- `Qwen/Qwen3-8B` 自动解析为 `/models/c2c/Qwen3-8B`。
+- 写入模型目录被内核以 `EROFS`（errno 30）拒绝，确认只读挂载生效。
+- 两个 Job 均为 `Complete`，完成后已删除 Job 与 Pod。
+
+### 结论
+
+Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face ID 和旧模型绝对路径可本地优先解析，通过 `/models/c2c` 写入公共权重会被拒绝。
