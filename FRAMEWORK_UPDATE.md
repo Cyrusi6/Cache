@@ -97,3 +97,32 @@
 ### 结论
 
 项目现可通过单条命令安全提交单卡、并行单卡或四卡任务；正式 GPU 工作负载应统一由 Kubernetes 管理，避免与宿主机直跑进程混用。
+
+## 2026-07-16：Kubernetes Route-1 v2.2 实测
+
+### 研究目标
+
+使用现有 Route-1 v2.2 `token_mlp + entropy050` checkpoint 验证 Kubernetes 上的真实 C2C 评测闭环。
+
+### 核心改动
+
+- 调度器默认设置 `HF_ENDPOINT=https://hf-mirror.com` 和 600 秒下载超时。
+- 将旧工作目录中的 v2.2 checkpoint 复制到当前项目 `local/checkpoints/`。
+- 新增 AI2-ARC 4 样本 smoke 配置，实验细节记录于 `EXPERIMENT.md`。
+
+### 实验配置
+
+- Qwen3-0.6B Receiver + TinyLlama-1.1B Sharer。
+- `soft_span_overlap_v2`、uniform、entropy050、`token_mlp`。
+- AI2-ARC Challenge，limit 4，greedy generation，单张 RTX 4090。
+
+### 验证结果
+
+- 首次访问 Hugging Face 官方站失败；Pod 内 `hf-mirror.com` 返回 HTTP 200。
+- 使用默认镜像站后，普通提交命令完成真实 v2.2 评测。
+- 结果为 4/4、100%，平均输入 153.75 tokens，平均生成 7 tokens。
+- Job 已删除，输出与 checkpoint 保留在 `local/`。
+
+### 结论
+
+集群已具备运行 C2C v2.2 的能力；本次只验证链路，不将 4 样本结果作为论文性能结论。

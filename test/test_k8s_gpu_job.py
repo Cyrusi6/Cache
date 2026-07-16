@@ -124,6 +124,8 @@ def test_manifest_contains_expected_mounts_uid_and_management_labels() -> None:
     assert env["HOME"] == "/runtime/home"
     assert env["XDG_CACHE_HOME"] == "/runtime/home/.cache"
     assert env["TORCH_HOME"] == "/runtime/home/.cache/torch"
+    assert env["HF_ENDPOINT"] == "https://hf-mirror.com"
+    assert env["HF_HUB_DOWNLOAD_TIMEOUT"] == "600"
 
 
 def test_no_bootstrap_executes_image_command_directly() -> None:

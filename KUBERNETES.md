@@ -11,6 +11,7 @@
 - 资源：每张 GPU 默认申请 8 CPU、32Gi 内存
 - 最长运行时间：72 小时
 - manifest：`local/k8s/manifests/<完整任务名>.json`
+- Hugging Face：默认使用 `https://hf-mirror.com`，下载超时 600 秒
 
 任务名会自动追加时间戳。提交后保存输出中的 `job=...`，后续查看日志、等待和删除均使用这个完整名称。
 

@@ -282,6 +282,14 @@ def build_job_manifest(
                                     "name": "HF_HUB_CACHE",
                                     "value": "/cache/huggingface/hub",
                                 },
+                                {
+                                    "name": "HF_ENDPOINT",
+                                    "value": "https://hf-mirror.com",
+                                },
+                                {
+                                    "name": "HF_HUB_DOWNLOAD_TIMEOUT",
+                                    "value": "600",
+                                },
                                 {"name": "PIP_CACHE_DIR", "value": "/cache/pip"},
                                 {"name": "C2C_RUNTIME_IMAGE", "value": image},
                             ],
