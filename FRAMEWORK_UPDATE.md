@@ -60,3 +60,40 @@
 ### 结论与下一步
 
 后续按精简规范执行研究任务，并持续结构化更新本文件。
+
+## 2026-07-16：Kubernetes GPU 任务调度器
+
+### 研究目标
+
+在四卡服务器上通过统一命令提交 1–4 GPU 项目进程，由 Kubernetes 自动分配空闲 GPU，并在资源不足时排队。
+
+### 核心改动
+
+- 新增 GPU Job CLI、容器入口和 Conda 环境 Shell 包装。
+- 支持 init、submit、list、logs、describe、wait、delete 和 server-side dry-run。
+- 固定任务到 `4090-24gx4`，挂载项目、Hugging Face、pip 和持久 runtime。
+- 使用依赖指纹隔离不可变 venv，避免并发任务删除或原地更新运行环境。
+- `--no-bootstrap` 直接执行镜像命令，可用于 `nvidia-smi` 和完整自定义镜像。
+- 增加中文使用文档和 23 个纯单元测试。
+
+### 实验配置
+
+- Namespace：`c2c-research`。
+- 节点：`4090-24gx4`，4 × RTX 4090。
+- 默认镜像：PyTorch 2.6.0、CUDA 12.4、Python 3.11 国内代理镜像。
+- 默认资源：每卡 8 CPU、32Gi 内存，最长运行 72 小时。
+- 本地验证环境：`c2c-py310-cu124`。
+
+### 验证结果
+
+- 新增调度器测试 23 passed；项目全量测试 88 passed，2 个已知 Pydantic warning。
+- 1 卡与 4 卡 Job 均通过 Kubernetes server-side dry-run。
+- 1-GPU `nvidia-smi` Job 成功调度到本机，容器仅看到 1 张 RTX 4090。
+- 初版 `--no-bootstrap` 因基础镜像无 Python 失败，修复为直接执行 argv 后通过。
+- 默认环境 Job 成功导入 `torch` 与 `rosetta`：CUDA 可用、可见 GPU 数为 1。
+- 第二个默认环境 Job 输出“复用现有运行环境”，验证缓存有效。
+- 所有测试 Job 已删除；`c2c-research` namespace 与 runtime 缓存保留。
+
+### 结论
+
+项目现可通过单条命令安全提交单卡、并行单卡或四卡任务；正式 GPU 工作负载应统一由 Kubernetes 管理，避免与宿主机直跑进程混用。
