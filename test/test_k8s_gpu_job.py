@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 
@@ -110,6 +111,8 @@ def test_manifest_contains_expected_mounts_uid_and_management_labels() -> None:
         "workspace",
         "runtime",
         "huggingface-cache",
+        "huggingface-cache-host-view",
+        "c2c-datasets",
         "pip-cache",
         "shm",
     }
@@ -117,8 +120,30 @@ def test_manifest_contains_expected_mounts_uid_and_management_labels() -> None:
         "workspace",
         "runtime",
         "huggingface-cache",
+        "huggingface-cache-host-view",
+        "c2c-datasets",
         "pip-cache",
         "shm",
+    }
+    mounts = {item["name"]: item for item in container["volumeMounts"]}
+    assert mounts["huggingface-cache"] == {
+        "name": "huggingface-cache",
+        "mountPath": "/cache/huggingface",
+    }
+    assert mounts["huggingface-cache-host-view"] == {
+        "name": "huggingface-cache-host-view",
+        "mountPath": str(gpu_job.HF_CACHE),
+        "readOnly": True,
+    }
+    assert mounts["c2c-datasets"] == {
+        "name": "c2c-datasets",
+        "mountPath": "/datasets",
+        "readOnly": True,
+    }
+    volumes = {item["name"]: item for item in pod_spec["volumes"]}
+    assert volumes["c2c-datasets"]["hostPath"] == {
+        "path": str(gpu_job.DATASETS_ROOT),
+        "type": "Directory",
     }
     env = {item["name"]: item["value"] for item in container["env"]}
     assert env["HOME"] == "/runtime/home"
@@ -126,6 +151,53 @@ def test_manifest_contains_expected_mounts_uid_and_management_labels() -> None:
     assert env["TORCH_HOME"] == "/runtime/home/.cache/torch"
     assert env["HF_ENDPOINT"] == "https://hf-mirror.com"
     assert env["HF_HUB_DOWNLOAD_TIMEOUT"] == "600"
+    assert env["C2C_DATA_ROOT"] == "/datasets/c2c"
+
+
+def test_init_dataset_links_are_complete_idempotent_and_portable(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    datasets_root = tmp_path / "datasets"
+    c2c_root = datasets_root / "c2c"
+    hf_cache = tmp_path / "huggingface"
+    longbench = datasets_root / "kvcomm_selective" / "LongBench"
+    longbench.mkdir(parents=True)
+
+    repo_name = "datasets--cais--mmlu"
+    revision = "abc123"
+    snapshot = hf_cache / "hub" / repo_name / "snapshots" / revision
+    snapshot.mkdir(parents=True)
+    ref = hf_cache / "hub" / repo_name / "refs" / "main"
+    ref.parent.mkdir(parents=True)
+    ref.write_text(revision, encoding="utf-8")
+
+    monkeypatch.setattr(gpu_job, "DATASETS_ROOT", datasets_root)
+    monkeypatch.setattr(gpu_job, "C2C_DATASETS_ROOT", c2c_root)
+    monkeypatch.setattr(gpu_job, "HF_CACHE", hf_cache)
+    monkeypatch.setattr(
+        gpu_job,
+        "HF_DATASET_LINKS",
+        {"mmlu": repo_name, "ceval-exam": "datasets--ceval--ceval-exam"},
+    )
+
+    first = gpu_job.ensure_c2c_dataset_links()
+    second = gpu_job.ensure_c2c_dataset_links()
+
+    assert first == second
+    assert first["mmlu"] == snapshot
+    assert first["ceval-exam"] is None
+    assert (c2c_root / "mmlu").resolve() == snapshot
+    assert (c2c_root / "LongBench").readlink() == Path("../kvcomm_selective/LongBench")
+    assert (c2c_root / "LongBench").resolve() == longbench
+
+
+def test_submit_requires_initialized_dataset_root(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(gpu_job, "C2C_DATASETS_ROOT", tmp_path / "missing")
+
+    with pytest.raises(gpu_job.GpuJobError, match="统一数据目录不存在"):
+        gpu_job.require_dataset_root()
 
 
 def test_no_bootstrap_executes_image_command_directly() -> None:

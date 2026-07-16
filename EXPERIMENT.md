@@ -44,3 +44,29 @@ bash bash/k8s/gpu_job.sh submit \
 ### 结论
 
 当前 Kubernetes 调度器可运行真实 C2C v2.2 checkpoint，模型、projector、对齐、数据集和生成链路均已打通。4 样本 100% 仅证明 smoke 链路成功，不用于论文性能比较。
+
+## 2026-07-16：Kubernetes 统一数据目录 Smoke
+
+### 研究目标
+
+验证宿主机数据软链接、Kubernetes 只读挂载、`C2C_DATA_ROOT` 和本地优先加载器在真实 Pod 中能够协同工作。
+
+### 实验配置
+
+- Namespace：`c2c-research`。
+- 节点：`4090-24gx4`。
+- GPU：1 × RTX 4090。
+- 数据根：`/datasets/c2c`。
+- 加载数据：OpenBookQA `main/test`、LongBench-E `qasper_e/test`。
+- Job：`dataset-mount-smoke-20260716-184328-905304`。
+
+### 验证结果
+
+- Pod 内 `C2C_DATA_ROOT=/datasets/c2c` 存在。
+- OpenHermes、MMLU、MMLU-Redux、LongBench、OpenBookQA、AI2-ARC、GSM8K 七个链接全部可解析。
+- OpenBookQA 成功加载 500 条，Qasper-E 成功加载 224 条，日志明确显示使用本地路径。
+- Job 状态为 `Complete`，完成后已删除 Job 与 Pod。
+
+### 结论
+
+统一数据目录已在真实 Kubernetes 任务中验证可用；后续训练和评测可直接沿用原命令，由代码自动选择本地数据，C-Eval 缺失时回退 Hugging Face。

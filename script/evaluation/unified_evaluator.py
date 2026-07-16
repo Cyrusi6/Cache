@@ -21,7 +21,6 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 from typing import Dict, Any, List, Tuple, Optional
-from datasets import load_dataset, load_from_disk
 from datetime import datetime
 import hashlib
 import random
@@ -45,6 +44,7 @@ from rosetta.model.aligner import TokenAligner, AlignmentStrategy
 from rosetta.train.dataset_adapters import generate_kv_cache_index
 from transformers import AutoTokenizer
 from rosetta.utils.evaluate import set_default_chat_template
+from rosetta.utils.dataset_loading import load_c2c_dataset
 from rosetta.baseline.multi_stage import TwoStageInference, TwoStageRosetta
 
 # Dataset-specific configurations
@@ -375,6 +375,7 @@ class UnifiedEvaluator:
         self.output_config = config["output"]
         self.eval_config = config["eval"]
         self.dataset_name = self.eval_config.get("dataset", "mmlu-redux")
+        self.data_root = self.eval_config.get("data_root")
 
         # Extract generation config if provided
         self.generation_config = self.model_config.get("generation_config", {})
@@ -1413,26 +1414,29 @@ class UnifiedEvaluator:
                 total_splits = max(1, int(m.group(2)))
 
         if self.dataset_name == "math-500":
-            dataset = load_dataset(self.dataset_config["dataset_name"])
+            config_name = None
         elif self.dataset_name == "gsm8k":
             base_subset = "main" if is_virtual_split else subject
-            dataset = load_dataset(self.dataset_config["dataset_name"], base_subset)
+            config_name = base_subset
         elif self.dataset_name == "openbookqa":
-            dataset = load_dataset(self.dataset_config["dataset_name"])
+            config_name = "main"
         elif self.dataset_name == "gpqa":
             base_subset = "gpqa_diamond" if is_virtual_split else subject
-            dataset = load_dataset(self.dataset_config["dataset_name"], base_subset)
+            config_name = base_subset
         elif self.dataset_name == "ai2-arc":
             base_subset = "ARC-Challenge" if is_virtual_split else subject
-            dataset = load_dataset(self.dataset_config["dataset_name"], base_subset)
+            config_name = base_subset
         elif self.dataset_name == "mmlu-pro":
-            dataset = load_dataset(self.dataset_config["dataset_name"])
-        elif self.dataset_name == "ceval":
-            dataset = load_dataset(self.dataset_config["dataset_name"], subject)
+            config_name = None
         else:
-            dataset = load_dataset(self.dataset_config["dataset_name"], subject)
+            config_name = subject
         # dataset = load_from_disk("local/teacher_datasets/MMMLU")
-        test_data = dataset[self.dataset_config["test_split"]]
+        test_data = load_c2c_dataset(
+            self.dataset_config["dataset_name"],
+            config_name=config_name,
+            split=self.dataset_config["test_split"],
+            data_root_path=self.data_root,
+        )
 
         self.current_evaluating_subject = subject
         # 新增：将 tokenizer 赋值给 evaluator 实例（供截断使用）

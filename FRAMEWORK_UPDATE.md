@@ -126,3 +126,37 @@
 ### 结论
 
 集群已具备运行 C2C v2.2 的能力；本次只验证链路，不将 4 样本结果作为论文性能结论。
+
+## 2026-07-16：统一 C2C 数据目录与 Kubernetes 挂载
+
+### 研究目标
+
+将 C2C 论文相关数据统一暴露到固定目录，使本地训练、评测和 Kubernetes Job 使用相同路径，避免重复下载和数据版本漂移。
+
+### 核心改动
+
+- 在 `/home/lijunsi/projects/KVcache/datasets/c2c` 补齐 7 个现有数据集软链接，保留原始物理文件。
+- Kubernetes 将数据总目录只读挂载到 `/datasets`，设置 `C2C_DATA_ROOT=/datasets/c2c`。
+- 新增集中数据加载器，按 dataset、config 和 split 精确读取本地 Parquet、Arrow、JSON 或 CSV，缺失时回退 Hugging Face。
+- 训练适配器、统一评测器及 MMLU、OpenHermes、GSM8K 数据脚本统一接入该加载器。
+- `init` 可幂等补齐软链接；C-Eval 未下载时不创建悬空链接。
+
+### 实验配置
+
+- 宿主机：`4090-24Gx4`。
+- Namespace：`c2c-research`。
+- Pod 数据根：`/datasets/c2c`，数据源只读。
+- Smoke：1 GPU，加载 OpenBookQA `main/test` 与 LongBench-E `qasper_e/test`。
+
+### 验证结果
+
+- 7 个现有数据集软链接均可解析，无断链；C-Eval 明确为缺失。
+- 本地加载 MMLU `auxiliary_train` 99,842 条、LongBench-E `qasper_e` 224 条。
+- Route-1 v2.2 的 `MMLUChatDataset` 成功通过统一目录加载 2 条样本。
+- Kubernetes 1 卡与 4 卡 Job 均通过 server-side dry-run。
+- 真实 Pod 中 7 个链接全部可见，OpenBookQA 500 条、Qasper-E 224 条加载成功；测试 Job 已删除。
+- 聚焦测试 31 passed；项目全量测试 96 passed，保留 2 个已知 Pydantic warning。
+
+### 结论与下一步
+
+本地与 Kubernetes 已共享统一数据入口，现有 Route-1 v2.2 无需修改 recipe 即可优先使用本地数据。后续下载 C-Eval 后重新执行 `gpu_job.sh init`，再补齐论文四项主评测。

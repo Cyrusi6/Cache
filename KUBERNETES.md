@@ -12,6 +12,7 @@
 - 最长运行时间：72 小时
 - manifest：`local/k8s/manifests/<完整任务名>.json`
 - Hugging Face：默认使用 `https://hf-mirror.com`，下载超时 600 秒
+- 统一数据目录：宿主机 `/home/lijunsi/projects/KVcache/datasets/c2c`，Pod 内 `/datasets/c2c`
 
 任务名会自动追加时间戳。提交后保存输出中的 `job=...`，后续查看日志、等待和删除均使用这个完整名称。
 
@@ -27,7 +28,40 @@
 bash bash/k8s/gpu_job.sh init
 ```
 
-该命令创建 `c2c-research` namespace 和本地缓存目录，并检查节点状态、GPU 数量与 Job 权限。
+该命令创建 `c2c-research` namespace 和本地缓存目录，补齐 C2C 数据软链接，并检查节点状态、GPU 数量与 Job 权限。首次执行后无需每次重复运行；只有 namespace、缓存目录或数据链接被删除时才需重新执行。
+
+## 统一数据目录
+
+宿主机数据保持在原位置，不复制大文件。`init` 在以下目录建立统一软链接：
+
+```text
+/home/lijunsi/projects/KVcache/datasets/c2c/
+├── OpenHermes-2.5
+├── mmlu
+├── mmlu-redux-2.0
+├── LongBench
+├── openbookqa
+├── ai2_arc
+├── gsm8k
+└── ceval-exam        # 下载后再次运行 init 加入
+```
+
+Kubernetes 将数据总目录只读挂载到 `/datasets`，并设置：
+
+```bash
+C2C_DATA_ROOT=/datasets/c2c
+```
+
+训练、评测和数据生成代码优先从该目录精确加载 config 与 split；对应本地目录不存在时才回退 Hugging Face ID。Hugging Face 缓存仍挂载到 `/cache/huggingface` 并保持可写，以便复用 Arrow 缓存或补充尚未下载的数据。
+
+检查宿主机链接：
+
+```bash
+find /home/lijunsi/projects/KVcache/datasets/c2c -maxdepth 1 -type l -print
+ls -l /home/lijunsi/projects/KVcache/datasets/c2c
+```
+
+数据源挂载为只读；训练输出仍必须写入项目的 `local/`。当前 C-Eval 尚未下载，因此 `ceval-exam` 链接暂不存在，首次使用会回退到 `ceval/ceval-exam`。
 
 ## 提交任务
 

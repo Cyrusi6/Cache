@@ -12,6 +12,7 @@ import os
 import hashlib
 import json
 from rosetta.model.aligner import AlignmentStrategy
+from rosetta.utils.dataset_loading import load_c2c_dataset
 
 # Dataset Registry System
 DATASET_REGISTRY = {}
@@ -583,6 +584,7 @@ class LongBenchChatDataset(Dataset):
         max_length: Optional[int] = 14000,
         use_longbench_e: bool = True,
         filter_mod4: bool = True,
+        data_root: Optional[str] = None,
     ):
         """
         初始化LongBench数据集
@@ -596,6 +598,7 @@ class LongBenchChatDataset(Dataset):
             max_length: 最大字符长度限制
             use_longbench_e: 是否使用LongBench-E版本
             filter_mod4: 是否过滤_id mod4余1的样本
+            data_root: 统一数据目录；默认读取 C2C_DATA_ROOT
         """
         print(
             f"Loading LongBench{' -E' if use_longbench_e else ''} dataset (split: {split}, dataset: {dataset_name})..."
@@ -692,7 +695,12 @@ class LongBenchChatDataset(Dataset):
         for dataset in target_datasets:
             try:
                 dataset_suffix = f"{dataset}_e" if use_longbench_e else dataset
-                data = load_dataset("THUDM/LongBench", dataset_suffix, split=split)
+                data = load_c2c_dataset(
+                    "THUDM/LongBench",
+                    config_name=dataset_suffix,
+                    split=split,
+                    data_root_path=data_root,
+                )
                 print(f"  Loaded {len(data)} samples from {dataset}")
 
                 # 添加数据集名称标识
@@ -808,6 +816,7 @@ class MMLUChatDataset(Dataset):
         split: str = "train",
         num_samples: Optional[int] = None,
         max_word_count: Optional[int] = None,
+        data_root: Optional[str] = None,
     ):
         """
         Initialize the dataset
@@ -816,11 +825,16 @@ class MMLUChatDataset(Dataset):
             split: Dataset split
             num_samples: Number of samples to use (None for all)
             max_word_count: If set, drop samples whose question + all choices exceed this word count
+            data_root: Unified local dataset root; defaults to C2C_DATA_ROOT
         """
         print(f"Loading MMLU dataset (split: {split})...")
         # Load dataset
-        dataset = load_dataset("cais/mmlu", "all")
-        dataset = dataset[split]
+        dataset = load_c2c_dataset(
+            "cais/mmlu",
+            config_name="all",
+            split=split,
+            data_root_path=data_root,
+        )
 
         # Ensure we have a proper Dataset object
         if hasattr(dataset, "select"):
@@ -893,6 +907,7 @@ class MMLUCotChatDataset(Dataset):
         Args:
             split: Dataset split
             num_samples: Number of samples to use (None for all)
+            data_root: Unified local dataset root; defaults to C2C_DATA_ROOT
         """
         print(f"Loading MMLUCot dataset (split: {split})...")
         # Load dataset
@@ -1076,7 +1091,12 @@ class LLMGeneratedChatDataset(Dataset):
 class OpenBookChatDataset(Dataset):
     """Simple OpenBook dataset converted to chat format"""
 
-    def __init__(self, split: str = "train", num_samples: Optional[int] = None):
+    def __init__(
+        self,
+        split: str = "train",
+        num_samples: Optional[int] = None,
+        data_root: Optional[str] = None,
+    ):
         """
         Initialize the dataset
 
@@ -1086,8 +1106,12 @@ class OpenBookChatDataset(Dataset):
         """
         print(f"Loading OpenBook dataset (split: {split})...")
         # Load dataset
-        dataset = load_dataset("allenai/openbookqa", "main")
-        dataset = dataset[split]
+        dataset = load_c2c_dataset(
+            "allenai/openbookqa",
+            config_name="main",
+            split=split,
+            data_root_path=data_root,
+        )
 
         # Ensure we have a proper Dataset object
         if hasattr(dataset, "select"):
@@ -1133,6 +1157,7 @@ class OpenHermesChatDataset(Dataset):
         num_samples: Optional[int] = None,
         max_word_count: Optional[int] = None,
         min_conversation_turns: int = 0,
+        data_root: Optional[str] = None,
     ):
         """
         Initialize the dataset
@@ -1142,11 +1167,15 @@ class OpenHermesChatDataset(Dataset):
             num_samples: Number of samples to use (None for all)
             max_word_count: Maximum token count for filtering
             min_conversation_turns: Minimum number of conversation turns (default 3 for multi-turn conversations)
+            data_root: Unified local dataset root; defaults to C2C_DATA_ROOT
         """
         print(f"Loading OpenHermes dataset (split: {split})...")
         # Load dataset
-        dataset = load_dataset("teknium/OpenHermes-2.5")
-        dataset = dataset[split]
+        dataset = load_c2c_dataset(
+            "teknium/OpenHermes-2.5",
+            split=split,
+            data_root_path=data_root,
+        )
 
         # Ensure we have a proper Dataset object
         if hasattr(dataset, "select"):

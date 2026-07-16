@@ -34,6 +34,20 @@ RUNTIME_ROOT = LOCAL_K8S_ROOT / "runtime"
 MANIFEST_ROOT = LOCAL_K8S_ROOT / "manifests"
 HF_CACHE = Path.home() / ".cache" / "huggingface"
 PIP_CACHE = Path.home() / ".cache" / "pip"
+DATASETS_ROOT = Path("/home/lijunsi/projects/KVcache/datasets")
+C2C_DATASETS_ROOT = DATASETS_ROOT / "c2c"
+CONTAINER_DATASETS_ROOT = Path("/datasets")
+CONTAINER_C2C_DATA_ROOT = CONTAINER_DATASETS_ROOT / "c2c"
+
+HF_DATASET_LINKS = {
+    "OpenHermes-2.5": "datasets--teknium--OpenHermes-2.5",
+    "mmlu": "datasets--cais--mmlu",
+    "mmlu-redux-2.0": "datasets--edinburgh-dawg--mmlu-redux-2.0",
+    "openbookqa": "datasets--openbookqa",
+    "ai2_arc": "datasets--allenai--ai2_arc",
+    "gsm8k": "datasets--openai--gsm8k",
+    "ceval-exam": "datasets--ceval--ceval-exam",
+}
 
 
 class GpuJobError(RuntimeError):
@@ -87,6 +101,63 @@ def ensure_local_paths() -> None:
         PIP_CACHE,
     ):
         path.mkdir(parents=True, exist_ok=True)
+
+
+def current_hf_snapshot(repo_cache_name: str) -> Path | None:
+    """Resolve a cached Hugging Face repository's current local snapshot."""
+    repo_root = HF_CACHE / "hub" / repo_cache_name
+    ref_path = repo_root / "refs" / "main"
+    try:
+        revision = ref_path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return None
+    snapshot = repo_root / "snapshots" / revision
+    return snapshot if revision and snapshot.is_dir() else None
+
+
+def _ensure_dataset_link(link: Path, target: Path, link_target: str) -> None:
+    if link.is_symlink():
+        if link.resolve(strict=False) == target.resolve(strict=False):
+            return
+        raise GpuJobError(f"数据软链接目标冲突：{link}")
+    if link.exists():
+        raise GpuJobError(f"数据汇总路径已存在且不是软链接：{link}")
+    link.symlink_to(link_target, target_is_directory=True)
+
+
+def ensure_c2c_dataset_links() -> dict[str, Path | None]:
+    """Create the host-side unified C2C dataset link directory."""
+    if not DATASETS_ROOT.is_dir():
+        raise GpuJobError(f"数据源目录不存在：{DATASETS_ROOT}")
+    C2C_DATASETS_ROOT.mkdir(parents=True, exist_ok=True)
+
+    results: dict[str, Path | None] = {}
+    for link_name, repo_cache_name in HF_DATASET_LINKS.items():
+        target = current_hf_snapshot(repo_cache_name)
+        results[link_name] = target
+        if target is not None:
+            _ensure_dataset_link(
+                C2C_DATASETS_ROOT / link_name,
+                target,
+                str(target),
+            )
+
+    longbench_target = DATASETS_ROOT / "kvcomm_selective" / "LongBench"
+    results["LongBench"] = longbench_target if longbench_target.is_dir() else None
+    if longbench_target.is_dir():
+        _ensure_dataset_link(
+            C2C_DATASETS_ROOT / "LongBench",
+            longbench_target,
+            "../kvcomm_selective/LongBench",
+        )
+    return results
+
+
+def require_dataset_root() -> None:
+    if not C2C_DATASETS_ROOT.is_dir():
+        raise GpuJobError(
+            f"统一数据目录不存在：{C2C_DATASETS_ROOT}；请先运行 `gpu_job.sh init`"
+        )
 
 
 def kubectl_prefix(context: str, namespace: str | None = None) -> list[str]:
@@ -290,6 +361,10 @@ def build_job_manifest(
                                     "name": "HF_HUB_DOWNLOAD_TIMEOUT",
                                     "value": "600",
                                 },
+                                {
+                                    "name": "C2C_DATA_ROOT",
+                                    "value": str(CONTAINER_C2C_DATA_ROOT),
+                                },
                                 {"name": "PIP_CACHE_DIR", "value": "/cache/pip"},
                                 {"name": "C2C_RUNTIME_IMAGE", "value": image},
                             ],
@@ -310,6 +385,16 @@ def build_job_manifest(
                                 {
                                     "name": "huggingface-cache",
                                     "mountPath": "/cache/huggingface",
+                                },
+                                {
+                                    "name": "huggingface-cache-host-view",
+                                    "mountPath": str(HF_CACHE),
+                                    "readOnly": True,
+                                },
+                                {
+                                    "name": "c2c-datasets",
+                                    "mountPath": str(CONTAINER_DATASETS_ROOT),
+                                    "readOnly": True,
                                 },
                                 {
                                     "name": "pip-cache",
@@ -338,6 +423,20 @@ def build_job_manifest(
                             "name": "huggingface-cache",
                             "hostPath": {
                                 "path": str(HF_CACHE),
+                                "type": "Directory",
+                            },
+                        },
+                        {
+                            "name": "huggingface-cache-host-view",
+                            "hostPath": {
+                                "path": str(HF_CACHE),
+                                "type": "Directory",
+                            },
+                        },
+                        {
+                            "name": "c2c-datasets",
+                            "hostPath": {
+                                "path": str(DATASETS_ROOT),
                                 "type": "Directory",
                             },
                         },
@@ -405,6 +504,7 @@ def apply_manifest(
 
 def init_command(args: argparse.Namespace) -> None:
     ensure_local_paths()
+    dataset_links = ensure_c2c_dataset_links()
     require_local_node(args.node)
     capacity = node_capacity(args.context, args.node)
     if capacity < 1:
@@ -433,10 +533,15 @@ def init_command(args: argparse.Namespace) -> None:
     print(f"node={args.node} ready=true gpu={capacity}")
     print(f"runtime={RUNTIME_ROOT}")
     print(f"manifests={MANIFEST_ROOT}")
+    print(f"datasets={C2C_DATASETS_ROOT}")
+    for name, target in dataset_links.items():
+        status = target if target is not None else "missing"
+        print(f"dataset_link[{name}]={status}")
 
 
 def submit_command(args: argparse.Namespace) -> None:
     ensure_local_paths()
+    require_dataset_root()
     require_local_node(args.node)
     if not namespace_exists(args.context, args.namespace):
         raise GpuJobError(

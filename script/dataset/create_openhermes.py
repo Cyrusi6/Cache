@@ -13,7 +13,7 @@ Outputs:
 from datetime import datetime
 import pandas as pd
 import requests
-from datasets import load_dataset, Dataset, load_from_disk
+from datasets import Dataset
 from tqdm import tqdm
 import torch
 from transformers import AutoTokenizer
@@ -26,6 +26,8 @@ from typing import Optional, Dict, List, Tuple
 import concurrent.futures
 import threading
 from time import sleep
+
+from rosetta.utils.dataset_loading import load_c2c_dataset
 
 # os.environ["HF_DATASETS_OFFLINE"] = "1"
 
@@ -589,11 +591,11 @@ def main():
     
     if items_to_load:
         print(f"Loading first {items_to_load} items from OpenHermes dataset")
-        dataset = load_dataset(args.dataset_path, split=args.split)
+        dataset = load_c2c_dataset(args.dataset_path, split=args.split)
         dataset = dataset.select(range(items_to_load))
     else:
         print(f"Loading all items from OpenHermes dataset")
-        dataset = load_dataset(args.dataset_path, split=args.split)
+        dataset = load_c2c_dataset(args.dataset_path, split=args.split)
     
     print(f"Loaded OpenHermes dataset with {len(dataset)} items")
     
