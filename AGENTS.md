@@ -6,25 +6,33 @@
 
 ## 项目结构
 
-`rosetta/` 存放模型、对齐、训练与评测逻辑；
-`script/` 存放运行入口；
-`recipe/` 存放配置；
-`test/` 存放测试；
-临时配置、checkpoint 和结果统一放入 `local/`，不得提交。
+- 训练入口：`script/train/SFT_train.py`
+- 评测入口：`script/evaluation/unified_evaluator.py`
+- 分析脚本：`script/analysis/`
+- 核心代码：`rosetta/`
+- 配置文件：`recipe/`
+- 测试目录：`test/`
+- 实验产物：`local/`，不得提交
 
 ## Environment
 
-使用kubectl调用合适的集群
+本地测试使用 Conda 环境 `c2c-py310-cu124`；正式训练和评测通过 Kubernetes 调度 GPU,尽量使用多个卡
 
 ## 常用命令
 
 ```bash
+# 本地测试
 python -m pytest -q --no-cov --basetemp=local/tmp/pytest-all
-CUDA_VISIBLE_DEVICES=0 python script/train/SFT_train.py --config <train-config>
-python script/evaluation/unified_evaluator.py --config <eval-config>
-kubectl config current-context
-kubectl get nodes -o wide
-kubectl get pods -A -o wide
+# 提交任务
+bash bash/k8s/gpu_job.sh submit \
+  --name <name> \
+  --gpus <num> \
+  --follow \
+  -- python <script> <args>
+# 管理任务
+bash bash/k8s/gpu_job.sh list
+bash bash/k8s/gpu_job.sh logs <job-name> --follow
+bash bash/k8s/gpu_job.sh delete <job-name>
 ```
 
 ## Commit
