@@ -348,6 +348,7 @@ def _checkout_script(options: RenderOptions) -> str:
     workspace = shlex.quote(str(WORKSPACE_ROOT))
     parent = shlex.quote(str(WORKSPACE_ROOT.parent))
     marker = shlex.quote(str(_checkout_marker(options)))
+    pre_staged_marker = shlex.quote(str(_pre_staged_workspace_marker(options)))
     marker_payload = shlex.quote(
         json.dumps({"git_commit": options.git_commit.lower()}, separators=(",", ":"))
     )
@@ -355,6 +356,19 @@ def _checkout_script(options: RenderOptions) -> str:
         [
             "set -euo pipefail",
             f"mkdir -p {parent}",
+            f"if [ -f {pre_staged_marker} ]; then",
+            f"  test -d {workspace}/.git",
+            f"  IFS= read -r prestaged_head < {workspace}/.git/HEAD",
+            f"  test \"$prestaged_head\" = {commit}",
+            f"  mkdir -p {shlex.quote(str(_checkout_marker(options).parent))}",
+            f"  printf '%s\\n' {marker_payload} > {marker}.tmp",
+            f"  mv {marker}.tmp {marker}",
+            (
+                "  echo 'using pre-staged shared Git checkout at commit "
+                f"{options.git_commit.lower()}'"
+            ),
+            "  exit 0",
+            "fi",
             f"if [ -e {workspace} ] && [ ! -d {workspace}/.git ]; then",
             (
                 "  echo 'workspace path exists but is not a Git checkout: "
@@ -413,6 +427,12 @@ def _workspace_marker(options: RenderOptions) -> PurePosixPath:
 
 def _checkout_marker(options: RenderOptions) -> PurePosixPath:
     return SHARED_ROOT / "status" / (f"checkout-{options.git_commit[:12].lower()}.json")
+
+
+def _pre_staged_workspace_marker(options: RenderOptions) -> PurePosixPath:
+    return SHARED_ROOT / "status" / (
+        f"source-prestaged-{options.git_commit.lower()}.ready"
+    )
 
 
 def _hf_provenance_marker(options: RenderOptions, scope: str) -> PurePosixPath:

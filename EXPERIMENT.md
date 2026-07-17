@@ -190,6 +190,7 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - 五套模型同时冻结关键文件 SHA256 与完整目录树 SHA256，覆盖 `generation_config.json`、special token、vocab/merges 等运行时文件；四套数据也冻结完整目录树 SHA256。Qwen3-1.7B 与 Llama3.2 均直接使用共享副本，避免慢速重复下载。
 - 24gx8 已确认可访问共享根；stager 在发布 workspace-ready marker 前会一次性核对固定 HF revision、Python package 版本、五套共享模型及四套共享数据的完整目录树哈希。不一致时三条 lane 都不会启动。
 - Llama3.2 保持 lane A affinity 仅用于稳定的任务分配与三 lane 负载均衡，不再依赖 lane A 的节点本地模型来源。
+- 基础 PyTorch 镜像未内置 `git` 时，允许由控制节点把已提交的 detached checkout 预置到共享盘；stager 仅在 commit-specific ready marker 存在且 `.git/HEAD` 精确等于目标 40 位 SHA 时跳过容器内 clone，之后仍执行同一套资产、环境和计划审计。
 
 ### 必须产出的指标与统计
 

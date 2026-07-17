@@ -173,6 +173,10 @@ def test_stager_clones_public_main_at_explicit_commit_and_runs_suite_generate() 
     pod = _pod_spec(jobs["workspace-stager"])
     checkout = pod["initContainers"][0]["args"][0]
 
+    assert f"source-prestaged-{COMMIT}.ready" in checkout
+    assert "IFS= read -r prestaged_head" in checkout
+    assert f'test "$prestaged_head" = {COMMIT}' in checkout
+    assert "using pre-staged shared Git checkout" in checkout
     assert "git clone --branch main --single-branch" in checkout
     assert lanes.DEFAULT_REPOSITORY in checkout
     assert f"merge-base --is-ancestor {COMMIT} origin/main" in checkout
