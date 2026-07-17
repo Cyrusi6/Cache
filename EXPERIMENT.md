@@ -180,7 +180,7 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - 三条 lane 的 per-device batch 均为 1、有效全局 batch 均为 32。两卡评测先并发运行 ARC `[0]` 与 OpenBookQA `[1]`，再运行 MMLU-Redux `[0,1]`。
 - 每条 lane 内按 run 串行执行 train→ARC/OpenBookQA/MMLU-Redux，并用状态文件、依赖和 gate 防止越级运行；不同 lane 可并行。
 - 三条 lane 的 `C2C_MODEL_ROOT` 与 `C2C_DATA_ROOT` 均指向同一份 `/netdisk` 资产，不再按节点使用不同的 local-first 路径。
-- 当前 Job：Lane A `route1-id-v22-9b06d173-lane-a-e1e95b27`；Lane B `r1id-v22-9b06-lane-b-2gpu-24g-1a7dd1d2`；Lane C `r1id-v22-9b06-lane-c-2gpu-48g-1a7dd1d2`。
+- 当前 Job：Lane A `route1-id-v22-9b06d173-lane-a-e1e95b27`；Lane B `r1id-v22-9b06-lane-b-2gpu-24g-1a7dd1d2`；Lane C `r1id-v22-9b06-lane-c-2gpu-48g-1a7dd1d2-cache`。
 
 ### 2026-07-17 实际启动记录
 
@@ -190,7 +190,9 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - Lane B 的第二次四卡执行被分配到含隐藏高占用卡的 GPU 集合，rank 2 在模型 `.to(device)` 时 OOM。该节点标准 Pod 中观测到一张卡约占用 21,992 MiB，但 Kubernetes 没有对应 GPU request，因此后续改为两卡准入检查，不对该卡执行未授权 reset。
 - 两卡 adapter SHA256 为 `1a7dd1d25dc4ac9cf208676a6403e0c4938a47e2bd2b21cb7de3a7d6b6f9d6bb`。每个适配后的 train config 都重新计算 `train_config_sha256` 并写入 checkpoint provenance。
 - Lane B 两张启动卡均为 1 MiB，已跳过完成的 B0 并进入 TinyLlama B2 seed 42 的 64-step 训练。
-- Lane C 已调度到 `4090-48gx2`；该节点首次拉取约 3.3GB 的固定 PyTorch runtime 镜像，完成后才进入显存准入与 B1 seed 42 训练。
+- Lane C 首次拉取约 3.3GB 固定 PyTorch runtime 镜像后，暴露出该节点与其他节点不同的 hostPath 权限：共享 `/netdisk` 需要 supplemental GID 31000，节点本地 `/cache/huggingface` 又由 root 创建且不可写。最终 Job 显式加入 GID 31000，并把只用于 datasets 临时索引的 cache 改成 Pod `emptyDir`；模型、数据和 checkpoint 仍只读取已审计的 `/netdisk` 资产。
+- 修复后的 Lane C 两张启动卡均为 1 MiB，已进入 TinyLlama B1 seed 42 的 64-step 两进程训练；运行时显存约 10.7/11.7 GiB，未观察到 OOM 或重启。
+- 两卡输入 Job manifests 已保存到 `/netdisk/lijunsi/c2c-route1-identifiability/status/job-manifests/`；Lane B/C manifest SHA256 分别为 `299868b8aca0ab41986a2262ea67ba6b08a716244ef9bb21a852336493e0e143` 与 `6f168f648c84979aeec527d6f53a7792da601e67f4f277f402960f9b31e02746`。
 
 ### `/netdisk` 共享资产与跨节点审计
 

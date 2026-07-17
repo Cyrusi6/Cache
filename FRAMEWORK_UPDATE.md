@@ -271,8 +271,8 @@
 - 两卡 adapter 聚焦测试与 suite NFS 竞态测试共 25 passed。
 - 两份 Kubernetes Job 均通过 server-side dry-run。
 - Lane B 实际分配的两张 GPU 启动显存均为 1 MiB，成功复用已完成的 B0 评测，并以两进程进入 TinyLlama B2 seed 42 训练。
-- Lane C 已调度到 `4090-48gx2`；该节点首次拉取固定 PyTorch runtime 镜像，完成镜像准备后执行同一显存准入检查和两进程训练。
+- Lane C 首次拉取固定 PyTorch runtime 镜像后，补充了共享盘 supplemental GID 31000，并将不可写的节点本地 HF cache 替换为 Pod `emptyDir`；两张启动卡均为 1 MiB，已进入 TinyLlama B1 seed 42 两进程训练，显存约 10.7/11.7 GiB。
 
 ### 结论与下一步
 
-当前三条物理流水线均已占位，Lane A/B 已进入真实训练，Lane C 等待首次镜像拉取完成。卡数变化只用于基础设施等效批量调度，不构成新方法；最终统计必须保留 world-size 字段，并在解释很小的 seed 差异时把非 bitwise 的 DDP 轨迹作为潜在工程噪声披露。
+当前三条物理流水线均已进入真实训练且无 Pod 重启。卡数变化只用于基础设施等效批量调度，不构成新方法；最终统计必须保留 world-size 字段，并在解释很小的 seed 差异时把非 bitwise 的 DDP 轨迹作为潜在工程噪声披露。
