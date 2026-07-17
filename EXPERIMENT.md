@@ -235,3 +235,12 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - Adapter SHA256 更新为 `933bc1868f319e718ae30bcc22f37211b43d61d42813af7a620914fcd9aed3e9`；实际选择的 GPU UUID 与启动显存写入每个 adapted plan 的 `.allocation.json`。
 - 两个短暂的 3-card-reserve shard 仅运行数分钟即被主动删除并重新均衡，没有产生 completion marker；对应 partial checkpoint 不满足 reuse 条件，正式四 shard 计划会从头训练相关 run。
 - 长期并行布局为 A 的一条 4 卡 lane、`24gx8` 的三条 2 卡 shard、`48gx2` 的一条 2 卡 shard，共五条。Phase1 新 ETA 为约 7–10 小时；若 seed-42 跨模型方向通过并立即以相同方式释放 conditional 30 runs，全部 67 runs 预计还需约 15–20 小时。
+
+### 2026-07-17 Max7 终态调度
+
+- 五线布局进一步被七 worker 终态替代。当前正在运行的 6 个 runs 被标记为 reserved，完成后退出：TinyLlama B6 seed 44、B2 seed 42、B1 seed 42、B3 seed 42、B2-constant seed 43、B5 seed 42。
+- 其余 27 runs 重新分成 7 个互斥 plans，SHA256 为 `3bdd060601f30c502f0dc3f291253c605d572b24be535ab37aa57133a989d1a2`、`4037cdc5908f166d8c6ffc36338e9c231522ec8e7825384b5a9628e167ca17bb`、`c67ab3a17f5fbd60425285fbf3958d3d0aa681acb3d0dcf4ab269b7cd1d8024d`、`38a7082d394788bb070e5f1c2c3154a730b5501fad64bb20cdd09f2902c69b9d`、`a62a8a82165de5a075572b7771b79bb215af03eff5a8af084319f96f21c89512`、`bba0d70fb86531c8cc9a53378bec2f90cd2e50566fd3ed56f182a037df157fd7`、`a029475b19093fbb222e22db3632f94486c061e89bff3a1f587c1bb0484f550c`。
+- Max7 Jobs 为 `r1id-v22-max7-s1-x4-r2-933bc186`、`s2-x4`、`s3`–`s6-x8`、`s7-x48`；均已创建并使用独立 pass gate，在旧 worker 释放资源后自动调度。
+- 终态资源布局：`4090-24gx4` 两条 2 卡 worker，`4090-24gx8` 四条 2 卡 worker，`4090-48gx2` 一条 2 卡 worker，14 张 NVIDIA GPU 全部进入调度合同。
+- Max7 的 shard manifest、gate 与七份 Job 输入清单保存于 `/netdisk/lijunsi/c2c-route1-identifiability/status/job-manifests/max7-phase1/`，目录内文件均记录 SHA256。
+- Phase1 ETA 更新为约 6–7 小时，预计 2026-07-18 05:00–06:00 CST 左右完成；若 conditional 阶段立即按相同布局释放，全部 67 runs 预计约 12–16 小时完成。

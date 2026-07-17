@@ -307,3 +307,26 @@
 ### 结论与下一步
 
 Phase1 的长期并行线提升为五条，预计关键路径从约 14–18 小时缩短到约 7–10 小时。该变化只重排互相独立的 run，不改变任何方法或单个 run 的有效全局 batch、数据、超参数与 checkpoint 规则。
+
+## 2026-07-17：吃满 14 张 NVIDIA GPU 的七 worker 终态
+
+### 研究目标
+
+在五线方案基础上继续利用 `4090-24gx4` 可拆成两个 2 卡 worker、`4090-24gx8` 可容纳四个 2 卡 worker 的事实，把 Phase1 剩余关键路径压到当前硬件的物理上限。
+
+### 核心改动
+
+- 保留 6 个已经在运行的 reserved runs：B6 seed 44、B2 seed 42、B1 seed 42、B3 seed 42、B2-constant seed 43、B5 seed 42；这些 worker 在各自 run 完整落盘后由 pending gate 退出。
+- 将其余 27 个 runs 从 A/B/C 三份原始计划统一重分为 7 个互斥 worker，estimated weights 为 4.55、3.60、4.50、4.50、4.45、4.45、4.45。
+- `4090-24gx4` 部署两个 2 卡 worker，`4090-24gx8` 部署四个 2 卡 worker，`4090-48gx2` 部署一个 2 卡 worker；总计使用全部 14 张 NVIDIA GPU。
+- 七个终态 Job 使用独立 reproduction-pass gate，已提前创建为 Pending；旧 worker 释放对应节点资源后由 Kubernetes 自动填充，无人工切换窗口。
+
+### 验证结果
+
+- 七份 Job 均通过 server-side dry-run 并已创建；当前因旧 reserved workers 占满节点而处于 Pending，资源释放后自动调度。
+- Max7 shard plan SHA256 和输入 Job manifests 已保存到 `/netdisk/lijunsi/c2c-route1-identifiability/status/job-manifests/max7-phase1/`。
+- 全量测试仍为 197 passed、2 个已知 Pydantic warnings；终态只改变计划分配和 Kubernetes placement。
+
+### 结论与下一步
+
+七 worker 是当前 CUDA 代码不迁移 Ascend 的安全并行上限。Phase1 新 ETA 为约 6–7 小时；若 conditional 30 runs 通过方向门控后立即采用同一七 worker 布局，全部 67 runs 预计约 12–16 小时完成。
