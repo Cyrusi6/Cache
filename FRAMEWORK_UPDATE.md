@@ -244,3 +244,35 @@
 ### 结论与下一步
 
 复现门控已通过，且历史 v2.2 的偏差已被确认来自 split 实现变化并通过冻结 index 消除。整套组件实验与跨模型验证任务状态记为“运行中”，目前不能回答 soft candidates、entropy 或 token/head gate 谁是主要来源，也不能据此进入下一阶段。第一阶段最终判断只使用下游 accuracy、配对迁移和统计检验；train/eval loss 仅作优化诊断，尤其不得因 learned-affine 的 eval loss 更低而宣称机制更优。
+
+## 2026-07-17：异构卡数流水线与共享 NFS 稳定性修复
+
+### 研究目标
+
+在不改变方法、学习率、epoch、数据 split、checkpoint 选择规则及有效全局 batch 的前提下，把空闲的 `2×48GB` 节点和 `24gx8` 的健康 GPU 纳入第一阶段流水线，并消除并发 lane 写共享状态目录时的 NFS 竞态。
+
+### 核心改动
+
+- 新增两卡 lane adapter：把 canonical `1×4 GPUs×8 accumulation=32` 显式转换为 `1×2 GPUs×16 accumulation=32`，训练 recipe、checkpoint provenance 和硬件 profile 均记录实际值，不在运行时隐式伪装原配置。
+- 两卡评测 profile 改为 ARC 使用 GPU 0、OpenBookQA 使用 GPU 1 并发；二者结束后 MMLU-Redux 使用 GPU `[0,1]`，避免四卡布局 `[0] / [1] / [2,3]` 在两卡 Pod 中越界。
+- 作业启动前读取两张可见 GPU 的已用显存；任一卡超过 4,096 MiB 即拒绝启动，避免 `4090-24gx8` 上未被 Kubernetes 记录的高占用 GPU 混入正式训练。
+- suite 的共享目录创建增加窄范围重试：仅吞掉“并发写者已成功创建且路径确为目录”的 `FileExistsError`，真实文件碰撞仍直接失败。
+- 所有 lane 的 `lane_state/completed`、`lane_state/failed`、checkpoint、评测和 post-hoc 输出目录在运行前预创建，降低 NFS 元数据竞态。
+
+### 实验配置
+
+- Lane A：`4090-24gx4`，4×24GB，`num_processes=4`、gradient accumulation 8。
+- Lane B：`4090-24gx8`，2×24GB，`num_processes=2`、gradient accumulation 16。
+- Lane C：`4090-48gx2`，2×48GB，`num_processes=2`、gradient accumulation 16。
+- 三条 lane 的 per-device batch 均为 1，有效全局 batch 均为 32；两卡 DDP 与四卡 DDP 不宣称 bitwise 等价，world size 和硬件 profile 进入运行 provenance。
+
+### 验证结果
+
+- 两卡 adapter 聚焦测试与 suite NFS 竞态测试共 25 passed。
+- 两份 Kubernetes Job 均通过 server-side dry-run。
+- Lane B 实际分配的两张 GPU 启动显存均为 1 MiB，成功复用已完成的 B0 评测，并以两进程进入 TinyLlama B2 seed 42 训练。
+- Lane C 已调度到 `4090-48gx2`；该节点首次拉取固定 PyTorch runtime 镜像，完成镜像准备后执行同一显存准入检查和两进程训练。
+
+### 结论与下一步
+
+当前三条物理流水线均已占位，Lane A/B 已进入真实训练，Lane C 等待首次镜像拉取完成。卡数变化只用于基础设施等效批量调度，不构成新方法；最终统计必须保留 world-size 字段，并在解释很小的 seed 差异时把非 bitwise 的 DDP 轨迹作为潜在工程噪声披露。

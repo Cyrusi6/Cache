@@ -12,6 +12,39 @@ import yaml
 from script.analysis import route1_identifiability_suite as suite
 
 
+def test_ensure_directory_tolerates_shared_nfs_fileexists_race() -> None:
+    class RacingDirectory:
+        def __init__(self) -> None:
+            self.calls = 0
+
+        def mkdir(self, *, parents: bool, exist_ok: bool) -> None:
+            assert parents and exist_ok
+            self.calls += 1
+            raise FileExistsError("concurrent NFS writer created the directory")
+
+        def is_dir(self) -> bool:
+            return self.calls > 0
+
+    path = RacingDirectory()
+    suite._ensure_directory(path, sleep_fn=lambda _seconds: None)  # type: ignore[arg-type]
+    assert path.calls == 1
+
+
+def test_ensure_directory_does_not_mask_non_directory_collision() -> None:
+    class CollidingPath:
+        def mkdir(self, *, parents: bool, exist_ok: bool) -> None:
+            assert parents and exist_ok
+            raise FileExistsError("path is a file")
+
+        def is_dir(self) -> bool:
+            return False
+
+    with pytest.raises(FileExistsError, match="path is a file"):
+        suite._ensure_directory(  # type: ignore[arg-type]
+            CollidingPath(), attempts=2, sleep_fn=lambda _seconds: None
+        )
+
+
 def test_git_commit_falls_back_to_verified_detached_head_without_git(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

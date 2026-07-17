@@ -116,7 +116,7 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - 训练数据：MMLU `auxiliary_train` 2,048 条。
 - Seeds：42、43、44；相同 seed 的方法共享冻结的 train/eval indices 与顺序。
 - 评测：MMLU-Redux、AI2-ARC Challenge、OpenBookQA，只作为开发集。
-- 所有方法固定 epoch、per-device batch、gradient accumulation、学习率、fuser 架构、数据顺序与 final-checkpoint 选择规则，禁止单独调参。
+- 所有方法固定 epoch、per-device batch、有效全局 batch、学习率、fuser 架构、数据 split/order 与 final-checkpoint 选择规则，禁止单独调参。Canonical 四卡配置为 `1×4×8=32`，两卡基础设施 profile 为 `1×2×16=32`；world size 与 accumulation 的等效转换必须写入 provenance，不宣称不同 world size 的训练轨迹 bitwise 相同。
 - 禁止加入 RoPE correction、OT、byte transport、Route3 或新 loss。
 
 ### 实验矩阵
@@ -170,15 +170,27 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - 历史 B3/B4 虽有权重，但其 split/data order 与冻结协议不一致，不进入主表；B1/B2 的旧权重训练规模也不符合 2,048 条固定条件。
 - Suite 共 67 runs、66 个名义训练 runs、67 组三任务评测；66 个名义训练中扣除 checkpoint-only B6 后，需要新训练 65 个方法/seed/pair 组合，B0 本身无训练。
 
-### 三条四卡跨节点流水线
+### 三条异构卡数跨节点流水线
 
 - Phase1 共 37 runs：lane A/B/C 分别为 12/13/12。
 - Conditional 跨模型多 seed 阶段共 30 runs：每条 lane 10 个；只有 seed 42 的跨模型方向满足门控后才释放。
-- Lane A：`4090-24gx4`，4 GPUs；Llama3.2 pair 固定 affinity 到该 lane。
-- Lane B/C：`4090-24gx8` 上两个相互独立的 4-GPU Pods，共享节点但不共享 GPU allocation。
+- Lane A：`4090-24gx4`，4×24GB，4-process DDP、gradient accumulation 8；Llama3.2 pair 固定 affinity 到该 lane。
+- Lane B：`4090-24gx8`，2×24GB，2-process DDP、gradient accumulation 16。启动前要求两张可见卡的已用显存均不超过 4,096 MiB，以避开节点上 Kubernetes 未记录的高占用 GPU。
+- Lane C：`4090-48gx2`，2×48GB，2-process DDP、gradient accumulation 16。
+- 三条 lane 的 per-device batch 均为 1、有效全局 batch 均为 32。两卡评测先并发运行 ARC `[0]` 与 OpenBookQA `[1]`，再运行 MMLU-Redux `[0,1]`。
 - 每条 lane 内按 run 串行执行 train→ARC/OpenBookQA/MMLU-Redux，并用状态文件、依赖和 gate 防止越级运行；不同 lane 可并行。
 - 三条 lane 的 `C2C_MODEL_ROOT` 与 `C2C_DATA_ROOT` 均指向同一份 `/netdisk` 资产，不再按节点使用不同的 local-first 路径。
-- 本条记录不列尚未稳定确认的 lane Job IDs，后续在实际运行记录中补充。
+- 当前 Job：Lane A `route1-id-v22-9b06d173-lane-a-e1e95b27`；Lane B `r1id-v22-9b06-lane-b-2gpu-24g-1a7dd1d2`；Lane C `r1id-v22-9b06-lane-c-2gpu-48g-1a7dd1d2`。
+
+### 2026-07-17 实际启动记录
+
+- Stager `route1-id-v22-9b06d173-stager-69d7dbd9` 已完成，67-run manifest、共享模型/数据树哈希和固定 Python package 版本审计全部通过。
+- Canonical B6 seed 42 checkpoint 目录 SHA256 为 `a66bd9c0b2682dc204ff0efe9a8c0a68c78fe4fa537223e18ecbba396f1c1404`，Lane A 复用该权重，仅重新评测。
+- Lane B 的第一次四卡执行在 B0 三任务评测完成后遭遇共享 NFS `completed/` 目录创建竞态；预创建状态目录后重试可复用 B0 完整产物，不重复评测。
+- Lane B 的第二次四卡执行被分配到含隐藏高占用卡的 GPU 集合，rank 2 在模型 `.to(device)` 时 OOM。该节点标准 Pod 中观测到一张卡约占用 21,992 MiB，但 Kubernetes 没有对应 GPU request，因此后续改为两卡准入检查，不对该卡执行未授权 reset。
+- 两卡 adapter SHA256 为 `1a7dd1d25dc4ac9cf208676a6403e0c4938a47e2bd2b21cb7de3a7d6b6f9d6bb`。每个适配后的 train config 都重新计算 `train_config_sha256` 并写入 checkpoint provenance。
+- Lane B 两张启动卡均为 1 MiB，已跳过完成的 B0 并进入 TinyLlama B2 seed 42 的 64-step 训练。
+- Lane C 已调度到 `4090-48gx2`；该节点首次拉取约 3.3GB 的固定 PyTorch runtime 镜像，完成后才进入显存准入与 B1 seed 42 训练。
 
 ### `/netdisk` 共享资产与跨节点审计
 

@@ -250,8 +250,38 @@ def _read_json(path: Path) -> dict[str, Any]:
     return data
 
 
+def _ensure_directory(
+    path: Path,
+    *,
+    attempts: int = 8,
+    sleep_fn: Callable[[float], None] = time.sleep,
+) -> None:
+    """Create a directory robustly across concurrent shared-NFS writers."""
+    if attempts < 1:
+        raise ValueError("attempts must be positive")
+    last_error: FileExistsError | None = None
+    for attempt in range(attempts):
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+        except FileExistsError as error:
+            last_error = error
+            if path.is_dir():
+                return
+            if attempt + 1 < attempts:
+                sleep_fn(0.05 * (attempt + 1))
+                continue
+            raise
+        if path.is_dir():
+            return
+        if attempt + 1 < attempts:
+            sleep_fn(0.05 * (attempt + 1))
+    if last_error is not None:
+        raise last_error
+    raise OSError(f"directory was not visible after creation: {path}")
+
+
 def _write_json(path: Path, data: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_directory(path.parent)
     path.write_text(
         json.dumps(data, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
@@ -259,7 +289,7 @@ def _write_json(path: Path, data: Any) -> None:
 
 
 def _write_yaml(path: Path, data: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_directory(path.parent)
     path.write_text(
         yaml.safe_dump(data, sort_keys=False, allow_unicode=True),
         encoding="utf-8",
@@ -1324,7 +1354,7 @@ def generate_suite(
             "stages": stages,
         },
     )
-    commands_path.parent.mkdir(parents=True, exist_ok=True)
+    _ensure_directory(commands_path.parent)
     commands_path.write_text(
         "".join(
             json.dumps(command, ensure_ascii=False) + "\n" for command in lane_commands
@@ -1989,7 +2019,7 @@ def run_lane_plan(
         if state_dir is not None
         else _resolve_runtime_path(str(plan["state_dir"]))
     )
-    resolved_state_dir.mkdir(parents=True, exist_ok=True)
+    _ensure_directory(resolved_state_dir)
     resolved_gate_file = gate_file.resolve() if gate_file is not None else None
 
     for run in plan["runs"]:
