@@ -191,6 +191,7 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - 24gx8 已确认可访问共享根；stager 在发布 workspace-ready marker 前会一次性核对固定 HF revision、Python package 版本、五套共享模型及四套共享数据的完整目录树哈希。不一致时三条 lane 都不会启动。
 - Llama3.2 保持 lane A affinity 仅用于稳定的任务分配与三 lane 负载均衡，不再依赖 lane A 的节点本地模型来源。
 - 基础 PyTorch 镜像未内置 `git` 时，允许由控制节点把已提交的 detached checkout 预置到共享盘；stager 仅在 commit-specific ready marker 存在且 `.git/HEAD` 精确等于目标 40 位 SHA 时跳过容器内 clone，之后仍执行同一套资产、环境和计划审计。
+- `/netdisk` 是 autofs 根，Pod 不设置其深层目录为 OCI `workingDir`；所有 Python 命令使用绝对入口，待 volume mount 完成后由 `container_entrypoint.py` 校验并切换到 project root，避免 runtime 在挂载前创建 `/netdisk/lijunsi/...` 导致权限错误。
 
 ### 必须产出的指标与统计
 

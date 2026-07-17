@@ -85,6 +85,11 @@ def test_render_builds_shared_nfs_stager_gate_and_three_four_gpu_lanes() -> None
             for mount in container.get("volumeMounts", [])
         }
         assert mounts["shared-workspace"]["mountPath"] == "/netdisk"
+        for container in (
+            _pod_spec(jobs[component]).get("initContainers", [])
+            + _pod_spec(jobs[component]).get("containers", [])
+        ):
+            assert container.get("workingDir") != str(lanes.WORKSPACE_ROOT)
 
     lane_a_volumes = {
         volume["name"]: volume
