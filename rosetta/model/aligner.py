@@ -5,6 +5,7 @@ This module provides functionality to align tokens between two different tokeniz
 handling cases where the same text is tokenized differently.
 """
 
+import hashlib
 import math
 from typing import Any, List, Tuple, Optional, Dict, Literal, Union
 import torch
@@ -45,6 +46,9 @@ class TokenAligner:
         soft_alignment_confidence_alpha: float = 0.5,
         soft_alignment_confidence_floor: float = 0.0,
         soft_alignment_fallback_confidence: float = 1.0,
+        soft_alignment_confidence_control_mode: str = "native",
+        soft_alignment_confidence_constant_value: Optional[float] = None,
+        soft_alignment_confidence_shuffle_seed: int = 0,
         soft_alignment_reweight_mode: str = "none",
         soft_alignment_reweight_strength: float = 1.0,
         soft_alignment_reweight_power: float = 2.0,
@@ -79,6 +83,15 @@ class TokenAligner:
                      'entropy' confidence.
             soft_alignment_fallback_confidence: Confidence assigned to fallback
                      rows in 'entropy' mode.
+            soft_alignment_confidence_control_mode: Identifiability control for
+                     confidence/entropy signals. Supported values are 'native',
+                     'constant', and 'shuffle'. The default preserves the native
+                     confidence path.
+            soft_alignment_confidence_constant_value: Required per-token source
+                     confidence for 'constant' control. Projector entropy is set
+                     to zero in this mode.
+            soft_alignment_confidence_shuffle_seed: Base seed for deterministic
+                     within-sequence confidence/entropy shuffling.
             soft_alignment_reweight_mode: Optional post-normalization top-k
                      weight calibration. Supported values are 'none' and
                      'adaptive_overlap'.
@@ -125,6 +138,23 @@ class TokenAligner:
                 f"{soft_alignment_confidence_mode}. "
                 f"Expected one of {sorted(valid_confidence_modes)}"
             )
+        valid_confidence_control_modes = {"native", "constant", "shuffle"}
+        if soft_alignment_confidence_control_mode not in (
+            valid_confidence_control_modes
+        ):
+            raise ValueError(
+                "Unsupported soft_alignment_confidence_control_mode: "
+                f"{soft_alignment_confidence_control_mode}. Expected one of "
+                f"{sorted(valid_confidence_control_modes)}"
+            )
+        if (
+            soft_alignment_confidence_control_mode == "constant"
+            and soft_alignment_confidence_constant_value is None
+        ):
+            raise ValueError(
+                "soft_alignment_confidence_constant_value is required when "
+                "soft_alignment_confidence_control_mode='constant'"
+            )
         valid_reweight_modes = {"none", "adaptive_overlap"}
         if soft_alignment_reweight_mode not in valid_reweight_modes:
             raise ValueError(
@@ -152,6 +182,24 @@ class TokenAligner:
         )
         self.soft_alignment_fallback_confidence = min(
             1.0, max(0.0, float(soft_alignment_fallback_confidence))
+        )
+        self.soft_alignment_confidence_control_mode = (
+            soft_alignment_confidence_control_mode
+        )
+        self.soft_alignment_confidence_constant_value = (
+            None
+            if soft_alignment_confidence_constant_value is None
+            else float(soft_alignment_confidence_constant_value)
+        )
+        if self.soft_alignment_confidence_constant_value is not None and not (
+            0.0 <= self.soft_alignment_confidence_constant_value <= 1.0
+        ):
+            raise ValueError(
+                "soft_alignment_confidence_constant_value must be in [0, 1], "
+                f"got {soft_alignment_confidence_constant_value}"
+            )
+        self.soft_alignment_confidence_shuffle_seed = int(
+            soft_alignment_confidence_shuffle_seed
         )
         self.soft_alignment_reweight_mode = soft_alignment_reweight_mode
         self.soft_alignment_reweight_strength = max(
@@ -829,6 +877,84 @@ class TokenAligner:
         confidence = 1.0 - self.soft_alignment_confidence_alpha * entropy_norm
         return min(1.0, max(self.soft_alignment_confidence_floor, confidence))
 
+    @staticmethod
+    def _stable_confidence_shuffle_seed(
+        base_seed: int,
+        token_ids: List[int],
+    ) -> int:
+        """Derive a process-independent shuffle seed from config and sequence."""
+        digest = hashlib.blake2b(digest_size=8)
+        digest.update(int(base_seed).to_bytes(8, byteorder="little", signed=True))
+        for token_id in token_ids:
+            digest.update(int(token_id).to_bytes(8, byteorder="little", signed=True))
+        return int.from_bytes(digest.digest(), byteorder="little") & ((1 << 63) - 1)
+
+    def _apply_confidence_control(
+        self,
+        source_confidence: List[float],
+        source_entropy: List[float],
+        message_mask: List[bool],
+        token_ids: List[int],
+        shuffle_active_mask: Optional[List[bool]] = None,
+    ) -> Tuple[List[float], List[float], List[bool]]:
+        """Apply an identifiability control without changing source weights."""
+        override = [False] * len(source_confidence)
+        mode = self.soft_alignment_confidence_control_mode
+        if mode == "native":
+            return source_confidence, source_entropy, override
+
+        if mode == "constant":
+            controlled_indices = [
+                idx for idx, is_message in enumerate(message_mask) if is_message
+            ]
+            for idx in controlled_indices:
+                override[idx] = True
+            constant_value = self.soft_alignment_confidence_constant_value
+            if constant_value is None:
+                raise RuntimeError("constant confidence control requires a value")
+            for idx in controlled_indices:
+                source_confidence[idx] = constant_value
+                source_entropy[idx] = 0.0
+            return source_confidence, source_entropy, override
+
+        active_mask = shuffle_active_mask if shuffle_active_mask is not None else message_mask
+        if len(active_mask) != len(message_mask):
+            raise ValueError("shuffle_active_mask must match message_mask length")
+        controlled_indices = [
+            idx
+            for idx, (is_message, is_active) in enumerate(
+                zip(message_mask, active_mask)
+            )
+            if is_message and is_active
+        ]
+        for idx in controlled_indices:
+            override[idx] = True
+
+        if len(controlled_indices) <= 1:
+            return source_confidence, source_entropy, override
+
+        generator = torch.Generator(device="cpu")
+        generator.manual_seed(
+            self._stable_confidence_shuffle_seed(
+                self.soft_alignment_confidence_shuffle_seed,
+                [token_ids[idx] for idx in controlled_indices],
+            )
+        )
+        order = torch.randperm(len(controlled_indices), generator=generator).tolist()
+        if order == list(range(len(controlled_indices))):
+            order = order[1:] + order[:1]
+        shuffled_pairs = [
+            (
+                source_confidence[controlled_indices[src_idx]],
+                source_entropy[controlled_indices[src_idx]],
+            )
+            for src_idx in order
+        ]
+        for dst_idx, (confidence, entropy) in zip(controlled_indices, shuffled_pairs):
+            source_confidence[dst_idx] = confidence
+            source_entropy[dst_idx] = entropy
+        return source_confidence, source_entropy, override
+
     def _fallback_llm_index_for_span(
         self,
         target_start: int,
@@ -1054,6 +1180,7 @@ class TokenAligner:
         rows_indices: List[List[int]] = []
         rows_weights: List[List[float]] = []
         rows_confidence: List[float] = []
+        rows_entropy: List[float] = []
         fallback_mask: List[bool] = []
         positive_counts: List[int] = []
         top1_boundary_hit_mask: List[bool] = []
@@ -1073,6 +1200,7 @@ class TokenAligner:
             if llm_start_idx >= llm_end_idx:
                 rows_indices.append(row_indices)
                 rows_weights.append(row_weights)
+                rows_entropy.append(self._normalized_weight_entropy(row_weights))
                 rows_confidence.append(
                     self._soft_alignment_confidence(row_weights, used_fallback=True)
                     if not learned_alignment
@@ -1096,6 +1224,7 @@ class TokenAligner:
                     row_weights[0] = 1.0
                 rows_indices.append(row_indices)
                 rows_weights.append(row_weights)
+                rows_entropy.append(self._normalized_weight_entropy(row_weights))
                 rows_confidence.append(
                     self._soft_alignment_confidence(row_weights, used_fallback=True)
                     if not learned_alignment
@@ -1120,6 +1249,7 @@ class TokenAligner:
                     row_weights[0] = 1.0
                 rows_indices.append(row_indices)
                 rows_weights.append(row_weights)
+                rows_entropy.append(self._normalized_weight_entropy(row_weights))
                 rows_confidence.append(
                     self._soft_alignment_confidence(row_weights, used_fallback=True)
                     if not learned_alignment
@@ -1217,6 +1347,7 @@ class TokenAligner:
 
             rows_indices.append(row_indices)
             rows_weights.append(row_weights)
+            rows_entropy.append(self._normalized_weight_entropy(row_weights))
             rows_confidence.append(
                 self._soft_alignment_confidence(row_weights, used_fallback)
                 if not learned_alignment
@@ -1231,6 +1362,7 @@ class TokenAligner:
             "source_indices": rows_indices,
             "source_weights": rows_weights,
             "source_confidence": rows_confidence,
+            "source_entropy": rows_entropy,
             "fallback_mask": fallback_mask,
             "positive_overlap_counts": positive_counts,
             "top1_boundary_hit_mask": top1_boundary_hit_mask,
@@ -1244,6 +1376,7 @@ class TokenAligner:
         remove_last_surfix: bool = False,
         top_k: int = 4,
         return_details: bool = False,
+        apply_confidence_control: bool = True,
     ) -> Dict[str, Any]:
         """
         Return unpadded SLM/LLM chat-template token sequences plus top-k soft
@@ -1301,6 +1434,7 @@ class TokenAligner:
         source_indices = [[-1] * top_k for _ in slm_ids]
         source_weights = [[0.0] * top_k for _ in slm_ids]
         source_confidence = [1.0] * len(slm_ids)
+        source_entropy = [0.0] * len(slm_ids)
         fallback_mask = [False] * len(slm_ids)
         positive_overlap_counts = [0] * len(slm_ids)
         top1_boundary_hit_mask = [False] * len(slm_ids)
@@ -1334,6 +1468,7 @@ class TokenAligner:
                 source_indices[slm_idx] = rows["source_indices"][local_idx]
                 source_weights[slm_idx] = rows["source_weights"][local_idx]
                 source_confidence[slm_idx] = rows["source_confidence"][local_idx]
+                source_entropy[slm_idx] = rows["source_entropy"][local_idx]
                 fallback_mask[slm_idx] = rows["fallback_mask"][local_idx]
                 positive_overlap_counts[slm_idx] = rows["positive_overlap_counts"][
                     local_idx
@@ -1342,6 +1477,27 @@ class TokenAligner:
                     local_idx
                 ]
             message_section_idx += 1
+
+        shuffle_active_mask = message_mask.copy()
+        if messages and messages[-1].get("role") == "assistant" and slm_msg_ranges:
+            last_assistant_start = slm_msg_ranges[-1][0]
+            shuffle_active_mask = [
+                is_message and idx < last_assistant_start
+                for idx, is_message in enumerate(message_mask)
+            ]
+
+        if apply_confidence_control:
+            source_confidence, source_entropy, source_entropy_override = (
+                self._apply_confidence_control(
+                    source_confidence=source_confidence,
+                    source_entropy=source_entropy,
+                    message_mask=message_mask,
+                    token_ids=slm_ids,
+                    shuffle_active_mask=shuffle_active_mask,
+                )
+            )
+        else:
+            source_entropy_override = [False] * len(source_confidence)
 
         result: Dict[str, Any] = {
             "slm_ids": slm_ids,
@@ -1355,6 +1511,8 @@ class TokenAligner:
                 "source_indices": source_indices,
                 "source_weights": source_weights,
                 "source_confidence": source_confidence,
+                "source_entropy": source_entropy,
+                "source_entropy_override": source_entropy_override,
                 "fallback_mask": fallback_mask,
                 "positive_overlap_counts": positive_overlap_counts,
                 "top1_boundary_hit_mask": top1_boundary_hit_mask,
@@ -1367,6 +1525,16 @@ class TokenAligner:
                 "confidence_alpha": self.soft_alignment_confidence_alpha,
                 "confidence_floor": self.soft_alignment_confidence_floor,
                 "fallback_confidence": self.soft_alignment_fallback_confidence,
+                "confidence_control_mode": (
+                    self.soft_alignment_confidence_control_mode
+                ),
+                "confidence_constant_value": (
+                    self.soft_alignment_confidence_constant_value
+                ),
+                "confidence_shuffle_seed": (
+                    self.soft_alignment_confidence_shuffle_seed
+                ),
+                "confidence_control_applied": apply_confidence_control,
                 "reweight_mode": self.soft_alignment_reweight_mode,
                 "reweight_strength": self.soft_alignment_reweight_strength,
                 "reweight_power": self.soft_alignment_reweight_power,

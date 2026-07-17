@@ -49,6 +49,8 @@ class Projector(nn.Module):
         source_weights: Tensor,
         source_indices: Optional[Tensor] = None,
         source_confidence: Optional[Tensor] = None,
+        source_entropy: Optional[Tensor] = None,
+        source_entropy_override: Optional[Tensor] = None,
     ) -> Tensor:
         """Optionally calibrate top-k source weights before source KV gathering."""
         return source_weights
@@ -3648,10 +3650,53 @@ class C2CProjector(Projector):
             materialize(self._last_learned_alignment_value_transfer_gate),
         )
 
+    def _resolve_source_entropy(
+        self,
+        source_weights: Optional[Tensor],
+        source_entropy: Optional[Tensor],
+        source_entropy_override: Optional[Tensor],
+        fallback: Tensor,
+        compute_dtype: torch.dtype,
+        device: torch.device,
+    ) -> Tensor:
+        """Use controlled entropy where requested, otherwise preserve native math."""
+        native_entropy = fallback
+        if source_weights is not None:
+            native_entropy = self._normalized_source_weight_entropy(
+                source_weights.to(device=device, dtype=compute_dtype)
+            )
+        if source_entropy is None:
+            return native_entropy
+
+        explicit_entropy = source_entropy.to(device=device, dtype=compute_dtype)
+        if explicit_entropy.dim() == 3 and explicit_entropy.shape[-1] == 1:
+            explicit_entropy = explicit_entropy.squeeze(-1)
+        if explicit_entropy.shape != native_entropy.shape:
+            raise ValueError(
+                "source_entropy must have shape (B, N) or (B, N, 1), "
+                f"got {tuple(source_entropy.shape)}"
+            )
+        explicit_entropy = explicit_entropy.clamp(min=0.0, max=1.0)
+
+        if source_entropy_override is None:
+            override = torch.ones_like(explicit_entropy, dtype=torch.bool)
+        else:
+            override = source_entropy_override.to(device=device, dtype=torch.bool)
+            if override.dim() == 3 and override.shape[-1] == 1:
+                override = override.squeeze(-1)
+            if override.shape != native_entropy.shape:
+                raise ValueError(
+                    "source_entropy_override must have shape (B, N) or "
+                    f"(B, N, 1), got {tuple(source_entropy_override.shape)}"
+                )
+        return torch.where(override, explicit_entropy, native_entropy)
+
     def _alignment_quality_features(
         self,
         confidence: Tensor,
         source_weights: Optional[Tensor],
+        source_entropy: Optional[Tensor],
+        source_entropy_override: Optional[Tensor],
         compute_dtype: torch.dtype,
         device: torch.device,
     ) -> Tensor:
@@ -3661,7 +3706,7 @@ class C2CProjector(Projector):
         one = torch.ones_like(confidence_feature)
 
         if source_weights is None:
-            entropy = zero
+            entropy_weights = None
             top1 = one
             active_fraction = one
         else:
@@ -3674,11 +3719,19 @@ class C2CProjector(Projector):
                 positive / totals.clamp_min(torch.finfo(compute_dtype).eps),
                 torch.zeros_like(positive),
             )
-            entropy = self._normalized_source_weight_entropy(probs)
+            entropy_weights = probs
             top1 = probs.max(dim=-1).values
             active_fraction = active_mask.sum(dim=-1).to(dtype=compute_dtype) / float(
                 max(positive.shape[-1], 1)
             )
+        entropy = self._resolve_source_entropy(
+            source_weights=entropy_weights,
+            source_entropy=source_entropy,
+            source_entropy_override=source_entropy_override,
+            fallback=zero,
+            compute_dtype=compute_dtype,
+            device=device,
+        )
 
         return torch.stack(
             (
@@ -3695,6 +3748,8 @@ class C2CProjector(Projector):
         source_weights: Tensor,
         source_indices: Optional[Tensor] = None,
         source_confidence: Optional[Tensor] = None,
+        source_entropy: Optional[Tensor] = None,
+        source_entropy_override: Optional[Tensor] = None,
     ) -> Tensor:
         self._last_alignment_weight_calibration_aux_loss = None
         if self.alignment_weight_calibration_mode == "none" or source_weights is None:
@@ -3731,7 +3786,14 @@ class C2CProjector(Projector):
         if probs.shape[-1] <= 1:
             return probs.to(dtype=original_dtype)
 
-        entropy = self._normalized_source_weight_entropy(probs)
+        entropy = self._resolve_source_entropy(
+            source_weights=probs,
+            source_entropy=source_entropy,
+            source_entropy_override=source_entropy_override,
+            fallback=torch.zeros_like(probs[..., 0]),
+            compute_dtype=compute_dtype,
+            device=device,
+        )
         active_count = valid_mask.sum(dim=-1)
         if self.alignment_weight_calibration_apply_mode == "all":
             calibration_rows = has_valid.squeeze(-1)
@@ -3998,6 +4060,8 @@ class C2CProjector(Projector):
         target_shape: Tuple[int, int, int, int],
         dtype: torch.dtype,
         device: torch.device,
+        source_entropy: Optional[Tensor] = None,
+        source_entropy_override: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Tensor]:
         B, Ht, N, _ = target_shape
         self._last_alignment_confidence_aux_loss = None
@@ -4033,9 +4097,14 @@ class C2CProjector(Projector):
         entropy: Optional[Tensor] = None
         quality_features: Optional[Tensor] = None
 
-        if source_weights is not None:
-            entropy = self._normalized_source_weight_entropy(
-                source_weights.to(device=device, dtype=compute_dtype)
+        if source_weights is not None or source_entropy is not None:
+            entropy = self._resolve_source_entropy(
+                source_weights=source_weights,
+                source_entropy=source_entropy,
+                source_entropy_override=source_entropy_override,
+                fallback=torch.zeros(B, N, device=device, dtype=compute_dtype),
+                compute_dtype=compute_dtype,
+                device=device,
             )[:, None, :, None]
             key_delta = (
                 key_delta
@@ -4059,6 +4128,8 @@ class C2CProjector(Projector):
                 quality_features = self._alignment_quality_features(
                     confidence=confidence,
                     source_weights=source_weights,
+                    source_entropy=source_entropy,
+                    source_entropy_override=source_entropy_override,
                     compute_dtype=compute_dtype,
                     device=device,
                 )
@@ -4227,6 +4298,8 @@ class C2CProjector(Projector):
         max_pos: Optional[Tensor] = None,
         source_confidence: Optional[Tensor] = None,
         source_weights: Optional[Tensor] = None,
+        source_entropy: Optional[Tensor] = None,
+        source_entropy_override: Optional[Tensor] = None,
     ) -> Tuple[Tensor, Tensor]:
         source_key, source_value = source_kv
         target_key, target_value = target_kv
@@ -4316,6 +4389,8 @@ class C2CProjector(Projector):
             self._compute_alignment_confidence(
                 source_confidence=source_confidence,
                 source_weights=source_weights,
+                source_entropy=source_entropy,
+                source_entropy_override=source_entropy_override,
                 key_hidden=key_hidden,
                 value_hidden=value_hidden,
                 target_shape=(B, Ht, N, Dt),

@@ -192,3 +192,47 @@
 ### 结论与下一步
 
 统一模型库已同时供本地与 Kubernetes 使用，正式任务可继续在 recipe 中保留标准 Hugging Face ID。后续新增模型只需放入统一目录，并保持目录名与模型 ID basename 一致。
+
+## 2026-07-17：Route-1 v2.2 可识别性实验与跨节点流水线
+
+### 研究目标
+
+在不引入新 transport、Route3、OT、RoPE correction 或新 loss 的前提下，分离验证 v2.2 的提升究竟来自多个 source candidates、entropy confidence、token/head gate，还是模块交互；同时建立可复现、可中断续跑的三条四卡跨节点实验流水线。
+
+### 核心改动
+
+- 为 soft alignment 增加 `native`、`constant`、`shuffle` 三种 confidence control；显式传递 `source_entropy` 与 override mask，保证常数和序列内打乱反事实不会从 source weights 旁路泄漏原 entropy。
+- 增加 `B2-constant` 匹配控制，用相同 top-k=1 与常数 confidence 比较 B5，避免把静态缩放差异误判为 gate 容量；原始 B2→B5 仅作为带混杂的次要比较。
+- 训练入口支持加载和校验冻结的 train/eval index manifest，并拒绝覆盖内容不一致的 split；seed 42 固定为 April v2.2 的历史 split，seeds 43、44 也分别冻结，保证同一 seed 的所有变体使用完全相同的数据成员与顺序。
+- 新增 67-run identifiability suite 生成器与 lane runner：覆盖 B0–B6、B2-constant、B6-constant、B6-shuffle、三 seeds 和四个 Sharer pair；runner 串行执行单次训练及三任务评测，支持 reproduction/conditional gate、依赖检查、完整产物复用和断点续跑。
+- 复用策略收紧为 checkpoint-only：只有逐位验证通过的 TinyLlama B6 seed 42 可复用，且必须由当前 evaluator 重新评测并生成新 diagnostics；历史 B3/B4 等因 split 不同，不进入主结果复用。
+- 统一 evaluator 增加 per-example alignment diagnostics，并在多进程评测后校验所有 worker 的退出状态和返回结果，避免静默合并不完整样本。
+- 新增统计报告器，输出每任务 accuracy、macro/weighted mean、正负迁移、三 seed mean±std、paired bootstrap 95% CI、McNemar、跨 seed/pair 聚合比较、alignment 分桶、confidence 相关性和 gate 统计；机制结论只有在对应置信区间不跨 0 时才标为支持。
+- 新增跨节点 Kubernetes 基础设施：lane A 使用 `4090-24gx4` 的 4 卡，lane B/C 是 `4090-24gx8` 上两个独立 4 卡 Pod；三者通过 `/netdisk/lijunsi/c2c-route1-identifiability` 共享 workspace、模型、数据、checkpoint、状态与结果。
+- 将五套所需模型全部准备到 `/netdisk`，同时记录关键文件和完整目录树 SHA256，覆盖 generation config、special token、vocab/merges 等运行时文件；四套固定数据也记录完整目录树 SHA256。三条 lane 统一从共享根加载模型与数据，节点本地 cache 只用于来源 provenance，不参与实际实验输入选择。
+- stager 在发布 ready marker 前统一审计固定 HF revision、Python package 版本、五套共享模型和四套共享数据的完整目录树哈希；任一不一致都会阻止三条 lane 启动。Llama-3.2-1B 的 lane A affinity 只保留为确定性负载分配。
+- 完整评测仅采集轻量 per-example gate 汇总；详细 K/V layer/head/early-middle-late/relative-token 统计由 checkpoint 后单 GPU、batch size 1 的固定样本诊断在线聚合，禁止落盘 raw gate tensor。
+
+### 实验配置
+
+- Receiver：Qwen3-0.6B。
+- Sharer：TinyLlama-1.1B、Qwen3-1.7B、Qwen2.5-0.5B、Llama3.2-1B。
+- 训练：MMLU auxiliary 2,048 条；seeds 42、43、44；所有变体保持相同 epoch、batch、学习率、fuser 和 checkpoint 选择规则。
+- 评测：MMLU-Redux、ARC、OpenBookQA，均由当前 evaluator 重新运行并保存 per-example prediction。
+- 方法：B0、B1、B2、B2-constant、B3、B4、B5、B6、B6-constant、B6-shuffle。
+- Suite：67 个评测 run、66 个名义训练 run、67 组三任务评测；其中 B0 无训练，TinyLlama B6 seed 42 使用严格校验后的 checkpoint-only reuse。
+- Lane 计划：phase1 为 37 runs，A/B/C 分别 12/13/12；方向一致后释放的 conditional 阶段为 30 runs，每条 lane 10 个。
+- 冻结 split：`recipe/train_recipe/identifiability/splits/`；B6 复用声明：`recipe/train_recipe/identifiability/reuse_step1_b6.json`。
+
+### 验证结果
+
+- 第一次使用独立 `Generator(seed)` 的 seeded split 复训未通过 reproduction gate：历史 checkpoint 在当前 evaluator 上 macro 为 50.8058%，新 checkpoint 为 49.7897%，macro 下降 1.0161 个百分点；其中 MMLU-Redux 下降 2.4221 个百分点，同时超过预注册的 macro 1.0pp 与单任务 2.0pp 阈值，因此下游流水线被停止。
+- 根因定位为数据 split 漂移：April v2.2 在 `token_mlp` projector 初始化之后使用进程全局 Torch RNG 调用 `random_split`，后来改成独立 seeded generator 后同时改变了 train/eval 成员和样本顺序，并非 v2.2 算法本身不可复现。
+- 使用 `legacy_global_rng` 捕获并冻结 April split 后重新训练，64 个 optimizer steps 的训练轨迹逐步、逐位一致。
+- 历史与复现 checkpoint 的 28 层 projector 共 1,148 个 tensors、485,647,428 个参数全部 `torch.equal`；两个目录 SHA256 均为 `a66bd9c0b2682dc204ff0efe9a8c0a68c78fe4fa537223e18ecbba396f1c1404`，最终 reproduction gate 通过。
+- 24gx8 已验证可直接读写 `/netdisk`；共享盘中已准备四项固定数据、五个所需模型和 bitwise-verified B6 checkpoint。共享模型与共享数据的完整目录树哈希均已冻结，lane 启动前仍会执行 revision、文件、数据和环境审计。
+- 生成清单确认 67 runs、三条四卡 lane 和两阶段 gate/依赖关系一致；本条记录不将调度清单误写为已完成实验。
+
+### 结论与下一步
+
+复现门控已通过，且历史 v2.2 的偏差已被确认来自 split 实现变化并通过冻结 index 消除。整套组件实验与跨模型验证任务状态记为“运行中”，目前不能回答 soft candidates、entropy 或 token/head gate 谁是主要来源，也不能据此进入下一阶段。第一阶段最终判断只使用下游 accuracy、配对迁移和统计检验；train/eval loss 仅作优化诊断，尤其不得因 learned-affine 的 eval loss 更低而宣称机制更优。

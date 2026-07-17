@@ -26,6 +26,8 @@ from datetime import datetime
 from typing import List, Dict, Any, Tuple, Optional, Union
 import math
 import contextlib
+import hashlib
+from pathlib import Path
 
 from rosetta.model.wrapper import RosettaModel
 from rosetta.model.projector import create_projector, save_projector
@@ -88,6 +90,131 @@ def enable_full_determinism():
         torch.backends.cudnn.allow_tf32 = False
     except Exception:
         pass
+
+
+def _load_dataset_split_indices(
+    path: Path,
+    dataset_size: int,
+    train_size: int,
+    eval_size: int,
+) -> Tuple[List[int], List[int]]:
+    """Load and validate a frozen train/eval split manifest."""
+    with path.open("r", encoding="utf-8") as handle:
+        payload = json.load(handle)
+    manifest_dataset_size = int(payload.get("dataset_size", dataset_size))
+    if manifest_dataset_size != dataset_size:
+        raise ValueError(
+            f"Frozen split {path} declares dataset_size={manifest_dataset_size}; "
+            f"expected {dataset_size}"
+        )
+    train_indices = [int(index) for index in payload["train_indices"]]
+    eval_indices = [int(index) for index in payload["eval_indices"]]
+    if len(train_indices) != train_size or len(eval_indices) != eval_size:
+        raise ValueError(
+            f"Frozen split {path} has lengths "
+            f"{len(train_indices)}/{len(eval_indices)}; expected "
+            f"{train_size}/{eval_size}"
+        )
+    combined = train_indices + eval_indices
+    if len(set(combined)) != dataset_size or set(combined) != set(range(dataset_size)):
+        raise ValueError(
+            f"Frozen split {path} must contain every dataset index exactly once"
+        )
+    expected_hashes = payload.get("indices_sha256", {})
+    for name, indices in {
+        "permutation": combined,
+        "train": train_indices,
+        "eval": eval_indices,
+    }.items():
+        expected = expected_hashes.get(name)
+        if not expected:
+            continue
+        actual = hashlib.sha256(
+            json.dumps(indices, separators=(",", ":")).encode("utf-8")
+        ).hexdigest()
+        if actual != expected:
+            raise ValueError(
+                f"Frozen split {path} has invalid {name} index SHA256: "
+                f"{actual} != {expected}"
+            )
+    return train_indices, eval_indices
+
+
+def _write_dataset_split_indices(
+    path: Path,
+    train_indices: List[int],
+    eval_indices: List[int],
+    *,
+    dataset_size: int,
+    seed: int,
+    split_mode: str,
+) -> None:
+    """Atomically record a split so later variants can share identical data order."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "schema_version": 1,
+        "dataset_size": dataset_size,
+        "seed": seed,
+        "split_mode": split_mode,
+        "train_indices": train_indices,
+        "eval_indices": eval_indices,
+    }
+    if path.is_file():
+        with path.open("r", encoding="utf-8") as handle:
+            existing = json.load(handle)
+        if existing != payload:
+            raise ValueError(
+                f"Refusing to overwrite frozen dataset split with different content: {path}"
+            )
+        return
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    with temporary.open("w", encoding="utf-8") as handle:
+        json.dump(payload, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+    os.replace(temporary, path)
+
+
+def _create_dataset_split(
+    dataset: Dataset,
+    train_size: int,
+    eval_size: int,
+    *,
+    seed: int,
+    split_mode: str = "seeded",
+    split_indices_path: Optional[Path] = None,
+) -> Tuple[torch.utils.data.Subset, torch.utils.data.Subset, str]:
+    """Create the requested split while preserving the seeded default behavior."""
+    normalized_mode = str(split_mode).strip().lower()
+    if split_indices_path is not None:
+        train_indices, eval_indices = _load_dataset_split_indices(
+            split_indices_path,
+            len(dataset),
+            train_size,
+            eval_size,
+        )
+        return (
+            torch.utils.data.Subset(dataset, train_indices),
+            torch.utils.data.Subset(dataset, eval_indices),
+            "frozen_indices",
+        )
+    if normalized_mode == "legacy_global_rng":
+        train_dataset, eval_dataset = torch.utils.data.random_split(
+            dataset,
+            [train_size, eval_size],
+        )
+        return train_dataset, eval_dataset, normalized_mode
+    if normalized_mode == "seeded":
+        split_generator = torch.Generator().manual_seed(seed)
+        train_dataset, eval_dataset = torch.utils.data.random_split(
+            dataset,
+            [train_size, eval_size],
+            generator=split_generator,
+        )
+        return train_dataset, eval_dataset, normalized_mode
+    raise ValueError(
+        "data.split_mode must be 'seeded' or 'legacy_global_rng'; "
+        f"got {normalized_mode!r}"
+    )
 
 
 def broadcast_decision_from_rank0(
@@ -1272,6 +1399,15 @@ def setup_models(
                 soft_alignment_fallback_confidence=model_config.get(
                     "soft_alignment_fallback_confidence", 1.0
                 ),
+                soft_alignment_confidence_control_mode=model_config.get(
+                    "soft_alignment_confidence_control_mode", "native"
+                ),
+                soft_alignment_confidence_constant_value=model_config.get(
+                    "soft_alignment_confidence_constant_value"
+                ),
+                soft_alignment_confidence_shuffle_seed=model_config.get(
+                    "soft_alignment_confidence_shuffle_seed", 0
+                ),
                 soft_alignment_reweight_mode=model_config.get(
                     "soft_alignment_reweight_mode", "none"
                 ),
@@ -1349,6 +1485,20 @@ def train_step(
                         torch.ones_like(
                             section["source_indices"][..., 0],
                             dtype=torch.float,
+                        ),
+                    ).to(device),
+                    "source_entropy": section.get(
+                        "source_entropy",
+                        torch.zeros_like(
+                            section["source_indices"][..., 0],
+                            dtype=torch.float,
+                        ),
+                    ).to(device),
+                    "source_entropy_override": section.get(
+                        "source_entropy_override",
+                        torch.zeros_like(
+                            section["source_indices"][..., 0],
+                            dtype=torch.bool,
                         ),
                     ).to(device),
                 }
@@ -1773,12 +1923,38 @@ def main():
 
     train_size = int(data_config["train_ratio"] * len(full_dataset))
     eval_size = len(full_dataset) - train_size
-    split_generator = torch.Generator().manual_seed(training_config["seed"])
-    train_dataset, eval_dataset = torch.utils.data.random_split(
-        full_dataset,
-        [train_size, eval_size],
-        generator=split_generator,
+    split_indices_path = data_config.get("split_indices_path")
+    resolved_split_path = (
+        Path(split_indices_path).expanduser().resolve()
+        if split_indices_path
+        else None
     )
+    # The April 2026 v2.2 checkpoint used the process-global torch RNG for its
+    # split, after model/projector initialization. ``legacy_global_rng`` exists
+    # only to recover that historical split and freeze its captured indices.
+    train_dataset, eval_dataset, split_mode = _create_dataset_split(
+        full_dataset,
+        train_size,
+        eval_size,
+        seed=int(training_config["seed"]),
+        split_mode=data_config.get("split_mode", "seeded"),
+        split_indices_path=resolved_split_path,
+    )
+    if resolved_split_path is not None and rank == 0:
+        print(f"Loaded frozen dataset split: {resolved_split_path}")
+
+    split_indices_output = data_config.get("split_indices_output")
+    if split_indices_output and rank == 0:
+        resolved_output_path = Path(split_indices_output).expanduser().resolve()
+        _write_dataset_split_indices(
+            resolved_output_path,
+            list(train_dataset.indices),
+            list(eval_dataset.indices),
+            dataset_size=len(full_dataset),
+            seed=int(training_config["seed"]),
+            split_mode=split_mode,
+        )
+        print(f"Saved frozen dataset split: {resolved_output_path}")
 
     per_device_batch_size = training_config["per_device_train_batch_size"]
     grad_accum_steps = training_config.get("gradient_accumulation_steps", 1)

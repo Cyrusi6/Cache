@@ -319,6 +319,9 @@ def test_soft_aligned_chat_dataset_collates_independent_source_length():
     assert first["soft_alignment"]["source_indices"].shape == (96, 4)
     assert first["soft_alignment"]["source_weights"].shape == (96, 4)
     assert first["soft_alignment"]["source_confidence"].shape == (96,)
+    assert first["soft_alignment"]["source_entropy"].shape == (96,)
+    assert first["soft_alignment"]["source_entropy_override"].shape == (96,)
+    assert not first["soft_alignment"]["source_entropy_override"].any()
 
     collator = RosettaDataCollator(
         slm_tokenizer=slm_tokenizer,
@@ -337,6 +340,9 @@ def test_soft_aligned_chat_dataset_collates_independent_source_length():
         assert section["source_indices"].shape[-1] == 4
         assert section["source_weights"].shape[-1] == 4
         assert section["source_confidence"].dim() == 2
+        assert section["source_entropy"].dim() == 2
+        assert section["source_entropy_override"].dim() == 2
+        assert section["source_entropy_override"].dtype == torch.bool
 
 
 def test_soft_aligned_chat_dataset_collates_candidate_replay_cache(tmp_path):
@@ -846,6 +852,56 @@ def test_c2c_projector_quality_confidence_gate_can_use_entropy_feature():
     )
 
 
+def test_c2c_projector_explicit_entropy_override_blocks_source_weight_leakage():
+    projector = C2CProjector(
+        source_dim=2,
+        target_dim=2,
+        source_num_heads=1,
+        target_num_heads=1,
+        hidden_dim=4,
+        intermediate_dim=4,
+        num_layers=3,
+        dropout=0.0,
+        alignment_confidence_gate_mode="token_mlp",
+    )
+    source_confidence = torch.tensor([[0.5, 0.5]])
+    source_weights = torch.tensor([[[1.0, 0.0], [0.5, 0.5]]])
+    common_kwargs = {
+        "source_confidence": source_confidence,
+        "source_weights": source_weights,
+        "key_hidden": torch.zeros(1, 2, 4),
+        "value_hidden": torch.zeros(1, 2, 4),
+        "target_shape": (1, 1, 2, 2),
+        "dtype": torch.float32,
+        "device": torch.device("cpu"),
+    }
+    with torch.no_grad():
+        projector.key_alignment_entropy_scale.fill_(2.0)
+        projector.value_alignment_entropy_scale.fill_(2.0)
+
+    native_key, native_value = projector._compute_alignment_confidence(
+        **common_kwargs
+    )
+    native_with_observation_key, native_with_observation_value = (
+        projector._compute_alignment_confidence(
+            **common_kwargs,
+            source_entropy=torch.tensor([[1.0, 0.0]]),
+            source_entropy_override=torch.tensor([[False, False]]),
+        )
+    )
+    controlled_key, controlled_value = projector._compute_alignment_confidence(
+        **common_kwargs,
+        source_entropy=torch.tensor([[1.0, 0.0]]),
+        source_entropy_override=torch.tensor([[True, True]]),
+    )
+
+    assert torch.equal(native_key, native_with_observation_key)
+    assert torch.equal(native_value, native_with_observation_value)
+    assert native_key[0, 0, 0, 0] < native_key[0, 0, 1, 0]
+    assert controlled_key[0, 0, 0, 0] > controlled_key[0, 0, 1, 0]
+    assert controlled_value[0, 0, 0, 0] > controlled_value[0, 0, 1, 0]
+
+
 def test_c2c_projector_token_confidence_regularization_is_trainable():
     projector = C2CProjector(
         source_dim=2,
@@ -1261,6 +1317,177 @@ def test_soft_span_overlap_v2_entropy_confidence_penalizes_ambiguous_rows():
     assert abs(rows["source_confidence"][0] - 0.5) < 1e-6
     assert rows["fallback_mask"][1] == [True][0]
     assert abs(rows["source_confidence"][1] - 0.1) < 1e-6
+
+
+def test_constant_confidence_control_requires_explicit_value():
+    with pytest.raises(ValueError, match="constant_value is required"):
+        TokenAligner(
+            FakeTokenizer("char"),
+            FakeTokenizer("word"),
+            strategy=AlignmentStrategy.SOFT_SPAN_OVERLAP_V2,
+            soft_alignment_confidence_control_mode="constant",
+        )
+
+
+def test_constant_confidence_control_zeroes_projector_entropy_signal():
+    aligner = TokenAligner(
+        FakeTokenizer("char"),
+        FakeTokenizer("word"),
+        strategy=AlignmentStrategy.SOFT_SPAN_OVERLAP_V2,
+        soft_alignment_score_mode="uniform",
+        soft_alignment_confidence_mode="entropy",
+        soft_alignment_confidence_control_mode="constant",
+        soft_alignment_confidence_constant_value=0.93,
+    )
+
+    details = aligner.align_chat_messages_soft(
+        [{"role": "user", "content": "alpha beta"}],
+        add_generation_prompt=False,
+        top_k=4,
+    )
+    soft = details["soft_alignment"]
+    message_indices = [
+        idx for idx, is_message in enumerate(details["message_mask"]) if is_message
+    ]
+    template_indices = [
+        idx for idx, is_message in enumerate(details["message_mask"]) if not is_message
+    ]
+
+    assert message_indices
+    assert all(soft["source_confidence"][idx] == pytest.approx(0.93) for idx in message_indices)
+    assert all(soft["source_entropy"][idx] == 0.0 for idx in message_indices)
+    assert all(soft["source_entropy_override"][idx] for idx in message_indices)
+    assert all(soft["source_confidence"][idx] == 1.0 for idx in template_indices)
+    assert not any(soft["source_entropy_override"][idx] for idx in template_indices)
+
+
+def test_shuffle_confidence_control_is_deterministic_and_pair_preserving():
+    aligner = TokenAligner(
+        FakeTokenizer("char"),
+        FakeTokenizer("word"),
+        strategy=AlignmentStrategy.SOFT_SPAN_OVERLAP_V2,
+        soft_alignment_confidence_control_mode="shuffle",
+        soft_alignment_confidence_shuffle_seed=44,
+    )
+    confidence = [1.0, 0.2, 0.4, 0.6, 1.0]
+    entropy = [0.0, 0.8, 0.6, 0.4, 0.0]
+    message_mask = [False, True, True, True, False]
+    token_ids = [10, 11, 12, 13, 14]
+
+    first = aligner._apply_confidence_control(
+        confidence.copy(), entropy.copy(), message_mask, token_ids
+    )
+    second = aligner._apply_confidence_control(
+        confidence.copy(), entropy.copy(), message_mask, token_ids
+    )
+
+    assert first == second
+    shuffled_confidence, shuffled_entropy, override = first
+    assert list(zip(shuffled_confidence[1:4], shuffled_entropy[1:4])) != list(
+        zip(confidence[1:4], entropy[1:4])
+    )
+    assert sorted(zip(shuffled_confidence[1:4], shuffled_entropy[1:4])) == sorted(
+        zip(confidence[1:4], entropy[1:4])
+    )
+    assert shuffled_confidence[0] == confidence[0]
+    assert shuffled_entropy[4] == entropy[4]
+    assert override == message_mask
+
+
+def test_shuffle_control_uses_only_truncated_active_prompt_and_ignores_answer():
+    def build(mode: str, assistant: str):
+        aligner = TokenAligner(
+            FakeTokenizer("char"),
+            FakeTokenizer("word"),
+            strategy=AlignmentStrategy.SOFT_SPAN_OVERLAP_V2,
+            soft_alignment_score_mode="uniform",
+            soft_alignment_confidence_mode="entropy",
+            soft_alignment_confidence_control_mode=mode,
+            soft_alignment_confidence_shuffle_seed=44,
+        )
+        dataset = AlignedChatDataset(
+            [[
+                {"role": "user", "content": "alpha beta gamma delta"},
+                {"role": "assistant", "content": assistant},
+            ]],
+            aligner,
+            max_length=128,
+            soft_alignment_top_k=4,
+        )
+        return dataset[0]
+
+    native = build("native", "answer one")
+    shuffled_a = build("shuffle", "answer one")
+    shuffled_b = build("shuffle", "a completely different gold answer")
+
+    def masks(item):
+        soft = item["soft_alignment"]
+        message = soft["source_weights"].sum(dim=-1) > 0
+        active = item["kv_cache_index"][:, 0] == 1
+        answer = message & ~active
+        return active, answer
+
+    native_active, native_answer = masks(native)
+    active_a, answer_a = masks(shuffled_a)
+    active_b, _answer_b = masks(shuffled_b)
+    assert torch.equal(native_active, active_a)
+    assert torch.equal(
+        active_a.nonzero(as_tuple=False), active_b.nonzero(as_tuple=False)
+    )
+    assert native_answer.any() and answer_a.any()
+
+    def pairs(item, mask):
+        soft = item["soft_alignment"]
+        return list(
+            zip(
+                soft["source_confidence"][mask].tolist(),
+                soft["source_entropy"][mask].tolist(),
+            )
+        )
+
+    def assert_pairs_close(left, right):
+        assert len(left) == len(right)
+        for left_pair, right_pair in zip(left, right):
+            assert left_pair == pytest.approx(right_pair)
+
+    assert_pairs_close(
+        sorted(pairs(shuffled_a, active_a)),
+        sorted(pairs(native, native_active)),
+    )
+    assert_pairs_close(pairs(shuffled_a, active_a), pairs(shuffled_b, active_b))
+    assert_pairs_close(pairs(shuffled_a, answer_a), pairs(native, native_answer))
+    override = shuffled_a["soft_alignment"]["source_entropy_override"]
+    assert torch.equal(override, active_a)
+    assert not override[answer_a].any()
+
+
+def test_constant_control_keeps_all_message_token_semantics_in_dataset():
+    aligner = TokenAligner(
+        FakeTokenizer("char"),
+        FakeTokenizer("word"),
+        strategy=AlignmentStrategy.SOFT_SPAN_OVERLAP_V2,
+        soft_alignment_confidence_control_mode="constant",
+        soft_alignment_confidence_constant_value=0.93,
+    )
+    item = AlignedChatDataset(
+        [[
+            {"role": "user", "content": "prompt"},
+            {"role": "assistant", "content": "gold answer"},
+        ]],
+        aligner,
+        max_length=128,
+        soft_alignment_top_k=4,
+    )[0]
+    soft = item["soft_alignment"]
+    message = soft["source_weights"].sum(dim=-1) > 0
+
+    assert message.any()
+    assert torch.allclose(
+        soft["source_confidence"][message],
+        torch.full_like(soft["source_confidence"][message], 0.93),
+    )
+    assert not soft["source_entropy"][message].any()
+    assert soft["source_entropy_override"][message].all()
 
 
 def test_soft_span_overlap_v2_overlap_power2_emphasizes_large_overlap():

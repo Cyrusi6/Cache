@@ -46,6 +46,13 @@ from transformers import AutoTokenizer
 from rosetta.utils.evaluate import set_default_chat_template
 from rosetta.utils.dataset_loading import load_c2c_dataset
 from rosetta.utils.model_loading import resolve_model_path
+from rosetta.utils.gate_diagnostics import (
+    GateDiagnosticsAccumulator,
+    clear_projector_compact_gate_values,
+    clear_projector_gate_diagnostic_records,
+    configure_projector_gate_diagnostics,
+    merge_gate_diagnostic_states,
+)
 from rosetta.baseline.multi_stage import TwoStageInference, TwoStageRosetta
 
 # Dataset-specific configurations
@@ -362,6 +369,98 @@ DATASET_CONFIGS = {
 }
 
 
+def summarize_alignment_diagnostics(details: Dict[str, Any]) -> Dict[str, Any]:
+    """Reduce token-level soft alignment metadata to one row per example."""
+    soft = details.get("soft_alignment")
+    message_mask = details.get("message_mask")
+    if not isinstance(soft, dict) or not isinstance(message_mask, list):
+        return {}
+
+    source_indices = soft.get("source_indices", [])
+    source_weights = soft.get("source_weights", [])
+    source_confidence = soft.get("source_confidence", [])
+    source_entropy = soft.get("source_entropy", [])
+    fallback_mask = soft.get("fallback_mask", [])
+    boundary_hits = soft.get("top1_boundary_hit_mask", [])
+
+    candidate_counts: List[float] = []
+    entropies: List[float] = []
+    confidences: List[float] = []
+    fallbacks: List[float] = []
+    boundary_mismatches: List[float] = []
+
+    for index, is_message in enumerate(message_mask):
+        if not is_message or index >= len(source_weights):
+            continue
+        weights = [float(value) for value in source_weights[index]]
+        indices = source_indices[index] if index < len(source_indices) else []
+        active = [
+            weight
+            for candidate_index, weight in zip(indices, weights)
+            if int(candidate_index) >= 0 and weight > 0.0
+        ]
+        if not active:
+            continue
+        candidate_counts.append(float(len(active)))
+
+        if index < len(source_entropy):
+            entropies.append(float(source_entropy[index]))
+        elif len(active) <= 1:
+            entropies.append(0.0)
+        else:
+            total = sum(active)
+            probabilities = [weight / total for weight in active]
+            entropy = -sum(probability * np.log(probability) for probability in probabilities)
+            entropies.append(float(entropy / np.log(len(probabilities))))
+
+        confidences.append(
+            float(source_confidence[index])
+            if index < len(source_confidence)
+            else 1.0
+        )
+        fallbacks.append(
+            float(bool(fallback_mask[index])) if index < len(fallback_mask) else 0.0
+        )
+        boundary_mismatches.append(
+            1.0 - float(bool(boundary_hits[index]))
+            if index < len(boundary_hits)
+            else 1.0
+        )
+
+    if not candidate_counts:
+        return {}
+    one_to_many_rate = float(
+        sum(count > 1.0 for count in candidate_counts) / len(candidate_counts)
+    )
+    return {
+        "alignment_bucket": "one-to-many" if one_to_many_rate > 0.0 else "1-to-1",
+        "candidate_count": float(np.mean(candidate_counts)),
+        "candidate_count_max": int(max(candidate_counts)),
+        "one_to_many_rate": one_to_many_rate,
+        "alignment_entropy": float(np.mean(entropies)),
+        # Current aligner exposes a tolerance-based boundary hit.  Store its
+        # complement as a per-example mismatch rate for deterministic bucketing.
+        "boundary_mismatch": float(np.mean(boundary_mismatches)),
+        "confidence": float(np.mean(confidences)),
+        "fallback_rate": float(np.mean(fallbacks)),
+    }
+
+
+def validate_worker_completion(processes: List[Any], return_dict: Dict[int, Any]) -> None:
+    """Reject partial multi-GPU evaluations instead of silently merging them."""
+    failed = [
+        (rank, process.exitcode)
+        for rank, process in enumerate(processes)
+        if process.exitcode != 0
+    ]
+    missing = [rank for rank in range(len(processes)) if rank not in return_dict]
+    if failed or missing:
+        raise RuntimeError(
+            "Evaluation workers did not complete successfully: "
+            f"failed={failed}, missing_results={missing}"
+        )
+
+
 class UnifiedEvaluator:
     """Unified evaluator for multiple benchmark datasets."""
 
@@ -415,6 +514,37 @@ class UnifiedEvaluator:
         self.cuda_launch_blocking = bool(
             self.eval_config.get("cuda_launch_blocking", False)
         )
+        self.gate_diagnostics_enabled = bool(
+            self.eval_config.get("gate_diagnostics", False)
+        )
+        self.gate_diagnostics_mode = str(
+            self.eval_config.get("gate_diagnostics_mode", "compact")
+        )
+        if self.gate_diagnostics_mode not in {"compact", "full"}:
+            raise ValueError("gate_diagnostics_mode must be 'compact' or 'full'")
+        self.gate_saturation_low_threshold = float(
+            self.eval_config.get("gate_saturation_low_threshold", 0.05)
+        )
+        self.gate_saturation_high_threshold = float(
+            self.eval_config.get("gate_saturation_high_threshold", 0.95)
+        )
+        self.gate_relative_token_bins = int(
+            self.eval_config.get("gate_relative_token_bins", 10)
+        )
+        if not (
+            0.0
+            <= self.gate_saturation_low_threshold
+            < self.gate_saturation_high_threshold
+            <= 1.0
+        ):
+            raise ValueError(
+                "gate saturation thresholds must satisfy 0 <= low < high <= 1"
+            )
+        if self.gate_relative_token_bins <= 0:
+            raise ValueError("gate_relative_token_bins must be positive")
+        self._gate_diagnostics_accumulator: Optional[
+            GateDiagnosticsAccumulator
+        ] = None
 
         # Check if using two-stage based on model_name
         self.use_two_stage = self.model_config["model_name"].lower() in [
@@ -449,6 +579,10 @@ class UnifiedEvaluator:
         print(f"Available GPUs: {torch.cuda.device_count()}")
         print(f"Requested GPU IDs: {self.eval_config['gpu_ids']}")
         print(f"Answer method: {self.eval_config['answer_method']}")
+        print(
+            "Gate diagnostics: "
+            f"{self.gate_diagnostics_enabled} ({self.gate_diagnostics_mode})"
+        )
 
     def _make_subject_splits(self, num_gpus: int) -> List[str]:
         """Create virtual subject splits for datasets without native subjects.
@@ -962,6 +1096,34 @@ class UnifiedEvaluator:
             elapsed_ms = (time.perf_counter() - t0) * 1000.0
             return result, float(elapsed_ms)
 
+    def _measure_with_gate_diagnostics(
+        self,
+        run_fn,
+        device: torch.device,
+        model: Any,
+    ) -> Tuple[Any, float, Dict[str, Any]]:
+        """Measure one model call and consume its gate records without retaining tensors."""
+        accumulator = self._gate_diagnostics_accumulator
+        if not self.gate_diagnostics_enabled or accumulator is None:
+            result, latency_ms = self._measure_latency_ms(run_fn, device)
+            return result, latency_ms, {}
+
+        projectors = list(getattr(model, "projector_list", []) or [])
+        if self.gate_diagnostics_mode == "full":
+            clear_projector_gate_diagnostic_records(projectors)
+        else:
+            clear_projector_compact_gate_values(projectors)
+        gate_summary: Dict[str, Any] = {}
+        try:
+            result, latency_ms = self._measure_latency_ms(run_fn, device)
+        finally:
+            if self.gate_diagnostics_mode == "full":
+                # consume_projectors clears records and all last-tensor references.
+                gate_summary = accumulator.consume_projectors(projectors)
+            else:
+                gate_summary = accumulator.consume_compact_projectors(projectors)
+        return result, latency_ms, gate_summary
+
     def create_segmented_kv_cache_index(
         self,
         instruction_length: int,
@@ -1183,6 +1345,15 @@ class UnifiedEvaluator:
                 soft_alignment_fallback_confidence=self.model_config[
                     "rosetta_config"
                 ].get("soft_alignment_fallback_confidence", 1.0),
+                soft_alignment_confidence_control_mode=self.model_config[
+                    "rosetta_config"
+                ].get("soft_alignment_confidence_control_mode", "native"),
+                soft_alignment_confidence_constant_value=self.model_config[
+                    "rosetta_config"
+                ].get("soft_alignment_confidence_constant_value"),
+                soft_alignment_confidence_shuffle_seed=self.model_config[
+                    "rosetta_config"
+                ].get("soft_alignment_confidence_shuffle_seed", 0),
                 soft_alignment_reweight_mode=self.model_config["rosetta_config"].get(
                     "soft_alignment_reweight_mode", "none"
                 ),
@@ -1245,6 +1416,20 @@ class UnifiedEvaluator:
                     ),
                     dtype=torch.float,
                 )
+                source_entropy = torch.tensor(
+                    details["soft_alignment"].get(
+                        "source_entropy",
+                        [0.0] * len(details["soft_alignment"]["source_indices"]),
+                    ),
+                    dtype=torch.float,
+                )
+                source_entropy_override = torch.tensor(
+                    details["soft_alignment"].get(
+                        "source_entropy_override",
+                        [False] * len(details["soft_alignment"]["source_indices"]),
+                    ),
+                    dtype=torch.bool,
+                )
             else:
                 details = aligner.align_chat_messages(
                     messages,
@@ -1273,6 +1458,8 @@ class UnifiedEvaluator:
                 source_indices = None
                 source_weights = None
                 source_confidence = None
+                source_entropy = None
+                source_entropy_override = None
 
             message_mask = torch.tensor(details["message_mask"])
 
@@ -1313,6 +1500,14 @@ class UnifiedEvaluator:
                                 "source_confidence": source_confidence[start:j]
                                 .unsqueeze(0)
                                 .to(device),
+                                "source_entropy": source_entropy[start:j]
+                                .unsqueeze(0)
+                                .to(device),
+                                "source_entropy_override": source_entropy_override[
+                                    start:j
+                                ]
+                                .unsqueeze(0)
+                                .to(device),
                             }
                         )
 
@@ -1348,6 +1543,12 @@ class UnifiedEvaluator:
                         "source_confidence": source_confidence[start:]
                         .unsqueeze(0)
                         .to(device),
+                        "source_entropy": source_entropy[start:]
+                        .unsqueeze(0)
+                        .to(device),
+                        "source_entropy_override": source_entropy_override[start:]
+                        .unsqueeze(0)
+                        .to(device),
                     }
                 )
 
@@ -1366,6 +1567,7 @@ class UnifiedEvaluator:
                     "kv_cache_index": kv_cache_list,
                 },
                 "printable_text": (details["slm_text"], details["llm_text"]),
+                "alignment_diagnostics": summarize_alignment_diagnostics(details),
             }
             if soft_alignment_list:
                 outputs["inputs"]["soft_alignment"] = soft_alignment_list
@@ -1518,6 +1720,7 @@ class UnifiedEvaluator:
             sample_indices,
             desc=f"Evaluating {subject} ({self.eval_config['answer_method']})",
         ):
+            prepared = None
             try:
                 example = test_data[i]
 
@@ -1593,6 +1796,7 @@ class UnifiedEvaluator:
                     raise ValueError(f"Unknown dataset: {self.dataset_name}")
 
                 # Generate answer
+                gate_diagnostic_summary: Dict[str, Any] = {}
                 if model_type in ["two_stage", "two_stage_rosetta"]:
                     # Two-stage inference mode (both regular and Rosetta)
                     # Extract question without options
@@ -1732,8 +1936,10 @@ class UnifiedEvaluator:
                         def _forward_call():
                             return model.forward(**prepared["inputs"])
 
-                        outputs, latency_ms = self._measure_latency_ms(
-                            _forward_call, device
+                        outputs, latency_ms, gate_diagnostic_summary = (
+                            self._measure_with_gate_diagnostics(
+                                _forward_call, device, model
+                            )
                         )
 
                         logits = outputs.logits[0, -1]
@@ -1762,8 +1968,10 @@ class UnifiedEvaluator:
                         def _generate_call():
                             return model.generate(**inputs, **self.generation_config)
 
-                        outputs, latency_ms = self._measure_latency_ms(
-                            _generate_call, device
+                        outputs, latency_ms, gate_diagnostic_summary = (
+                            self._measure_with_gate_diagnostics(
+                                _generate_call, device, model
+                            )
                         )
 
                         if isinstance(model, RosettaModel):
@@ -1927,6 +2135,9 @@ class UnifiedEvaluator:
                         else None
                     ),
                 }
+                if prepared is not None:
+                    cot_log_entry.update(prepared.get("alignment_diagnostics", {}))
+                cot_log_entry.update(gate_diagnostic_summary)
 
                 # Add question and choices based on dataset format
                 if self.dataset_name == "mmmlu":
@@ -2220,6 +2431,23 @@ class UnifiedEvaluator:
                 model_type = "hf"
             llm_tokenizer = None
 
+        if self.gate_diagnostics_enabled:
+            self._gate_diagnostics_accumulator = GateDiagnosticsAccumulator(
+                low_threshold=self.gate_saturation_low_threshold,
+                high_threshold=self.gate_saturation_high_threshold,
+                relative_token_bins=self.gate_relative_token_bins,
+            )
+            projector_info = configure_projector_gate_diagnostics(
+                model, enabled=self.gate_diagnostics_mode == "full"
+            )
+            self._gate_diagnostics_accumulator.note_projectors(
+                projector_info["projector_count"],
+                projector_info["gate_projector_count"],
+                projector_info["target_layer_by_projector"],
+            )
+        else:
+            self._gate_diagnostics_accumulator = None
+
         all_cors = []
         subject_cors = {}
         subcat_cors = defaultdict(list)
@@ -2247,6 +2475,12 @@ class UnifiedEvaluator:
                         if subcat in subcat_list:
                             cat_cors[cat].append(cors)
 
+        gate_diagnostics_state = (
+            self._gate_diagnostics_accumulator.state_dict()
+            if self._gate_diagnostics_accumulator is not None
+            else None
+        )
+        configure_projector_gate_diagnostics(model, enabled=False)
         return_dict[rank] = {
             "all_cors": all_cors,
             "subject_cors": subject_cors,
@@ -2254,6 +2488,7 @@ class UnifiedEvaluator:
             "cat_cors": dict(cat_cors),
             "length_stats": all_length_stats,
             "cot_logs": cot_logs_all,
+            "gate_diagnostics_state": gate_diagnostics_state,
         }
 
     def merge_results(self, results_by_rank: Dict) -> Tuple:
@@ -2272,17 +2507,41 @@ class UnifiedEvaluator:
         cat_cors = defaultdict(list)
         all_length_stats = []
         all_cot_logs = []
+        gate_diagnostic_states = []
 
         for result in results_by_rank.values():
             all_cors.extend(result["all_cors"])
             subject_cors.update(result.get("subject_cors", {}))
             all_length_stats.extend(result.get("length_stats", []))
             all_cot_logs.extend(result.get("cot_logs", []))
+            gate_state = result.get("gate_diagnostics_state")
+            if isinstance(gate_state, dict):
+                gate_diagnostic_states.append(gate_state)
 
             for k, v in result.get("subcat_cors", {}).items():
                 subcat_cors[k].extend(v)
             for k, v in result.get("cat_cors", {}).items():
                 cat_cors[k].extend(v)
+
+        gate_diagnostics = None
+        if self.gate_diagnostics_enabled:
+            accumulator = merge_gate_diagnostic_states(
+                gate_diagnostic_states,
+                low_threshold=self.gate_saturation_low_threshold,
+                high_threshold=self.gate_saturation_high_threshold,
+                relative_token_bins=self.gate_relative_token_bins,
+            )
+            gate_diagnostics = accumulator.finalize(
+                {
+                    "model": self.model_config["model_name"],
+                    "dataset": self.dataset_name,
+                    "answer_method": self.eval_config["answer_method"],
+                    "diagnostics_mode": self.gate_diagnostics_mode,
+                    "checkpoint_dir": self.model_config.get(
+                        "rosetta_config", {}
+                    ).get("checkpoints_dir"),
+                }
+            )
 
         return (
             all_cors,
@@ -2291,6 +2550,7 @@ class UnifiedEvaluator:
             cat_cors,
             all_length_stats,
             all_cot_logs,
+            gate_diagnostics,
         )
 
     def save_results(
@@ -2301,6 +2561,7 @@ class UnifiedEvaluator:
         cat_cors,
         all_length_stats,
         all_cot_logs,
+        gate_diagnostics,
     ):
         """
         Save evaluation results.
@@ -2342,6 +2603,26 @@ class UnifiedEvaluator:
         # Generate filename
         model_name_for_file = self.model_config["model_name"].split("/")[-1]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        if gate_diagnostics is not None:
+            gate_diagnostics_file = (
+                self.output_dir
+                / f"{model_name_for_file}_{self.dataset_name}_{self.eval_config['answer_method']}_{timestamp}_gate_diagnostics.json"
+            )
+            with gate_diagnostics_file.open("w", encoding="utf-8") as handle:
+                json.dump(gate_diagnostics, handle, indent=2)
+            summary["gate_diagnostics"] = {
+                "enabled": True,
+                "status": gate_diagnostics["status"],
+                "artifact": gate_diagnostics_file.name,
+                "saturation_thresholds": gate_diagnostics[
+                    "saturation_thresholds"
+                ],
+                "global": gate_diagnostics["global"],
+            }
+            print(f"Gate diagnostics saved to {gate_diagnostics_file}")
+        else:
+            summary["gate_diagnostics"] = {"enabled": False}
 
         # Save summary JSON
         summary_file = (
@@ -2392,6 +2673,28 @@ class UnifiedEvaluator:
                     "cot_gen_length",
                     "cot_output",
                     "answer_latency_ms",
+                    "alignment_bucket",
+                    "candidate_count",
+                    "candidate_count_max",
+                    "one_to_many_rate",
+                    "alignment_entropy",
+                    "boundary_mismatch",
+                    "confidence",
+                    "fallback_rate",
+                    # Compact per-example token/head gate diagnostics. Full
+                    # layer/head/token aggregates live in *_gate_diagnostics.json.
+                    "gate_diagnostics_status",
+                    "gate_record_count",
+                    "gate_token_count",
+                    "gate",
+                    "key_gate_mean",
+                    "key_gate_std",
+                    "key_gate_saturation_low_rate",
+                    "key_gate_saturation_high_rate",
+                    "value_gate_mean",
+                    "value_gate_std",
+                    "value_gate_saturation_low_rate",
+                    "value_gate_saturation_high_rate",
                     # Extraction diagnostics (mainly for MATH-500)
                     "extraction_method_used",
                     "ground_truth_normalized",
@@ -2513,6 +2816,7 @@ class UnifiedEvaluator:
 
         for p in processes:
             p.join()
+        validate_worker_completion(processes, return_dict)
         if self.dataset_name == "longbench":
             print(
                 "LongBench evaluation completed. Predictions are saved in respective files."

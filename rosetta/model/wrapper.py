@@ -889,6 +889,12 @@ class RosettaModel(nn.Module):
                                                         source_confidence=soft_section.get(
                                                             "source_confidence"
                                                         ),
+                                                        source_entropy=soft_section.get(
+                                                            "source_entropy"
+                                                        ),
+                                                        source_entropy_override=soft_section.get(
+                                                            "source_entropy_override"
+                                                        ),
                                                     )
                                                 )
                                             new_source_kv_cache = (
@@ -927,6 +933,12 @@ class RosettaModel(nn.Module):
                                                 "source_confidence"
                                             ),
                                             "source_weights": source_weights,
+                                            "source_entropy": soft_section.get(
+                                                "source_entropy"
+                                            ),
+                                            "source_entropy_override": soft_section.get(
+                                                "source_entropy_override"
+                                            ),
                                         }
                                     projected_key, projected_value = projector.forward(
                                         new_source_kv_cache,

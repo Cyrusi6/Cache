@@ -1452,12 +1452,29 @@ class AlignedChatDataset(Dataset):
         )
         return source_indices, source_weights
 
+    @staticmethod
+    def _normalized_soft_alignment_entropy(source_weights: torch.Tensor) -> torch.Tensor:
+        positive = source_weights.clamp_min(0.0)
+        totals = positive.sum(dim=-1, keepdim=True)
+        probs = torch.where(
+            totals > 0,
+            positive / totals.clamp_min(torch.finfo(source_weights.dtype).eps),
+            torch.zeros_like(positive),
+        )
+        entropy = -(probs * probs.clamp_min(torch.finfo(probs.dtype).eps).log()).sum(
+            dim=-1
+        )
+        active = (positive > 0).sum(dim=-1)
+        denom = active.clamp_min(2).to(dtype=source_weights.dtype).log()
+        return torch.where(active > 1, entropy / denom, torch.zeros_like(entropy))
+
     def _getitem_soft(self, messages: List[Dict[str, str]], idx: int) -> Dict[str, Any]:
         details = self.aligner.align_chat_messages_soft(
             messages,
             add_generation_prompt=False,
             top_k=self.soft_alignment_top_k,
             return_details=True,
+            apply_confidence_control=False,
         )
 
         slm_ids: List[int] = details["slm_ids"]
@@ -1478,6 +1495,20 @@ class AlignedChatDataset(Dataset):
             ),
             dtype=torch.float,
         )
+        source_entropy = torch.tensor(
+            details["soft_alignment"].get(
+                "source_entropy",
+                [0.0] * len(details["soft_alignment"]["source_indices"]),
+            ),
+            dtype=torch.float,
+        )
+        source_entropy_override = torch.tensor(
+            details["soft_alignment"].get(
+                "source_entropy_override",
+                [False] * len(details["soft_alignment"]["source_indices"]),
+            ),
+            dtype=torch.bool,
+        )
 
         instr_end = 0
         for sec_idx in range(len(sections) - 1, -1, -1):
@@ -1492,6 +1523,8 @@ class AlignedChatDataset(Dataset):
             source_indices = source_indices[: self.max_length]
             source_weights = source_weights[: self.max_length]
             source_confidence = source_confidence[: self.max_length]
+            source_entropy = source_entropy[: self.max_length]
+            source_entropy_override = source_entropy_override[: self.max_length]
         if len(llm_ids) > self.max_length:
             llm_ids = llm_ids[: self.max_length]
 
@@ -1499,10 +1532,33 @@ class AlignedChatDataset(Dataset):
         source_indices, source_weights = self._renormalize_soft_alignment(
             source_indices, source_weights, len(llm_ids)
         )
+        native_entropy = self._normalized_soft_alignment_entropy(source_weights)
+        source_entropy = torch.where(
+            source_entropy_override,
+            source_entropy,
+            native_entropy,
+        )
 
         labels = [-100] * instr_end + slm_ids[instr_end:]
         kv_cache_index = generate_kv_cache_index(instr_end, len(slm_ids))
         kv_cache_index[~message_mask] = torch.tensor([[-1, 0]])
+        shuffle_active_mask = message_mask & (kv_cache_index[:, 0] == 1)
+        (
+            controlled_confidence,
+            controlled_entropy,
+            controlled_entropy_override,
+        ) = self.aligner._apply_confidence_control(
+            source_confidence=source_confidence.tolist(),
+            source_entropy=source_entropy.tolist(),
+            message_mask=message_mask.tolist(),
+            token_ids=slm_ids,
+            shuffle_active_mask=shuffle_active_mask.tolist(),
+        )
+        source_confidence = torch.tensor(controlled_confidence, dtype=torch.float)
+        source_entropy = torch.tensor(controlled_entropy, dtype=torch.float)
+        source_entropy_override = torch.tensor(
+            controlled_entropy_override, dtype=torch.bool
+        )
 
         slm_pad_mask = torch.zeros(len(slm_ids), dtype=torch.bool)
         llm_pad_mask = torch.zeros(len(llm_ids), dtype=torch.bool)
@@ -1517,6 +1573,8 @@ class AlignedChatDataset(Dataset):
                 "source_indices": source_indices,
                 "source_weights": source_weights,
                 "source_confidence": source_confidence,
+                "source_entropy": source_entropy,
+                "source_entropy_override": source_entropy_override,
             },
         }
         candidate_replay = self._candidate_replay_entry(idx)
@@ -1998,6 +2056,14 @@ class RosettaDataCollator:
                 "source_confidence",
                 torch.ones(source_indices.size(0), dtype=torch.float),
             )
+            source_entropy = feature["soft_alignment"].get(
+                "source_entropy",
+                torch.zeros(source_indices.size(0), dtype=torch.float),
+            )
+            source_entropy_override = feature["soft_alignment"].get(
+                "source_entropy_override",
+                torch.zeros(source_indices.size(0), dtype=torch.bool),
+            )
             position_ids = torch.arange(len(labels), dtype=torch.long)
 
             source_input_ids.append(llm_ids)
@@ -2023,6 +2089,8 @@ class RosettaDataCollator:
                         "source_indices": source_indices[start:end],
                         "source_weights": source_weights[start:end],
                         "source_confidence": source_confidence[start:end],
+                        "source_entropy": source_entropy[start:end],
+                        "source_entropy_override": source_entropy_override[start:end],
                     }
                 )
             target_sections.append(sections)
@@ -2044,6 +2112,8 @@ class RosettaDataCollator:
             sec_indices = []
             sec_weights = []
             sec_confidence = []
+            sec_entropy = []
+            sec_entropy_override = []
             top_k = None
 
             for sections in target_sections:
@@ -2057,6 +2127,8 @@ class RosettaDataCollator:
                     sec_indices.append(sec["source_indices"])
                     sec_weights.append(sec["source_weights"])
                     sec_confidence.append(sec["source_confidence"])
+                    sec_entropy.append(sec["source_entropy"])
+                    sec_entropy_override.append(sec["source_entropy_override"])
                     top_k = sec["source_indices"].shape[-1]
                 else:
                     if top_k is None:
@@ -2069,6 +2141,8 @@ class RosettaDataCollator:
                     sec_indices.append(torch.empty((0, top_k), dtype=torch.long))
                     sec_weights.append(torch.empty((0, top_k), dtype=torch.float))
                     sec_confidence.append(torch.empty((0,), dtype=torch.float))
+                    sec_entropy.append(torch.empty((0,), dtype=torch.float))
+                    sec_entropy_override.append(torch.empty((0,), dtype=torch.bool))
 
             padded_target_ids.append(
                 torch.nn.utils.rnn.pad_sequence(
@@ -2105,6 +2179,12 @@ class RosettaDataCollator:
                     ),
                     "source_confidence": torch.nn.utils.rnn.pad_sequence(
                         sec_confidence, batch_first=True, padding_value=0.0
+                    ),
+                    "source_entropy": torch.nn.utils.rnn.pad_sequence(
+                        sec_entropy, batch_first=True, padding_value=0.0
+                    ),
+                    "source_entropy_override": torch.nn.utils.rnn.pad_sequence(
+                        sec_entropy_override, batch_first=True, padding_value=False
                     ),
                 }
             )
@@ -2216,6 +2296,12 @@ class RosettaDataCollator:
                         "source_confidence": section["source_confidence"][
                             :, :remaining_length
                         ],
+                        "source_entropy": section["source_entropy"][
+                            :, :remaining_length
+                        ],
+                        "source_entropy_override": section[
+                            "source_entropy_override"
+                        ][:, :remaining_length],
                     }
                 )
                 break

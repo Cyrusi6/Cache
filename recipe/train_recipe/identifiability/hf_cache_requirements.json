@@ -1,0 +1,290 @@
+{
+  "schema_version": 1,
+  "python_packages": {
+    "datasets": "5.0.0",
+    "accelerate": "1.14.0",
+    "wandb": "0.28.0",
+    "peft": "0.19.1",
+    "transformers": "4.52.4"
+  },
+  "repository_templates": [
+    {
+      "key": "qwen3_1p7b",
+      "repo_type": "model",
+      "repo_id": "Qwen/Qwen3-1.7B",
+      "ref": "main",
+      "required_files": [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "model.safetensors.index.json",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors"
+      ],
+      "file_sha256": {
+        "config.json": "1ddb5b89ebc90dcb417a45c213d818577e65976454d29385c8f6140771d95197",
+        "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+        "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+        "model.safetensors.index.json": "0d660e94b165eb912669a5249dff44b83188c4777a07ddb9611fb78d91b0578d",
+        "model-00001-of-00002.safetensors": "169ad53ec313c3a34b06c0809216e4fc072cce444a5d4ff2b59690d064130ed5",
+        "model-00002-of-00002.safetensors": "912becff8d60672aa8628ef08c05898d9adf17c2ad4ae3caf99b065622fdeff9"
+      }
+    },
+    {
+      "key": "llama32_1b",
+      "repo_type": "model",
+      "repo_id": "meta-llama/Llama-3.2-1B-Instruct",
+      "ref": "main",
+      "required_files": [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json"
+      ],
+      "required_globs": [
+        {
+          "pattern": "*.safetensors",
+          "minimum_matches": 1
+        }
+      ]
+    }
+  ],
+  "shared_models": [
+    {
+      "key": "qwen3_1p7b",
+      "directory": "models/Qwen3-1.7B",
+      "required_files": [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "model.safetensors.index.json",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors"
+      ],
+      "file_sha256": {
+        "config.json": "1ddb5b89ebc90dcb417a45c213d818577e65976454d29385c8f6140771d95197",
+        "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+        "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+        "model.safetensors.index.json": "0d660e94b165eb912669a5249dff44b83188c4777a07ddb9611fb78d91b0578d",
+        "model-00001-of-00002.safetensors": "169ad53ec313c3a34b06c0809216e4fc072cce444a5d4ff2b59690d064130ed5",
+        "model-00002-of-00002.safetensors": "912becff8d60672aa8628ef08c05898d9adf17c2ad4ae3caf99b065622fdeff9"
+      },
+      "directory_sha256": "b1b46b15937e8eb22d2dc7f0c5a6de698b4873f106f4e7f8d080bc7192879a32"
+    },
+    {
+      "key": "qwen3_0p6b",
+      "directory": "models/Qwen3-0.6B",
+      "required_files": [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "model.safetensors"
+      ],
+      "file_sha256": {
+        "config.json": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+        "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+        "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+        "model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+      },
+      "directory_sha256": "8b68256a049db94119d2fea44d3b9011df83f7c3058cda98b16ab0378a3e7fba"
+    },
+    {
+      "key": "tinyllama_1p1b",
+      "directory": "models/TinyLlama-1.1B-Chat-v1.0",
+      "required_files": [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "tokenizer.model",
+        "model.safetensors"
+      ],
+      "file_sha256": {
+        "config.json": "486bedda3a6988332e60d9638a09ca4b260d34ebcf1b19e22cf3b140b63d8fe9",
+        "tokenizer_config.json": "7b41ba7d0eb91e77914ca3dafde559ea3e19878769b7e68409e89bed5222e77a",
+        "tokenizer.json": "bcd04f0eadf90287bd26e1a183ac487d8a141b09b06aecb7725bbdd343640f2e",
+        "tokenizer.model": "9e556afd44213b6bd1be2b850ebbbd98f5481437a8021afaf58ee7fb1818d347",
+        "model.safetensors": "6e6001da2106d4757498752a021df6c2bdc332c650aae4bae6b0c004dcf14933"
+      },
+      "directory_sha256": "5f21b2016854b7127cb8d7c6aa6b2ed774e6020751ec8e042de912972f518bec"
+    },
+    {
+      "key": "qwen25_0p5b",
+      "directory": "models/Qwen2.5-0.5B-Instruct",
+      "required_files": [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "model.safetensors"
+      ],
+      "file_sha256": {
+        "config.json": "18e18afcaccafade98daf13a54092927904649e1dd4eba8299ab717d5d94ff45",
+        "tokenizer_config.json": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+        "tokenizer.json": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+        "model.safetensors": "fdf756fa7fcbe7404d5c60e26bff1a0c8b8aa1f72ced49e7dd0210fe288fb7fe"
+      },
+      "directory_sha256": "2cc22a9597de3d0d21b73ca737c111b21acc418a14623b6bc5e20bb36644d402"
+    },
+    {
+      "key": "llama32_1b",
+      "directory": "models/Llama-3.2-1B-Instruct",
+      "required_files": [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "model.safetensors"
+      ],
+      "file_sha256": {
+        "config.json": "2febf68cea25bf4611be02b7536f2488a5ba523bb1134986e3610152abe74fdb",
+        "tokenizer_config.json": "9823dcfdc1121869029da45192238e85cf44f0b232a6d9dc20e4fe6f4242a14e",
+        "tokenizer.json": "79e3e522635f3171300913bb421464a87de6222182a0570b9b2ccba2a964b2b4",
+        "model.safetensors": "1ff795ff6a07e6a68085d206fb84417da2f083f68391c2843cd2b8ac6df8538f"
+      },
+      "directory_sha256": "312b1f2bdd70db0bce29d3e6d0b6001ca1905857d871115b75031b814e863fc8"
+    }
+  ],
+  "shared_datasets": [
+    {
+      "key": "mmlu",
+      "directory": "data/c2c/mmlu",
+      "required_files": [
+        "README.md",
+        "dataset_infos.json",
+        "all/auxiliary_train-00000-of-00001.parquet",
+        "all/test-00000-of-00001.parquet",
+        "all/validation-00000-of-00001.parquet",
+        "all/dev-00000-of-00001.parquet"
+      ],
+      "directory_sha256": "195c97b11def28ff28e3cc693040b0c6696acd74065cdb7c29c6c57f86298320"
+    },
+    {
+      "key": "mmlu_redux",
+      "directory": "data/c2c/mmlu-redux-2.0",
+      "required_files": [
+        "README.md",
+        "abstract_algebra/data-00000-of-00001.arrow",
+        "world_religions/data-00000-of-00001.arrow"
+      ],
+      "directory_sha256": "3630ceb45031facee39532ba1110760d49c71270be0bd5de96e6235971cdb402"
+    },
+    {
+      "key": "openbookqa",
+      "directory": "data/c2c/openbookqa",
+      "required_files": [
+        "README.md",
+        "main/train-00000-of-00001.parquet",
+        "main/validation-00000-of-00001.parquet",
+        "main/test-00000-of-00001.parquet"
+      ],
+      "directory_sha256": "5f903c0bd9272642eb983c4e30ec71a16e3922c578dc1f08a6cdfb33e99b4ecf"
+    },
+    {
+      "key": "arc",
+      "directory": "data/c2c/ai2_arc",
+      "required_files": [
+        "README.md",
+        "ARC-Challenge/train-00000-of-00001.parquet",
+        "ARC-Challenge/validation-00000-of-00001.parquet",
+        "ARC-Challenge/test-00000-of-00001.parquet"
+      ],
+      "directory_sha256": "57aff44115478c094aba1ce9ec3c13ee3556ee47e637eadb3ac728691ad70b51"
+    }
+  ],
+  "repositories": [
+    {
+      "key": "mmlu",
+      "repo_type": "dataset",
+      "repo_id": "cais/mmlu",
+      "ref": "main",
+      "expected_revision": "c30699e8356da336a370243923dbaf21066bb9fe",
+      "required_files": [
+        "README.md",
+        "dataset_infos.json",
+        "all/auxiliary_train-00000-of-00001.parquet",
+        "all/test-00000-of-00001.parquet",
+        "all/validation-00000-of-00001.parquet",
+        "all/dev-00000-of-00001.parquet"
+      ]
+    },
+    {
+      "key": "mmlu_redux",
+      "repo_type": "dataset",
+      "repo_id": "edinburgh-dawg/mmlu-redux-2.0",
+      "ref": "main",
+      "expected_revision": "372ea425445d51e1ba1188c56e5e893f8138621f",
+      "required_files": [
+        "README.md"
+      ],
+      "required_globs": [
+        {
+          "pattern": "*/data-00000-of-00001.arrow",
+          "minimum_matches": 57
+        }
+      ]
+    },
+    {
+      "key": "openbookqa",
+      "repo_type": "dataset",
+      "repo_id": "openbookqa",
+      "ref": "main",
+      "expected_revision": "388097ea7776314e93a529163e0fea805b8a6454",
+      "required_files": [
+        "README.md",
+        "main/train-00000-of-00001.parquet",
+        "main/validation-00000-of-00001.parquet",
+        "main/test-00000-of-00001.parquet"
+      ]
+    },
+    {
+      "key": "arc",
+      "repo_type": "dataset",
+      "repo_id": "allenai/ai2_arc",
+      "ref": "main",
+      "expected_revision": "210d026faf9955653af8916fad021475a3f00453",
+      "required_files": [
+        "README.md",
+        "ARC-Challenge/train-00000-of-00001.parquet",
+        "ARC-Challenge/validation-00000-of-00001.parquet",
+        "ARC-Challenge/test-00000-of-00001.parquet"
+      ]
+    },
+    {
+      "key": "qwen3_0p6b",
+      "repo_type": "model",
+      "repo_id": "Qwen/Qwen3-0.6B",
+      "ref": "main",
+      "expected_revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "required_files": [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "model.safetensors"
+      ]
+    },
+    {
+      "key": "tinyllama_1p1b",
+      "repo_type": "model",
+      "repo_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "ref": "main",
+      "expected_revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "required_files": [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "tokenizer.model",
+        "model.safetensors"
+      ]
+    },
+    {
+      "key": "qwen25_0p5b",
+      "repo_type": "model",
+      "repo_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "ref": "main",
+      "expected_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "required_files": [
+        "config.json",
+        "tokenizer_config.json",
+        "tokenizer.json",
+        "model.safetensors"
+      ]
+    }
+  ]
+}

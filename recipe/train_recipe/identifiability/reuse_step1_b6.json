@@ -1,0 +1,8 @@
+{
+  "tinyllama__b6__seed_42": {
+    "mode": "checkpoint_reuse_required",
+    "checkpoint_dir": "/netdisk/lijunsi/c2c-route1-identifiability/checkpoints/b6_seed42/final",
+    "checkpoint_directory_sha256": "a66bd9c0b2682dc204ff0efe9a8c0a68c78fe4fa537223e18ecbba396f1c1404",
+    "note": "Reuse only the bitwise-verified B6 checkpoint; rerun all canonical suite evaluations with the current evaluator."
+  }
+}
