@@ -141,6 +141,9 @@ def test_lane_jobs_have_exact_resources_mounts_and_independent_plans() -> None:
         assert env["HF_DATASETS_OFFLINE"] == "1"
         assert env["DATASETS_OFFLINE"] == "1"
         assert env["TRANSFORMERS_OFFLINE"] == "1"
+        assert env["PIP_CONSTRAINT"].endswith(
+            "recipe/train_recipe/identifiability/runtime_constraints.txt"
+        )
         assert env["C2C_MODEL_ROOT"] == (
             "/netdisk/lijunsi/c2c-route1-identifiability/models"
         )

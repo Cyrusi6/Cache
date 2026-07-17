@@ -297,6 +297,13 @@ def _common_env(image: str) -> list[dict[str, str]]:
         {"name": "HF_HUB_CACHE", "value": "/cache/huggingface/hub"},
         {"name": "HF_ENDPOINT", "value": "https://hf-mirror.com"},
         {"name": "HF_HUB_DOWNLOAD_TIMEOUT", "value": "600"},
+        {
+            "name": "PIP_CONSTRAINT",
+            "value": str(
+                WORKSPACE_ROOT
+                / "recipe/train_recipe/identifiability/runtime_constraints.txt"
+            ),
+        },
         {"name": "C2C_SHARED_ROOT", "value": str(SHARED_ROOT)},
         {"name": "C2C_RUNTIME_IMAGE", "value": image},
     ]

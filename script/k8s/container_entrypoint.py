@@ -35,12 +35,23 @@ def runtime_identity(project_root: Path) -> dict[str, str]:
     digest.update(sys.version.encode("utf-8"))
     image = os.environ.get("C2C_RUNTIME_IMAGE", "unknown")
     digest.update(image.encode("utf-8"))
-    return {
+    identity = {
         "fingerprint": digest.hexdigest(),
         "python": sys.version,
         "image": image,
         "extras": EXTRAS,
     }
+    constraint_value = os.environ.get("PIP_CONSTRAINT")
+    if constraint_value:
+        constraint_path = Path(constraint_value).expanduser().resolve()
+        if not constraint_path.is_file():
+            raise RuntimeError(f"pip constraint file does not exist: {constraint_path}")
+        constraint_digest = hashlib.sha256(constraint_path.read_bytes()).hexdigest()
+        digest.update(b"\0pip-constraint\0")
+        digest.update(constraint_digest.encode("ascii"))
+        identity["fingerprint"] = digest.hexdigest()
+        identity["pip_constraint_sha256"] = constraint_digest
+    return identity
 
 
 def load_marker(path: Path) -> dict[str, str] | None:

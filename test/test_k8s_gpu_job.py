@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -347,6 +348,19 @@ def test_container_runtime_fingerprint_tracks_project_and_image(
     assert (
         container_entrypoint.runtime_identity(tmp_path)["fingerprint"]
         != first["fingerprint"]
+    )
+
+    constraint = tmp_path / "constraints.txt"
+    constraint.write_text("wandb==0.28.0\n", encoding="utf-8")
+    monkeypatch.setenv("PIP_CONSTRAINT", str(constraint))
+    constrained = container_entrypoint.runtime_identity(tmp_path)
+    assert constrained["pip_constraint_sha256"] == hashlib.sha256(
+        constraint.read_bytes()
+    ).hexdigest()
+    constraint.write_text("wandb==0.28.1\n", encoding="utf-8")
+    assert (
+        container_entrypoint.runtime_identity(tmp_path)["fingerprint"]
+        != constrained["fingerprint"]
     )
 
 
