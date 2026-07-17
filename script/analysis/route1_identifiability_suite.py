@@ -283,14 +283,31 @@ def _sha256(path: Path) -> str:
 
 
 def _git_commit_sha(repo_root: Path) -> str:
-    result = subprocess.run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=str(repo_root),
-        check=True,
-        capture_output=True,
-        text=True,
-    )
-    commit = result.stdout.strip().lower()
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=str(repo_root),
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        commit = result.stdout.strip().lower()
+    except FileNotFoundError:
+        # The stager may run in a minimal image without the git executable. Its
+        # pre-staged path already verifies an exact detached HEAD, so reading that
+        # value preserves the immutable revision contract.
+        try:
+            commit = (repo_root / ".git/HEAD").read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise ValueError(
+                f"Cannot resolve git commit without git executable: {repo_root}"
+            ) from exc
+        if commit.startswith("ref:"):
+            raise ValueError(
+                "git executable is unavailable and the fallback checkout is not "
+                f"detached: {commit!r}"
+            )
+        commit = commit.lower()
     if re.fullmatch(r"[0-9a-f]{40}", commit) is None:
         raise ValueError(f"Invalid git commit from {repo_root}: {commit!r}")
     return commit

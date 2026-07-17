@@ -12,6 +12,25 @@ import yaml
 from script.analysis import route1_identifiability_suite as suite
 
 
+def test_git_commit_falls_back_to_verified_detached_head_without_git(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    commit = "a" * 40
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    (git_dir / "HEAD").write_text(commit + "\n", encoding="utf-8")
+
+    def missing_git(*_args: object, **_kwargs: object) -> None:
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(suite.subprocess, "run", missing_git)
+    assert suite._git_commit_sha(tmp_path) == commit
+
+    (git_dir / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="not detached"):
+        suite._git_commit_sha(tmp_path)
+
+
 def _generate(
     tmp_path: Path,
     reuse_overrides: dict[str, dict[str, Any]] | None = None,

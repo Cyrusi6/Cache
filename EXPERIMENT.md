@@ -193,6 +193,7 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - 基础 PyTorch 镜像未内置 `git` 时，允许由控制节点把已提交的 detached checkout 预置到共享盘；stager 仅在 commit-specific ready marker 存在且 `.git/HEAD` 精确等于目标 40 位 SHA 时跳过容器内 clone，之后仍执行同一套资产、环境和计划审计。
 - `/netdisk` 是 autofs 根，Pod 不设置其深层目录为 OCI `workingDir`；所有 Python 命令使用绝对入口，待 volume mount 完成后由 `container_entrypoint.py` 校验并切换到 project root，避免 runtime 在挂载前创建 `/netdisk/lijunsi/...` 导致权限错误。
 - 共享 runtime bootstrap 使用 tracked pip constraints 固定 `transformers/datasets/accelerate/wandb/peft` 的审计版本；constraint 文件 SHA256 纳入 runtime fingerprint，防止已安装的漂移环境被错误复用。
+- suite revision resolver 优先使用 `git rev-parse HEAD`；无 `git` runtime 中仅接受 40 位 detached `.git/HEAD` fallback，stager 随后仍将 manifest revision 与请求 commit 严格比对。
 
 ### 必须产出的指标与统计
 

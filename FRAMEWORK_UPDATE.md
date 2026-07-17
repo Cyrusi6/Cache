@@ -215,6 +215,7 @@
 - 增加无 `git` 基础镜像的受控 fallback：控制节点可将目标 commit 的 clean detached checkout 预置到 `/netdisk`；checkout init 只有在 commit-specific marker 存在且共享 workspace 的 `.git/HEAD` 精确匹配目标 SHA 时才跳过 clone，其余审计与计划生成保持不变。
 - 移除所有容器的深层 `/netdisk/...` OCI `workingDir`；命令保持绝对路径，并由入口脚本在共享 volume 挂载完成后执行 `chdir(project_root)`，兼容 autofs 根挂载。
 - 新增 tracked runtime pip constraints，精确固定审计合同中的 `transformers`、`datasets`、`accelerate`、`wandb` 与 `peft`；constraints 内容哈希进入共享 venv fingerprint，避免宽松 optional dependency 将 `wandb` 解到 0.28.1 后仍复用该环境。
+- suite revision resolver 在 `git` 可用时保持 `git rev-parse HEAD`；无 `git` 镜像只允许读取预置 checkout 的 40 位 detached `.git/HEAD`，且 stage-plans 继续核对生成 manifest 与请求 commit 完全相同。
 
 ### 实验配置
 
@@ -237,6 +238,7 @@
 - 首次 stager 现场验证发现 PyTorch runtime 镜像没有 `git`（checkout init exit 127），未进入资产审计或训练；已改用上述 exact-HEAD 共享预置路径，避免在计算节点临时安装软件。
 - exact-HEAD checkout 随后通过，但 audit init 在 OCI 启动阶段因深层 `/netdisk` workingDir 创建顺序触发 permission denied；同样未运行审计或训练，已按上述 post-mount chdir 方式修复。
 - post-mount chdir 修复后 runtime bootstrap 开始正常执行；在进入资产审计前观察到宽松 `wandb>=0.13` 会解析为 0.28.1，与固定合同 0.28.0 不符，因此主动停止该 stager 并加入 constraints，未产生训练任务。
+- constraints 版本的 runtime 构建及模型/数据/package 审计均已通过；主容器随后在 suite revision 解析处再次因镜像无 `git` 退出，尚未发布 workspace-ready marker 或训练任务，已加入 detached-HEAD fallback。
 - 生成清单确认 67 runs、三条四卡 lane 和两阶段 gate/依赖关系一致；本条记录不将调度清单误写为已完成实验。
 
 ### 结论与下一步
