@@ -224,3 +224,14 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 ### 当前结论
 
 实验运行中，尚未形成任何组件贡献或机制结论。只有 B6 稳定优于 hard-span 与 gate-only control，且预注册的聚合 paired 95% CI 不跨 0，才考虑下一阶段。train/eval loss 只能诊断优化过程，不能判定方法优劣；现有 learned-affine 已显示 eval loss 更低但下游明显更差，因此第一阶段禁止依据 eval loss 得出机制结论。
+
+### 2026-07-17 Phase1 二次加速记录
+
+- 旧 Lane A 已完成 TinyLlama B3 seed 44，并在 reproduction gate 临时设为 pending 后于 run 边界退出；恢复 Job `r1id-v22-9b06-lane-a-resume4` 已跳过三个完整 run，进入 B6 seed 44。
+- 旧 Lane B/C 分别保留正在执行的 B2 seed 42 与 B1 seed 42；两者完成全部训练、评测和 marker 后退出，不进入后续 run。
+- 除上述两个 reserved runs 与已有 B0 外，B/C 剩余 22 runs 被确定性拆成四个互斥 shard，plan SHA256 分别为 `cc45e28522a643e82e5fddad063f364e371897b1ef01d544c7bcd6c7b592b75b`、`bd0e432d29284a775a05a220303b500d24ead4f0c45f5b7325c142b4315b8b33`、`510ff6356038c7c79381aec6106f62f734210b16b428c8cd724de970b715ad68`、`aa7c98505f270d69e7462278dbe6fcf4c9e877d8b5742229cd9c46e80b4de37b`。
+- Shards 1–3 使用 `4090-24gx8` 各 2 卡，当前 Jobs 为 `r1id-v22-bc4-s1-x8-r2-933bc186`、`r1id-v22-bc4-s2-x8-r2-933bc186`、`r1id-v22-bc4-s3-x8-r2-933bc186`；三者均已通过启动显存检查并进入训练。
+- Shard 4 Job `r1id-v22-bc4-s4-x48-r2-933bc186` 已创建，在旧 C worker 释放 `4090-48gx2` 后自动调度。
+- Adapter SHA256 更新为 `933bc1868f319e718ae30bcc22f37211b43d61d42813af7a620914fcd9aed3e9`；实际选择的 GPU UUID 与启动显存写入每个 adapted plan 的 `.allocation.json`。
+- 两个短暂的 3-card-reserve shard 仅运行数分钟即被主动删除并重新均衡，没有产生 completion marker；对应 partial checkpoint 不满足 reuse 条件，正式四 shard 计划会从头训练相关 run。
+- 长期并行布局为 A 的一条 4 卡 lane、`24gx8` 的三条 2 卡 shard、`48gx2` 的一条 2 卡 shard，共五条。Phase1 新 ETA 为约 7–10 小时；若 seed-42 跨模型方向通过并立即以相同方式释放 conditional 30 runs，全部 67 runs 预计还需约 15–20 小时。

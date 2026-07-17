@@ -14,6 +14,7 @@ import copy
 import hashlib
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -125,19 +126,23 @@ def materialize(
     *,
     node_profile: str,
     gpu_memory_gib: int,
+    requested_gpus: int = 2,
 ) -> dict[str, Any]:
     suite = _load_suite()
     source_plan = source_plan.resolve()
     source = json.loads(source_plan.read_text(encoding="utf-8"))
-    lane = str(source.get("lane"))
-    if lane not in {"lane_b", "lane_c"} or source.get("phase") != "phase1":
-        raise ValueError("the two-GPU adapter only accepts lane_b/lane_c phase1 plans")
+    lane = str(source.get("lane", "")).strip()
+    if not lane or source.get("phase") != "phase1":
+        raise ValueError("the two-GPU adapter requires a named phase1 lane plan")
+    if requested_gpus < 2:
+        raise ValueError("requested_gpus must be at least two")
 
     commit = suite._git_commit_sha(REPO_ROOT)
     adapted = copy.deepcopy(source)
     adapted["hardware"] = {
         "node_profile": node_profile,
-        "requested_gpus": 2,
+        "requested_gpus": int(requested_gpus),
+        "used_training_gpus": 2,
         "gpu_memory_gib": int(gpu_memory_gib),
         "placement": "two_gpu_single_node_pod",
         "training_processes": 2,
@@ -237,6 +242,7 @@ def materialize(
             "lane": adapted["lane"],
             "node_profile": node_profile,
             "gpu_memory_gib": int(gpu_memory_gib),
+            "requested_gpus": int(requested_gpus),
             "training_processes": 2,
             "effective_global_batch_size": 32,
             "evaluation_gpu_layout": GPU_LAYOUT,
@@ -251,6 +257,7 @@ def _run_two_gpu_triplet(
     openbookqa_config: Path,
     mmlu_config: Path,
     python_executable: str,
+    child_env: Mapping[str, str] | None = None,
 ) -> int:
     configs = {
         "ARC": (arc_config.resolve(), [0]),
@@ -270,7 +277,11 @@ def _run_two_gpu_triplet(
             path = configs[name][0]
             command = [python_executable, str(evaluator), "--config", str(path)]
             print(f"[{name}] starting: {' '.join(command)}", flush=True)
-            processes[name] = subprocess.Popen(command, cwd=str(REPO_ROOT))
+            processes[name] = subprocess.Popen(
+                command,
+                cwd=str(REPO_ROOT),
+                env=dict(child_env) if child_env is not None else None,
+            )
         while processes:
             for name in list(processes):
                 return_code = processes[name].poll()
@@ -296,29 +307,56 @@ def _run_two_gpu_triplet(
     mmlu_path = configs["MMLU-Redux"][0]
     command = [python_executable, str(evaluator), "--config", str(mmlu_path)]
     print(f"[MMLU-Redux] starting: {' '.join(command)}", flush=True)
-    return int(subprocess.run(command, cwd=str(REPO_ROOT)).returncode)
+    return int(
+        subprocess.run(
+            command,
+            cwd=str(REPO_ROOT),
+            env=dict(child_env) if child_env is not None else None,
+        ).returncode
+    )
 
 
-def _check_startup_gpu_memory(max_used_mib: int) -> None:
+def _select_startup_gpus(max_used_mib: int) -> tuple[list[str], list[int]]:
     result = subprocess.run(
         [
             "nvidia-smi",
-            "--query-gpu=memory.used",
+            "--query-gpu=uuid,memory.used",
             "--format=csv,noheader,nounits",
         ],
         check=True,
         capture_output=True,
         text=True,
     )
-    values = [int(line.strip()) for line in result.stdout.splitlines() if line.strip()]
-    if len(values) != 2:
-        raise RuntimeError(f"expected exactly two visible GPUs, found memory rows={values}")
-    if any(value > max_used_mib for value in values):
+    rows: list[tuple[str, int]] = []
+    for line in result.stdout.splitlines():
+        if not line.strip():
+            continue
+        uuid, used = (part.strip() for part in line.split(",", maxsplit=1))
+        rows.append((uuid, int(used)))
+    healthy = [(uuid, used) for uuid, used in rows if used <= max_used_mib]
+    if len(healthy) < 2:
         raise RuntimeError(
-            f"allocated GPU is not idle enough: used_mib={values}, "
+            f"fewer than two allocated GPUs are idle enough: rows={rows}, "
             f"threshold={max_used_mib}"
         )
-    print(f"[2gpu] startup GPU memory check passed: used_mib={values}", flush=True)
+    selected = healthy[:2]
+    selected_uuids = [uuid for uuid, _used in selected]
+    selected_used = [used for _uuid, used in selected]
+    print(
+        f"[2gpu] startup GPU selection passed: visible={len(rows)} "
+        f"selected={selected_uuids} used_mib={selected_used}",
+        flush=True,
+    )
+    return selected_uuids, selected_used
+
+
+def _adapt_two_gpu_command(command: list[str]) -> tuple[list[str], bool]:
+    adapted = list(command)
+    if "--nproc_per_node=4" not in adapted:
+        return adapted, False
+    index = adapted.index("--nproc_per_node=4")
+    adapted[index] = "--nproc_per_node=2"
+    return adapted, True
 
 
 def run(
@@ -329,27 +367,52 @@ def run(
     *,
     node_profile: str,
     gpu_memory_gib: int,
+    requested_gpus: int,
     max_startup_used_mib: int,
 ) -> int:
     suite = _load_suite()
-    _check_startup_gpu_memory(max_startup_used_mib)
+    selected_uuids, selected_used_mib = _select_startup_gpus(
+        max_startup_used_mib
+    )
+    child_env = dict(os.environ)
+    child_env["CUDA_VISIBLE_DEVICES"] = ",".join(selected_uuids)
     adapted = materialize(
         source_plan,
         adapted_plan,
         node_profile=node_profile,
         gpu_memory_gib=gpu_memory_gib,
+        requested_gpus=requested_gpus,
     )
     lane = str(adapted["lane"])
+    _write_json(
+        adapted_plan.with_suffix(adapted_plan.suffix + ".allocation.json"),
+        {
+            "schema_version": 1,
+            "lane": lane,
+            "requested_gpus": int(requested_gpus),
+            "selected_gpu_uuids": selected_uuids,
+            "selected_gpu_used_mib_at_start": selected_used_mib,
+            "cuda_visible_devices": child_env["CUDA_VISIBLE_DEVICES"],
+        },
+    )
 
     def run_command(command: list[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
-        command = list(command)
-        try:
-            index = command.index("--nproc_per_node=4")
-        except ValueError as exc:
-            raise ValueError(f"unexpected training command: {command}") from exc
-        command[index] = "--nproc_per_node=2"
-        print(f"[{lane}/2gpu] adapted training command: {' '.join(command)}", flush=True)
+        command, training_adapted = _adapt_two_gpu_command(command)
+        if training_adapted:
+            print(
+                f"[{lane}/2gpu] adapted training command: {' '.join(command)}",
+                flush=True,
+            )
+        else:
+            print(
+                f"[{lane}/2gpu] passthrough command: {' '.join(command)}",
+                flush=True,
+            )
+        kwargs.setdefault("env", child_env)
         return subprocess.run(command, **kwargs)
+
+    def triplet_runner(**kwargs: Any) -> int:
+        return _run_two_gpu_triplet(**kwargs, child_env=child_env)
 
     return int(
         suite.run_lane_plan(
@@ -361,7 +424,7 @@ def run(
             dependency_poll_seconds=10.0,
             python_executable=sys.executable,
             run_command=run_command,
-            triplet_runner=_run_two_gpu_triplet,
+            triplet_runner=triplet_runner,
         )
     )
 
@@ -374,6 +437,7 @@ def main() -> int:
     parser.add_argument("--state-dir", type=Path, required=True)
     parser.add_argument("--node-profile", required=True)
     parser.add_argument("--gpu-memory-gib", type=int, required=True)
+    parser.add_argument("--requested-gpus", type=int, default=2)
     parser.add_argument("--max-startup-used-mib", type=int, default=4096)
     parser.add_argument("--prepare-only", action="store_true")
     args = parser.parse_args()
@@ -383,6 +447,7 @@ def main() -> int:
             args.adapted_plan,
             node_profile=args.node_profile,
             gpu_memory_gib=args.gpu_memory_gib,
+            requested_gpus=args.requested_gpus,
         )
         print(f"prepared {args.adapted_plan.resolve()}")
         return 0
@@ -393,6 +458,7 @@ def main() -> int:
         args.state_dir,
         node_profile=args.node_profile,
         gpu_memory_gib=args.gpu_memory_gib,
+        requested_gpus=args.requested_gpus,
         max_startup_used_mib=args.max_startup_used_mib,
     )
 

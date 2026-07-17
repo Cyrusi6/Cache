@@ -276,3 +276,34 @@
 ### 结论与下一步
 
 当前三条物理流水线均已进入真实训练且无 Pod 重启。卡数变化只用于基础设施等效批量调度，不构成新方法；最终统计必须保留 world-size 字段，并在解释很小的 seed 差异时把非 bitwise 的 DDP 轨迹作为潜在工程噪声披露。
+
+## 2026-07-17：Phase1 动态重分片到五条长期流水线
+
+### 研究目标
+
+在不终止已接近完成的 B2/B1 run、不重复任何正式输出的前提下，利用 `4090-24gx8` 后续恢复为空闲状态的全部 GPU，把 B/C 剩余串行计划拆成四个互斥 shard，降低 Phase1 的关键路径。
+
+### 核心改动
+
+- 新增 deterministic lane sharder：读取多个 phase1 plan，排除 completed 与显式 reserved runs，清除仅用于旧 lane 串行化的 `depends_on_runs`，按 pair 规模与 post-hoc gate 成本做 LPT 负载均衡。
+- 当前 B2 seed 42 与 B1 seed 42 继续由旧 B/C worker 完整执行；旧 worker 使用独立 pending gate，在当前 run 写完 checkpoint、三任务评测和 completion marker 后退出。
+- A 使用新的 pass gate 立即恢复 canonical 4 卡计划；B/C 的其余 22 runs 被拆为 4 个互斥 shard，estimated weights 为 6.60、5.65、5.65、6.55。
+- `4090-24gx8` 同时运行三个 2 卡 shard；`4090-48gx2` 的第四个 shard 在旧 C worker 完成 B1 后自动获得两张卡。长期并行度由三条提升为五条。
+- 两卡 adapter 现在允许 Pod 看到多于两张卡时按 UUID 选择两张低占用卡，并把实际 UUID/启动显存写入 allocation provenance；post-hoc 单卡 diagnostics 命令保持 passthrough，不再被误判为 torchrun 命令。
+
+### 实验配置
+
+- Lane A：`r1id-v22-9b06-lane-a-resume4`，`4090-24gx4`，4-process DDP。
+- B/C shards 1–3：`4090-24gx8`，各 2-process DDP、per-device batch 1、accumulation 16。
+- B/C shard 4：`4090-48gx2`，2-process DDP；旧 C 完成后由 Kubernetes 自动调度。
+- 所有 shard 共享同一 reproduction-pass ConfigMap、冻结 split、输出根与 completion state；run IDs、checkpoint 和评测目录在 shard 之间不重叠。
+
+### 验证结果
+
+- 三个 `24gx8` shard 均完成 GPU 准入并进入不同方法训练；启动检查未发现高占用卡。
+- A resume 跳过三个 completed runs 后进入 TinyLlama B6 seed 44 训练。
+- Sharder 与 adapter 聚焦测试 5 passed；项目全量测试 197 passed，保留 2 个已知 Pydantic warnings。
+
+### 结论与下一步
+
+Phase1 的长期并行线提升为五条，预计关键路径从约 14–18 小时缩短到约 7–10 小时。该变化只重排互相独立的 run，不改变任何方法或单个 run 的有效全局 batch、数据、超参数与 checkpoint 规则。

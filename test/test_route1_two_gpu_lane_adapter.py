@@ -109,6 +109,7 @@ def test_materialize_two_gpu_plan_preserves_effective_global_batch(
         adapted_plan_path,
         node_profile="24gx2",
         gpu_memory_gib=24,
+        requested_gpus=3,
     )
 
     run = result["runs"][0]
@@ -127,7 +128,8 @@ def test_materialize_two_gpu_plan_preserves_effective_global_batch(
     assert run["training"]["checkpoint_provenance"]["train_config_sha256"] == (
         hashlib.sha256(adapted_train_path.read_bytes()).hexdigest()
     )
-    assert result["hardware"]["requested_gpus"] == 2
+    assert result["hardware"]["requested_gpus"] == 3
+    assert result["hardware"]["used_training_gpus"] == 2
     assert result["hardware"]["effective_global_batch_size"] == 32
 
     for dataset, expected in adapter.GPU_LAYOUT.items():
@@ -146,11 +148,39 @@ def test_startup_gpu_memory_check_rejects_busy_allocation(monkeypatch) -> None:
     monkeypatch.setattr(
         adapter.subprocess,
         "run",
-        lambda *_args, **_kwargs: SimpleNamespace(stdout="1\n21992\n"),
+        lambda *_args, **_kwargs: SimpleNamespace(
+            stdout="GPU-a, 21992\nGPU-b, 8192\n"
+        ),
     )
     try:
-        adapter._check_startup_gpu_memory(4096)
+        adapter._select_startup_gpus(4096)
     except RuntimeError as error:
-        assert "used_mib=[1, 21992]" in str(error)
+        assert "fewer than two" in str(error)
     else:
         raise AssertionError("busy GPU allocation was not rejected")
+
+
+def test_startup_gpu_selection_uses_two_idle_cards_from_three(monkeypatch) -> None:
+    monkeypatch.setattr(
+        adapter.subprocess,
+        "run",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            stdout="GPU-a, 1\nGPU-b, 21992\nGPU-c, 2\n"
+        ),
+    )
+    uuids, used = adapter._select_startup_gpus(4096)
+    assert uuids == ["GPU-a", "GPU-c"]
+    assert used == [1, 2]
+
+
+def test_two_gpu_command_only_rewrites_distributed_training() -> None:
+    training, changed = adapter._adapt_two_gpu_command(
+        ["python", "-m", "torch.distributed.run", "--nproc_per_node=4", "train.py"]
+    )
+    assert changed
+    assert "--nproc_per_node=2" in training
+
+    diagnostics = ["python", "diagnostics.py", "--device", "cuda:0"]
+    passthrough, changed = adapter._adapt_two_gpu_command(diagnostics)
+    assert not changed
+    assert passthrough == diagnostics
