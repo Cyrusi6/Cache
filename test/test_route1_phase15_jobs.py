@@ -3,6 +3,7 @@ from __future__ import annotations
 import copy
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -92,12 +93,32 @@ def test_render_uses_three_node_level_gpu_pools(tmp_path: Path) -> None:
         assert pod["volumes"][0]["hostPath"]["path"] == "/netdisk"
         env = {item["name"]: item["value"] for item in container["env"]}
         assert env["C2C_PRESERVE_CUDA_VISIBLE_DEVICES"] == "1"
+        assert env["C2C_PHASE15_WORKSPACE_ROOT"] == str(jobs.WORKSPACE_ROOT)
         assert env["PIP_CONSTRAINT"].endswith(
             "recipe/train_recipe/identifiability/runtime_constraints.txt"
         )
         init_script = pod["initContainers"][0]["command"][-1]
         assert ".git/HEAD" in init_script
         assert "FileNotFoundError" in init_script
+
+
+def test_workspace_root_can_be_overridden_for_resume_checkout(tmp_path: Path) -> None:
+    workspace = tmp_path / "Cache_phase15_fast"
+    script = (
+        "import runpy; "
+        f"value = runpy.run_path({str(MODULE_PATH)!r}); "
+        "print(value['WORKSPACE_ROOT'])"
+    )
+    environment = dict(os.environ)
+    environment["C2C_PHASE15_WORKSPACE_ROOT"] = str(workspace)
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        env=environment,
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    assert result.stdout.strip() == str(workspace)
 
 
 def test_manifest_validation_rejects_duplicate_outputs(tmp_path: Path) -> None:

@@ -42,7 +42,12 @@ DEFAULT_NAMESPACE = "c2c-research"
 DEFAULT_NAME_PREFIX = "r1-p15"
 DEFAULT_SHARED_HOST_PATH = "/netdisk"
 EXPERIMENT_ROOT = PurePosixPath("/netdisk/lijunsi/c2c-route1-identifiability")
-WORKSPACE_ROOT = EXPERIMENT_ROOT / "workspace/Cache"
+WORKSPACE_ROOT = PurePosixPath(
+    os.environ.get(
+        "C2C_PHASE15_WORKSPACE_ROOT",
+        str(EXPERIMENT_ROOT / "workspace/Cache"),
+    )
+)
 RUNTIME_ROOT = EXPERIMENT_ROOT / "runtime"
 DEFAULT_MANIFEST = Path("local/tmp/phase1_5_causal_diagnostics/manifest.json")
 DEFAULT_STATE_DIR = WORKSPACE_ROOT / "local/tmp/phase1_5_causal_diagnostics/k8s_state"
@@ -251,6 +256,7 @@ def _common_env(options: RenderOptions, worker: NodeWorker) -> list[dict[str, st
         {"name": "DATASETS_OFFLINE", "value": "1"},
         {"name": "TRANSFORMERS_OFFLINE", "value": "1"},
         {"name": "C2C_SHARED_ROOT", "value": str(EXPERIMENT_ROOT)},
+        {"name": "C2C_PHASE15_WORKSPACE_ROOT", "value": str(WORKSPACE_ROOT)},
         {"name": "C2C_MODEL_ROOT", "value": str(EXPERIMENT_ROOT / "models")},
         {"name": "C2C_DATA_ROOT", "value": str(EXPERIMENT_ROOT / "data/c2c")},
         {"name": "C2C_RUNTIME_IMAGE", "value": options.image},

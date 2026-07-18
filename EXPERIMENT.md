@@ -308,5 +308,6 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 三个活跃 Pods 均 restart 0、无 OOM/Traceback：x4 运行 shard 0 并在其后串行 shard 1，x8 以三个双卡组并行 shards 2/3/4 后接 shard 5，x48 运行 shard 6。新的 x48 resume Job 与 Qwen2.5 seed44 anomaly Job 因该节点 2/2 GPU 已占用而 Pending，会在 shard 6 释放后自动接续。
 - GPU 实测显示每个 evaluator 子进程都在单卡完整加载模型：TinyLlama pair 约 5.8–6.1GiB，Qwen3-1.7B pair 约 6.6–7.0GiB。x4 的第三张 24GB 卡仅占约 396MiB，具备预取 ARC/OpenBookQA 的显存余量；第四张卡由 Kubernetes 外部进程占约 19.2GiB，不参与实验。
 - 新增受控 `stage-small-benchmarks`：不改 YAML，只用 CUDA UUID mask 把原 ARC `[0]` 与 OpenBookQA `[1]` 映射到 spare GPU；新版主 lane 与 stager 通过 per-run lock 互斥，状态 JSON 原子记录，MMLU 已开始或小任务存在 partial artifacts 时不重复启动。
+- 为避免修改仍被 x8/x48 Pending Jobs 核验的 canonical checkout，节点级 launcher 支持 `C2C_PHASE15_WORKSPACE_ROOT`；x4 resume 使用独立的精确 commit checkout，manifest、checkpoint 与结果路径仍指向同一份共享 `local/` 资产。
 - 预取器只用于尚未开始的 shard 1；MMLU 仍保持原双卡 subject 分片。按已观察首个 triplet 约 31.6 分钟与历史子任务耗时估算，预取可把 x4 关键路径缩短约 28%。x48 完成 shard 6 与 anomaly 后，还会按已完成 summary 对 x4/x8 未启动尾部做无重叠再平衡。
-- 调度改动验证为聚焦 `15 passed`、全量 `228 passed`，保留 2 个既有 Pydantic warnings；未改变任何 Phase 1.5 方法、checkpoint 或统计比较。
+- 调度改动验证为预取器聚焦 `15 passed`、全量 `229 passed`，保留 2 个既有 Pydantic warnings；未改变任何 Phase 1.5 方法、checkpoint 或统计比较。

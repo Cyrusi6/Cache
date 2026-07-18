@@ -461,6 +461,7 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 - 新增 shard 级非阻塞锁和 run 级 NFS advisory lock；新版主 `run-shard` 在同一 run lock 内重新检查完成状态，避免主 lane 与预取器写入相同 triplet。
 - MMLU provenance 已出现时默认安全跳过，亦可配置为立即报错；ARC/OpenBookQA 存在 partial/active artifacts 时拒绝重复启动。
 - 状态以原子 JSON 记录 manifest SHA、GPU mask、逐 run/dataset 时间、返回码和最终输出契约；每个已完成数据集仍严格要求唯一 prediction CSV、summary JSON 与 provenance。
+- 节点级 Job renderer 支持通过 `C2C_PHASE15_WORKSPACE_ROOT` 指向独立、精确 commit 的 resume checkout，并把该路径传入 Pod；因此运行中的 canonical checkout 无需被原地切换或修改。
 
 ### 实验配置
 
@@ -471,7 +472,7 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 ### 验证结果
 
 - 新增测试覆盖原始配置不变、ARC/OBQA 设备映射、MMLU-started skip/error、run lock 互斥、锁内完成状态重查和输出契约失败。
-- 聚焦测试 `15 passed`；项目全量测试 `228 passed`，保留 2 个既有 Pydantic warnings；`git diff --check` 通过。
+- 预取器聚焦测试 `15 passed`；加入独立 resume checkout 后项目全量测试更新为 `229 passed`，保留 2 个既有 Pydantic warnings；`git diff --check` 通过。
 
 ### 结论与下一步
 
