@@ -300,4 +300,4 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 使用现有 receiver-only 与 fused 逐例结果计算 oracle abstention accuracy、理想 abstain rate 和相对最佳固定策略的 headroom。
 - 只有同 checkpoint top-k4 在至少两个真正异构模型对上为正、跨 pair CI 下界大于 0 且收益集中在高 ambiguity 时，才允许进入小型 query-time prototype。
 
-启动前验证：项目全量测试 `217 passed`，七份 Kubernetes Jobs API server dry-run 全部通过。正式 Job 将在实现 commit 推送并同步到共享 detached checkout 后创建。
+启动前验证：项目全量测试 `217 passed`，七份 Kubernetes Jobs API server dry-run 全部通过。首次真实创建在评测开始前发现 Job 漏传固定 `PIP_CONSTRAINT`，导致准备建立未锁定的新 venv，并在两个节点上触发未发布目录清理竞态；七个 Job 已立即删除，prediction 产物为 0。修复后运行时将复用 Phase 1 constraints SHA256 `a2258586be96bf21526130a723b56885a5ea93a00c532400ff854288f8358af8` 对应的已审计环境，再重新提交。

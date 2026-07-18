@@ -85,6 +85,10 @@ def test_render_max7_uses_fixed_cross_node_two_gpu_layout(tmp_path: Path) -> Non
         assert "7" in container["args"]
         assert pod["volumes"][0]["hostPath"]["path"] == "/netdisk"
         assert f"shard_{shard_index:02d}" in " ".join(container["args"])
+        env = {item["name"]: item["value"] for item in container["env"]}
+        assert env["PIP_CONSTRAINT"].endswith(
+            "recipe/train_recipe/identifiability/runtime_constraints.txt"
+        )
         init_script = pod["initContainers"][0]["command"][-1]
         assert ".git/HEAD" in init_script
         assert "FileNotFoundError" in init_script

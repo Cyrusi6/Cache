@@ -421,6 +421,7 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 - 新增 Phase 1.5 manifest 生成与断点续跑入口。主矩阵为 4 pairs × 3 seeds × 6 非 native 干预，共 72 个三任务 triplets；36 个 native comparator 直接复用 Phase 1 逐例结果。
 - 新增七路双卡 Kubernetes renderer：`4090-24gx4` 两路、`4090-24gx8` 四路、`4090-48gx2` 一路，共使用 14 张 NVIDIA GPU。每路先并发运行 ARC/OBQA，再用双卡运行 MMLU-Redux。
 - Kubernetes init 同时核验精确 Git commit 与 execution manifest SHA；当基础镜像没有 `git` 时，允许读取 detached checkout 的 40 位 `.git/HEAD`，避免 init 阶段误阻塞。
+- Job 显式传入 Phase 1 已审计的 `runtime_constraints.txt`，运行时 fingerprint 与既有固定 venv 保持一致，禁止因漏传 constraints 而安装漂移依赖。
 - 新增 Phase 1.5 统计入口，复用 pair→seed→example hierarchical paired bootstrap，输出同 checkpoint accuracy delta、McNemar、seed 方差、ambiguity interaction 与 receiver/fused oracle abstention headroom。
 
 ### 实验配置
@@ -436,6 +437,7 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 - 项目全量测试 `217 passed`，保留 2 个已知 Pydantic warnings。
 - 72-run execution manifest 完整性、输出目录隔离、checkpoint-only 约束和七 shard 数量 `[11,11,10,10,10,10,10]` 均通过校验。
 - 七份 Kubernetes Jobs 已通过 API server dry-run；本次实现提交前未创建正式 Job。
+- 首次真实创建在进入评测前暴露了 `PIP_CONSTRAINT` 漏传：两个跨节点 Pod 清理同一未发布 venv 时发生竞态，其余 Pod 尚在等待/安装。七个 Job 随即全部删除，没有产生 prediction；补齐 constraints 后将复用已审计环境重新提交。
 
 ### 结论与下一步
 

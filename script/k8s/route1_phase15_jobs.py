@@ -43,6 +43,9 @@ DEFAULT_MANIFEST = Path("local/tmp/phase1_5_causal_diagnostics/manifest.json")
 DEFAULT_STATE_DIR = WORKSPACE_ROOT / "local/tmp/phase1_5_causal_diagnostics/k8s_state"
 INTERVENTION_SCRIPT = WORKSPACE_ROOT / "script/analysis/route1_phase15_interventions.py"
 THIS_SCRIPT = WORKSPACE_ROOT / "script/k8s/route1_phase15_jobs.py"
+RUNTIME_CONSTRAINTS = (
+    WORKSPACE_ROOT / "recipe/train_recipe/identifiability/runtime_constraints.txt"
+)
 FULL_GIT_SHA = re.compile(r"[0-9a-fA-F]{40}")
 DATASETS = ("ai2-arc", "openbookqa", "mmlu-redux")
 EXPECTED_PAIRS = {"tinyllama", "qwen3_1p7b", "qwen25_0p5b", "llama32_1b"}
@@ -232,6 +235,7 @@ def _common_env(options: RenderOptions, shard_index: int) -> list[dict[str, str]
         {"name": "C2C_MODEL_ROOT", "value": str(EXPERIMENT_ROOT / "models")},
         {"name": "C2C_DATA_ROOT", "value": str(EXPERIMENT_ROOT / "data/c2c")},
         {"name": "C2C_RUNTIME_IMAGE", "value": options.image},
+        {"name": "PIP_CONSTRAINT", "value": str(RUNTIME_CONSTRAINTS)},
         {"name": "C2C_PHASE15_SHARD", "value": str(shard_index)},
     ]
 
