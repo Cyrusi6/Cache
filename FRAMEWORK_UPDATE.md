@@ -447,3 +447,32 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 ### 结论与下一步
 
 推理期因果诊断基础设施已经就绪。正式实验必须基于本次实现的最终 commit 重新生成共享 manifest 与三节点 Job YAML，再启动最多五个同时运行的双卡逻辑 shard；是否补 TinyLlama constant/shuffle seeds 43/44 训练，严格取决于同 checkpoint entropy 干预是否跨模型对稳定有效。
+
+## 2026-07-18：Phase 1.5 单卡小任务预取与安全并发
+
+### 研究目标
+
+利用 `4090-24gx4` 上无法再组成双卡组、但显存足够承载完整 sender/receiver/projector 的一张空闲 24GB GPU，提前完成后续 triplet 的 ARC 与 OpenBookQA，缩短双卡主 lane 的关键路径；不改变 checkpoint、干预配置、数据、预测逻辑或 MMLU 两卡分片。
+
+### 核心改动
+
+- `route1_phase15_interventions.py` 新增 `stage-small-benchmarks` CLI，按逻辑 shard 串行预取尚未完成的 ARC/OpenBookQA。
+- 预取器直接使用 manifest 中原始 YAML：ARC 保持 `gpu_ids=[0]`，OpenBookQA 保持 `gpu_ids=[1]`；只通过进程级 `CUDA_VISIBLE_DEVICES` 把两者映射到同一张 spare GPU，因此不重写 config，也不改变 intervention provenance。
+- 新增 shard 级非阻塞锁和 run 级 NFS advisory lock；新版主 `run-shard` 在同一 run lock 内重新检查完成状态，避免主 lane 与预取器写入相同 triplet。
+- MMLU provenance 已出现时默认安全跳过，亦可配置为立即报错；ARC/OpenBookQA 存在 partial/active artifacts 时拒绝重复启动。
+- 状态以原子 JSON 记录 manifest SHA、GPU mask、逐 run/dataset 时间、返回码和最终输出契约；每个已完成数据集仍严格要求唯一 prediction CSV、summary JSON 与 provenance。
+
+### 实验配置
+
+- 单卡显存审计：TinyLlama pair 活跃 evaluator 约占 5.8–6.1GiB；最重 Qwen3-1.7B pair 约占 6.6–7.0GiB，均明显低于 24.56GiB。
+- 双卡并非模型并行要求：每个 evaluator 进程在单卡完整加载 sender、Qwen3-0.6B receiver 与 28 层 projector；MMLU 使用两卡仅用于 subject 数据并行。
+- x4 预取计划只覆盖尚未由主 lane 进入的 shard 1；主 lane 继续用两卡执行 MMLU，外部高占用 GPU 不参与实验。
+
+### 验证结果
+
+- 新增测试覆盖原始配置不变、ARC/OBQA 设备映射、MMLU-started skip/error、run lock 互斥、锁内完成状态重查和输出契约失败。
+- 聚焦测试 `15 passed`；项目全量测试 `228 passed`，保留 2 个既有 Pydantic warnings；`git diff --check` 通过。
+
+### 结论与下一步
+
+该改动只优化同一评测矩阵的调度，不引入新方法或统计口径。按历史 ARC、OpenBookQA 与 MMLU 耗时，x4 节点的单 triplet 关键路径预计由约 32 分钟降至约 23 分钟；正式启用时必须在旧 commit 主 lane 完成当前 triplet 后 resume-safe 切换到新版，使主 lane 与预取器共同遵守 run lock。

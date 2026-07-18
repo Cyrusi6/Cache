@@ -8,13 +8,18 @@ from __future__ import annotations
 
 import argparse
 import copy
+from contextlib import contextmanager
+from datetime import datetime, timezone
+import fcntl
 import glob
+import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Optional
+from typing import Any, Iterable, Iterator, Mapping, Optional
 
 import yaml
 
@@ -131,6 +136,67 @@ def _write_json(path: Path, value: Mapping[str, Any]) -> None:
     with path.open("w", encoding="utf-8") as handle:
         json.dump(value, handle, indent=2)
         handle.write("\n")
+
+
+def _write_json_atomic(path: Path, value: Mapping[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(path.suffix + ".tmp")
+    temporary.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
+    temporary.replace(path)
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _utc_now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+class ExclusiveLockBusy(RuntimeError):
+    """Raised when a non-blocking Phase-1.5 coordination lock is held."""
+
+
+@contextmanager
+def _exclusive_file_lock(path: Path, *, blocking: bool) -> Iterator[None]:
+    """Hold one advisory exclusive lock, including across NFS clients."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    handle = path.open("a+")
+    flags = fcntl.LOCK_EX
+    if not blocking:
+        flags |= fcntl.LOCK_NB
+    try:
+        try:
+            fcntl.flock(handle.fileno(), flags)
+        except BlockingIOError as exc:
+            raise ExclusiveLockBusy(f"exclusive lock is busy: {path}") from exc
+        yield
+    finally:
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+        finally:
+            handle.close()
+
+
+def _coordination_root(manifest_path: Path) -> Path:
+    return manifest_path.resolve().parent / "small_benchmark_stager"
+
+
+def _run_lock_path(manifest_path: Path, run_id: str) -> Path:
+    digest = hashlib.sha256(run_id.encode("utf-8")).hexdigest()
+    return _coordination_root(manifest_path) / "run_locks" / f"{digest}.lock"
+
+
+def _shard_stager_lock_path(manifest_path: Path, shard_index: int) -> Path:
+    return (
+        _coordination_root(manifest_path)
+        / "shard_locks"
+        / f"shard_{shard_index:02d}.lock"
+    )
 
 
 def _repo_reference(path: Path) -> str:
@@ -472,6 +538,278 @@ def _dataset_output_complete(output_dir: Path) -> bool:
     )
 
 
+def _dataset_output_started(output_dir: Path) -> bool:
+    return (
+        (output_dir / "eval_intervention_provenance.json").exists()
+        or bool(list(output_dir.glob("*_cot.csv")))
+        or bool(list(output_dir.glob("*_summary.json")))
+    )
+
+
+def _validate_eval_config(
+    config_path: Path, *, dataset: str, gpu_ids: list[int]
+) -> Path:
+    with config_path.open("r", encoding="utf-8") as handle:
+        config = yaml.safe_load(handle)
+    if config.get("eval", {}).get("dataset") != dataset:
+        raise ValueError(f"config has the wrong dataset for {dataset}: {config_path}")
+    if config.get("eval", {}).get("gpu_ids") != gpu_ids:
+        raise ValueError(
+            f"{dataset} config must use gpu_ids={gpu_ids}, got "
+            f"{config.get('eval', {}).get('gpu_ids')}: {config_path}"
+        )
+    return _resolve_under(REPO_ROOT, config["output"]["output_dir"])
+
+
+def _normalize_cuda_visible_devices(
+    value: str, *, minimum_devices: int, argument: str
+) -> str:
+    devices = [item.strip() for item in value.split(",")]
+    if any(not item for item in devices) or len(devices) < minimum_devices:
+        raise ValueError(
+            f"{argument} must name at least {minimum_devices} comma-separated "
+            "CUDA devices"
+        )
+    if len(set(devices)) != len(devices):
+        raise ValueError(f"{argument} must not contain duplicate CUDA devices")
+    return ",".join(devices)
+
+
+def run_small_benchmark_stager(
+    *,
+    manifest_path: Path,
+    shard_index: int,
+    num_shards: int,
+    arc_cuda_visible_devices: str,
+    openbookqa_cuda_visible_devices: str,
+    state_dir: Optional[Path] = None,
+    mmlu_started_policy: str = "skip",
+    runner: Any = subprocess.run,
+) -> int:
+    """Prefetch incomplete ARC/OpenBookQA evaluations on one spare GPU.
+
+    The original YAML files are passed directly to ``unified_evaluator``.  ARC
+    therefore keeps local ``gpu_ids=[0]`` and OpenBookQA keeps ``gpu_ids=[1]``;
+    the caller controls only the process-local CUDA visibility mask.  Per-run
+    locks are also acquired by ``run_shard`` so an updated main lane cannot
+    enter the same triplet while its small benchmarks are being staged.
+    """
+    if num_shards <= 0 or not 0 <= shard_index < num_shards:
+        raise ValueError("require num_shards > 0 and 0 <= shard_index < num_shards")
+    if mmlu_started_policy not in {"skip", "error"}:
+        raise ValueError("mmlu_started_policy must be 'skip' or 'error'")
+    arc_devices = _normalize_cuda_visible_devices(
+        arc_cuda_visible_devices,
+        minimum_devices=1,
+        argument="--arc-cuda-visible-devices",
+    )
+    openbookqa_devices = _normalize_cuda_visible_devices(
+        openbookqa_cuda_visible_devices,
+        minimum_devices=2,
+        argument="--openbookqa-cuda-visible-devices",
+    )
+
+    manifest_path = manifest_path.resolve()
+    manifest = _read_json(manifest_path)
+    selected = [
+        run
+        for index, run in enumerate(manifest["runs"])
+        if index % num_shards == shard_index
+    ]
+    resolved_state_dir = (
+        state_dir.resolve()
+        if state_dir is not None
+        else _coordination_root(manifest_path) / "state"
+    )
+    state_path = resolved_state_dir / f"shard_{shard_index:02d}.json"
+    state: dict[str, Any] = {
+        "schema_version": 1,
+        "kind": "route1_phase15_small_benchmark_stager",
+        "status": "starting",
+        "manifest": str(manifest_path),
+        "manifest_sha256": _sha256(manifest_path),
+        "shard_index": shard_index,
+        "num_shards": num_shards,
+        "run_count": len(selected),
+        "cuda_visible_devices": {
+            "ai2-arc": arc_devices,
+            "openbookqa": openbookqa_devices,
+        },
+        "mmlu_started_policy": mmlu_started_policy,
+        "started_at": _utc_now(),
+        "runs": {},
+    }
+
+    shard_lock = _shard_stager_lock_path(manifest_path, shard_index)
+    with _exclusive_file_lock(shard_lock, blocking=False):
+        state["status"] = "running"
+        state["updated_at"] = _utc_now()
+        _write_json_atomic(state_path, state)
+        try:
+            for run in selected:
+                run_id = str(run["id"])
+                run_state: dict[str, Any] = {
+                    "status": "pending",
+                    "datasets": {},
+                }
+                state["runs"][run_id] = run_state
+                state["updated_at"] = _utc_now()
+                _write_json_atomic(state_path, state)
+                try:
+                    run_lock = _run_lock_path(manifest_path, run_id)
+                    with _exclusive_file_lock(run_lock, blocking=False):
+                        if _triplet_complete(run):
+                            run_state["status"] = "already_complete"
+                            continue
+
+                        configs = run["eval_configs"]
+                        mmlu_config = _resolve_under(
+                            REPO_ROOT, configs["mmlu-redux"]
+                        )
+                        mmlu_output = _validate_eval_config(
+                            mmlu_config,
+                            dataset="mmlu-redux",
+                            gpu_ids=[0, 1],
+                        )
+                        expected_mmlu_output = _resolve_under(
+                            REPO_ROOT, run["output_dirs"]["mmlu-redux"]
+                        )
+                        if mmlu_output != expected_mmlu_output:
+                            raise ValueError(
+                                f"{run_id} MMLU output differs between manifest "
+                                "and config"
+                            )
+                        if (
+                            mmlu_output / "eval_intervention_provenance.json"
+                        ).exists():
+                            run_state["status"] = "skipped_mmlu_started"
+                            run_state["mmlu_provenance"] = str(
+                                mmlu_output
+                                / "eval_intervention_provenance.json"
+                            )
+                            if mmlu_started_policy == "error":
+                                raise RuntimeError(
+                                    f"{run_id} has already started MMLU-Redux"
+                                )
+                            continue
+
+                        dataset_specs = (
+                            (
+                                "ai2-arc",
+                                _resolve_under(REPO_ROOT, configs["ai2-arc"]),
+                                [0],
+                                arc_devices,
+                            ),
+                            (
+                                "openbookqa",
+                                _resolve_under(REPO_ROOT, configs["openbookqa"]),
+                                [1],
+                                openbookqa_devices,
+                            ),
+                        )
+                        for dataset, config_path, gpu_ids, devices in dataset_specs:
+                            output_dir = _validate_eval_config(
+                                config_path, dataset=dataset, gpu_ids=gpu_ids
+                            )
+                            expected_output = _resolve_under(
+                                REPO_ROOT, run["output_dirs"][dataset]
+                            )
+                            if output_dir != expected_output:
+                                raise ValueError(
+                                    f"{run_id} {dataset} output differs between "
+                                    "manifest and config"
+                                )
+                            dataset_state = {
+                                "config": str(config_path),
+                                "output_dir": str(output_dir),
+                            }
+                            run_state["datasets"][dataset] = dataset_state
+                            if _dataset_output_complete(output_dir):
+                                dataset_state["status"] = "already_complete"
+                                continue
+                            if _dataset_output_started(output_dir):
+                                raise RuntimeError(
+                                    f"{run_id} {dataset} has partial or active output "
+                                    f"artifacts: {output_dir}"
+                                )
+                            if (
+                                mmlu_output
+                                / "eval_intervention_provenance.json"
+                            ).exists():
+                                run_state["status"] = "skipped_mmlu_started"
+                                if mmlu_started_policy == "error":
+                                    raise RuntimeError(
+                                        f"{run_id} started MMLU-Redux while staging"
+                                    )
+                                break
+
+                            environment = dict(os.environ)
+                            environment["CUDA_VISIBLE_DEVICES"] = devices
+                            environment["C2C_PRESERVE_CUDA_VISIBLE_DEVICES"] = "1"
+                            evaluator = REPO_ROOT / "script/evaluation/unified_evaluator.py"
+                            command = [
+                                sys.executable,
+                                str(evaluator),
+                                "--config",
+                                str(config_path),
+                            ]
+                            dataset_state["status"] = "running"
+                            dataset_state["started_at"] = _utc_now()
+                            state["updated_at"] = _utc_now()
+                            _write_json_atomic(state_path, state)
+                            result = runner(
+                                command,
+                                cwd=REPO_ROOT,
+                                env=environment,
+                                check=False,
+                            )
+                            dataset_state["return_code"] = int(result.returncode)
+                            dataset_state["completed_at"] = _utc_now()
+                            if result.returncode != 0:
+                                dataset_state["status"] = "failed"
+                                raise RuntimeError(
+                                    f"{run_id} {dataset} evaluator failed with "
+                                    f"return code {result.returncode}"
+                                )
+                            if not _dataset_output_complete(output_dir):
+                                dataset_state["status"] = "failed_validation"
+                                raise RuntimeError(
+                                    f"{run_id} {dataset} returned success without "
+                                    "one prediction CSV, one summary JSON, and provenance"
+                                )
+                            dataset_state["status"] = "completed"
+                            state["updated_at"] = _utc_now()
+                            _write_json_atomic(state_path, state)
+                        else:
+                            run_state["status"] = "completed"
+                except ExclusiveLockBusy:
+                    run_state["status"] = "skipped_run_locked"
+                finally:
+                    state["updated_at"] = _utc_now()
+                    _write_json_atomic(state_path, state)
+        except Exception as exc:
+            state["status"] = "failed"
+            state["error"] = {
+                "type": type(exc).__name__,
+                "message": str(exc),
+            }
+            state["failed_at"] = _utc_now()
+            state["updated_at"] = state["failed_at"]
+            _write_json_atomic(state_path, state)
+            raise
+
+        counts: dict[str, int] = {}
+        for run_state in state["runs"].values():
+            status = str(run_state["status"])
+            counts[status] = counts.get(status, 0) + 1
+        state["status"] = "completed"
+        state["status_counts"] = counts
+        state["completed_at"] = _utc_now()
+        state["updated_at"] = state["completed_at"]
+        _write_json_atomic(state_path, state)
+    return 0
+
+
 def run_triplet(
     *, arc_config: Path, openbookqa_config: Path, mmlu_config: Path
 ) -> int:
@@ -482,16 +820,9 @@ def run_triplet(
     )
     completed: dict[str, bool] = {}
     for name, path, dataset, gpu_ids in specs:
-        with path.open("r", encoding="utf-8") as handle:
-            config = yaml.safe_load(handle)
-        if config.get("eval", {}).get("dataset") != dataset:
-            raise ValueError(f"{name} config has the wrong dataset: {path}")
-        if config.get("eval", {}).get("gpu_ids") != gpu_ids:
-            raise ValueError(
-                f"{name} config must use gpu_ids={gpu_ids}, got "
-                f"{config.get('eval', {}).get('gpu_ids')}"
-            )
-        output_dir = _resolve_under(REPO_ROOT, config["output"]["output_dir"])
+        output_dir = _validate_eval_config(
+            path, dataset=dataset, gpu_ids=gpu_ids
+        )
         completed[name] = _dataset_output_complete(output_dir)
         if completed[name]:
             print(f"[{name}] complete; skipping", flush=True)
@@ -540,19 +871,25 @@ def run_shard(manifest_path: Path, shard_index: int, num_shards: int) -> int:
         if index % num_shards == shard_index
     ]
     for run in selected:
-        if _triplet_complete(run):
-            print(f"[{run['id']}] complete; skipping", flush=True)
-            continue
-        print(f"[{run['id']}] starting", flush=True)
-        configs = run["eval_configs"]
-        return_code = run_triplet(
-            arc_config=_resolve_under(REPO_ROOT, configs["ai2-arc"]),
-            openbookqa_config=_resolve_under(REPO_ROOT, configs["openbookqa"]),
-            mmlu_config=_resolve_under(REPO_ROOT, configs["mmlu-redux"]),
-        )
-        if return_code != 0:
-            print(f"[{run['id']}] failed with {return_code}", file=sys.stderr)
-            return return_code
+        run_id = str(run["id"])
+        with _exclusive_file_lock(
+            _run_lock_path(manifest_path, run_id), blocking=True
+        ):
+            # Recheck after acquiring the coordination lock: a small-benchmark
+            # stager may have completed ARC/OpenBookQA while this lane waited.
+            if _triplet_complete(run):
+                print(f"[{run_id}] complete; skipping", flush=True)
+                continue
+            print(f"[{run_id}] starting", flush=True)
+            configs = run["eval_configs"]
+            return_code = run_triplet(
+                arc_config=_resolve_under(REPO_ROOT, configs["ai2-arc"]),
+                openbookqa_config=_resolve_under(REPO_ROOT, configs["openbookqa"]),
+                mmlu_config=_resolve_under(REPO_ROOT, configs["mmlu-redux"]),
+            )
+            if return_code != 0:
+                print(f"[{run_id}] failed with {return_code}", file=sys.stderr)
+                return return_code
     return 0
 
 
@@ -615,6 +952,22 @@ def _parser() -> argparse.ArgumentParser:
     shard.add_argument("--manifest", type=Path, required=True)
     shard.add_argument("--shard-index", type=int, required=True)
     shard.add_argument("--num-shards", type=int, required=True)
+
+    stager = subparsers.add_parser(
+        "stage-small-benchmarks",
+        help="Prefetch incomplete ARC/OpenBookQA tasks on one spare GPU",
+    )
+    stager.add_argument("--manifest", type=Path, required=True)
+    stager.add_argument("--shard-index", type=int, required=True)
+    stager.add_argument("--num-shards", type=int, required=True)
+    stager.add_argument("--arc-cuda-visible-devices", required=True)
+    stager.add_argument("--openbookqa-cuda-visible-devices", required=True)
+    stager.add_argument("--state-dir", type=Path)
+    stager.add_argument(
+        "--mmlu-started-policy",
+        choices=("skip", "error"),
+        default="skip",
+    )
     return parser
 
 
@@ -663,7 +1016,17 @@ def main() -> int:
             openbookqa_config=args.openbookqa_config,
             mmlu_config=args.mmlu_config,
         )
-    return run_shard(args.manifest, args.shard_index, args.num_shards)
+    if args.command == "run-shard":
+        return run_shard(args.manifest, args.shard_index, args.num_shards)
+    return run_small_benchmark_stager(
+        manifest_path=args.manifest,
+        shard_index=args.shard_index,
+        num_shards=args.num_shards,
+        arc_cuda_visible_devices=args.arc_cuda_visible_devices,
+        openbookqa_cuda_visible_devices=args.openbookqa_cuda_visible_devices,
+        state_dir=args.state_dir,
+        mmlu_started_policy=args.mmlu_started_policy,
+    )
 
 
 if __name__ == "__main__":

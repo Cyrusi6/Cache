@@ -301,3 +301,12 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 只有同 checkpoint top-k4 在至少两个真正异构模型对上为正、跨 pair CI 下界大于 0 且收益集中在高 ambiguity 时，才允许进入小型 query-time prototype。
 
 启动前验证：项目全量测试 `223 passed`，三份节点级 Kubernetes Jobs API server dry-run 全部通过。首次真实创建在评测开始前发现 Job 漏传固定 `PIP_CONSTRAINT`，导致准备建立未锁定的新 venv，并在两个节点上触发未发布目录清理竞态；七个 Job 已立即删除，prediction 产物为 0。补齐 constraints 后，第二次启动直接复用 Phase 1 已审计环境，同时暴露两个既有基础设施事实：共享 NFS 上多个 evaluator 递归创建共同结果父目录会发生 `FileExistsError`，且 x4/x8 各有一张 Kubernetes 不可见的高占用 GPU。GPU 调度改为三个整节点池，按实际空闲显存选择 UUID 卡组，并发或排队覆盖全部七个逻辑 shards；x8 对其他节点新建目录名的持续 negative dentry 通过 shards 2–5 的 node-isolated sibling 共享结果根规避，最终 execution manifest 仍统一记录所有逐例路径。统计命令通过 `--anomaly-manifest` 把 Qwen2.5 seed 44 的两个额外 triplets 与主八项对照统一输出，避免手工合并。
+
+### 2026-07-18 Phase 1.5 运行中吞吐审计与单卡预取
+
+- 19:02 CST 的严格输出审计：主矩阵完成 19/216 个 task-level outputs、3/72 个完整 triplets；所有已完成 ARC 1,150 行、OpenBookQA 500 行、MMLU-Redux 5,615 行，未发现重复 CSV/summary、坏 JSON、错误行数或主/x8 双写。24 个已出现的 provenance 均记录正确 intervention、manifest/config hash 与 `training_state_mutated=false`。
+- 三个活跃 Pods 均 restart 0、无 OOM/Traceback：x4 运行 shard 0 并在其后串行 shard 1，x8 以三个双卡组并行 shards 2/3/4 后接 shard 5，x48 运行 shard 6。新的 x48 resume Job 与 Qwen2.5 seed44 anomaly Job 因该节点 2/2 GPU 已占用而 Pending，会在 shard 6 释放后自动接续。
+- GPU 实测显示每个 evaluator 子进程都在单卡完整加载模型：TinyLlama pair 约 5.8–6.1GiB，Qwen3-1.7B pair 约 6.6–7.0GiB。x4 的第三张 24GB 卡仅占约 396MiB，具备预取 ARC/OpenBookQA 的显存余量；第四张卡由 Kubernetes 外部进程占约 19.2GiB，不参与实验。
+- 新增受控 `stage-small-benchmarks`：不改 YAML，只用 CUDA UUID mask 把原 ARC `[0]` 与 OpenBookQA `[1]` 映射到 spare GPU；新版主 lane 与 stager 通过 per-run lock 互斥，状态 JSON 原子记录，MMLU 已开始或小任务存在 partial artifacts 时不重复启动。
+- 预取器只用于尚未开始的 shard 1；MMLU 仍保持原双卡 subject 分片。按已观察首个 triplet 约 31.6 分钟与历史子任务耗时估算，预取可把 x4 关键路径缩短约 28%。x48 完成 shard 6 与 anomaly 后，还会按已完成 summary 对 x4/x8 未启动尾部做无重叠再平衡。
+- 调度改动验证为聚焦 `15 passed`、全量 `228 passed`，保留 2 个既有 Pydantic warnings；未改变任何 Phase 1.5 方法、checkpoint 或统计比较。

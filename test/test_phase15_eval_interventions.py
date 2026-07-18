@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 import json
 import copy
 from pathlib import Path
@@ -469,6 +470,236 @@ def test_two_gpu_triplet_resumes_completed_datasets(
     assert [event[:2] for event in events] == [
         ("popen", "openbookqa.yaml")
     ]
+
+
+def _write_small_benchmark_stager_fixture(
+    root: Path, *, run_ids: tuple[str, ...] = ("run0",)
+) -> tuple[Path, dict[str, dict[str, Path]]]:
+    runs = []
+    paths: dict[str, dict[str, Path]] = {}
+    for run_id in run_ids:
+        eval_configs = {}
+        output_dirs = {}
+        paths[run_id] = {}
+        for dataset, gpu_ids in phase15.GPU_LAYOUT.items():
+            output_dir = root / "outputs" / run_id / dataset
+            config_path = root / "eval" / run_id / f"{dataset}.yaml"
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            config_path.write_text(
+                yaml.safe_dump(
+                    {
+                        "eval": {"dataset": dataset, "gpu_ids": gpu_ids},
+                        "output": {"output_dir": str(output_dir)},
+                    },
+                    sort_keys=False,
+                ),
+                encoding="utf-8",
+            )
+            eval_configs[dataset] = str(config_path)
+            output_dirs[dataset] = str(output_dir)
+            paths[run_id][dataset] = config_path
+        runs.append(
+            {
+                "id": run_id,
+                "eval_configs": eval_configs,
+                "output_dirs": output_dirs,
+            }
+        )
+    manifest_path = root / "manifest.json"
+    manifest_path.write_text(
+        json.dumps({"schema_version": 1, "runs": runs}), encoding="utf-8"
+    )
+    return manifest_path, paths
+
+
+def _mark_dataset_complete(config_path: Path) -> None:
+    config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    output_dir = Path(config["output"]["output_dir"])
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "run_cot.csv").write_text("x\n", encoding="utf-8")
+    (output_dir / "run_summary.json").write_text("{}\n", encoding="utf-8")
+    (output_dir / "eval_intervention_provenance.json").write_text(
+        "{}\n", encoding="utf-8"
+    )
+
+
+def test_small_benchmark_stager_uses_original_configs_and_sequential_masks(
+    tmp_path: Path,
+) -> None:
+    manifest_path, paths = _write_small_benchmark_stager_fixture(tmp_path)
+    original = {
+        dataset: path.read_bytes() for dataset, path in paths["run0"].items()
+    }
+    events = []
+
+    def run(command, cwd, env, check):
+        config_path = Path(command[-1])
+        config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+        events.append(
+            (
+                config["eval"]["dataset"],
+                env["CUDA_VISIBLE_DEVICES"],
+                env["C2C_PRESERVE_CUDA_VISIBLE_DEVICES"],
+                cwd,
+                check,
+            )
+        )
+        _mark_dataset_complete(config_path)
+        return SimpleNamespace(returncode=0)
+
+    state_dir = tmp_path / "state"
+    assert phase15.run_small_benchmark_stager(
+        manifest_path=manifest_path,
+        shard_index=0,
+        num_shards=1,
+        arc_cuda_visible_devices="GPU-spare",
+        openbookqa_cuda_visible_devices="GPU-active,GPU-spare",
+        state_dir=state_dir,
+        runner=run,
+    ) == 0
+
+    assert events == [
+        ("ai2-arc", "GPU-spare", "1", phase15.REPO_ROOT, False),
+        (
+            "openbookqa",
+            "GPU-active,GPU-spare",
+            "1",
+            phase15.REPO_ROOT,
+            False,
+        ),
+    ]
+    assert {
+        dataset: path.read_bytes() for dataset, path in paths["run0"].items()
+    } == original
+    state = json.loads((state_dir / "shard_00.json").read_text())
+    assert state["status"] == "completed"
+    assert state["status_counts"] == {"completed": 1}
+    assert state["runs"]["run0"]["datasets"]["ai2-arc"]["status"] == "completed"
+    assert (
+        state["runs"]["run0"]["datasets"]["openbookqa"]["status"]
+        == "completed"
+    )
+
+
+def test_small_benchmark_stager_respects_mmlu_started_policy(
+    tmp_path: Path,
+) -> None:
+    manifest_path, paths = _write_small_benchmark_stager_fixture(tmp_path)
+    mmlu_config = yaml.safe_load(
+        paths["run0"]["mmlu-redux"].read_text(encoding="utf-8")
+    )
+    mmlu_output = Path(mmlu_config["output"]["output_dir"])
+    mmlu_output.mkdir(parents=True)
+    (mmlu_output / "eval_intervention_provenance.json").write_text(
+        "{}\n", encoding="utf-8"
+    )
+
+    def unexpected_run(*_args, **_kwargs):
+        raise AssertionError("stager must not race a started MMLU evaluation")
+
+    skip_state = tmp_path / "skip-state"
+    assert phase15.run_small_benchmark_stager(
+        manifest_path=manifest_path,
+        shard_index=0,
+        num_shards=1,
+        arc_cuda_visible_devices="GPU-spare",
+        openbookqa_cuda_visible_devices="GPU-active,GPU-spare",
+        state_dir=skip_state,
+        mmlu_started_policy="skip",
+        runner=unexpected_run,
+    ) == 0
+    skipped = json.loads((skip_state / "shard_00.json").read_text())
+    assert skipped["runs"]["run0"]["status"] == "skipped_mmlu_started"
+
+    error_state = tmp_path / "error-state"
+    with pytest.raises(RuntimeError, match="already started MMLU-Redux"):
+        phase15.run_small_benchmark_stager(
+            manifest_path=manifest_path,
+            shard_index=0,
+            num_shards=1,
+            arc_cuda_visible_devices="GPU-spare",
+            openbookqa_cuda_visible_devices="GPU-active,GPU-spare",
+            state_dir=error_state,
+            mmlu_started_policy="error",
+            runner=unexpected_run,
+        )
+    failed = json.loads((error_state / "shard_00.json").read_text())
+    assert failed["status"] == "failed"
+    assert failed["error"]["type"] == "RuntimeError"
+
+
+def test_small_benchmark_stager_skips_run_locked_by_main_lane(
+    tmp_path: Path,
+) -> None:
+    manifest_path, _paths = _write_small_benchmark_stager_fixture(tmp_path)
+    run_lock = phase15._run_lock_path(manifest_path, "run0")
+
+    def unexpected_run(*_args, **_kwargs):
+        raise AssertionError("locked run must not be evaluated")
+
+    state_dir = tmp_path / "state"
+    with phase15._exclusive_file_lock(run_lock, blocking=True):
+        assert phase15.run_small_benchmark_stager(
+            manifest_path=manifest_path,
+            shard_index=0,
+            num_shards=1,
+            arc_cuda_visible_devices="GPU-spare",
+            openbookqa_cuda_visible_devices="GPU-active,GPU-spare",
+            state_dir=state_dir,
+            runner=unexpected_run,
+        ) == 0
+    state = json.loads((state_dir / "shard_00.json").read_text())
+    assert state["runs"]["run0"]["status"] == "skipped_run_locked"
+
+
+def test_main_lane_rechecks_completion_after_acquiring_stager_lock(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path, paths = _write_small_benchmark_stager_fixture(tmp_path)
+    expected_lock = phase15._run_lock_path(manifest_path, "run0")
+
+    @contextmanager
+    def finish_before_main_enters(path, *, blocking):
+        assert path == expected_lock
+        assert blocking is True
+        for config_path in paths["run0"].values():
+            _mark_dataset_complete(config_path)
+        yield
+
+    monkeypatch.setattr(phase15, "_exclusive_file_lock", finish_before_main_enters)
+
+    def unexpected_triplet(**_kwargs):
+        raise AssertionError("main lane must recheck completion under the run lock")
+
+    monkeypatch.setattr(phase15, "run_triplet", unexpected_triplet)
+    assert phase15.run_shard(manifest_path, 0, 1) == 0
+
+
+def test_small_benchmark_stager_requires_complete_output_contract(
+    tmp_path: Path,
+) -> None:
+    manifest_path, _paths = _write_small_benchmark_stager_fixture(tmp_path)
+
+    def success_without_outputs(*_args, **_kwargs):
+        return SimpleNamespace(returncode=0)
+
+    state_dir = tmp_path / "state"
+    with pytest.raises(RuntimeError, match="returned success without"):
+        phase15.run_small_benchmark_stager(
+            manifest_path=manifest_path,
+            shard_index=0,
+            num_shards=1,
+            arc_cuda_visible_devices="GPU-spare",
+            openbookqa_cuda_visible_devices="GPU-active,GPU-spare",
+            state_dir=state_dir,
+            runner=success_without_outputs,
+        )
+    state = json.loads((state_dir / "shard_00.json").read_text())
+    assert state["status"] == "failed"
+    assert (
+        state["runs"]["run0"]["datasets"]["ai2-arc"]["status"]
+        == "failed_validation"
+    )
 
 
 def test_tracked_phase15_recipe_fixes_72_runs_and_three_node_pool_jobs() -> None:
