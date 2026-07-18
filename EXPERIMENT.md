@@ -254,3 +254,14 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - 30 个 conditional runs 已拆为七路，plan SHA256 为 `2f9d6cb6c0d7943d6aa873887484a5418fda635977ce74d89e1b1b0cf697ce1a`、`c9396dbe5d7c1f8c3f651b4af5185b64ef171abf8d48b8c8f5828a821bc5b2e7`、`1f5cf0b60fdbca591ae2974399585d61c2eba6cb9ec074d75731c9584bc2bf74`、`ec4d8d2df69a28f5bb8cb2523bc9fe890269084098e2ac5d1c3bc80a6f0c8e7c`、`74d2b9537023888f1180bf7412f366475a3588b7efafab523323ffd430b2ccf4`、`d0203899937fd660b766818690c58c735d25029a4ffc7837134c21b870b828a0`、`91637d1043ffa7ba28189baa383f84609ce6a65c5bfec0883fb5bfa92f4c1a29`。
 - 正式 Jobs 为 `r1id-v22-c7-s1-x4-r4-e796f4df`、`s2-x4`、`s3`–`s6-x8`、`s7-x48`；七个 Pods 均已进入训练、restart 0，共占用 14 张 NVIDIA GPU。第一批 r3 Jobs 仅因 adapter 不接受 conditional phase 而在训练前退出，修复后 adapter SHA256 为 `e796f4df99e362cfd83e5510b92955a06fac0b08bcd2aace1921ceb7607b9416`。
 - 按 Phase1 实测吞吐与 conditional 分片权重，预计 conditional 阶段约需 7–10 小时；从 2026-07-18 08:10 CST 启动计，预计在 15:00–18:00 CST 左右完成，之后生成完整 67-run 统计报告。
+
+### 2026-07-18 最终结果：identifiability gate 未通过
+
+- Conditional 七路在 14:46 CST 全部结束；67/67 runs 完成、failed marker 0，最终严格 materialized manifest 为 234 rows，`conditional_complete=true`。
+- 最终报告目录：`/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/final_report/`；主文件为 `report.md`、`summary.json` 和 `MECHANISM_SUMMARY_ZH.md`。
+- 三 seed sample-weighted B6：TinyLlama `47.13±1.24`、Qwen3-1.7B `50.27±0.74`、Qwen2.5-0.5B `43.62±4.19`、Llama3.2 `46.69±0.97`。
+- B3−B2 跨 pair 为 `+1.29 pp`，CI `[-0.61,+3.58]`；只有 Qwen3-1.7B pair 为 `+3.12 pp`、CI `[+0.47,+6.59]`。该 pair 的 1-to-1 与 one-to-many gains 分别约 `+3.10/+4.49 pp`，收益并非只存在于 tokenizer ambiguity bucket。
+- TinyLlama B4−B3 为 `+1.29 pp`、CI `[-2.78,+5.98]`，不能证明 static entropy 独立贡献；但 B6−constant `+0.94 pp`、CI `[+0.11,+1.75]`，B6−shuffle `+2.28 pp`、CI `[+1.39,+3.18]`，支持该 pair 中 entropy 数值与位置对应关系包含信息。
+- Clean gate capacity B5−B2-constant 为 `+0.93 pp`、CI `[-2.66,+3.90]`；B5−B2 跨 pair 为 `+0.35 pp`、CI `[-1.15,+2.13]`，均不支持 gate capacity 的稳定独立贡献。
+- B6 post-hoc gate 在三个跨模型 pair 上几乎始终开启：Qwen3/Qwen2.5 high-saturation 约 99.93%，Llama3.2 为 100%；TinyLlama 约 85.86%。B5 的 key gate 比 value gate 更动态，但未带来稳定下游提升。
+- Final gate：B6−B2 delta `+1.54 pp`、pair-cluster CI `[-1.14,+4.05]`，3/4 pairs 为正；B6−B5 delta `+1.19 pp`、CI `[-0.92,+3.31]`，2/4 pairs 为正。两个预注册条件均失败，第一阶段在此停止，不进入下一阶段。

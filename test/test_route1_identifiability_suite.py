@@ -1252,6 +1252,7 @@ def test_materialize_selects_latest_complete_common_attempt_stem(
                 "pair": "tinyllama",
                 "variant": "b6",
                 "seed": 42,
+                "conditional": True,
                 "posthoc_gate_diagnostics": {
                     "required": True,
                     "num_samples": 64,
@@ -1274,3 +1275,4 @@ def test_materialize_selects_latest_complete_common_attempt_stem(
     assert Path(mmlu["csv"]).name == "run_cot.csv"
     assert Path(mmlu["gate_diagnostics"]).name == "run_gate_diagnostics.json"
     assert mmlu["gate_diagnostics_posthoc"] == str(posthoc.resolve())
+    assert result["conditional_complete"] is True

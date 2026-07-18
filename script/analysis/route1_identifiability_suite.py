@@ -2377,12 +2377,28 @@ def materialize_analysis_manifest(
     report_runs.sort(
         key=lambda row: (row["pair"], row["method"], int(row["seed"]), row["task"])
     )
+    conditional_expected = {
+        (str(run["run_id"]), str(task))
+        for run in analysis["runs"]
+        if bool(run.get("conditional", False))
+        for task in run["datasets"]
+    }
+    conditional_materialized = {
+        (str(row["source_run_id"]), str(row["task"]))
+        for row in report_runs
+        if row.get("source_run_id") is not None
+    }
+    conditional_complete = (
+        conditional_expected.issubset(conditional_materialized)
+        if conditional_expected
+        else bool(analysis.get("conditional_complete", False))
+    )
     result = {
         "schema_version": 1,
         "receiver_method": "B0",
         "source_analysis_manifest": str(analysis_manifest_path.resolve()),
         "report_contract": copy.deepcopy(analysis.get("report_contract", {})),
-        "conditional_complete": bool(analysis.get("conditional_complete", False)),
+        "conditional_complete": conditional_complete,
         "comparisons": [
             {"name": name, "baseline": baseline, "candidate": candidate}
             for name, baseline, candidate in REPORT_COMPARISONS
