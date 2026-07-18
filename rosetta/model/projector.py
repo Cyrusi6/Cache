@@ -1370,6 +1370,11 @@ class C2CProjector(Projector):
         self.source_num_heads = source_num_heads
         self.target_num_heads = target_num_heads
         self.alignment_confidence_gate_mode = alignment_confidence_gate_mode
+        # Evaluation-only causal intervention. This is intentionally not a
+        # constructor argument and therefore never becomes part of a training
+        # recipe or checkpoint architecture.
+        self.alignment_confidence_eval_mode = "learned"
+        self.legacy_scalar_gate_eval_mode = "checkpoint_native"
         self.alignment_confidence_feature_mode = alignment_confidence_feature_mode
         self.alignment_confidence_quality_feature_dim = (
             4 if alignment_confidence_feature_mode == "quality" else 0
@@ -1945,6 +1950,53 @@ class C2CProjector(Projector):
 
     def uses_internal_source_confidence(self) -> bool:
         return self.alignment_confidence_gate_mode != "none"
+
+    def set_alignment_confidence_eval_mode(self, mode: str) -> None:
+        """Select an evaluation-only view of a trained confidence gate.
+
+        ``learned`` preserves checkpoint behavior and ``static`` uses native
+        source confidence without learned deltas. ``forced_on`` forces both
+        alignment-confidence and legacy scalar K/V gates; the two optional
+        ``*_forced_on`` diagnostic modes isolate either component. Projection
+        weights remain untouched in every mode.
+        """
+        normalized = str(mode).replace("-", "_")
+        valid_modes = {
+            "learned",
+            "static",
+            "forced_on",
+            "alignment_forced_on",
+            "legacy_forced_on",
+        }
+        if normalized not in valid_modes:
+            raise ValueError(
+                "alignment confidence eval mode must be one of "
+                f"{sorted(valid_modes)}, got {mode!r}"
+            )
+        alignment_mode = {
+            "learned": "learned",
+            "static": "static",
+            "forced_on": "forced_on",
+            "alignment_forced_on": "forced_on",
+            "legacy_forced_on": "learned",
+        }[normalized]
+        if (
+            alignment_mode != "learned"
+            and self.alignment_confidence_gate_mode == "none"
+        ):
+            raise ValueError(
+                f"cannot apply {normalized!r} to a projector trained without "
+                "an alignment confidence gate"
+            )
+        self.alignment_confidence_eval_mode = alignment_mode
+        # The formal forced-on control must remove both gate layers. Static
+        # keeps the trained legacy scalar K/V gate exactly as checkpointed.
+        self.legacy_scalar_gate_eval_mode = (
+            "forced_on"
+            if normalized in {"forced_on", "legacy_forced_on"}
+            else "checkpoint_native"
+        )
+        self.gate_eval_intervention_mode = normalized
 
     def uses_learned_source_alignment(self) -> bool:
         return self.learned_alignment_mode != "none"
@@ -4051,6 +4103,106 @@ class C2CProjector(Projector):
         )
         return selected_delta_l2, selected_mask
 
+    def _eval_alignment_confidence_override(
+        self,
+        source_confidence: Optional[Tensor],
+        source_weights: Optional[Tensor],
+        source_entropy: Optional[Tensor],
+        source_entropy_override: Optional[Tensor],
+        target_shape: Tuple[int, int, int, int],
+        dtype: torch.dtype,
+        device: torch.device,
+    ) -> Optional[Tuple[Tensor, Tensor]]:
+        """Return a static/forced-on eval gate without changing checkpoint state."""
+        eval_mode = getattr(self, "alignment_confidence_eval_mode", "learned")
+        if eval_mode == "learned":
+            return None
+
+        B, Ht, N, _ = target_shape
+        compute_dtype = (
+            torch.float32 if dtype in (torch.float16, torch.bfloat16) else dtype
+        )
+        if eval_mode == "forced_on" or source_confidence is None:
+            token_confidence = torch.ones(
+                B, 1, N, 1, dtype=compute_dtype, device=device
+            )
+        else:
+            token_confidence = source_confidence.to(
+                device=device, dtype=compute_dtype
+            )
+            if token_confidence.dim() == 2:
+                token_confidence = token_confidence[:, None, :, None]
+            elif token_confidence.dim() == 3:
+                token_confidence = token_confidence[:, None, :, :]
+            else:
+                raise ValueError(
+                    "source_confidence must have shape (B, N) or (B, N, 1), "
+                    f"got {tuple(token_confidence.shape)}"
+                )
+            token_confidence = token_confidence.clamp(min=0.0, max=1.0)
+
+        key_confidence = token_confidence.expand(B, Ht, N, 1).to(dtype=dtype)
+        value_confidence = key_confidence
+        zero_delta = torch.zeros_like(key_confidence, dtype=torch.float32)
+        source_for_record = token_confidence.detach().float().cpu()
+        entropy_for_record = torch.zeros_like(source_for_record)
+        if source_weights is not None or source_entropy is not None:
+            entropy_for_record = self._resolve_source_entropy(
+                source_weights=source_weights,
+                source_entropy=source_entropy,
+                source_entropy_override=source_entropy_override,
+                fallback=torch.zeros(B, N, device=device, dtype=compute_dtype),
+                compute_dtype=compute_dtype,
+                device=device,
+            )[:, None, :, None].detach().float().cpu()
+
+        self._last_alignment_confidence_aux_loss = None
+        self.last_alignment_delta_l2 = 0.0
+        self.last_alignment_regularized_delta_l2 = 0.0
+        self.last_alignment_regularization_selected_rate = 0.0
+        self.last_alignment_aux_loss = 0.0
+        self.last_alignment_key_delta_abs_mean = 0.0
+        self.last_alignment_value_delta_abs_mean = 0.0
+        self.last_alignment_key_delta_abs_max = 0.0
+        self.last_alignment_value_delta_abs_max = 0.0
+        self.last_alignment_key_confidence_std = float(
+            key_confidence.detach().float().std(unbiased=False).cpu().item()
+        )
+        self.last_alignment_value_confidence_std = (
+            self.last_alignment_key_confidence_std
+        )
+        if self.capture_alignment_diagnostics:
+            self.last_alignment_key_delta_tensor = zero_delta.detach().cpu()
+            self.last_alignment_value_delta_tensor = zero_delta.detach().cpu()
+            self.last_alignment_key_confidence_tensor = (
+                key_confidence.detach().float().cpu()
+            )
+            self.last_alignment_value_confidence_tensor = (
+                value_confidence.detach().float().cpu()
+            )
+            self.last_alignment_source_confidence_tensor = source_for_record
+            self.last_alignment_entropy_tensor = entropy_for_record
+            self.last_alignment_regularization_mask_tensor = torch.zeros_like(
+                source_for_record
+            )
+            if not hasattr(self, "alignment_diagnostic_records"):
+                self.alignment_diagnostic_records = []
+            self.alignment_diagnostic_records.append(
+                {
+                    "key_delta": self.last_alignment_key_delta_tensor,
+                    "value_delta": self.last_alignment_value_delta_tensor,
+                    "key_confidence": self.last_alignment_key_confidence_tensor,
+                    "value_confidence": self.last_alignment_value_confidence_tensor,
+                    "source_confidence": self.last_alignment_source_confidence_tensor,
+                    "entropy": self.last_alignment_entropy_tensor,
+                    "regularization_mask": (
+                        self.last_alignment_regularization_mask_tensor
+                    ),
+                    "quality_features": torch.empty(0),
+                }
+            )
+        return key_confidence, value_confidence
+
     def _compute_alignment_confidence(
         self,
         source_confidence: Optional[Tensor],
@@ -4065,6 +4217,17 @@ class C2CProjector(Projector):
     ) -> Tuple[Tensor, Tensor]:
         B, Ht, N, _ = target_shape
         self._last_alignment_confidence_aux_loss = None
+        eval_override = self._eval_alignment_confidence_override(
+            source_confidence=source_confidence,
+            source_weights=source_weights,
+            source_entropy=source_entropy,
+            source_entropy_override=source_entropy_override,
+            target_shape=target_shape,
+            dtype=dtype,
+            device=device,
+        )
+        if eval_override is not None:
+            return eval_override
         if self.alignment_confidence_gate_mode == "none" or source_confidence is None:
             ones = torch.ones(B, Ht, N, 1, dtype=dtype, device=device)
             return ones, ones
@@ -4358,7 +4521,12 @@ class C2CProjector(Projector):
         # Key/value gates: element-wise Gumbel noise with scalar logits (broadcast over channels)
         key_gate_logit = self.key_gate_logit.view(1, 1, 1, 1)
         value_gate_logit = self.value_gate_logit.view(1, 1, 1, 1)
-        if self._learned_alignment_replay_scoring_mode:
+        if getattr(self, "legacy_scalar_gate_eval_mode", "checkpoint_native") == "forced_on":
+            key_gate = torch.ones(
+                B, Ht, N, 1, device=target_key.device, dtype=target_key.dtype
+            )
+            value_gate = torch.ones_like(key_gate)
+        elif self._learned_alignment_replay_scoring_mode:
             key_gate = torch.sigmoid(key_gate_logit / self.gate_temperature)
             value_gate = torch.sigmoid(value_gate_logit / self.gate_temperature)
         elif self.training and self.use_gumbel:
@@ -4452,6 +4620,11 @@ class C2CProjector(Projector):
             self.last_key_gate_logit = float(self.key_gate_logit.detach().cpu().item())
             self.last_value_gate_logit = float(
                 self.value_gate_logit.detach().cpu().item()
+            )
+            self.last_legacy_key_gate = key_gate.detach().mean().cpu()
+            self.last_legacy_value_gate = value_gate.detach().mean().cpu()
+            self.last_legacy_scalar_gate_eval_mode = getattr(
+                self, "legacy_scalar_gate_eval_mode", "checkpoint_native"
             )
             self.last_alignment_key_confidence = (
                 key_alignment_confidence.detach().mean().cpu()

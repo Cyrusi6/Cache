@@ -1,0 +1,1105 @@
+{
+  "schema_version": 1,
+  "suite": "route1_phase1_5_same_checkpoint_interventions",
+  "source_commit": "0d308525860d27897bde6d558798e468cf113281",
+  "shared_root_parameter": "SHARED_ROOT",
+  "external_checkpoint_parameters": {
+    "TINYLLAMA_B6_SEED42_CHECKPOINT": "/netdisk/lijunsi/c2c-route1-identifiability/checkpoints/b6_seed42/final"
+  },
+  "fixed_conditions": {
+    "training_required": false,
+    "checkpoint_weights_mutated": false,
+    "query_time_transport": false,
+    "new_router_gate_loss_or_transport": false,
+    "datasets": [
+      "ai2-arc",
+      "openbookqa",
+      "mmlu-redux"
+    ],
+    "gpu_layout": {
+      "ai2-arc": [
+        0
+      ],
+      "openbookqa": [
+        1
+      ],
+      "mmlu-redux": [
+        0,
+        1
+      ]
+    }
+  },
+  "expansion": {
+    "pair_axis": [
+      "tinyllama",
+      "qwen3_1p7b",
+      "qwen25_0p5b",
+      "llama32_1b"
+    ],
+    "seed_axis": [
+      42,
+      43,
+      44
+    ],
+    "intervention_axis": [
+      "b2_eval_k4",
+      "b3_eval_k1",
+      "b6_entropy_constant",
+      "b6_entropy_shuffled",
+      "b6_gate_static",
+      "b6_gate_forced_on"
+    ],
+    "order": [
+      "pair",
+      "seed",
+      "intervention"
+    ],
+    "pair_seed_cell_count": 12,
+    "checkpoint_selection_record_count": 12,
+    "selected_checkpoint_count": 36,
+    "new_triplet_count": 72,
+    "new_dataset_eval_count": 216
+  },
+  "checkpoint_selection": {
+    "policy": "For each of the 12 pair-seed cells, reuse the completed Phase-1 final checkpoint for B2, B3, and B6; never train.",
+    "required_files": [
+      "projector_config.json",
+      "projector_*.json",
+      "projector_*.pt"
+    ],
+    "cells": [
+      {
+        "id": "tinyllama__seed_42",
+        "pair": "tinyllama",
+        "seed": 42,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/tinyllama/b2/seed_42/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/tinyllama/b3/seed_42/final",
+          "b6": "${TINYLLAMA_B6_SEED42_CHECKPOINT}"
+        }
+      },
+      {
+        "id": "tinyllama__seed_43",
+        "pair": "tinyllama",
+        "seed": 43,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/tinyllama/b2/seed_43/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/tinyllama/b3/seed_43/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_43/final"
+        }
+      },
+      {
+        "id": "tinyllama__seed_44",
+        "pair": "tinyllama",
+        "seed": 44,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/tinyllama/b2/seed_44/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/tinyllama/b3/seed_44/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_44/final"
+        }
+      },
+      {
+        "id": "qwen3_1p7b__seed_42",
+        "pair": "qwen3_1p7b",
+        "seed": 42,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b2/seed_42/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b3/seed_42/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_42/final"
+        }
+      },
+      {
+        "id": "qwen3_1p7b__seed_43",
+        "pair": "qwen3_1p7b",
+        "seed": 43,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b2/seed_43/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b3/seed_43/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_43/final"
+        }
+      },
+      {
+        "id": "qwen3_1p7b__seed_44",
+        "pair": "qwen3_1p7b",
+        "seed": 44,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b2/seed_44/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b3/seed_44/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_44/final"
+        }
+      },
+      {
+        "id": "qwen25_0p5b__seed_42",
+        "pair": "qwen25_0p5b",
+        "seed": 42,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b2/seed_42/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b3/seed_42/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_42/final"
+        }
+      },
+      {
+        "id": "qwen25_0p5b__seed_43",
+        "pair": "qwen25_0p5b",
+        "seed": 43,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b2/seed_43/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b3/seed_43/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_43/final"
+        }
+      },
+      {
+        "id": "qwen25_0p5b__seed_44",
+        "pair": "qwen25_0p5b",
+        "seed": 44,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b2/seed_44/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b3/seed_44/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_44/final"
+        }
+      },
+      {
+        "id": "llama32_1b__seed_42",
+        "pair": "llama32_1b",
+        "seed": 42,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b2/seed_42/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b3/seed_42/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/final"
+        }
+      },
+      {
+        "id": "llama32_1b__seed_43",
+        "pair": "llama32_1b",
+        "seed": 43,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b2/seed_43/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b3/seed_43/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_43/final"
+        }
+      },
+      {
+        "id": "llama32_1b__seed_44",
+        "pair": "llama32_1b",
+        "seed": 44,
+        "checkpoints": {
+          "b2": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b2/seed_44/final",
+          "b3": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b3/seed_44/final",
+          "b6": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_44/final"
+        }
+      }
+    ]
+  },
+  "base_eval_config_template": "${SHARED_ROOT}/local/tmp/route1_identifiability_suite/eval/{pair}__{trained_variant}__seed_{seed}/{dataset}.yaml",
+  "native_prediction_csv_template": "${SHARED_ROOT}/local/final_results/route1_identifiability/rev_9b06d173eada/{pair}/{native_variant}/seed_{seed}/{dataset}/*_cot.csv",
+  "ambiguity_policy": {
+    "top_k": "Use B3 native CSV from the same pair/seed/dataset for both sides.",
+    "entropy_and_gate": "Use B6 native CSV from the same pair/seed/dataset for both sides.",
+    "fixed_across_each_contrast": true
+  },
+  "interventions": [
+    {
+      "name": "b2_eval_k4",
+      "trained_variant": "b2",
+      "override": {
+        "top_k": 4
+      },
+      "native_comparator_variant": "b2",
+      "ambiguity_source_variant": "b3"
+    },
+    {
+      "name": "b3_eval_k1",
+      "trained_variant": "b3",
+      "override": {
+        "top_k": 1
+      },
+      "native_comparator_variant": "b3",
+      "ambiguity_source_variant": "b3"
+    },
+    {
+      "name": "b6_entropy_constant",
+      "trained_variant": "b6",
+      "override": {
+        "entropy_mode": "constant",
+        "entropy_constant_value": 0.93,
+        "gate_mode": "learned"
+      },
+      "native_comparator_variant": "b6",
+      "ambiguity_source_variant": "b6"
+    },
+    {
+      "name": "b6_entropy_shuffled",
+      "trained_variant": "b6",
+      "override": {
+        "entropy_mode": "shuffled",
+        "entropy_shuffle_seed": "{seed}",
+        "gate_mode": "learned"
+      },
+      "native_comparator_variant": "b6",
+      "ambiguity_source_variant": "b6"
+    },
+    {
+      "name": "b6_gate_static",
+      "trained_variant": "b6",
+      "override": {
+        "entropy_mode": "native",
+        "gate_mode": "static"
+      },
+      "gate_components": {
+        "alignment_confidence": "static entropy scalar",
+        "legacy_scalar_kv": "checkpoint_native hard threshold"
+      },
+      "native_comparator_variant": "b6",
+      "ambiguity_source_variant": "b6"
+    },
+    {
+      "name": "b6_gate_forced_on",
+      "trained_variant": "b6",
+      "override": {
+        "entropy_mode": "native",
+        "gate_mode": "forced_on"
+      },
+      "gate_components": {
+        "alignment_confidence": "forced_on",
+        "legacy_scalar_kv": "forced_on"
+      },
+      "native_comparator_variant": "b6",
+      "ambiguity_source_variant": "b6"
+    }
+  ],
+  "output_contract": {
+    "overwrite_phase1": false,
+    "output_dir_template": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/{pair}/{trained_variant}/seed_{seed}/{intervention}/{dataset}",
+    "required_per_dataset": [
+      "exactly_one_*_cot.csv",
+      "exactly_one_*_summary.json",
+      "eval_intervention_provenance.json"
+    ],
+    "large_predictions_git_tracked": false,
+    "summary_provenance_fields": [
+      "intervention",
+      "intervention.gate_components",
+      "checkpoint_dir",
+      "config_sha256",
+      "provenance_sha256",
+      "training_state_mutated=false"
+    ]
+  },
+  "runs": [
+    {
+      "id": "tinyllama__b2_eval_k4__seed_42",
+      "pair": "tinyllama",
+      "seed": 42,
+      "trained_variant": "b2",
+      "checkpoint_ref": "tinyllama__seed_42.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "tinyllama__b2__seed_42",
+      "ambiguity_source_run_id": "tinyllama__b3__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b2/seed_42/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "tinyllama__b3_eval_k1__seed_42",
+      "pair": "tinyllama",
+      "seed": 42,
+      "trained_variant": "b3",
+      "checkpoint_ref": "tinyllama__seed_42.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "tinyllama__b3__seed_42",
+      "ambiguity_source_run_id": "tinyllama__b3__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b3/seed_42/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_entropy_constant__seed_42",
+      "pair": "tinyllama",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_42.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "tinyllama__b6__seed_42",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_42/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_entropy_shuffled__seed_42",
+      "pair": "tinyllama",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_42.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "tinyllama__b6__seed_42",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_42/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_gate_static__seed_42",
+      "pair": "tinyllama",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_42.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "tinyllama__b6__seed_42",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_42/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_gate_forced_on__seed_42",
+      "pair": "tinyllama",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_42.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "tinyllama__b6__seed_42",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_42/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "tinyllama__b2_eval_k4__seed_43",
+      "pair": "tinyllama",
+      "seed": 43,
+      "trained_variant": "b2",
+      "checkpoint_ref": "tinyllama__seed_43.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "tinyllama__b2__seed_43",
+      "ambiguity_source_run_id": "tinyllama__b3__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b2/seed_43/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "tinyllama__b3_eval_k1__seed_43",
+      "pair": "tinyllama",
+      "seed": 43,
+      "trained_variant": "b3",
+      "checkpoint_ref": "tinyllama__seed_43.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "tinyllama__b3__seed_43",
+      "ambiguity_source_run_id": "tinyllama__b3__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b3/seed_43/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_entropy_constant__seed_43",
+      "pair": "tinyllama",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_43.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "tinyllama__b6__seed_43",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_43/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_entropy_shuffled__seed_43",
+      "pair": "tinyllama",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_43.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "tinyllama__b6__seed_43",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_43/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_gate_static__seed_43",
+      "pair": "tinyllama",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_43.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "tinyllama__b6__seed_43",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_43/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_gate_forced_on__seed_43",
+      "pair": "tinyllama",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_43.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "tinyllama__b6__seed_43",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_43/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "tinyllama__b2_eval_k4__seed_44",
+      "pair": "tinyllama",
+      "seed": 44,
+      "trained_variant": "b2",
+      "checkpoint_ref": "tinyllama__seed_44.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "tinyllama__b2__seed_44",
+      "ambiguity_source_run_id": "tinyllama__b3__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b2/seed_44/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "tinyllama__b3_eval_k1__seed_44",
+      "pair": "tinyllama",
+      "seed": 44,
+      "trained_variant": "b3",
+      "checkpoint_ref": "tinyllama__seed_44.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "tinyllama__b3__seed_44",
+      "ambiguity_source_run_id": "tinyllama__b3__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b3/seed_44/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_entropy_constant__seed_44",
+      "pair": "tinyllama",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_44.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "tinyllama__b6__seed_44",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_44/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_entropy_shuffled__seed_44",
+      "pair": "tinyllama",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_44.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "tinyllama__b6__seed_44",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_44/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_gate_static__seed_44",
+      "pair": "tinyllama",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_44.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "tinyllama__b6__seed_44",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_44/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "tinyllama__b6_gate_forced_on__seed_44",
+      "pair": "tinyllama",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "tinyllama__seed_44.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "tinyllama__b6__seed_44",
+      "ambiguity_source_run_id": "tinyllama__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/tinyllama/b6/seed_44/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b2_eval_k4__seed_42",
+      "pair": "qwen3_1p7b",
+      "seed": 42,
+      "trained_variant": "b2",
+      "checkpoint_ref": "qwen3_1p7b__seed_42.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "qwen3_1p7b__b2__seed_42",
+      "ambiguity_source_run_id": "qwen3_1p7b__b3__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b2/seed_42/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b3_eval_k1__seed_42",
+      "pair": "qwen3_1p7b",
+      "seed": 42,
+      "trained_variant": "b3",
+      "checkpoint_ref": "qwen3_1p7b__seed_42.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "qwen3_1p7b__b3__seed_42",
+      "ambiguity_source_run_id": "qwen3_1p7b__b3__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b3/seed_42/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_entropy_constant__seed_42",
+      "pair": "qwen3_1p7b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_42.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_42",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_42/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_entropy_shuffled__seed_42",
+      "pair": "qwen3_1p7b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_42.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_42",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_42/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_gate_static__seed_42",
+      "pair": "qwen3_1p7b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_42.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_42",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_42/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_gate_forced_on__seed_42",
+      "pair": "qwen3_1p7b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_42.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_42",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_42/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b2_eval_k4__seed_43",
+      "pair": "qwen3_1p7b",
+      "seed": 43,
+      "trained_variant": "b2",
+      "checkpoint_ref": "qwen3_1p7b__seed_43.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "qwen3_1p7b__b2__seed_43",
+      "ambiguity_source_run_id": "qwen3_1p7b__b3__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b2/seed_43/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b3_eval_k1__seed_43",
+      "pair": "qwen3_1p7b",
+      "seed": 43,
+      "trained_variant": "b3",
+      "checkpoint_ref": "qwen3_1p7b__seed_43.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "qwen3_1p7b__b3__seed_43",
+      "ambiguity_source_run_id": "qwen3_1p7b__b3__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b3/seed_43/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_entropy_constant__seed_43",
+      "pair": "qwen3_1p7b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_43.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_43",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_43/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_entropy_shuffled__seed_43",
+      "pair": "qwen3_1p7b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_43.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_43",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_43/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_gate_static__seed_43",
+      "pair": "qwen3_1p7b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_43.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_43",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_43/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_gate_forced_on__seed_43",
+      "pair": "qwen3_1p7b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_43.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_43",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_43/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b2_eval_k4__seed_44",
+      "pair": "qwen3_1p7b",
+      "seed": 44,
+      "trained_variant": "b2",
+      "checkpoint_ref": "qwen3_1p7b__seed_44.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "qwen3_1p7b__b2__seed_44",
+      "ambiguity_source_run_id": "qwen3_1p7b__b3__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b2/seed_44/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b3_eval_k1__seed_44",
+      "pair": "qwen3_1p7b",
+      "seed": 44,
+      "trained_variant": "b3",
+      "checkpoint_ref": "qwen3_1p7b__seed_44.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "qwen3_1p7b__b3__seed_44",
+      "ambiguity_source_run_id": "qwen3_1p7b__b3__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b3/seed_44/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_entropy_constant__seed_44",
+      "pair": "qwen3_1p7b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_44.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_44",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_44/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_entropy_shuffled__seed_44",
+      "pair": "qwen3_1p7b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_44.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_44",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_44/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_gate_static__seed_44",
+      "pair": "qwen3_1p7b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_44.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_44",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_44/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "qwen3_1p7b__b6_gate_forced_on__seed_44",
+      "pair": "qwen3_1p7b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen3_1p7b__seed_44.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "qwen3_1p7b__b6__seed_44",
+      "ambiguity_source_run_id": "qwen3_1p7b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen3_1p7b/b6/seed_44/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b2_eval_k4__seed_42",
+      "pair": "qwen25_0p5b",
+      "seed": 42,
+      "trained_variant": "b2",
+      "checkpoint_ref": "qwen25_0p5b__seed_42.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "qwen25_0p5b__b2__seed_42",
+      "ambiguity_source_run_id": "qwen25_0p5b__b3__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b2/seed_42/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b3_eval_k1__seed_42",
+      "pair": "qwen25_0p5b",
+      "seed": 42,
+      "trained_variant": "b3",
+      "checkpoint_ref": "qwen25_0p5b__seed_42.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "qwen25_0p5b__b3__seed_42",
+      "ambiguity_source_run_id": "qwen25_0p5b__b3__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b3/seed_42/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_entropy_constant__seed_42",
+      "pair": "qwen25_0p5b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_42.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_42",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_42/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_entropy_shuffled__seed_42",
+      "pair": "qwen25_0p5b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_42.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_42",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_42/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_gate_static__seed_42",
+      "pair": "qwen25_0p5b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_42.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_42",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_42/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_gate_forced_on__seed_42",
+      "pair": "qwen25_0p5b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_42.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_42",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_42/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b2_eval_k4__seed_43",
+      "pair": "qwen25_0p5b",
+      "seed": 43,
+      "trained_variant": "b2",
+      "checkpoint_ref": "qwen25_0p5b__seed_43.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "qwen25_0p5b__b2__seed_43",
+      "ambiguity_source_run_id": "qwen25_0p5b__b3__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b2/seed_43/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b3_eval_k1__seed_43",
+      "pair": "qwen25_0p5b",
+      "seed": 43,
+      "trained_variant": "b3",
+      "checkpoint_ref": "qwen25_0p5b__seed_43.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "qwen25_0p5b__b3__seed_43",
+      "ambiguity_source_run_id": "qwen25_0p5b__b3__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b3/seed_43/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_entropy_constant__seed_43",
+      "pair": "qwen25_0p5b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_43.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_43",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_43/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_entropy_shuffled__seed_43",
+      "pair": "qwen25_0p5b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_43.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_43",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_43/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_gate_static__seed_43",
+      "pair": "qwen25_0p5b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_43.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_43",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_43/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_gate_forced_on__seed_43",
+      "pair": "qwen25_0p5b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_43.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_43",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_43/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b2_eval_k4__seed_44",
+      "pair": "qwen25_0p5b",
+      "seed": 44,
+      "trained_variant": "b2",
+      "checkpoint_ref": "qwen25_0p5b__seed_44.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "qwen25_0p5b__b2__seed_44",
+      "ambiguity_source_run_id": "qwen25_0p5b__b3__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b2/seed_44/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b3_eval_k1__seed_44",
+      "pair": "qwen25_0p5b",
+      "seed": 44,
+      "trained_variant": "b3",
+      "checkpoint_ref": "qwen25_0p5b__seed_44.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "qwen25_0p5b__b3__seed_44",
+      "ambiguity_source_run_id": "qwen25_0p5b__b3__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b3/seed_44/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_entropy_constant__seed_44",
+      "pair": "qwen25_0p5b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_44.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_44",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_44/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_entropy_shuffled__seed_44",
+      "pair": "qwen25_0p5b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_44.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_44",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_44/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_gate_static__seed_44",
+      "pair": "qwen25_0p5b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_44.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_44",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_44/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "qwen25_0p5b__b6_gate_forced_on__seed_44",
+      "pair": "qwen25_0p5b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "qwen25_0p5b__seed_44.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "qwen25_0p5b__b6__seed_44",
+      "ambiguity_source_run_id": "qwen25_0p5b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_0p5b/b6/seed_44/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b2_eval_k4__seed_42",
+      "pair": "llama32_1b",
+      "seed": 42,
+      "trained_variant": "b2",
+      "checkpoint_ref": "llama32_1b__seed_42.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "llama32_1b__b2__seed_42",
+      "ambiguity_source_run_id": "llama32_1b__b3__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b2/seed_42/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b3_eval_k1__seed_42",
+      "pair": "llama32_1b",
+      "seed": 42,
+      "trained_variant": "b3",
+      "checkpoint_ref": "llama32_1b__seed_42.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "llama32_1b__b3__seed_42",
+      "ambiguity_source_run_id": "llama32_1b__b3__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b3/seed_42/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_entropy_constant__seed_42",
+      "pair": "llama32_1b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_42.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "llama32_1b__b6__seed_42",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_42/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_entropy_shuffled__seed_42",
+      "pair": "llama32_1b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_42.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "llama32_1b__b6__seed_42",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_42/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_gate_static__seed_42",
+      "pair": "llama32_1b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_42.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "llama32_1b__b6__seed_42",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_42/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_gate_forced_on__seed_42",
+      "pair": "llama32_1b",
+      "seed": 42,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_42.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "llama32_1b__b6__seed_42",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_42",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_42/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b2_eval_k4__seed_43",
+      "pair": "llama32_1b",
+      "seed": 43,
+      "trained_variant": "b2",
+      "checkpoint_ref": "llama32_1b__seed_43.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "llama32_1b__b2__seed_43",
+      "ambiguity_source_run_id": "llama32_1b__b3__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b2/seed_43/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b3_eval_k1__seed_43",
+      "pair": "llama32_1b",
+      "seed": 43,
+      "trained_variant": "b3",
+      "checkpoint_ref": "llama32_1b__seed_43.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "llama32_1b__b3__seed_43",
+      "ambiguity_source_run_id": "llama32_1b__b3__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b3/seed_43/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_entropy_constant__seed_43",
+      "pair": "llama32_1b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_43.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "llama32_1b__b6__seed_43",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_43/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_entropy_shuffled__seed_43",
+      "pair": "llama32_1b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_43.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "llama32_1b__b6__seed_43",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_43/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_gate_static__seed_43",
+      "pair": "llama32_1b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_43.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "llama32_1b__b6__seed_43",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_43/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_gate_forced_on__seed_43",
+      "pair": "llama32_1b",
+      "seed": 43,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_43.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "llama32_1b__b6__seed_43",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_43",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_43/b6_gate_forced_on/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b2_eval_k4__seed_44",
+      "pair": "llama32_1b",
+      "seed": 44,
+      "trained_variant": "b2",
+      "checkpoint_ref": "llama32_1b__seed_44.b2",
+      "intervention": "b2_eval_k4",
+      "native_comparator_run_id": "llama32_1b__b2__seed_44",
+      "ambiguity_source_run_id": "llama32_1b__b3__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b2/seed_44/b2_eval_k4/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b3_eval_k1__seed_44",
+      "pair": "llama32_1b",
+      "seed": 44,
+      "trained_variant": "b3",
+      "checkpoint_ref": "llama32_1b__seed_44.b3",
+      "intervention": "b3_eval_k1",
+      "native_comparator_run_id": "llama32_1b__b3__seed_44",
+      "ambiguity_source_run_id": "llama32_1b__b3__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b3/seed_44/b3_eval_k1/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_entropy_constant__seed_44",
+      "pair": "llama32_1b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_44.b6",
+      "intervention": "b6_entropy_constant",
+      "native_comparator_run_id": "llama32_1b__b6__seed_44",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_44/b6_entropy_constant/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_entropy_shuffled__seed_44",
+      "pair": "llama32_1b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_44.b6",
+      "intervention": "b6_entropy_shuffled",
+      "native_comparator_run_id": "llama32_1b__b6__seed_44",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_44/b6_entropy_shuffled/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_gate_static__seed_44",
+      "pair": "llama32_1b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_44.b6",
+      "intervention": "b6_gate_static",
+      "native_comparator_run_id": "llama32_1b__b6__seed_44",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_44/b6_gate_static/{dataset}"
+    },
+    {
+      "id": "llama32_1b__b6_gate_forced_on__seed_44",
+      "pair": "llama32_1b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "checkpoint_ref": "llama32_1b__seed_44.b6",
+      "intervention": "b6_gate_forced_on",
+      "native_comparator_run_id": "llama32_1b__b6__seed_44",
+      "ambiguity_source_run_id": "llama32_1b__b6__seed_44",
+      "output_dir": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/llama32_1b/b6/seed_44/b6_gate_forced_on/{dataset}"
+    }
+  ],
+  "scheduling": {
+    "shard_count": 7,
+    "assignment": "expanded_run_index modulo 7",
+    "run_counts": [
+      11,
+      11,
+      10,
+      10,
+      10,
+      10,
+      10
+    ],
+    "gpus_per_shard": 2,
+    "within_shard": "Triplets run serially. ARC uses GPU 0 and OpenBookQA uses GPU 1 concurrently; after both finish, MMLU-Redux uses GPUs [0,1].",
+    "node_allocation": {
+      "4090-24gx4": [0, 1],
+      "4090-24gx8": [2, 3, 4, 5],
+      "4090-24gx2": [6]
+    },
+    "launcher_constraint": "Use the external multi-node Kubernetes launcher. bash/k8s/gpu_job.sh is hostPath-limited to 4090-24gx4 and must not be used for the x8/x2 shards.",
+    "generate_command": "python script/analysis/route1_phase15_interventions.py generate --phase1-manifest ${SHARED_ROOT}/local/tmp/route1_identifiability_suite/manifest.json --phase1-analysis-manifest ${SHARED_ROOT}/local/tmp/route1_identifiability_suite/analysis_manifest.json --phase1-artifact-root ${SHARED_ROOT} --output-root local/tmp/phase1_5_causal_diagnostics --results-root ${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852 --recommended-shards 7",
+    "shard_inner_command": "python script/analysis/route1_phase15_interventions.py run-shard --manifest local/tmp/phase1_5_causal_diagnostics/manifest.json --shard-index {0_to_6} --num-shards 7"
+  }
+}

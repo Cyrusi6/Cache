@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "suite": "route1_phase1_5_qwen25_seed44_gate_anomaly",
+  "source_commit": "0d308525860d27897bde6d558798e468cf113281",
+  "main_72_matrix_excluded": true,
+  "training_required": false,
+  "checkpoint": "${SHARED_ROOT}/local/checkpoints/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_44/final",
+  "native_comparator": "${SHARED_ROOT}/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_44/{dataset}/*_cot.csv",
+  "ambiguity_source": "${SHARED_ROOT}/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_44/{dataset}/*_cot.csv",
+  "runs": [
+    {
+      "id": "qwen25_0p5b__b6_gate_alignment_forced_on__seed_44",
+      "pair": "qwen25_0p5b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "intervention": {
+        "id": "b6_gate_alignment_forced_on",
+        "entropy_mode": "native",
+        "gate_mode": "alignment_forced_on",
+        "gate_components": {
+          "alignment_confidence": "forced_on",
+          "legacy_scalar_kv": "checkpoint_native"
+        }
+      }
+    },
+    {
+      "id": "qwen25_0p5b__b6_gate_legacy_forced_on__seed_44",
+      "pair": "qwen25_0p5b",
+      "seed": 44,
+      "trained_variant": "b6",
+      "intervention": {
+        "id": "b6_gate_legacy_forced_on",
+        "entropy_mode": "native",
+        "gate_mode": "legacy_forced_on",
+        "gate_components": {
+          "alignment_confidence": "learned",
+          "legacy_scalar_kv": "forced_on"
+        }
+      }
+    }
+  ],
+  "output_dir_template": "${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_seed44_gate_anomaly/qwen25_0p5b/b6/seed_44/{intervention}/{dataset}",
+  "scheduling": {
+    "shard_count": 1,
+    "gpus_per_shard": 2,
+    "within_shard": "ARC@GPU0 and OpenBookQA@GPU1 concurrently, then MMLU-Redux@[0,1]",
+    "generate_command": "python script/analysis/route1_phase15_interventions.py generate-anomaly --phase1-manifest ${SHARED_ROOT}/local/tmp/route1_identifiability_suite/manifest.json --phase1-analysis-manifest ${SHARED_ROOT}/local/tmp/route1_identifiability_suite/analysis_manifest.json --phase1-artifact-root ${SHARED_ROOT} --output-root local/tmp/phase1_5_causal_diagnostics/qwen25_seed44_gate_anomaly --results-root ${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852/qwen25_seed44_gate_anomaly",
+    "inner_command": "python script/analysis/route1_phase15_interventions.py run-shard --manifest local/tmp/phase1_5_causal_diagnostics/qwen25_seed44_gate_anomaly/manifest.json --shard-index 0 --num-shards 1",
+    "launcher_constraint": "Use the external multi-node Kubernetes launcher; gpu_job.sh is valid only for 4090-24gx4 hostPath jobs."
+  }
+}

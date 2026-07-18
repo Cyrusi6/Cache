@@ -407,3 +407,36 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 ### 结论
 
 第一阶段实验记录现可从 GitHub 仓库根目录直接访问，同时避免把大体积逐例产物纳入版本控制。
+
+## 2026-07-18：Phase 1.5 同 checkpoint 因果干预与 Max7 评测调度
+
+### 研究目标
+
+在不训练新方法、不修改 checkpoint、也不进入 query-time transport 的前提下，对 Phase 1 的 B2、B3、B6 权重执行推理期交叉干预，分离 train/eval top-k、entropy 数值与位置、learned confidence gate 和 legacy scalar K/V gate 的贡献。
+
+### 核心改动
+
+- 新增统一的 evaluation-only intervention 配置与 provenance：支持 `top_k=1/4`、native/constant/shuffled entropy，以及 learned/static/forced-on gate 视图；重复应用配置保持幂等。
+- `forced_on` 同时把 alignment-confidence gate 与 checkpoint 中既有的 scalar K/V gate 置为 1；另提供只用于 Qwen2.5 seed 44 异常拆分的 `alignment_forced_on`、`legacy_forced_on`，不进入主矩阵。
+- 新增 Phase 1.5 manifest 生成与断点续跑入口。主矩阵为 4 pairs × 3 seeds × 6 非 native 干预，共 72 个三任务 triplets；36 个 native comparator 直接复用 Phase 1 逐例结果。
+- 新增七路双卡 Kubernetes renderer：`4090-24gx4` 两路、`4090-24gx8` 四路、`4090-48gx2` 一路，共使用 14 张 NVIDIA GPU。每路先并发运行 ARC/OBQA，再用双卡运行 MMLU-Redux。
+- Kubernetes init 同时核验精确 Git commit 与 execution manifest SHA；当基础镜像没有 `git` 时，允许读取 detached checkout 的 40 位 `.git/HEAD`，避免 init 阶段误阻塞。
+- 新增 Phase 1.5 统计入口，复用 pair→seed→example hierarchical paired bootstrap，输出同 checkpoint accuracy delta、McNemar、seed 方差、ambiguity interaction 与 receiver/fused oracle abstention headroom。
+
+### 实验配置
+
+- 固定四个 sender→Qwen3-0.6B 模型对、seeds 42/43/44 和完整 MMLU-Redux、ARC、OpenBookQA dev 集。
+- train-k × eval-k：B2 checkpoint 在 eval-k1/k4、B3 checkpoint 在 eval-k1/k4 形成 2×2 对照。
+- B6 checkpoint：native/constant-0.93/shuffled entropy，以及 learned/static/forced-on gate。
+- Qwen2.5 B6 seed 44 额外执行两个 gate-component isolation triplets；它们与主 72 矩阵分开记录。
+- 大体积配置、逐例 prediction、状态和统计中间文件全部保留在 `local/` 或共享 `/netdisk`，不提交 Git。
+
+### 验证结果
+
+- 项目全量测试 `217 passed`，保留 2 个已知 Pydantic warnings。
+- 72-run execution manifest 完整性、输出目录隔离、checkpoint-only 约束和七 shard 数量 `[11,11,10,10,10,10,10]` 均通过校验。
+- 七份 Kubernetes Jobs 已通过 API server dry-run；本次实现提交前未创建正式 Job。
+
+### 结论与下一步
+
+推理期因果诊断基础设施已经就绪。正式实验必须基于本次实现的最终 commit 重新生成共享 manifest 与 Job YAML，再启动七路评测；是否补 TinyLlama constant/shuffle seeds 43/44 训练，严格取决于同 checkpoint entropy 干预是否跨模型对稳定有效。

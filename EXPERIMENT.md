@@ -266,3 +266,38 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - B6 post-hoc gate 在三个跨模型 pair 上几乎始终开启：Qwen3/Qwen2.5 high-saturation 约 99.93%，Llama3.2 为 100%；TinyLlama 约 85.86%。B5 的 key gate 比 value gate 更动态，但未带来稳定下游提升。
 - Final gate：B6−B2 delta `+1.54 pp`、pair-cluster CI `[-1.14,+4.05]`，3/4 pairs 为正；B6−B5 delta `+1.19 pp`、CI `[-0.92,+3.31]`，2/4 pairs 为正。两个预注册条件均失败，第一阶段在此停止，不进入下一阶段。
 - 为便于 GitHub 直接查看，最终完整报告与中文机制总结同时发布到仓库根目录：[`ROUTE1_V22_IDENTIFIABILITY_REPORT.md`](ROUTE1_V22_IDENTIFIABILITY_REPORT.md) 和 [`ROUTE1_V22_IDENTIFIABILITY_SUMMARY_ZH.md`](ROUTE1_V22_IDENTIFIABILITY_SUMMARY_ZH.md)。逐例 prediction、CSV 与约 13MB 的 `summary.json` 继续保留在 `local/`，不提交仓库。
+
+### 2026-07-18 Phase 1.5 因果诊断预注册与启动前审计
+
+Phase 1.5 基于 main `0d308525860d27897bde6d558798e468cf113281` 的 Phase 1 完整产物继续执行，不开发 query-time transport、router、replay、OT、RoPE、新 gate 或新 loss。
+
+产物审计：
+
+- 67 个 completion markers、201 个 prediction CSV、26 组 post-hoc gate diagnostics 均存在；实验失败 marker 为 0。
+- 65 个新训练 checkpoint 加 TinyLlama B6 seed 42 的 bitwise-verified 复用 checkpoint，共 66 个必需 checkpoint 均可完整加载 28 层 projector，tensor 全部有限。
+- 65 个本地 checkpoint 的 run id、执行 commit、训练配置 SHA、split 与数据 hash 均与 provenance 一致；复用 checkpoint 目录 SHA256 为 `a66bd9c0b2682dc204ff0efe9a8c0a68c78fe4fa537223e18ecbba396f1c1404`。
+- 共享根 `/netdisk/lijunsi/c2c-route1-identifiability` 可被三个 NVIDIA 节点访问，空闲容量约 923GB；当前 14 张 NVIDIA GPU 无活动实验 request。
+
+Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
+
+- 不是 checkpoint 损坏、NaN/Inf、梯度爆炸或 optimizer 数值崩塌。seed 44 train/eval loss 反而低于另外两个 seeds，所有 7,265 个预测均合法。
+- seed 44 与 receiver 预测一致率为 84.1%，明显高于 seed 42/43 的 63.8%/65.5%；正迁移降到 10.3%，负迁移约 10.8%。异常本质是几乎失去正迁移，而非负迁移爆炸。
+- alignment-confidence gate 三个 seeds 均约 99.93% high-saturated，不能解释 seed 特异异常。
+- checkpoint 内 legacy scalar K/V gate 的 eval 决策是接近零的单标量 logit 硬阈值。seed 44 前 9 层有 7 层 K/V 同时关闭，前 6 层完全无 transfer；微小训练轨迹差异会翻转整层开关。
+- 当前最符合证据的解释是 `seed training trajectory × legacy scalar hard mask × model-pair compatibility`。因此额外预注册 Qwen2.5 B6 seed 44 的 alignment-only 与 legacy-only forced-on 推理干预。
+
+同 checkpoint 主矩阵：
+
+- B2 eval-k4；B3 eval-k1，配合 Phase 1 native B2 eval-k1 与 B3 eval-k4 形成 train-k × eval-k 2×2。
+- B6 entropy constant-0.93、entropy shuffled、gate static、gate forced-on；Phase 1 native B6 作为共同 comparator。
+- 4 个模型对 × 3 seeds × 6 个新干预 = 72 个三任务 triplets；另有 Qwen2.5 seed 44 的 2 个异常拆分 triplets。
+- 72 triplets 划分为七个双卡 shards `[11,11,10,10,10,10,10]`，在 `4090-24gx4`、`4090-24gx8`、`4090-48gx2` 上合计使用全部 14 张 GPU。
+
+统计协议：
+
+- 使用与 Phase 1 一致的 pair-balanced hierarchical paired bootstrap，报告 accuracy delta、95% CI、McNemar、正向 pair 数、三 seed 方差。
+- ambiguity bucket 固定取 native B3/B6 diagnostics，避免干预后 bucket 漂移；同时报告 absolute high ambiguity 与 pair/seed/task 内 composite score top quartile 的 interaction。
+- 使用现有 receiver-only 与 fused 逐例结果计算 oracle abstention accuracy、理想 abstain rate 和相对最佳固定策略的 headroom。
+- 只有同 checkpoint top-k4 在至少两个真正异构模型对上为正、跨 pair CI 下界大于 0 且收益集中在高 ambiguity 时，才允许进入小型 query-time prototype。
+
+启动前验证：项目全量测试 `217 passed`，七份 Kubernetes Jobs API server dry-run 全部通过。正式 Job 将在实现 commit 推送并同步到共享 detached checkout 后创建。

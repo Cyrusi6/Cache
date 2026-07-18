@@ -30,6 +30,10 @@ import sys
 import re
 import hashlib
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from rosetta.utils.evaluate import (
     extract_answer_from_content,
     load_hf_model,
@@ -52,6 +56,11 @@ from rosetta.utils.gate_diagnostics import (
     clear_projector_gate_diagnostic_records,
     configure_projector_gate_diagnostics,
     merge_gate_diagnostic_states,
+)
+from rosetta.utils.eval_interventions import (
+    apply_eval_intervention_to_config,
+    apply_projector_eval_intervention,
+    build_eval_intervention_provenance,
 )
 from rosetta.baseline.multi_stage import TwoStageInference, TwoStageRosetta
 
@@ -471,6 +480,10 @@ class UnifiedEvaluator:
         Args:
             config: Configuration dictionary
         """
+        self.eval_intervention = apply_eval_intervention_to_config(config)
+        self.intervention_provenance = config.get(
+            "_eval_intervention_provenance"
+        )
         self.model_config = config["model"]
         self.output_config = config["output"]
         self.eval_config = config["eval"]
@@ -507,6 +520,14 @@ class UnifiedEvaluator:
         # Setup output directory
         self.output_dir = Path(self.output_config["output_dir"])
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        if self.eval_intervention is not None:
+            if self.intervention_provenance is None:
+                self.intervention_provenance = build_eval_intervention_provenance(
+                    config=config
+                )
+            provenance_path = self.output_dir / "eval_intervention_provenance.json"
+            with provenance_path.open("w", encoding="utf-8") as handle:
+                json.dump(self.intervention_provenance, handle, indent=2)
         # Debug options
         self.debug_dump_bad_samples = bool(
             self.eval_config.get("debug_dump_bad_samples", True)
@@ -2419,6 +2440,14 @@ class UnifiedEvaluator:
                     print(f"Failed to load LLM tokenizer '{llm_model_path}': {e}")
                     llm_tokenizer = None
             model_type = "rosetta"
+            applied_intervention = apply_projector_eval_intervention(
+                model, self.eval_intervention
+            )
+            if applied_intervention["gate_mode"] is not None:
+                print(
+                    "Applied evaluation-only projector intervention: "
+                    f"{applied_intervention}"
+                )
         else:
             model, tokenizer = load_hf_model(
                 self.model_config["model_name"],
@@ -2537,6 +2566,7 @@ class UnifiedEvaluator:
                     "dataset": self.dataset_name,
                     "answer_method": self.eval_config["answer_method"],
                     "diagnostics_mode": self.gate_diagnostics_mode,
+                    "eval_intervention": self.eval_intervention,
                     "checkpoint_dir": self.model_config.get(
                         "rosetta_config", {}
                     ).get("checkpoints_dir"),
@@ -2583,6 +2613,11 @@ class UnifiedEvaluator:
             "overall_accuracy": overall_accuracy,
             "subjects": subject_cors,
         }
+        if self.eval_intervention is not None:
+            summary["eval_intervention"] = self.eval_intervention
+            summary["eval_intervention_provenance"] = (
+                "eval_intervention_provenance.json"
+            )
 
         # Add categories and subcategories for MMLU-Redux
         if self.dataset_name == "mmlu-redux":
@@ -2837,11 +2872,65 @@ def main():
         default="eval_recipe/unified_eval.yaml",
         help="Path to YAML config file",
     )
+    parser.add_argument(
+        "--eval-intervention-id",
+        type=str,
+        help="Provenance label for an evaluation-only intervention",
+    )
+    parser.add_argument(
+        "--eval-top-k",
+        type=int,
+        choices=[1, 4],
+        help="Override soft alignment top-k only during evaluation",
+    )
+    parser.add_argument(
+        "--eval-entropy-mode",
+        choices=["native", "constant", "shuffled"],
+        help="Use native, constant, or deterministically shuffled entropy at eval",
+    )
+    parser.add_argument(
+        "--eval-entropy-constant-value",
+        type=float,
+        help="Constant source confidence for --eval-entropy-mode constant",
+    )
+    parser.add_argument(
+        "--eval-entropy-shuffle-seed",
+        type=int,
+        help="Deterministic seed for --eval-entropy-mode shuffled",
+    )
+    parser.add_argument(
+        "--eval-gate-mode",
+        choices=[
+            "learned",
+            "static",
+            "forced_on",
+            "alignment_forced_on",
+            "legacy_forced_on",
+        ],
+        help="View a trained B6 gate as learned, static confidence, or forced-on",
+    )
     args = parser.parse_args()
 
     # Load configuration
     with open(args.config, "r") as f:
         config = yaml.safe_load(f)
+
+    cli_override = {
+        "id": args.eval_intervention_id,
+        "top_k": args.eval_top_k,
+        "entropy_mode": args.eval_entropy_mode,
+        "entropy_constant_value": args.eval_entropy_constant_value,
+        "entropy_shuffle_seed": args.eval_entropy_shuffle_seed,
+        "gate_mode": args.eval_gate_mode,
+    }
+    apply_eval_intervention_to_config(config, cli_override)
+    config["_eval_intervention_provenance"] = (
+        build_eval_intervention_provenance(
+            config=config,
+            config_path=Path(args.config),
+            argv=sys.argv,
+        )
+    )
 
     print("Using config: ", args.config)
 
