@@ -300,4 +300,4 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 使用现有 receiver-only 与 fused 逐例结果计算 oracle abstention accuracy、理想 abstain rate 和相对最佳固定策略的 headroom。
 - 只有同 checkpoint top-k4 在至少两个真正异构模型对上为正、跨 pair CI 下界大于 0 且收益集中在高 ambiguity 时，才允许进入小型 query-time prototype。
 
-启动前验证：项目全量测试 `222 passed`，三份节点级 Kubernetes Jobs API server dry-run 全部通过。首次真实创建在评测开始前发现 Job 漏传固定 `PIP_CONSTRAINT`，导致准备建立未锁定的新 venv，并在两个节点上触发未发布目录清理竞态；七个 Job 已立即删除，prediction 产物为 0。补齐 constraints 后，第二次启动直接复用 Phase 1 已审计环境，同时暴露两个既有基础设施事实：共享 NFS 上多个 evaluator 递归创建共同结果父目录会发生 `FileExistsError`，且 x4/x8 各有一张 Kubernetes 不可见的高占用 GPU。结果目录改为生成 manifest 时串行预创建；GPU 调度改为三个整节点池，按实际空闲显存选择 UUID 卡组，并发或排队覆盖全部七个逻辑 shards。
+启动前验证：项目全量测试 `222 passed`，三份节点级 Kubernetes Jobs API server dry-run 全部通过。首次真实创建在评测开始前发现 Job 漏传固定 `PIP_CONSTRAINT`，导致准备建立未锁定的新 venv，并在两个节点上触发未发布目录清理竞态；七个 Job 已立即删除，prediction 产物为 0。补齐 constraints 后，第二次启动直接复用 Phase 1 已审计环境，同时暴露两个既有基础设施事实：共享 NFS 上多个 evaluator 递归创建共同结果父目录会发生 `FileExistsError`，且 x4/x8 各有一张 Kubernetes 不可见的高占用 GPU。结果目录由 manifest 生成器串行预创建，node launcher 还会在本节点启动并发前再次预创建并重试短暂的 `ENOENT/EEXIST`；GPU 调度改为三个整节点池，按实际空闲显存选择 UUID 卡组，并发或排队覆盖全部七个逻辑 shards。

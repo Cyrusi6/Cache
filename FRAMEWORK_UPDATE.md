@@ -424,6 +424,7 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 - Kubernetes init 同时核验精确 Git commit 与 execution manifest SHA；当基础镜像没有 `git` 时，允许读取 detached checkout 的 40 位 `.git/HEAD`，避免 init 阶段误阻塞。
 - Job 显式传入 Phase 1 已审计的 `runtime_constraints.txt`，运行时 fingerprint 与既有固定 venv 保持一致，禁止因漏传 constraints 而安装漂移依赖。
 - Manifest 生成时把全部结果目录解析为绝对路径并串行预创建，避免 ARC/OBQA 与多 shard 在共享 NFS 上递归创建共同父目录时触发 `FileExistsError`。
+- 每个 node-pool launcher 在启动并行 evaluator 前，还会从本节点串行预创建其负责的结果树，并对 autofs/NFS 的短暂 `ENOENT/EEXIST` 不一致做有界重试。
 - 新增 Phase 1.5 统计入口，复用 pair→seed→example hierarchical paired bootstrap，输出同 checkpoint accuracy delta、McNemar、seed 方差、ambiguity interaction 与 receiver/fused oracle abstention headroom。
 
 ### 实验配置

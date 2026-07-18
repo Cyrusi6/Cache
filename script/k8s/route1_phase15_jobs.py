@@ -25,6 +25,7 @@ import shlex
 import shutil
 import subprocess
 import sys
+import time
 from typing import Any, Callable, Mapping, Sequence
 
 import yaml
@@ -605,6 +606,47 @@ def _completed_shard_state(
     )
 
 
+def _resolve_output_dir(value: str) -> Path:
+    path = Path(value)
+    return path if path.is_absolute() else WORKSPACE_ROOT / path
+
+
+def _precreate_assigned_output_dirs(
+    manifest: Mapping[str, Any],
+    *,
+    shard_indices: Sequence[int],
+    num_shards: int,
+    attempts: int = 20,
+) -> None:
+    """Create assigned result trees serially with NFS/autofs retry semantics."""
+    assigned = set(shard_indices)
+    paths = sorted(
+        {
+            _resolve_output_dir(str(output_dir))
+            for index, run in enumerate(manifest["runs"])
+            if index % num_shards in assigned
+            for output_dir in run["output_dirs"].values()
+        },
+        key=str,
+    )
+    for path in paths:
+        last_error: OSError | None = None
+        for attempt in range(attempts):
+            try:
+                path.mkdir(parents=True, exist_ok=True)
+                if path.is_dir():
+                    break
+            except (FileExistsError, FileNotFoundError, OSError) as exc:
+                last_error = exc
+                if path.is_dir():
+                    break
+            time.sleep(min(0.1 * (attempt + 1), 1.0))
+        else:
+            raise Phase15JobError(
+                f"failed to pre-create NFS output directory {path}: {last_error}"
+            )
+
+
 def _run_shard_on_gpu_pair(
     *, execution_manifest: Path, manifest: Mapping[str, Any],
     manifest_sha256: str, shard_index: int, num_shards: int,
@@ -722,6 +764,15 @@ def run_node(
             },
         )
         return 0
+
+    # Do this once per node, before any evaluator subprocesses are launched.
+    # Cross-node autofs/NFS directory caches can briefly report a parent as
+    # missing while another node reports EEXIST for the same parent.
+    _precreate_assigned_output_dirs(
+        manifest,
+        shard_indices=pending,
+        num_shards=num_shards,
+    )
 
     groups, inventory = _select_idle_gpu_groups(
         max_startup_used_mib,

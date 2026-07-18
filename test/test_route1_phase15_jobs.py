@@ -38,7 +38,7 @@ def _manifest(path: Path) -> Path:
                             for dataset in jobs.DATASETS
                         },
                         "output_dirs": {
-                            dataset: f"/netdisk/results/{index}/{dataset}"
+                            dataset: str(path.parent / "results" / str(index) / dataset)
                             for dataset in jobs.DATASETS
                         },
                     }
@@ -213,6 +213,11 @@ def test_run_node_x4_filters_hidden_busy_gpu_and_serializes_two_shards(
         item for item in started["gpu_inventory"] if item["uuid"] == "GPU-hidden"
     )
     assert hidden["idle_eligible"] is False
+    assert all(
+        (tmp_path / "results" / str(index)).is_dir()
+        for index in range(72)
+        if index % 7 in {0, 1}
+    )
 
 
 def test_run_node_x8_uses_three_pairs_and_queues_fourth_shard(
