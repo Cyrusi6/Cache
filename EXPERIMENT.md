@@ -265,3 +265,4 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - Clean gate capacity B5−B2-constant 为 `+0.93 pp`、CI `[-2.66,+3.90]`；B5−B2 跨 pair 为 `+0.35 pp`、CI `[-1.15,+2.13]`，均不支持 gate capacity 的稳定独立贡献。
 - B6 post-hoc gate 在三个跨模型 pair 上几乎始终开启：Qwen3/Qwen2.5 high-saturation 约 99.93%，Llama3.2 为 100%；TinyLlama 约 85.86%。B5 的 key gate 比 value gate 更动态，但未带来稳定下游提升。
 - Final gate：B6−B2 delta `+1.54 pp`、pair-cluster CI `[-1.14,+4.05]`，3/4 pairs 为正；B6−B5 delta `+1.19 pp`、CI `[-0.92,+3.31]`，2/4 pairs 为正。两个预注册条件均失败，第一阶段在此停止，不进入下一阶段。
+- 为便于 GitHub 直接查看，最终完整报告与中文机制总结同时发布到仓库根目录：[`ROUTE1_V22_IDENTIFIABILITY_REPORT.md`](ROUTE1_V22_IDENTIFIABILITY_REPORT.md) 和 [`ROUTE1_V22_IDENTIFIABILITY_SUMMARY_ZH.md`](ROUTE1_V22_IDENTIFIABILITY_SUMMARY_ZH.md)。逐例 prediction、CSV 与约 13MB 的 `summary.json` 继续保留在 `local/`，不提交仓库。

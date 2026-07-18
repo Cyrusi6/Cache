@@ -386,3 +386,24 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 ### 结论与下一步
 
 第一阶段没有支持一个跨模型统一的 v2.2 机制解释。Multiple candidates 只在特定 pair 显著；entropy 在 TinyLlama 反事实中确有信息，但 static entropy 的普适独立贡献未成立；token/head gate 的额外自适应容量未获得支持，完整 B6 反而接近 always-on 饱和。按预注册标准，B6 未稳定优于 B2 与 B5，不进入下一阶段，也不开发新 transport、Route3、OT、RoPE correction 或新 loss。
+
+## 2026-07-18：最终实验报告发布到仓库根目录
+
+### 研究目标
+
+让 GitHub 页面无需访问集群 `local/` 产物即可直接审阅第一阶段的完整统计报告与中文机制结论。
+
+### 核心改动
+
+- 将最终 992 行完整报告发布为根目录 `ROUTE1_V22_IDENTIFIABILITY_REPORT.md`。
+- 将三问题结论、关键三 seed 表格和最终门控发布为根目录 `ROUTE1_V22_IDENTIFIABILITY_SUMMARY_ZH.md`。
+- 在根目录 `EXPERIMENT.md` 增加两个报告链接；逐例 CSV、bootstrap 中间表和大体积 JSON 仍遵守 `local/` 不提交规则。
+
+### 验证结果
+
+- 两份根目录 Markdown 与最终 `local/final_results/.../final_report/` 来源逐字一致，合计约 92KB。
+- 本次只发布实验文档，不改变训练、评测或统计代码。
+
+### 结论
+
+第一阶段实验记录现可从 GitHub 仓库根目录直接访问，同时避免把大体积逐例产物纳入版本控制。
