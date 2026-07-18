@@ -1093,13 +1093,21 @@
     ],
     "gpus_per_shard": 2,
     "within_shard": "Triplets run serially. ARC uses GPU 0 and OpenBookQA uses GPU 1 concurrently; after both finish, MMLU-Redux uses GPUs [0,1].",
+    "physical_job_count": 3,
     "node_allocation": {
       "4090-24gx4": [0, 1],
       "4090-24gx8": [2, 3, 4, 5],
-      "4090-24gx2": [6]
+      "4090-48gx2": [6]
     },
-    "launcher_constraint": "Use the external multi-node Kubernetes launcher. bash/k8s/gpu_job.sh is hostPath-limited to 4090-24gx4 and must not be used for the x8/x2 shards.",
+    "node_pool_jobs": {
+      "4090-24gx4": "Request all 4 Kubernetes GPUs; filter the scheduler-invisible busy GPU with nvidia-smi; run shards 0 and 1 serially on one idle UUID pair.",
+      "4090-24gx8": "Request all 8 Kubernetes GPUs; filter the scheduler-invisible busy GPU with nvidia-smi; use at most 3 idle UUID pairs concurrently for shards 2, 3, 4, and 5, queueing the fourth shard.",
+      "4090-48gx2": "Request both 48 GiB GPUs and run shard 6 on its idle UUID pair; existing per-triplet outputs are resume-skipped."
+    },
+    "cuda_isolation": "Each shard subprocess receives a two-UUID CUDA_VISIBLE_DEVICES mask and C2C_PRESERVE_CUDA_VISIBLE_DEVICES=1; no training or method configuration changes are made.",
+    "launcher_constraint": "Use script/k8s/route1_phase15_jobs.py to render three node-level Jobs. bash/k8s/gpu_job.sh is hostPath-limited to 4090-24gx4 and must not be used for the x8/x2 pools.",
     "generate_command": "python script/analysis/route1_phase15_interventions.py generate --phase1-manifest ${SHARED_ROOT}/local/tmp/route1_identifiability_suite/manifest.json --phase1-analysis-manifest ${SHARED_ROOT}/local/tmp/route1_identifiability_suite/analysis_manifest.json --phase1-artifact-root ${SHARED_ROOT} --output-root local/tmp/phase1_5_causal_diagnostics --results-root ${SHARED_ROOT}/local/final_results/phase1_5_causal_diagnostics/rev_0d30852 --recommended-shards 7",
+    "render_command": "python script/k8s/route1_phase15_jobs.py render --git-commit ${PHASE15_COMMIT} --execution-manifest local/tmp/phase1_5_causal_diagnostics/manifest.json --output local/tmp/phase1_5_causal_diagnostics/phase15-node-pools.yaml --server-dry-run",
     "shard_inner_command": "python script/analysis/route1_phase15_interventions.py run-shard --manifest local/tmp/phase1_5_causal_diagnostics/manifest.json --shard-index {0_to_6} --num-shards 7"
   }
 }

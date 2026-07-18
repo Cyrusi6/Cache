@@ -314,7 +314,7 @@ def test_phase15_manifest_generates_only_72_non_native_triplets(
         phase1_analysis_manifest_path=phase1_analysis,
         phase1_artifact_root=tmp_path,
         output_root=output_root,
-        results_root=Path("local/results/phase15"),
+        results_root=tmp_path / "results/phase15",
         recommended_shards=7,
     )
 
@@ -332,6 +332,11 @@ def test_phase15_manifest_generates_only_72_non_native_triplets(
     )
     assert all(run["checkpoint"]["same_checkpoint_no_training"] for run in manifest["runs"])
     assert all("train" not in run for run in manifest["runs"])
+    for run in manifest["runs"]:
+        for output_dir in run["output_dirs"].values():
+            output_path = Path(output_dir)
+            assert output_path.is_absolute()
+            assert output_path.is_dir()
 
     b2_k4 = next(run for run in manifest["runs"] if run["intervention"]["id"] == "b2_eval_k4")
     assert b2_k4["intervention"]["top_k"] == 4
@@ -458,7 +463,7 @@ def test_two_gpu_triplet_resumes_completed_datasets(
     ]
 
 
-def test_tracked_phase15_recipe_fixes_72_runs_and_seven_two_gpu_shards() -> None:
+def test_tracked_phase15_recipe_fixes_72_runs_and_three_node_pool_jobs() -> None:
     recipe_path = (
         Path(__file__).resolve().parents[1]
         / "recipe/eval_recipe/phase1_5/route1_phase15_interventions.json"
@@ -471,6 +476,12 @@ def test_tracked_phase15_recipe_fixes_72_runs_and_seven_two_gpu_shards() -> None
     assert len(recipe["runs"]) == 72
     assert recipe["scheduling"]["shard_count"] == 7
     assert recipe["scheduling"]["gpus_per_shard"] == 2
+    assert recipe["scheduling"]["physical_job_count"] == 3
+    assert recipe["scheduling"]["node_allocation"] == {
+        "4090-24gx4": [0, 1],
+        "4090-24gx8": [2, 3, 4, 5],
+        "4090-48gx2": [6],
+    }
     assert recipe["scheduling"]["run_counts"] == [11, 11, 10, 10, 10, 10, 10]
 
 
@@ -483,7 +494,7 @@ def test_optional_qwen25_seed44_anomaly_manifest_has_only_two_triplets(
         phase1_analysis_manifest_path=phase1_analysis,
         phase1_artifact_root=tmp_path,
         output_root=tmp_path / "anomaly",
-        results_root=Path("local/results/phase15_anomaly"),
+        results_root=tmp_path / "results/phase15_anomaly",
     )
 
     assert manifest["summary"]["new_triplet_count"] == 2

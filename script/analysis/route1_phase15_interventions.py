@@ -227,6 +227,8 @@ def generate_manifest(
 
     output_root = output_root.resolve()
     output_root.mkdir(parents=True, exist_ok=True)
+    results_root = results_root.resolve()
+    results_root.mkdir(parents=True, exist_ok=True)
     runs: list[dict[str, Any]] = []
     for pair in pairs:
         for seed in seeds:
@@ -264,6 +266,10 @@ def generate_manifest(
                     normalized = apply_eval_intervention_to_config(config)
                     assert normalized is not None
                     dataset_output = results_root / pair / variant / f"seed_{seed}" / definition["name"] / dataset
+                    # Pre-create the complete output tree serially. Concurrent
+                    # evaluators on NFS can otherwise race while recursively
+                    # creating a shared ancestor even with exist_ok=True.
+                    dataset_output.mkdir(parents=True, exist_ok=True)
                     config["output"]["output_dir"] = str(dataset_output)
                     config_path = output_root / "eval" / run_id / f"{dataset}.yaml"
                     config_path.parent.mkdir(parents=True, exist_ok=True)

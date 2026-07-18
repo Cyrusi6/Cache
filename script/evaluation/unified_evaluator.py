@@ -64,6 +64,28 @@ from rosetta.utils.eval_interventions import (
 )
 from rosetta.baseline.multi_stage import TwoStageInference, TwoStageRosetta
 
+
+_TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
+
+
+def configure_cuda_visibility(environ=None) -> bool:
+    """Apply the evaluator's explicit CUDA visibility policy.
+
+    The historical default remains unchanged: remove CUDA_VISIBLE_DEVICES so a
+    standalone evaluator can use the GPU ids from its config.  Node-level
+    schedulers can set C2C_PRESERVE_CUDA_VISIBLE_DEVICES=1 to retain an assigned
+    UUID mask and safely run multiple evaluator processes on one node.
+
+    Returns True when the existing mask was preserved.
+    """
+    env = os.environ if environ is None else environ
+    preserve = str(env.get("C2C_PRESERVE_CUDA_VISIBLE_DEVICES", "")).strip().lower()
+    if preserve in _TRUTHY_ENV_VALUES:
+        return True
+    env.pop("CUDA_VISIBLE_DEVICES", None)
+    return False
+
+
 # Dataset-specific configurations
 DATASET_CONFIGS = {
     "mmlu-redux": {
@@ -2934,8 +2956,13 @@ def main():
 
     print("Using config: ", args.config)
 
-    # Remove CUDA_VISIBLE_DEVICES to use all GPUs
-    os.environ.pop("CUDA_VISIBLE_DEVICES", None)
+    if configure_cuda_visibility():
+        print(
+            "Preserving scheduler-assigned CUDA_VISIBLE_DEVICES=",
+            os.environ.get("CUDA_VISIBLE_DEVICES", ""),
+        )
+    else:
+        print("Using evaluator config GPU ids without an inherited CUDA mask")
 
     # Create and run evaluator
     evaluator = UnifiedEvaluator(config)

@@ -408,7 +408,7 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 
 第一阶段实验记录现可从 GitHub 仓库根目录直接访问，同时避免把大体积逐例产物纳入版本控制。
 
-## 2026-07-18：Phase 1.5 同 checkpoint 因果干预与 Max7 评测调度
+## 2026-07-18：Phase 1.5 同 checkpoint 因果干预与节点级 GPU 池调度
 
 ### 研究目标
 
@@ -419,9 +419,11 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 - 新增统一的 evaluation-only intervention 配置与 provenance：支持 `top_k=1/4`、native/constant/shuffled entropy，以及 learned/static/forced-on gate 视图；重复应用配置保持幂等。
 - `forced_on` 同时把 alignment-confidence gate 与 checkpoint 中既有的 scalar K/V gate 置为 1；另提供只用于 Qwen2.5 seed 44 异常拆分的 `alignment_forced_on`、`legacy_forced_on`，不进入主矩阵。
 - 新增 Phase 1.5 manifest 生成与断点续跑入口。主矩阵为 4 pairs × 3 seeds × 6 非 native 干预，共 72 个三任务 triplets；36 个 native comparator 直接复用 Phase 1 逐例结果。
-- 新增七路双卡 Kubernetes renderer：`4090-24gx4` 两路、`4090-24gx8` 四路、`4090-48gx2` 一路，共使用 14 张 NVIDIA GPU。每路先并发运行 ARC/OBQA，再用双卡运行 MMLU-Redux。
+- 保留七个逻辑双卡 shards，但改由三个整节点 Kubernetes Jobs 管理：x4 请求 4 卡并串行覆盖 shards 0/1，x8 请求 8 卡、最多三个两卡组并行覆盖 shards 2–5，x48 请求 2 卡覆盖 shard 6。运行时按 `nvidia-smi` 实际显存过滤 Kubernetes 不可见的 busy GPU，再用空闲 UUID 两两分组。
+- evaluator 仅在显式 `C2C_PRESERVE_CUDA_VISIBLE_DEVICES=1` 时保留调度器设置的 UUID mask；默认行为不变。这样同一 x8 Pod 内的三个 shard 能在互斥 GPU 对上安全并行。
 - Kubernetes init 同时核验精确 Git commit 与 execution manifest SHA；当基础镜像没有 `git` 时，允许读取 detached checkout 的 40 位 `.git/HEAD`，避免 init 阶段误阻塞。
 - Job 显式传入 Phase 1 已审计的 `runtime_constraints.txt`，运行时 fingerprint 与既有固定 venv 保持一致，禁止因漏传 constraints 而安装漂移依赖。
+- Manifest 生成时把全部结果目录解析为绝对路径并串行预创建，避免 ARC/OBQA 与多 shard 在共享 NFS 上递归创建共同父目录时触发 `FileExistsError`。
 - 新增 Phase 1.5 统计入口，复用 pair→seed→example hierarchical paired bootstrap，输出同 checkpoint accuracy delta、McNemar、seed 方差、ambiguity interaction 与 receiver/fused oracle abstention headroom。
 
 ### 实验配置
@@ -434,11 +436,11 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 
 ### 验证结果
 
-- 项目全量测试 `217 passed`，保留 2 个已知 Pydantic warnings。
+- 项目全量测试 `222 passed`，保留 2 个已知 Pydantic warnings。
 - 72-run execution manifest 完整性、输出目录隔离、checkpoint-only 约束和七 shard 数量 `[11,11,10,10,10,10,10]` 均通过校验。
-- 七份 Kubernetes Jobs 已通过 API server dry-run；本次实现提交前未创建正式 Job。
+- 三份节点级 Kubernetes Jobs 已通过 API server dry-run；逻辑 shard 数和 run 分布仍为 `[11,11,10,10,10,10,10]`。
 - 首次真实创建在进入评测前暴露了 `PIP_CONSTRAINT` 漏传：两个跨节点 Pod 清理同一未发布 venv 时发生竞态，其余 Pod 尚在等待/安装。七个 Job 随即全部删除，没有产生 prediction；补齐 constraints 后将复用已审计环境重新提交。
 
 ### 结论与下一步
 
-推理期因果诊断基础设施已经就绪。正式实验必须基于本次实现的最终 commit 重新生成共享 manifest 与 Job YAML，再启动七路评测；是否补 TinyLlama constant/shuffle seeds 43/44 训练，严格取决于同 checkpoint entropy 干预是否跨模型对稳定有效。
+推理期因果诊断基础设施已经就绪。正式实验必须基于本次实现的最终 commit 重新生成共享 manifest 与三节点 Job YAML，再启动最多五个同时运行的双卡逻辑 shard；是否补 TinyLlama constant/shuffle seeds 43/44 训练，严格取决于同 checkpoint entropy 干预是否跨模型对稳定有效。

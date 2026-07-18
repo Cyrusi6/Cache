@@ -5,6 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from script.evaluation.unified_evaluator import (
+    configure_cuda_visibility,
     summarize_alignment_diagnostics,
     validate_worker_completion,
 )
@@ -46,3 +47,20 @@ def test_validate_worker_completion_rejects_partial_results() -> None:
 def test_validate_worker_completion_accepts_all_ranks() -> None:
     processes = [SimpleNamespace(exitcode=0), SimpleNamespace(exitcode=0)]
     validate_worker_completion(processes, {0: {}, 1: {}})
+
+
+def test_configure_cuda_visibility_preserves_explicit_scheduler_uuid_mask() -> None:
+    env = {
+        "CUDA_VISIBLE_DEVICES": "GPU-a,GPU-b",
+        "C2C_PRESERVE_CUDA_VISIBLE_DEVICES": "1",
+    }
+
+    assert configure_cuda_visibility(env) is True
+    assert env["CUDA_VISIBLE_DEVICES"] == "GPU-a,GPU-b"
+
+
+def test_configure_cuda_visibility_keeps_legacy_default() -> None:
+    env = {"CUDA_VISIBLE_DEVICES": "0,1"}
+
+    assert configure_cuda_visibility(env) is False
+    assert "CUDA_VISIBLE_DEVICES" not in env

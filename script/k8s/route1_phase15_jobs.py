@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
-"""Render and validate the seven two-GPU Phase-1.5 Kubernetes workers.
+"""Render and validate three node-level Phase-1.5 Kubernetes workers.
 
 The renderer is deliberately non-submitting: it can render locally or ask the
 Kubernetes API server to dry-run the Jobs.  Execution uses one immutable
-intervention manifest, index-modulo-seven sharding, and the resume semantics in
-``route1_phase15_interventions.py``.
+intervention manifest and the resume semantics in
+``route1_phase15_interventions.py``.  Each Job reserves its complete Kubernetes
+GPU allocation, filters physically busy devices with ``nvidia-smi``, and runs
+the seven logical two-GPU shards through idle UUID pairs.  This protects the
+experiment from GPU users that are invisible to the Kubernetes scheduler.
 """
 
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 import hashlib
@@ -65,24 +69,38 @@ class Phase15JobError(RuntimeError):
 
 
 @dataclass(frozen=True)
-class Worker:
-    shard_index: int
+class NodeWorker:
     node: str
     profile: str
+    shard_indices: tuple[int, ...]
+    gpu_request: int
+    max_parallel_shards: int
     cpu_request: str
     cpu_limit: str
     memory_request: str
     memory_limit: str
+    shm_size: str
 
 
-WORKERS = (
-    Worker(0, "4090-24gx4", "24gx2", "20", "28", "72Gi", "96Gi"),
-    Worker(1, "4090-24gx4", "24gx2", "20", "28", "72Gi", "96Gi"),
-    Worker(2, "4090-24gx8", "24gx2", "12", "18", "48Gi", "64Gi"),
-    Worker(3, "4090-24gx8", "24gx2", "12", "18", "48Gi", "64Gi"),
-    Worker(4, "4090-24gx8", "24gx2", "12", "18", "48Gi", "64Gi"),
-    Worker(5, "4090-24gx8", "24gx2", "12", "18", "48Gi", "64Gi"),
-    Worker(6, "4090-48gx2", "48gx2", "24", "32", "96Gi", "112Gi"),
+NODE_WORKERS = (
+    # Reserve all four cards, but use one idle UUID pair at a time.  If one
+    # physical card is occupied outside Kubernetes, both logical shards still
+    # finish serially on the remaining idle pair.
+    NodeWorker(
+        "4090-24gx4", "24gx4-node", (0, 1), 4, 1,
+        "20", "28", "72Gi", "96Gi", "32Gi",
+    ),
+    # At most three pairs are used even when all eight cards are idle.  This
+    # leaves the fourth pair as slack and also tolerates one scheduler-invisible
+    # busy GPU while keeping three shards concurrent.
+    NodeWorker(
+        "4090-24gx8", "24gx8-node", (2, 3, 4, 5), 8, 3,
+        "36", "48", "144Gi", "192Gi", "96Gi",
+    ),
+    NodeWorker(
+        "4090-48gx2", "48gx2-node", (6,), 2, 1,
+        "24", "32", "96Gi", "112Gi", "32Gi",
+    ),
 )
 
 
@@ -148,7 +166,7 @@ def validate_execution_manifest(path: Path, num_shards: int = 7) -> dict[str, An
     runs = manifest.get("runs") if isinstance(manifest, dict) else None
     if manifest.get("schema_version") != 1 or not isinstance(runs, list):
         raise Phase15JobError("execution manifest must be schema_version=1 with runs")
-    if num_shards != len(WORKERS):
+    if num_shards != 7:
         raise Phase15JobError("Phase 1.5 Max7 requires exactly seven shards")
 
     combinations: set[tuple[str, int, str]] = set()
@@ -218,7 +236,7 @@ def _sanitize_name(value: str) -> str:
     return result[:63].rstrip("-")
 
 
-def _common_env(options: RenderOptions, shard_index: int) -> list[dict[str, str]]:
+def _common_env(options: RenderOptions, worker: NodeWorker) -> list[dict[str, str]]:
     return [
         {"name": "PYTHONUNBUFFERED", "value": "1"},
         {"name": "TOKENIZERS_PARALLELISM", "value": "false"},
@@ -236,7 +254,14 @@ def _common_env(options: RenderOptions, shard_index: int) -> list[dict[str, str]
         {"name": "C2C_DATA_ROOT", "value": str(EXPERIMENT_ROOT / "data/c2c")},
         {"name": "C2C_RUNTIME_IMAGE", "value": options.image},
         {"name": "PIP_CONSTRAINT", "value": str(RUNTIME_CONSTRAINTS)},
-        {"name": "C2C_PHASE15_SHARD", "value": str(shard_index)},
+        {
+            "name": "C2C_PHASE15_SHARDS",
+            "value": ",".join(str(index) for index in worker.shard_indices),
+        },
+        # unified_evaluator historically removed CUDA_VISIBLE_DEVICES.  The
+        # node launcher assigns UUID pairs explicitly, so preserving the mask
+        # is required for isolation between concurrent two-GPU shards.
+        {"name": "C2C_PRESERVE_CUDA_VISIBLE_DEVICES", "value": "1"},
     ]
 
 
@@ -299,17 +324,17 @@ def build_jobs(options: RenderOptions) -> tuple[list[dict[str, Any]], dict[str, 
     summary = validate_execution_manifest(local_manifest)
     manifest_sha = summary["sha256"]
     jobs = []
-    for worker in WORKERS:
-        shard_state = options.state_dir / f"shard_{worker.shard_index:02d}"
+    for worker in NODE_WORKERS:
+        node_state = options.state_dir / worker.node
         suffix = worker.node.replace("4090-", "").replace("gx", "g")
         name = _sanitize_name(
             f"{options.name_prefix}-{options.git_commit[:8]}-{manifest_sha[:8]}-"
-            f"s{worker.shard_index + 1}-{suffix}"
+            f"{suffix}"
         )
         labels = {
             "app.kubernetes.io/name": "c2c",
             "app.kubernetes.io/managed-by": "route1-phase15-jobs",
-            "app.kubernetes.io/component": f"phase15-shard-{worker.shard_index}",
+            "app.kubernetes.io/component": f"phase15-node-{worker.node}",
             "c2c.research/experiment": "route1-phase15-causal-diagnostics",
         }
         metadata = {
@@ -319,11 +344,17 @@ def build_jobs(options: RenderOptions) -> tuple[list[dict[str, Any]], dict[str, 
             "annotations": {
                 "c2c.research/git-commit": options.git_commit.lower(),
                 "c2c.research/execution-manifest-sha256": manifest_sha,
-                "c2c.research/shard-index": str(worker.shard_index),
-                "c2c.research/shard-run-count": str(
-                    summary["shard_run_counts"][worker.shard_index]
+                "c2c.research/shard-indices": ",".join(
+                    str(index) for index in worker.shard_indices
+                ),
+                "c2c.research/shard-run-counts": ",".join(
+                    str(summary["shard_run_counts"][index])
+                    for index in worker.shard_indices
                 ),
                 "c2c.research/hardware-profile": worker.profile,
+                "c2c.research/max-parallel-shards": str(
+                    worker.max_parallel_shards
+                ),
             },
         }
         init = {
@@ -347,22 +378,24 @@ def build_jobs(options: RenderOptions) -> tuple[list[dict[str, Any]], dict[str, 
         command = [
             "python",
             str(THIS_SCRIPT),
-            "run-shard",
+            "run-node",
             "--execution-manifest",
             str(pod_manifest),
             "--expected-manifest-sha256",
             manifest_sha,
-            "--shard-index",
-            str(worker.shard_index),
+            "--shard-indices",
+            ",".join(str(index) for index in worker.shard_indices),
             "--num-shards",
             "7",
             "--state-dir",
-            str(shard_state),
+            str(node_state),
             "--max-startup-used-mib",
             str(options.max_startup_used_mib),
+            "--max-parallel-shards",
+            str(worker.max_parallel_shards),
         ]
         container = {
-            "name": f"phase15-shard-{worker.shard_index}",
+            "name": f"phase15-node-{worker.node}",
             "image": options.image,
             "imagePullPolicy": "IfNotPresent",
             "command": ["python", str(WORKSPACE_ROOT / "script/k8s/container_entrypoint.py")],
@@ -371,17 +404,17 @@ def build_jobs(options: RenderOptions) -> tuple[list[dict[str, Any]], dict[str, 
                 "--project-root", str(WORKSPACE_ROOT),
                 "--", *command,
             ],
-            "env": _common_env(options, worker.shard_index),
+            "env": _common_env(options, worker),
             "resources": {
                 "requests": {
                     "cpu": worker.cpu_request,
                     "memory": worker.memory_request,
-                    "nvidia.com/gpu": "2",
+                    "nvidia.com/gpu": str(worker.gpu_request),
                 },
                 "limits": {
                     "cpu": worker.cpu_limit,
                     "memory": worker.memory_limit,
-                    "nvidia.com/gpu": "2",
+                    "nvidia.com/gpu": str(worker.gpu_request),
                 },
             },
             "volumeMounts": [
@@ -423,7 +456,10 @@ def build_jobs(options: RenderOptions) -> tuple[list[dict[str, Any]], dict[str, 
                                 {"name": "huggingface-cache", "emptyDir": {}},
                                 {
                                     "name": "shm",
-                                    "emptyDir": {"medium": "Memory", "sizeLimit": "32Gi"},
+                                    "emptyDir": {
+                                        "medium": "Memory",
+                                        "sizeLimit": worker.shm_size,
+                                    },
                                 },
                             ],
                         },
@@ -497,26 +533,124 @@ def server_dry_run(
     )
 
 
-def _select_startup_gpus(
-    max_used_mib: int, *,
-    runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
-) -> tuple[list[str], list[int]]:
+def _query_gpu_memory(
+    *, runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+) -> list[tuple[str, int]]:
+    """Return the physical GPUs visible to the node-level container."""
     result = runner(
         ["nvidia-smi", "--query-gpu=uuid,memory.used", "--format=csv,noheader,nounits"],
         check=True, capture_output=True, text=True,
     )
-    rows = []
+    rows: list[tuple[str, int]] = []
     for line in result.stdout.splitlines():
         if line.strip():
-            uuid, used = (part.strip() for part in line.split(",", maxsplit=1))
-            rows.append((uuid, int(used)))
+            try:
+                uuid, used = (part.strip() for part in line.split(",", maxsplit=1))
+                rows.append((uuid, int(used)))
+            except (TypeError, ValueError) as exc:
+                raise Phase15JobError(
+                    f"invalid nvidia-smi GPU row: {line!r}"
+                ) from exc
+    if not rows:
+        raise Phase15JobError("nvidia-smi did not report any visible GPUs")
+    if len({uuid for uuid, _used in rows}) != len(rows):
+        raise Phase15JobError("nvidia-smi reported duplicate GPU UUIDs")
+    return rows
+
+
+def _select_idle_gpu_groups(
+    max_used_mib: int, *,
+    max_groups: int,
+    runner: Callable[..., subprocess.CompletedProcess[str]] = subprocess.run,
+) -> tuple[list[tuple[list[str], list[int]]], list[tuple[str, int]]]:
+    if max_groups < 1:
+        raise Phase15JobError("max_groups must be positive")
+    rows = _query_gpu_memory(runner=runner)
     healthy = [item for item in rows if item[1] <= max_used_mib]
-    if len(rows) < 2 or len(healthy) < 2:
+    group_count = min(len(healthy) // 2, max_groups)
+    if len(rows) < 2 or group_count < 1:
         raise Phase15JobError(
-            f"fewer than two allocated GPUs are idle enough: rows={rows}, threshold={max_used_mib}"
+            "fewer than two visible GPUs are idle enough: "
+            f"rows={rows}, threshold={max_used_mib}"
         )
-    selected = healthy[:2]
-    return [item[0] for item in selected], [item[1] for item in selected]
+    groups = []
+    for index in range(group_count):
+        selected = healthy[index * 2 : index * 2 + 2]
+        groups.append(
+            ([item[0] for item in selected], [item[1] for item in selected])
+        )
+    return groups, rows
+
+
+def _shard_run_ids(manifest: Mapping[str, Any], shard_index: int, num_shards: int) -> list[str]:
+    return [
+        run["id"]
+        for index, run in enumerate(manifest["runs"])
+        if index % num_shards == shard_index
+    ]
+
+
+def _completed_shard_state(
+    state_dir: Path, *, manifest_sha256: str, shard_index: int,
+) -> bool:
+    path = state_dir / f"shard_{shard_index:02d}" / "completed.json"
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return False
+    return (
+        value.get("manifest_sha256") == manifest_sha256
+        and value.get("shard_index") == shard_index
+        and value.get("return_code", 0) == 0
+    )
+
+
+def _run_shard_on_gpu_pair(
+    *, execution_manifest: Path, manifest: Mapping[str, Any],
+    manifest_sha256: str, shard_index: int, num_shards: int,
+    state_dir: Path, selected_uuids: Sequence[str], used_mib: Sequence[int],
+    runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
+) -> int:
+    if len(selected_uuids) != 2 or len(used_mib) != 2:
+        raise Phase15JobError("each logical shard requires exactly one two-GPU pair")
+    shard_state = state_dir / f"shard_{shard_index:02d}"
+    run_ids = _shard_run_ids(manifest, shard_index, num_shards)
+    child_env = dict(os.environ)
+    child_env["CUDA_VISIBLE_DEVICES"] = ",".join(selected_uuids)
+    child_env["C2C_PRESERVE_CUDA_VISIBLE_DEVICES"] = "1"
+    child_env["C2C_PHASE15_GPU_UUIDS"] = ",".join(selected_uuids)
+    base = {
+        "schema_version": 2,
+        "shard_index": shard_index,
+        "num_shards": num_shards,
+        "manifest": str(execution_manifest.resolve()),
+        "manifest_sha256": manifest_sha256,
+        "run_ids": run_ids,
+        "selected_gpu_uuids": list(selected_uuids),
+        "selected_gpu_used_mib_at_start": list(used_mib),
+    }
+    _atomic_json(
+        shard_state / "started.json",
+        {**base, "started_at": datetime.now(timezone.utc).isoformat()},
+    )
+    command = [
+        sys.executable, str(INTERVENTION_SCRIPT), "run-shard",
+        "--manifest", str(execution_manifest.resolve()),
+        "--shard-index", str(shard_index), "--num-shards", str(num_shards),
+    ]
+    result = runner(command, cwd=str(WORKSPACE_ROOT), env=child_env, check=False)
+    finished = datetime.now(timezone.utc).isoformat()
+    if result.returncode == 0:
+        _atomic_json(
+            shard_state / "completed.json",
+            {**base, "completed_at": finished, "return_code": 0},
+        )
+    else:
+        _atomic_json(
+            shard_state / "failed.json",
+            {**base, "failed_at": finished, "return_code": int(result.returncode)},
+        )
+    return int(result.returncode)
 
 
 def run_shard(
@@ -531,44 +665,145 @@ def run_shard(
     if actual_sha != expected_manifest_sha256:
         raise Phase15JobError("execution manifest SHA changed after rendering")
     manifest = json.loads(execution_manifest.read_text(encoding="utf-8"))
-    run_ids = [
-        run["id"] for index, run in enumerate(manifest["runs"])
-        if index % num_shards == shard_index
-    ]
-    selected_uuids, used_mib = _select_startup_gpus(
-        max_startup_used_mib, runner=runner
+    groups, _inventory = _select_idle_gpu_groups(
+        max_startup_used_mib, max_groups=1, runner=runner
     )
-    child_env = dict(os.environ)
-    child_env["CUDA_VISIBLE_DEVICES"] = ",".join(selected_uuids)
-    base = {
-        "schema_version": 1,
-        "shard_index": shard_index,
-        "num_shards": num_shards,
+    selected_uuids, used_mib = groups[0]
+    # Preserve the old CLI for one-off recovery, but use the same per-shard
+    # state layout and UUID-isolated implementation as run-node.
+    return _run_shard_on_gpu_pair(
+        execution_manifest=execution_manifest,
+        manifest=manifest,
+        manifest_sha256=actual_sha,
+        shard_index=shard_index,
+        num_shards=num_shards,
+        state_dir=state_dir.parent if state_dir.name == f"shard_{shard_index:02d}" else state_dir,
+        selected_uuids=selected_uuids,
+        used_mib=used_mib,
+        runner=runner,
+    )
+
+
+def run_node(
+    *, execution_manifest: Path, expected_manifest_sha256: str,
+    shard_indices: Sequence[int], num_shards: int, state_dir: Path,
+    max_startup_used_mib: int, max_parallel_shards: int,
+    runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
+) -> int:
+    """Run several modulo shards on disjoint, physically idle UUID pairs."""
+    if num_shards != 7:
+        raise Phase15JobError("require exactly seven logical shards")
+    normalized = tuple(int(index) for index in shard_indices)
+    if not normalized or len(set(normalized)) != len(normalized):
+        raise Phase15JobError("shard-indices must be non-empty and unique")
+    if any(index < 0 or index >= num_shards for index in normalized):
+        raise Phase15JobError("shard-indices must be in [0, 6]")
+    if max_parallel_shards < 1:
+        raise Phase15JobError("max-parallel-shards must be positive")
+    actual_sha = _sha256(execution_manifest)
+    if actual_sha != expected_manifest_sha256:
+        raise Phase15JobError("execution manifest SHA changed after rendering")
+    manifest = json.loads(execution_manifest.read_text(encoding="utf-8"))
+    pending = [
+        index for index in normalized
+        if not _completed_shard_state(
+            state_dir, manifest_sha256=actual_sha, shard_index=index
+        )
+    ]
+    if not pending:
+        _atomic_json(
+            state_dir / "completed.json",
+            {
+                "schema_version": 2,
+                "manifest_sha256": actual_sha,
+                "shard_indices": list(normalized),
+                "skipped_completed_shards": list(normalized),
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            },
+        )
+        return 0
+
+    groups, inventory = _select_idle_gpu_groups(
+        max_startup_used_mib,
+        max_groups=min(max_parallel_shards, len(pending)),
+        runner=runner,
+    )
+    schedules = [pending[index::len(groups)] for index in range(len(groups))]
+    selected = [
+        {
+            "gpu_uuids": uuids,
+            "used_mib_at_start": used,
+            "shard_indices": schedules[index],
+        }
+        for index, (uuids, used) in enumerate(groups)
+    ]
+    node_base = {
+        "schema_version": 2,
         "manifest": str(execution_manifest.resolve()),
         "manifest_sha256": actual_sha,
-        "run_ids": run_ids,
-        "selected_gpu_uuids": selected_uuids,
-        "selected_gpu_used_mib_at_start": used_mib,
+        "shard_indices": list(normalized),
+        "pending_shard_indices": pending,
+        "max_parallel_shards": max_parallel_shards,
+        "max_startup_used_mib": max_startup_used_mib,
+        "gpu_inventory": [
+            {
+                "uuid": uuid,
+                "used_mib": used,
+                "idle_eligible": used <= max_startup_used_mib,
+            }
+            for uuid, used in inventory
+        ],
+        "selected_gpu_groups": selected,
     }
     _atomic_json(
         state_dir / "started.json",
-        {**base, "started_at": datetime.now(timezone.utc).isoformat()},
+        {**node_base, "started_at": datetime.now(timezone.utc).isoformat()},
     )
-    command = [
-        sys.executable, str(INTERVENTION_SCRIPT), "run-shard",
-        "--manifest", str(execution_manifest.resolve()),
-        "--shard-index", str(shard_index), "--num-shards", str(num_shards),
+
+    def run_group(group_index: int) -> list[tuple[int, int]]:
+        uuids, used = groups[group_index]
+        results = []
+        for shard_index in schedules[group_index]:
+            return_code = _run_shard_on_gpu_pair(
+                execution_manifest=execution_manifest,
+                manifest=manifest,
+                manifest_sha256=actual_sha,
+                shard_index=shard_index,
+                num_shards=num_shards,
+                state_dir=state_dir,
+                selected_uuids=uuids,
+                used_mib=used,
+                runner=runner,
+            )
+            results.append((shard_index, return_code))
+            if return_code != 0:
+                break
+        return results
+
+    with ThreadPoolExecutor(max_workers=len(groups)) as pool:
+        group_results = list(pool.map(run_group, range(len(groups))))
+    flat_results = [item for group in group_results for item in group]
+    failures = [
+        {"shard_index": shard_index, "return_code": return_code}
+        for shard_index, return_code in flat_results
+        if return_code != 0
     ]
-    result = runner(command, cwd=str(WORKSPACE_ROOT), env=child_env, check=False)
     finished = datetime.now(timezone.utc).isoformat()
-    if result.returncode == 0:
-        _atomic_json(state_dir / "completed.json", {**base, "completed_at": finished})
-    else:
+    if failures:
         _atomic_json(
             state_dir / "failed.json",
-            {**base, "failed_at": finished, "return_code": int(result.returncode)},
+            {**node_base, "failures": failures, "failed_at": finished},
         )
-    return int(result.returncode)
+        return failures[0]["return_code"]
+    _atomic_json(
+        state_dir / "completed.json",
+        {
+            **node_base,
+            "completed_shard_indices": [index for index, _code in flat_results],
+            "completed_at": finished,
+        },
+    )
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -599,6 +834,19 @@ def build_parser() -> argparse.ArgumentParser:
     launch.add_argument("--num-shards", type=int, required=True)
     launch.add_argument("--state-dir", type=Path, required=True)
     launch.add_argument("--max-startup-used-mib", type=int, default=4096)
+
+    node = subparsers.add_parser("run-node")
+    node.add_argument("--execution-manifest", type=Path, required=True)
+    node.add_argument("--expected-manifest-sha256", required=True)
+    node.add_argument(
+        "--shard-indices",
+        required=True,
+        help="Comma-separated logical shard indices assigned to this node",
+    )
+    node.add_argument("--num-shards", type=int, required=True)
+    node.add_argument("--state-dir", type=Path, required=True)
+    node.add_argument("--max-startup-used-mib", type=int, default=4096)
+    node.add_argument("--max-parallel-shards", type=int, required=True)
     return parser
 
 
@@ -613,6 +861,19 @@ def main(argv: Sequence[str] | None = None) -> int:
                 num_shards=args.num_shards,
                 state_dir=args.state_dir,
                 max_startup_used_mib=args.max_startup_used_mib,
+            )
+        if args.command == "run-node":
+            return run_node(
+                execution_manifest=args.execution_manifest,
+                expected_manifest_sha256=args.expected_manifest_sha256,
+                shard_indices=[
+                    int(value) for value in args.shard_indices.split(",")
+                    if value.strip()
+                ],
+                num_shards=args.num_shards,
+                state_dir=args.state_dir,
+                max_startup_used_mib=args.max_startup_used_mib,
+                max_parallel_shards=args.max_parallel_shards,
             )
         options = RenderOptions(
             git_commit=args.git_commit,
@@ -643,7 +904,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 {
                     "mode": "server-dry-run" if args.server_dry_run else "render-only",
                     "job_count": len(jobs),
-                    "nodes": [worker.node for worker in WORKERS],
+                    "nodes": [worker.node for worker in NODE_WORKERS],
                     "manifest": summary,
                     "output": str(args.output) if args.output else None,
                 }
