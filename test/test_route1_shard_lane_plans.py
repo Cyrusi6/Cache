@@ -6,7 +6,13 @@ from pathlib import Path
 from script.k8s import route1_shard_lane_plans as shard
 
 
-def _write_plan(path: Path, lane: str, runs: list[dict]) -> None:
+def _write_plan(
+    path: Path,
+    lane: str,
+    runs: list[dict],
+    *,
+    phase: str = "phase1",
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         json.dumps(
@@ -14,7 +20,7 @@ def _write_plan(path: Path, lane: str, runs: list[dict]) -> None:
                 "schema_version": 1,
                 "suite": "route1_v22_identifiability",
                 "lane": lane,
-                "phase": "phase1",
+                "phase": phase,
                 "state_dir": "state",
                 "runs": runs,
             }
@@ -88,3 +94,37 @@ def test_shard_plans_excludes_completed_and_removes_serial_dependencies(
         assert all(not run["depends_on_runs"] for run in plan["runs"])
     assert sorted(assigned) == ["heavy", "light-a"]
     assert len(assigned) == len(set(assigned))
+
+
+def test_shard_plans_supports_conditional_phase(tmp_path: Path) -> None:
+    state = tmp_path / "state"
+    (state / "completed").mkdir(parents=True)
+    plan = tmp_path / "lane_a.conditional.json"
+    _write_plan(
+        plan,
+        "lane_a",
+        [
+            {
+                "run_id": "conditional-run",
+                "pair": "qwen3_1p7b",
+                "depends_on_runs": ["seed-42"],
+                "gate_diagnostics": {"required": True},
+            }
+        ],
+        phase="conditional",
+    )
+
+    output = tmp_path / "conditional-shards"
+    manifest = shard.shard_plans(
+        [plan],
+        output_dir=output,
+        state_dir=state,
+        shard_count=1,
+        lane_prefix="lane_max_cond",
+    )
+
+    shard_path = output / "lane_max_cond_1.conditional.json"
+    shard_plan = json.loads(shard_path.read_text(encoding="utf-8"))
+    assert manifest["phase"] == "conditional"
+    assert shard_plan["phase"] == "conditional"
+    assert shard_plan["runs"][0]["depends_on_runs"] == []

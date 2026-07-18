@@ -132,8 +132,11 @@ def materialize(
     source_plan = source_plan.resolve()
     source = json.loads(source_plan.read_text(encoding="utf-8"))
     lane = str(source.get("lane", "")).strip()
-    if not lane or source.get("phase") != "phase1":
-        raise ValueError("the two-GPU adapter requires a named phase1 lane plan")
+    phase = str(source.get("phase", "")).strip()
+    if not lane or phase not in {"phase1", "conditional"}:
+        raise ValueError(
+            "the two-GPU adapter requires a named phase1 or conditional lane plan"
+        )
     if requested_gpus < 2:
         raise ValueError("requested_gpus must be at least two")
 

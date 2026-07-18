@@ -244,3 +244,13 @@ Kubernetes 任务现在可以直接复用统一模型库；现有 Hugging Face I
 - 终态资源布局：`4090-24gx4` 两条 2 卡 worker，`4090-24gx8` 四条 2 卡 worker，`4090-48gx2` 一条 2 卡 worker，14 张 NVIDIA GPU 全部进入调度合同。
 - Max7 的 shard manifest、gate 与七份 Job 输入清单保存于 `/netdisk/lijunsi/c2c-route1-identifiability/status/job-manifests/max7-phase1/`，目录内文件均记录 SHA256。
 - Phase1 ETA 更新为约 6–7 小时，预计 2026-07-18 05:00–06:00 CST 左右完成；若 conditional 阶段立即按相同布局释放，全部 67 runs 预计约 12–16 小时完成。
+
+### 2026-07-18 Phase1 完成与 conditional 放行
+
+- Phase1 的 37 个计划 runs 已全部完成，实验失败为 0；七个 Max7 Jobs 全部 Kubernetes Complete，wall time 为 5 小时至 7 小时 8 分。旧过渡 Jobs 的 Kubernetes Failed 来自 pending gate 在 run 边界主动返回非零，不代表训练或评测失败。
+- Phase1 报告保存于 `/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/phase1_report/`。TinyLlama B6 seed 42 macro mean 为 50.806%，与预期 50.82% 接近。
+- seed 42 sample-weighted 结果满足 conditional 筛选：B6−B2 在 TinyLlama、Qwen3-1.7B、Qwen2.5-0.5B、Llama3.2 四个 pair 全部为正；B6−B5 在前三个 pair 为正，Llama3.2 为 −0.509 percentage points。该筛选只决定是否补 seed，不替代最终三 seed paired CI。
+- TinyLlama 三 seed 的 provisional component contrasts：B3−B2 `+2.09 pp`、B4−B3 `+1.29 pp`、B5−B2-constant `+0.93 pp`，三者 cluster CI 均跨 0；B6−B4 `+1.34 pp` 与 B6−B5 `+2.50 pp` 的 cluster CI 均高于 0。B6−constant 为 `+0.94 pp`，B6−shuffle 为 `+2.28 pp`，当前反事实支持 entropy 数值和位置含有信息，但仍需结合跨模型多 seed 与 gate 饱和诊断解释。
+- 30 个 conditional runs 已拆为七路，plan SHA256 为 `2f9d6cb6c0d7943d6aa873887484a5418fda635977ce74d89e1b1b0cf697ce1a`、`c9396dbe5d7c1f8c3f651b4af5185b64ef171abf8d48b8c8f5828a821bc5b2e7`、`1f5cf0b60fdbca591ae2974399585d61c2eba6cb9ec074d75731c9584bc2bf74`、`ec4d8d2df69a28f5bb8cb2523bc9fe890269084098e2ac5d1c3bc80a6f0c8e7c`、`74d2b9537023888f1180bf7412f366475a3588b7efafab523323ffd430b2ccf4`、`d0203899937fd660b766818690c58c735d25029a4ffc7837134c21b870b828a0`、`91637d1043ffa7ba28189baa383f84609ce6a65c5bfec0883fb5bfa92f4c1a29`。
+- 正式 Jobs 为 `r1id-v22-c7-s1-x4-r4-e796f4df`、`s2-x4`、`s3`–`s6-x8`、`s7-x48`；七个 Pods 均已进入训练、restart 0，共占用 14 张 NVIDIA GPU。第一批 r3 Jobs 仅因 adapter 不接受 conditional phase 而在训练前退出，修复后 adapter SHA256 为 `e796f4df99e362cfd83e5510b92955a06fac0b08bcd2aace1921ceb7607b9416`。
+- 按 Phase1 实测吞吐与 conditional 分片权重，预计 conditional 阶段约需 7–10 小时；从 2026-07-18 08:10 CST 启动计，预计在 15:00–18:00 CST 左右完成，之后生成完整 67-run 统计报告。

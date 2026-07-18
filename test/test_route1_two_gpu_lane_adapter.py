@@ -6,12 +6,14 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import yaml
+import pytest
 
 from script.k8s import route1_two_gpu_lane_adapter as adapter
 
 
+@pytest.mark.parametrize("phase", ["phase1", "conditional"])
 def test_materialize_two_gpu_plan_preserves_effective_global_batch(
-    tmp_path: Path, monkeypatch
+    tmp_path: Path, monkeypatch, phase: str
 ) -> None:
     source_prefix = Path("local/tmp/source-suite")
     adapted_prefix = Path("local/tmp/adapted-suite")
@@ -64,13 +66,13 @@ def test_materialize_two_gpu_plan_preserves_effective_global_batch(
         )
         configs[dataset] = path.relative_to(tmp_path).as_posix()
 
-    plan_path = source_root / "lanes/lane_b.phase1.json"
+    plan_path = source_root / f"lanes/lane_b.{phase}.json"
     plan_path.parent.mkdir(parents=True)
     plan_path.write_text(
         json.dumps(
             {
                 "lane": "lane_b",
-                "phase": "phase1",
+                "phase": phase,
                 "state_dir": "local/tmp/state",
                 "runs": [
                     {
@@ -102,7 +104,7 @@ def test_materialize_two_gpu_plan_preserves_effective_global_batch(
         ),
         encoding="utf-8",
     )
-    adapted_plan_path = tmp_path / adapted_prefix / "lanes/lane_b.phase1.json"
+    adapted_plan_path = tmp_path / adapted_prefix / f"lanes/lane_b.{phase}.json"
 
     result = adapter.materialize(
         plan_path,

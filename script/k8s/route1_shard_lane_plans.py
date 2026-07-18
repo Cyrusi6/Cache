@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministically shard independent Route-1 phase-1 runs across workers."""
+"""Deterministically shard independent Route-1 runs across workers."""
 
 from __future__ import annotations
 
@@ -65,8 +65,12 @@ def shard_plans(
     plans = [_read_json(path.resolve()) for path in plan_paths]
     if not plans:
         raise ValueError("at least one source plan is required")
-    if any(plan.get("phase") != "phase1" for plan in plans):
-        raise ValueError("only phase1 plans can be sharded")
+    phases = {str(plan.get("phase")) for plan in plans}
+    if len(phases) != 1 or not phases.issubset({"phase1", "conditional"}):
+        raise ValueError(
+            "source plans must share one supported phase: phase1 or conditional"
+        )
+    phase = next(iter(phases))
     suites = {str(plan.get("suite")) for plan in plans}
     if len(suites) != 1:
         raise ValueError(f"source plans disagree about suite: {sorted(suites)}")
@@ -109,7 +113,7 @@ def shard_plans(
             "schema_version": 1,
             "suite": next(iter(suites)),
             "lane": lane,
-            "phase": "phase1",
+            "phase": phase,
             "hardware": {"profile": "assigned_by_two_gpu_adapter"},
             "state_dir": str(state_dir.resolve()),
             "gate_contract": {
@@ -118,7 +122,7 @@ def shard_plans(
             },
             "runs": runs,
         }
-        plan_path = output_dir / f"{lane}.phase1.json"
+        plan_path = output_dir / f"{lane}.{phase}.json"
         _write_json(plan_path, plan)
         shard_records.append(
             {
@@ -132,6 +136,7 @@ def shard_plans(
 
     manifest = {
         "schema_version": 1,
+        "phase": phase,
         "source_plans": [
             {"path": str(path.resolve()), "sha256": _sha256(path.resolve())}
             for path in plan_paths
