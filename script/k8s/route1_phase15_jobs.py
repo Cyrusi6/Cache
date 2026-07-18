@@ -630,21 +630,25 @@ def _precreate_assigned_output_dirs(
         key=str,
     )
     for path in paths:
-        last_error: OSError | None = None
-        for attempt in range(attempts):
-            try:
-                path.mkdir(parents=True, exist_ok=True)
-                if path.is_dir():
+        if not path.is_absolute():
+            raise Phase15JobError(f"output directory must be absolute: {path}")
+        current = Path(path.anchor)
+        for part in path.parts[1:]:
+            current /= part
+            for attempt in range(attempts):
+                try:
+                    current.mkdir()
                     break
-            except (FileExistsError, FileNotFoundError, OSError) as exc:
-                last_error = exc
-                if path.is_dir():
+                except FileExistsError:
+                    # On cross-node NFS, mkdir(EEXIST) is authoritative even
+                    # when a following stat still observes a negative dentry.
                     break
-            time.sleep(min(0.1 * (attempt + 1), 1.0))
-        else:
-            raise Phase15JobError(
-                f"failed to pre-create NFS output directory {path}: {last_error}"
-            )
+                except FileNotFoundError as exc:
+                    if attempt + 1 == attempts:
+                        raise Phase15JobError(
+                            f"parent remained invisible while creating {current}: {exc}"
+                        ) from exc
+                    time.sleep(min(0.1 * (attempt + 1), 1.0))
 
 
 def _run_shard_on_gpu_pair(
