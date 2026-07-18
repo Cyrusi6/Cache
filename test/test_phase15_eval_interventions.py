@@ -309,6 +309,7 @@ def test_phase15_manifest_generates_only_72_non_native_triplets(
 ) -> None:
     phase1_manifest, phase1_analysis = _write_phase1_fixture(tmp_path)
     output_root = tmp_path / "generated"
+    x8_root = tmp_path / "x8-results"
     manifest = generate_manifest(
         phase1_manifest_path=phase1_manifest,
         phase1_analysis_manifest_path=phase1_analysis,
@@ -316,6 +317,7 @@ def test_phase15_manifest_generates_only_72_non_native_triplets(
         output_root=output_root,
         results_root=tmp_path / "results/phase15",
         recommended_shards=7,
+        shard_results_roots={index: x8_root for index in (2, 3, 4, 5)},
     )
 
     assert manifest["summary"]["new_triplet_count"] == 72
@@ -332,11 +334,17 @@ def test_phase15_manifest_generates_only_72_non_native_triplets(
     )
     assert all(run["checkpoint"]["same_checkpoint_no_training"] for run in manifest["runs"])
     assert all("train" not in run for run in manifest["runs"])
-    for run in manifest["runs"]:
+    for run_index, run in enumerate(manifest["runs"]):
         for output_dir in run["output_dirs"].values():
             output_path = Path(output_dir)
             assert output_path.is_absolute()
-            assert output_path.is_dir()
+            if run_index % 7 in {2, 3, 4, 5}:
+                assert output_path.is_relative_to(x8_root.resolve())
+            else:
+                assert output_path.is_dir()
+    assert manifest["scheduling"]["shard_results_roots"] == {
+        str(index): str(x8_root.resolve()) for index in (2, 3, 4, 5)
+    }
 
     b2_k4 = next(run for run in manifest["runs"] if run["intervention"]["id"] == "b2_eval_k4")
     assert b2_k4["intervention"]["top_k"] == 4

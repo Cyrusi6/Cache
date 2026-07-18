@@ -210,6 +210,7 @@ def generate_manifest(
     output_root: Path,
     results_root: Path,
     recommended_shards: int = 7,
+    shard_results_roots: Optional[Mapping[int, Path]] = None,
     intervention_definitions: tuple[dict[str, Any], ...] = INTERVENTIONS,
     pairs: tuple[str, ...] = PAIRS,
     seeds: tuple[int, ...] = SEEDS,
@@ -229,6 +230,15 @@ def generate_manifest(
     output_root.mkdir(parents=True, exist_ok=True)
     results_root = results_root.resolve()
     results_root.mkdir(parents=True, exist_ok=True)
+    resolved_shard_roots = {
+        int(index): Path(path).resolve()
+        for index, path in (shard_results_roots or {}).items()
+    }
+    invalid_shards = sorted(
+        index for index in resolved_shard_roots if not 0 <= index < recommended_shards
+    )
+    if invalid_shards:
+        raise ValueError(f"invalid shard result root indices: {invalid_shards}")
     runs: list[dict[str, Any]] = []
     for pair in pairs:
         for seed in seeds:
@@ -253,6 +263,10 @@ def generate_manifest(
                 output_dirs: dict[str, str] = {}
                 base_configs: dict[str, str] = {}
                 checkpoint_path: Optional[str] = None
+                logical_shard = len(runs) % recommended_shards
+                run_results_root = resolved_shard_roots.get(
+                    logical_shard, results_root
+                )
                 for dataset in DATASETS:
                     base_path, config = _base_eval_config(
                         phase1_run, dataset, phase1_artifact_root
@@ -265,11 +279,12 @@ def generate_manifest(
                     config["eval"]["intervention"] = intervention
                     normalized = apply_eval_intervention_to_config(config)
                     assert normalized is not None
-                    dataset_output = results_root / pair / variant / f"seed_{seed}" / definition["name"] / dataset
+                    dataset_output = run_results_root / pair / variant / f"seed_{seed}" / definition["name"] / dataset
                     # Pre-create the complete output tree serially. Concurrent
                     # evaluators on NFS can otherwise race while recursively
                     # creating a shared ancestor even with exist_ok=True.
-                    dataset_output.mkdir(parents=True, exist_ok=True)
+                    if logical_shard not in resolved_shard_roots:
+                        dataset_output.mkdir(parents=True, exist_ok=True)
                     config["output"]["output_dir"] = str(dataset_output)
                     config_path = output_root / "eval" / run_id / f"{dataset}.yaml"
                     config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -408,6 +423,10 @@ def generate_manifest(
                 "MMLU-Redux on GPUs [0, 1]"
             ),
             "commands": shard_commands,
+            "shard_results_roots": {
+                str(index): str(path)
+                for index, path in sorted(resolved_shard_roots.items())
+            },
         },
     }
     _write_json(manifest_path, manifest)
@@ -557,6 +576,16 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     generate.add_argument("--recommended-shards", type=int, default=7)
+    generate.add_argument(
+        "--shard-results-root",
+        action="append",
+        default=[],
+        metavar="SHARD=PATH",
+        help=(
+            "Place one logical shard under a node-isolated shared result root; "
+            "repeat for multiple shards"
+        ),
+    )
 
     anomaly = subparsers.add_parser("generate-anomaly")
     anomaly.add_argument("--phase1-manifest", type=Path, required=True)
@@ -592,6 +621,15 @@ def _parser() -> argparse.ArgumentParser:
 def main() -> int:
     args = _parser().parse_args()
     if args.command == "generate":
+        shard_results_roots = {}
+        for raw in args.shard_results_root:
+            index_text, separator, path_text = raw.partition("=")
+            if not separator or not path_text.strip():
+                raise ValueError("--shard-results-root requires SHARD=PATH")
+            index = int(index_text)
+            if index in shard_results_roots:
+                raise ValueError(f"duplicate shard result root: {index}")
+            shard_results_roots[index] = Path(path_text)
         manifest = generate_manifest(
             phase1_manifest_path=args.phase1_manifest,
             phase1_analysis_manifest_path=args.phase1_analysis_manifest,
@@ -599,6 +637,7 @@ def main() -> int:
             output_root=args.output_root,
             results_root=args.results_root,
             recommended_shards=args.recommended_shards,
+            shard_results_roots=shard_results_roots,
         )
         print(
             f"Generated {manifest['summary']['new_triplet_count']} triplets at "
