@@ -6,7 +6,10 @@ import math
 from pathlib import Path
 from typing import Iterable, Mapping
 
-from script.analysis.phase1_5_causal_diagnostics import generate_diagnostics
+from script.analysis.phase1_5_causal_diagnostics import (
+    _load_manifest,
+    generate_diagnostics,
+)
 
 
 def _write_predictions(
@@ -426,3 +429,209 @@ def test_consumes_phase15_execution_manifest_directly(tmp_path: Path) -> None:
     )
     assert ambiguity["ambiguity_source_method"] == "b3_native"
     assert ambiguity["high_delta_accuracy"] == 0.5
+
+
+def test_optional_qwen25_seed44_anomaly_manifest_adds_stats_and_oracle(
+    tmp_path: Path,
+) -> None:
+    receiver = tmp_path / "receiver.csv"
+    b2_native = tmp_path / "b2-native.csv"
+    b2_k4 = tmp_path / "main-results" / "b2-k4" / "run_cot.csv"
+    b6_native = tmp_path / "b6-native.csv"
+    alignment_forced = (
+        tmp_path / "anomaly-results" / "alignment" / "run_cot.csv"
+    )
+    legacy_forced = tmp_path / "anomaly-results" / "legacy" / "run_cot.csv"
+    _write_predictions(receiver, [True, False, False, True])
+    _write_predictions(b2_native, [True, False, False, False])
+    _write_predictions(b2_k4, [True, False, True, False])
+    _write_predictions(
+        b6_native,
+        [True, False, True, False],
+        {
+            "candidate_count_max": [1, 1, 2, 2],
+            "alignment_entropy": [0.0, 0.0, 1.0, 2.0],
+            "one_to_many_rate": [0.0, 0.0, 1.0, 1.0],
+            "boundary_mismatch": [0.0, 0.0, 0.0, 1.0],
+        },
+    )
+    _write_predictions(alignment_forced, [True, True, False, False])
+    _write_predictions(legacy_forced, [True, True, True, False])
+
+    phase1_analysis = tmp_path / "phase1-analysis.json"
+    phase1_analysis.write_text(
+        json.dumps(
+            {
+                "report_contract": {"expected_task_rows": {"task-a": 4}},
+                "runs": [
+                    {
+                        "run_id": "receiver",
+                        "pair": "receiver",
+                        "variant": "b0",
+                        "seed": 42,
+                        "datasets": {"task-a": {"prediction_glob": receiver.name}},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    source = {
+        "phase1_analysis_manifest": str(phase1_analysis),
+        "phase1_artifact_root": str(tmp_path),
+    }
+
+    def run(
+        *,
+        pair: str,
+        seed: int,
+        trained_variant: str,
+        intervention: str,
+        output: Path,
+        native_variant: str,
+        native_csv: Path,
+    ) -> dict[str, object]:
+        return {
+            "id": intervention,
+            "pair": pair,
+            "seed": seed,
+            "trained_variant": trained_variant,
+            "intervention": {"id": intervention},
+            "output_dirs": {"task-a": str(output.parent)},
+            "native_comparator": {
+                "variant": native_variant,
+                "prediction_csv": {"task-a": str(native_csv)},
+            },
+            "ambiguity_source": {
+                "variant": native_variant,
+                "fixed_across_contrast": True,
+                "prediction_csv": {"task-a": str(native_csv)},
+            },
+        }
+
+    main_manifest = tmp_path / "main-manifest.json"
+    main_manifest.write_text(
+        json.dumps(
+            {
+                "suite": "route1_phase1_5_same_checkpoint_interventions",
+                "source": source,
+                "runs": [
+                    run(
+                        pair="tinyllama",
+                        seed=42,
+                        trained_variant="b2",
+                        intervention="b2_eval_k4",
+                        output=b2_k4,
+                        native_variant="b2",
+                        native_csv=b2_native,
+                    )
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    anomaly_manifest = tmp_path / "anomaly-manifest.json"
+    anomaly_manifest.write_text(
+        json.dumps(
+            {
+                "suite": "route1_phase1_5_qwen25_seed44_gate_anomaly",
+                "source": source,
+                "runs": [
+                    run(
+                        pair="qwen25_0p5b",
+                        seed=44,
+                        trained_variant="b6",
+                        intervention="b6_gate_alignment_forced_on",
+                        output=alignment_forced,
+                        native_variant="b6",
+                        native_csv=b6_native,
+                    ),
+                    run(
+                        pair="qwen25_0p5b",
+                        seed=44,
+                        trained_variant="b6",
+                        intervention="b6_gate_legacy_forced_on",
+                        output=legacy_forced,
+                        native_variant="b6",
+                        native_csv=b6_native,
+                    ),
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    _runs, main_comparisons, _receiver, _metadata = _load_manifest(main_manifest)
+    _runs, merged_comparisons, _receiver, _metadata = _load_manifest(
+        main_manifest, anomaly_manifest
+    )
+    assert len(main_comparisons) == 8
+    assert [item.name for item in merged_comparisons[:8]] == [
+        item.name for item in main_comparisons
+    ]
+    assert [item.name for item in merged_comparisons[8:]] == [
+        "qwen25_seed44_alignment_forced_on_vs_native",
+        "qwen25_seed44_legacy_forced_on_vs_native",
+    ]
+
+    summary = generate_diagnostics(
+        main_manifest,
+        tmp_path / "analysis",
+        anomaly_manifest_path=anomaly_manifest,
+        bootstrap_samples=100,
+        bootstrap_seed=31,
+    )
+    assert summary["anomaly_manifest"] == str(anomaly_manifest.resolve())
+    alignment_task = _find(
+        summary["paired_interventions"],
+        comparison="qwen25_seed44_alignment_forced_on_vs_native",
+        pair="qwen25_0p5b",
+        seed=44,
+        task="task-a",
+    )
+    alignment_pooled = _find(
+        summary["paired_interventions"],
+        comparison="qwen25_seed44_alignment_forced_on_vs_native",
+        pair="qwen25_0p5b",
+        seed=44,
+        task="__pooled__",
+    )
+    assert alignment_task["delta_accuracy"] == 0.0
+    assert alignment_pooled["delta_accuracy"] == 0.0
+    legacy_task = _find(
+        summary["paired_interventions"],
+        comparison="qwen25_seed44_legacy_forced_on_vs_native",
+        pair="qwen25_0p5b",
+        seed=44,
+        task="task-a",
+    )
+    assert legacy_task["delta_accuracy"] == 0.25
+    _find(
+        summary["hierarchical_interventions"],
+        comparison="qwen25_seed44_legacy_forced_on_vs_native",
+        aggregation_level="across_seeds_within_pair",
+        pair="qwen25_0p5b",
+    )
+    alignment_oracle = _find(
+        summary["oracle_abstention"],
+        method="b6_gate_alignment_forced_on",
+        pair="qwen25_0p5b",
+        seed=44,
+        task="task-a",
+    )
+    alignment_oracle_pooled = _find(
+        summary["oracle_abstention"],
+        method="b6_gate_alignment_forced_on",
+        pair="qwen25_0p5b",
+        seed=44,
+        task="__pooled__",
+    )
+    assert alignment_oracle["oracle_headroom_over_fused"] == 0.25
+    assert alignment_oracle_pooled["oracle_headroom_over_fused"] == 0.25
+    _find(
+        summary["oracle_abstention"],
+        method="b6_gate_legacy_forced_on",
+        pair="qwen25_0p5b",
+        seed=44,
+        task="__pooled__",
+    )

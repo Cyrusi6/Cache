@@ -87,6 +87,83 @@ NUMERIC_ALIASES = {
     ),
 }
 
+MAIN_EXECUTION_SUITE = "route1_phase1_5_same_checkpoint_interventions"
+QWEN25_SEED44_ANOMALY_SUITE = "route1_phase1_5_qwen25_seed44_gate_anomaly"
+
+
+def _main_execution_comparisons() -> List[Dict[str, str]]:
+    """Return the preregistered eight main-matrix contrasts in fixed order."""
+
+    return [
+        {
+            "name": "b2_train_k1_eval_k4_vs_k1",
+            "baseline": "b2_native",
+            "candidate": "b2_eval_k4",
+            "ambiguity_source": "b3_native",
+        },
+        {
+            "name": "b3_train_k4_eval_k4_vs_k1",
+            "baseline": "b3_eval_k1",
+            "candidate": "b3_native",
+            "ambiguity_source": "b3_native",
+        },
+        {
+            "name": "train_k4_vs_k1_at_eval_k1",
+            "baseline": "b2_native",
+            "candidate": "b3_eval_k1",
+            "ambiguity_source": "b3_native",
+        },
+        {
+            "name": "train_k4_vs_k1_at_eval_k4",
+            "baseline": "b2_eval_k4",
+            "candidate": "b3_native",
+            "ambiguity_source": "b3_native",
+        },
+        {
+            "name": "b6_native_entropy_vs_constant",
+            "baseline": "b6_entropy_constant",
+            "candidate": "b6_native",
+            "ambiguity_source": "b6_native",
+        },
+        {
+            "name": "b6_native_entropy_vs_shuffled",
+            "baseline": "b6_entropy_shuffled",
+            "candidate": "b6_native",
+            "ambiguity_source": "b6_native",
+        },
+        {
+            "name": "b6_learned_gate_vs_static",
+            "baseline": "b6_gate_static",
+            "candidate": "b6_native",
+            "ambiguity_source": "b6_native",
+        },
+        {
+            "name": "b6_learned_gate_vs_forced_on",
+            "baseline": "b6_gate_forced_on",
+            "candidate": "b6_native",
+            "ambiguity_source": "b6_native",
+        },
+    ]
+
+
+def _qwen25_seed44_anomaly_comparisons() -> List[Dict[str, str]]:
+    """Return the two anomaly-only same-checkpoint gate contrasts."""
+
+    return [
+        {
+            "name": "qwen25_seed44_alignment_forced_on_vs_native",
+            "baseline": "b6_native",
+            "candidate": "b6_gate_alignment_forced_on",
+            "ambiguity_source": "b6_native",
+        },
+        {
+            "name": "qwen25_seed44_legacy_forced_on_vs_native",
+            "baseline": "b6_native",
+            "candidate": "b6_gate_legacy_forced_on",
+            "ambiguity_source": "b6_native",
+        },
+    ]
+
 
 @dataclass(frozen=True)
 class InterventionComparison:
@@ -408,56 +485,6 @@ def _materialize_execution_manifest(
                 }
             )
 
-    comparisons = [
-        {
-            "name": "b2_train_k1_eval_k4_vs_k1",
-            "baseline": "b2_native",
-            "candidate": "b2_eval_k4",
-            "ambiguity_source": "b3_native",
-        },
-        {
-            "name": "b3_train_k4_eval_k4_vs_k1",
-            "baseline": "b3_eval_k1",
-            "candidate": "b3_native",
-            "ambiguity_source": "b3_native",
-        },
-        {
-            "name": "train_k4_vs_k1_at_eval_k1",
-            "baseline": "b2_native",
-            "candidate": "b3_eval_k1",
-            "ambiguity_source": "b3_native",
-        },
-        {
-            "name": "train_k4_vs_k1_at_eval_k4",
-            "baseline": "b2_eval_k4",
-            "candidate": "b3_native",
-            "ambiguity_source": "b3_native",
-        },
-        {
-            "name": "b6_native_entropy_vs_constant",
-            "baseline": "b6_entropy_constant",
-            "candidate": "b6_native",
-            "ambiguity_source": "b6_native",
-        },
-        {
-            "name": "b6_native_entropy_vs_shuffled",
-            "baseline": "b6_entropy_shuffled",
-            "candidate": "b6_native",
-            "ambiguity_source": "b6_native",
-        },
-        {
-            "name": "b6_learned_gate_vs_static",
-            "baseline": "b6_gate_static",
-            "candidate": "b6_native",
-            "ambiguity_source": "b6_native",
-        },
-        {
-            "name": "b6_learned_gate_vs_forced_on",
-            "baseline": "b6_gate_forced_on",
-            "candidate": "b6_native",
-            "ambiguity_source": "b6_native",
-        },
-    ]
     return {
         "schema_version": 1,
         "source_execution_manifest": str(manifest_path),
@@ -476,9 +503,129 @@ def _materialize_execution_manifest(
             "qwen25_0p5b": "heterogeneous",
             "llama32_1b": "heterogeneous",
         },
-        "comparisons": comparisons,
+        "comparisons": _main_execution_comparisons(),
         "runs": list(materialized.values()),
     }
+
+
+def _analysis_run_key(entry: Mapping[str, Any]) -> Tuple[str, str, int, str]:
+    return (
+        str(entry["pair"]),
+        str(entry["method"]),
+        int(entry["seed"]),
+        str(entry["task"]),
+    )
+
+
+def _validate_qwen25_seed44_anomaly_manifest(data: Mapping[str, Any]) -> None:
+    if data.get("suite") != QWEN25_SEED44_ANOMALY_SUITE:
+        raise ValueError(
+            "--anomaly-manifest must use suite "
+            f"{QWEN25_SEED44_ANOMALY_SUITE!r}"
+        )
+    runs = data.get("runs")
+    if not isinstance(runs, list):
+        raise ValueError("Qwen2.5 seed-44 anomaly manifest has invalid runs")
+    expected = {
+        "b6_gate_alignment_forced_on",
+        "b6_gate_legacy_forced_on",
+    }
+    observed: set[str] = set()
+    for run in runs:
+        if not isinstance(run, Mapping):
+            raise ValueError("Each Qwen2.5 seed-44 anomaly run must be an object")
+        intervention = run.get("intervention", {})
+        if not isinstance(intervention, Mapping):
+            raise ValueError("Qwen2.5 seed-44 anomaly run has invalid intervention")
+        intervention_id = str(intervention.get("id", "")).strip()
+        if (
+            str(run.get("pair")) != "qwen25_0p5b"
+            or int(run.get("seed", -1)) != 44
+            or str(run.get("trained_variant", "")).casefold() != "b6"
+        ):
+            raise ValueError(
+                "Qwen2.5 anomaly runs must be qwen25_0p5b/B6/seed 44"
+            )
+        observed.add(intervention_id)
+    if observed != expected or len(runs) != len(expected):
+        raise ValueError(
+            "Qwen2.5 seed-44 anomaly manifest must contain exactly "
+            f"{sorted(expected)}; observed {sorted(observed)}"
+        )
+
+
+def _merge_qwen25_seed44_anomaly(
+    primary: Mapping[str, Any],
+    anomaly: Mapping[str, Any],
+    anomaly_manifest_path: Path,
+) -> Dict[str, Any]:
+    """Merge anomaly-only runs without changing the registered main contrasts."""
+
+    primary_runs = primary.get("runs")
+    anomaly_runs = anomaly.get("runs")
+    if not isinstance(primary_runs, list) or not isinstance(anomaly_runs, list):
+        raise ValueError("Materialized Phase1.5 manifests have invalid runs")
+
+    merged_runs: List[Dict[str, Any]] = [dict(run) for run in primary_runs]
+    by_key = {_analysis_run_key(run): run for run in merged_runs}
+    for run in anomaly_runs:
+        candidate = dict(run)
+        key = _analysis_run_key(candidate)
+        previous = by_key.get(key)
+        if previous is not None:
+            previous_csv = Path(str(previous["csv"])).resolve()
+            candidate_csv = Path(str(candidate["csv"])).resolve()
+            if previous_csv != candidate_csv:
+                raise ValueError(
+                    "Conflicting primary/anomaly prediction CSV for "
+                    f"{key}: {previous_csv} != {candidate_csv}"
+                )
+            continue
+        by_key[key] = candidate
+        merged_runs.append(candidate)
+
+    main_comparisons = primary.get("comparisons")
+    if not isinstance(main_comparisons, list):
+        raise ValueError("Materialized primary Phase1.5 manifest has no comparisons")
+    expected_main_names = [item["name"] for item in _main_execution_comparisons()]
+    observed_main_names = [
+        str(item.get("name", ""))
+        for item in main_comparisons
+        if isinstance(item, Mapping)
+    ]
+    if observed_main_names != expected_main_names:
+        raise ValueError(
+            "Optional anomaly merge requires the unchanged eight registered main "
+            "Phase1.5 comparisons"
+        )
+
+    anomaly_methods = {
+        "b6_gate_alignment_forced_on",
+        "b6_gate_legacy_forced_on",
+    }
+    present_anomaly_methods = {
+        key[1]
+        for key in by_key
+        if key[0] == "qwen25_0p5b" and key[2] == 44
+    }
+    missing = anomaly_methods - present_anomaly_methods
+    if missing:
+        raise ValueError(
+            f"Materialized anomaly manifest is missing methods: {sorted(missing)}"
+        )
+
+    oracle_methods = primary.get("oracle_methods", [])
+    if not isinstance(oracle_methods, list):
+        raise ValueError("Materialized primary oracle_methods must be a list")
+    merged = dict(primary)
+    merged["source_anomaly_execution_manifest"] = str(anomaly_manifest_path)
+    merged["comparisons"] = [
+        *[dict(item) for item in main_comparisons],
+        *_qwen25_seed44_anomaly_comparisons(),
+    ]
+    merged["oracle_methods"] = sorted(set(map(str, oracle_methods)) | anomaly_methods)
+    merged["runs"] = merged_runs
+    return merged
 
 
 def _numeric_values(value: Any) -> List[float]:
@@ -565,6 +712,7 @@ def _load_ambiguity(
 
 def _load_manifest(
     manifest_path: Path,
+    anomaly_manifest_path: Path | None = None,
 ) -> Tuple[
     List[LoadedRun],
     List[InterventionComparison],
@@ -573,11 +721,31 @@ def _load_manifest(
 ]:
     with manifest_path.open(encoding="utf-8") as handle:
         data = json.load(handle)
+    source_suite = data.get("suite") if isinstance(data, Mapping) else None
     if (
         isinstance(data, Mapping)
-        and data.get("suite") == "route1_phase1_5_same_checkpoint_interventions"
+        and source_suite == MAIN_EXECUTION_SUITE
     ):
         data = _materialize_execution_manifest(data, manifest_path)
+    if anomaly_manifest_path is not None:
+        if source_suite != MAIN_EXECUTION_SUITE:
+            raise ValueError(
+                "--anomaly-manifest is only valid with the Phase1.5 same-checkpoint "
+                "execution manifest"
+            )
+        with anomaly_manifest_path.open(encoding="utf-8") as handle:
+            anomaly_source = json.load(handle)
+        if not isinstance(anomaly_source, Mapping):
+            raise ValueError("Qwen2.5 seed-44 anomaly manifest must be an object")
+        _validate_qwen25_seed44_anomaly_manifest(anomaly_source)
+        anomaly_data = _materialize_execution_manifest(
+            anomaly_source, anomaly_manifest_path
+        )
+        if not isinstance(data, Mapping):  # Defensive: source suite was validated.
+            raise ValueError("Materialized primary Phase1.5 manifest must be an object")
+        data = _merge_qwen25_seed44_anomaly(
+            data, anomaly_data, anomaly_manifest_path
+        )
     entries, metadata = phase1._manifest_entries(data)
     comparisons = _parse_comparisons(metadata)
     ambiguity_config = metadata.get("ambiguity", {})
@@ -1672,6 +1840,7 @@ def generate_diagnostics(
     manifest_path: Path,
     output_dir: Path,
     *,
+    anomaly_manifest_path: Path | None = None,
     bootstrap_samples: int = 5000,
     bootstrap_confidence: float = 0.95,
     bootstrap_seed: int = 20260718,
@@ -1681,8 +1850,12 @@ def generate_diagnostics(
     if not 0.0 < bootstrap_confidence < 1.0:
         raise ValueError("bootstrap_confidence must be between 0 and 1")
     manifest_path = manifest_path.resolve()
+    if anomaly_manifest_path is not None:
+        anomaly_manifest_path = anomaly_manifest_path.resolve()
     output_dir = output_dir.resolve()
-    runs, comparisons, receiver_method, metadata = _load_manifest(manifest_path)
+    runs, comparisons, receiver_method, metadata = _load_manifest(
+        manifest_path, anomaly_manifest_path
+    )
     contract = metadata.get("report_contract", {})
     expected_task_rows = (
         contract.get("expected_task_rows", {}) if isinstance(contract, Mapping) else {}
@@ -1731,6 +1904,9 @@ def generate_diagnostics(
     summary: Dict[str, Any] = {
         "schema_version": 1,
         "manifest": str(manifest_path),
+        "anomaly_manifest": (
+            str(anomaly_manifest_path) if anomaly_manifest_path is not None else None
+        ),
         "statistics": {
             "bootstrap_samples": bootstrap_samples,
             "bootstrap_confidence": bootstrap_confidence,
@@ -1776,6 +1952,14 @@ def main() -> None:
         )
     )
     parser.add_argument("--manifest", type=Path, required=True)
+    parser.add_argument(
+        "--anomaly-manifest",
+        type=Path,
+        help=(
+            "Optional route1_phase1_5_qwen25_seed44_gate_anomaly execution "
+            "manifest; adds two gate-component contrasts and their oracle rows"
+        ),
+    )
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--bootstrap-samples", type=int, default=5000)
     parser.add_argument("--bootstrap-confidence", type=float, default=0.95)
@@ -1785,6 +1969,7 @@ def main() -> None:
         generate_diagnostics(
             args.manifest,
             args.output_dir,
+            anomaly_manifest_path=args.anomaly_manifest,
             bootstrap_samples=args.bootstrap_samples,
             bootstrap_confidence=args.bootstrap_confidence,
             bootstrap_seed=args.bootstrap_seed,

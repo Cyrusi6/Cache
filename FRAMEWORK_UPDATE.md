@@ -438,7 +438,8 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 
 ### 验证结果
 
-- 项目全量测试 `222 passed`，保留 2 个已知 Pydantic warnings。
+- 项目全量测试 `223 passed`，保留 2 个已知 Pydantic warnings。
+- 统计 CLI 支持可选 `--anomaly-manifest`，严格合并 Qwen2.5 B6 seed 44 的 alignment-only 与 legacy-only forced-on 结果；原八项主对照保持不变，异常两项同时进入 paired、oracle 与层级统计。
 - 72-run execution manifest 完整性、输出目录隔离、checkpoint-only 约束和七 shard 数量 `[11,11,10,10,10,10,10]` 均通过校验。
 - 三份节点级 Kubernetes Jobs 已通过 API server dry-run；逻辑 shard 数和 run 分布仍为 `[11,11,10,10,10,10,10]`。
 - 首次真实创建在进入评测前暴露了 `PIP_CONSTRAINT` 漏传：两个跨节点 Pod 清理同一未发布 venv 时发生竞态，其余 Pod 尚在等待/安装。七个 Job 随即全部删除，没有产生 prediction；补齐 constraints 后将复用已审计环境重新提交。
