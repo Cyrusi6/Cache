@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "stage": "FPCT-3.7",
+  "status": "INCONCLUSIVE",
+  "execution_sha": "b11a046597b2466c1c6ba95c4d3693e76523c3b3",
+  "branch": "research/fpct-factorized-transport",
+  "pre_audit_lock": {
+    "path": "local/final_results/fpct_factorized_transport/fpct_3_7_certified_support/rev_b11a046597b2466c1c6ba95c4d3693e76523c3b3/pre_audit_lock.json",
+    "sha256": "311ddf36bc0ab598ec52eae5236ad14f007a4645373200d58a301c9fcfd9cdb5"
+  },
+  "failure": {
+    "id": "runtime_import_provenance_mismatch",
+    "exception_type": "TypeError",
+    "exception_message": "TokenAligner.align_chat_messages_soft() got an unexpected keyword argument 'apply_confidence_control'",
+    "published_shards": 0,
+    "natural_alignment_rows": 0,
+    "scientific_results_available": false
+  },
+  "expected_source": {
+    "path": "rosetta/model/aligner.py",
+    "absolute_path": "/home/lijunsi/projects/Cache-fpct-factorized-transport/rosetta/model/aligner.py",
+    "sha256": "fe77d72fb7103ca103fe87fa602bed545e0caf6fc75b1741b8736b41e9daf7d8",
+    "signature_contains_apply_confidence_control": true
+  },
+  "resolved_script_mode_source": {
+    "editable_mapping": "/home/lijunsi/projects/KVcache/C2C/rosetta",
+    "absolute_path": "/home/lijunsi/projects/KVcache/C2C/rosetta/model/aligner.py",
+    "sha256": "1d68fe69aecd03382fb9bf1385ee110f5f218902c0f5566c3827e0d8afa0922a",
+    "signature_contains_apply_confidence_control": false
+  },
+  "attempts": {
+    "tinyllama_ai2_arc": "failed before entering alignment method",
+    "llama32_1b_ai2_arc": "failed before entering alignment method",
+    "qwen25_0p5b": "not launched",
+    "qwen3_1p7b": "not launched"
+  },
+  "local_artifacts": {
+    "failure": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_7_certified_support/rev_b11a046597b2466c1c6ba95c4d3693e76523c3b3/failure.json",
+      "bytes": 2374,
+      "sha256": "051a425b83ff38d401323d8708da8032723adbe0a3fcb72c72ecb48f4706af2b"
+    },
+    "controller_state": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_7_certified_support/rev_b11a046597b2466c1c6ba95c4d3693e76523c3b3/controller_state.json",
+      "bytes": 267,
+      "sha256": "aa46ba058f5ad623723cfa5cb866ede74ba2cf923f650a529066991a9aebc617"
+    }
+  },
+  "report": {
+    "path": "FPCT_CERTIFIED_SUPPORT_REPORT.md",
+    "sha256": "0bdfea8f1abea4029264a5c40ce3f3685b07c860ff81fdf89b64f0032bda378f"
+  },
+  "stop_rule": "no post-freeze PYTHONPATH/invocation correction, code patch or rerun in this execution revision",
+  "downstream": {
+    "fpct_3_8": "NOT_ENTERED",
+    "fpct_3_9": "NOT_ENTERED",
+    "hf_model_forward": false,
+    "gpu": false,
+    "kubernetes": false,
+    "training": false,
+    "accuracy_evaluation": false,
+    "held_out_test_released": false
+  },
+  "claim_boundary": "execution-provenance failure only; no certified-support, mechanism, accuracy or resource conclusion"
+}
