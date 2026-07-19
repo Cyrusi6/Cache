@@ -1,0 +1,446 @@
+{
+  "created_without_selector_outcome_access": true,
+  "implementation_commit": "3deca6ae7372dca5b2964b3aa647d4d8199bc3cd",
+  "implementation_script": {
+    "path": "/home/lijunsi/projects/Cache/script/analysis/phase2a_1_selector_killtest.py",
+    "sha256": "61f6873007adca6b06bb9d9affea5804db12c4f7c9ce4387cad8805190289c79"
+  },
+  "inputs": {
+    "candidates": {
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/candidate_manifest.json",
+      "sha256": "a1ffb018ffe8a67c73483f05cf90f2d1a12e25e6f5b9e2aa950dfc6687f3d89e"
+    },
+    "features": {
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/feature_whitelist.json",
+      "sha256": "0d6dbaf2c24112126c9fcec89c2562728a499e5cfef3ba9fd708edfee3b003ef"
+    },
+    "protocol": {
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/protocol_manifest.json",
+      "sha256": "c3b21f0737380df2b5d60d4ce3390a4db5ebf70c524491091d164c6b5c16a490"
+    },
+    "source_artifact_digest": "1f13ea8d80937ff74d6db10cfc1314284f3b6c3f49b239a9ceb7645090514290",
+    "source_artifacts": [
+      {
+        "pair": "llama32_1b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/ai2-arc/Rosetta_ai2-arc_generate_20260717_162247_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 42,
+        "sha256": "662ac29719856797a1ebd759564d7734680649325579a7bafe1705b8e402e9de",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "llama32_1b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/mmlu-redux/Rosetta_mmlu-redux_generate_20260717_164148_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 42,
+        "sha256": "fbbf88c55493adffa59a06704675191c8cae1aa2ab9c887536c8d56622eb62f9",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "llama32_1b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/openbookqa/Rosetta_openbookqa_generate_20260717_161658_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 42,
+        "sha256": "28b2ae3626aa2480c4bed8ee8a241debb0707d314e28798900472527bf7b6823",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "llama32_1b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_43/ai2-arc/Rosetta_ai2-arc_generate_20260718_010924_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 43,
+        "sha256": "b7743e970fe5919e7c6faf2e49eb5cb9e90b027550b151eda8025db8f72285d5",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "llama32_1b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_43/mmlu-redux/Rosetta_mmlu-redux_generate_20260718_013201_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 43,
+        "sha256": "5f1c26531342b2622de32e15c9bb1bc2d64b6853c9cfe3ef3f069625cf8528e2",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "llama32_1b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_43/openbookqa/Rosetta_openbookqa_generate_20260718_010429_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 43,
+        "sha256": "5f62af40f5325f899a6edb291c671b52ea7d344a9498790664816c42d8db3d29",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "llama32_1b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_44/ai2-arc/Rosetta_ai2-arc_generate_20260718_011252_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 44,
+        "sha256": "e24c809ca05b108a03a4ef8bef83dd9149e3f7f66db252b4ea47d97ea607ee9a",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "llama32_1b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_44/mmlu-redux/Rosetta_mmlu-redux_generate_20260718_013700_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 44,
+        "sha256": "3bc46248c97f69aa59ba04d61aaaf2bab14c0d1a1b1ec833d94bc5a1f840ed42",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "llama32_1b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_44/openbookqa/Rosetta_openbookqa_generate_20260718_010743_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 44,
+        "sha256": "ccd2c6f880af6c7f5da97cc80b93eae05f7fff73486ef4edcb938e400424b767",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "qwen25_0p5b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_42/ai2-arc/Rosetta_ai2-arc_generate_20260717_190810_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 42,
+        "sha256": "36b9d740d9e0add8bc2694432df957289f65a166ad55561dd4f746627a85a914",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "qwen25_0p5b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_42/mmlu-redux/Rosetta_mmlu-redux_generate_20260717_192843_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 42,
+        "sha256": "735ffd11b5046782bb1069075b9cfb27ca6ae968d47f59a9b7c4c5502b3e3a2e",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "qwen25_0p5b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_42/openbookqa/Rosetta_openbookqa_generate_20260717_190138_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 42,
+        "sha256": "255be908205a000183bf50d6d5292c0e2b74ddca26c091ac3ba24eb3bb1dbf68",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "qwen25_0p5b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_43/ai2-arc/Rosetta_ai2-arc_generate_20260718_051830_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 43,
+        "sha256": "da9fc577054c43e8158e2cb2c9b3239f04bfe5551c1a541ec82f9bab922a5326",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "qwen25_0p5b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_43/mmlu-redux/Rosetta_mmlu-redux_generate_20260718_054641_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 43,
+        "sha256": "1ef741dfe9ab805d613011d90328f001c675b7ac3aa16c21d73146ad4a5c562c",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "qwen25_0p5b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_43/openbookqa/Rosetta_openbookqa_generate_20260718_051237_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 43,
+        "sha256": "a4d05596ec05008226de399a1b8739ea24a0d12754d90665396db7c5d31169f3",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "qwen25_0p5b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_44/ai2-arc/Rosetta_ai2-arc_generate_20260718_050402_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 44,
+        "sha256": "f1de459b034583762541507199febb76be2ddfef1236cfdc7d7248ccbc2644a5",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "qwen25_0p5b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_44/mmlu-redux/Rosetta_mmlu-redux_generate_20260718_052440_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 44,
+        "sha256": "2ade226513ab36e293e0a949ce8aa729e1645d16bdbaa2a16f2f4f1b368dd26c",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "qwen25_0p5b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen25_0p5b/b6/seed_44/openbookqa/Rosetta_openbookqa_generate_20260718_045731_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 44,
+        "sha256": "e57fd6ca1a704955e2575d80558162eb84ade67619063a66acdaba945bcc3496",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "qwen3_1p7b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_42/ai2-arc/Rosetta_ai2-arc_generate_20260717_192426_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 42,
+        "sha256": "9677ff8ebe993b6d020159148191747bc23606b016b0edefd45f6fd4149a716c",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "qwen3_1p7b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_42/mmlu-redux/Rosetta_mmlu-redux_generate_20260717_194709_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 42,
+        "sha256": "a61493cca0977c3e240b056747739e7b6a038375d1566463b6f4c83f47dfe89a",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "qwen3_1p7b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_42/openbookqa/Rosetta_openbookqa_generate_20260717_191940_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 42,
+        "sha256": "8a9c91dc72cd5ad249c28cdb00cb3410f816666bec62c6cbe8348c5deabbbcba",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "qwen3_1p7b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_43/ai2-arc/Rosetta_ai2-arc_generate_20260718_034309_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 43,
+        "sha256": "cc0679cce6ac4b6f94cee00311b89940bf10bf1106c147ae5d192fa1893fe22d",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "qwen3_1p7b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_43/mmlu-redux/Rosetta_mmlu-redux_generate_20260718_040829_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 43,
+        "sha256": "a385c1369dc3999e9e53584e4251d7ed9504dc5d2bf5769713b4db5720c78646",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "qwen3_1p7b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_43/openbookqa/Rosetta_openbookqa_generate_20260718_033755_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 43,
+        "sha256": "8561611e46ca8ef4983184bb80cd98281f499665c466717286bb6ee84b0bab36",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "qwen3_1p7b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_44/ai2-arc/Rosetta_ai2-arc_generate_20260718_024700_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 44,
+        "sha256": "6eb05e7d9d0809452135e99b3b9dae1a22cef235302ded2c0609c11279703fff",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "qwen3_1p7b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_44/mmlu-redux/Rosetta_mmlu-redux_generate_20260718_031431_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 44,
+        "sha256": "636c1743be2bcae29eb865d660e3a6a1a4e053862f2f7a6653fbf56ed0fd6225",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "qwen3_1p7b",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/qwen3_1p7b/b6/seed_44/openbookqa/Rosetta_openbookqa_generate_20260718_024116_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 44,
+        "sha256": "818df18c813a40b79776158ee9c96f82ae9d82e4b27e2c1530f8357871265034",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "tinyllama",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_42/ai2-arc/Rosetta_ai2-arc_generate_20260717_123650_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 42,
+        "sha256": "e5ee920a4189d650b43c1c10a8d09528bec071a7ee24e1c315d2b83eb28a87b1",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "tinyllama",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_42/mmlu-redux/Rosetta_mmlu-redux_generate_20260717_125041_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 42,
+        "sha256": "12669c3e937996e41b3c854a8a22d72bb96c21a49b402663c6967a2ca1b68240",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "tinyllama",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_42/openbookqa/Rosetta_openbookqa_generate_20260717_123212_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 42,
+        "sha256": "13d4c074a2f0c7b018527fbaa8bdd4e3a0f007d4c90836b8e018df59c57b0106",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "tinyllama",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_43/ai2-arc/Rosetta_ai2-arc_generate_20260717_133015_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 43,
+        "sha256": "a65c153218bccb0082420d4e66b92ef8b7cd9de24213463434090e21d43eab3a",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "tinyllama",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_43/mmlu-redux/Rosetta_mmlu-redux_generate_20260717_134444_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 43,
+        "sha256": "a6b9d32974a565c49de33d17e8c6a427fb55b09027f4b33f9b6f3313b9a53596",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "tinyllama",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_43/openbookqa/Rosetta_openbookqa_generate_20260717_132529_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 43,
+        "sha256": "19c4399b209e3be45d2ca664593f201ea427a532856bcaa6e8ca55cd75e206be",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "tinyllama",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_44/ai2-arc/Rosetta_ai2-arc_generate_20260717_151613_cot.csv",
+        "role": "b6_native",
+        "rows": 1150,
+        "seed": 44,
+        "sha256": "c46a009c5f2fd8d451a4802d89d97941e818df61a2aca9b23816103b2e5890a4",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "tinyllama",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_44/mmlu-redux/Rosetta_mmlu-redux_generate_20260717_154618_cot.csv",
+        "role": "b6_native",
+        "rows": 5615,
+        "seed": 44,
+        "sha256": "a8ed4055bdbe8b1232543b827320d70a657d54a3544b473c25459ccb9e562524",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "tinyllama",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/tinyllama/b6/seed_44/openbookqa/Rosetta_openbookqa_generate_20260717_151058_cot.csv",
+        "role": "b6_native",
+        "rows": 500,
+        "seed": 44,
+        "sha256": "1525bddb490530f8487de914b09a9718020ea7b5ddf19af5d65492c61a0c0611",
+        "task": "openbookqa"
+      },
+      {
+        "pair": "receiver",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/receiver/b0/seed_42/ai2-arc/Qwen3-0.6B_ai2-arc_generate_20260717_125217_cot.csv",
+        "role": "receiver_only",
+        "rows": 1150,
+        "seed": 42,
+        "sha256": "94147453992282217327bb920c4ca6964ba505c874cb5e2bca15503ef24a68f0",
+        "task": "ai2-arc"
+      },
+      {
+        "pair": "receiver",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/receiver/b0/seed_42/mmlu-redux/Qwen3-0.6B_mmlu-redux_generate_20260717_130306_cot.csv",
+        "role": "receiver_only",
+        "rows": 5615,
+        "seed": 42,
+        "sha256": "2006f1aaaa178e0877f2389bf36efcdf8192b4bf45c188a8f6e579c33af65003",
+        "task": "mmlu-redux"
+      },
+      {
+        "pair": "receiver",
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/receiver/b0/seed_42/openbookqa/Qwen3-0.6B_openbookqa_generate_20260717_124806_cot.csv",
+        "role": "receiver_only",
+        "rows": 500,
+        "seed": 42,
+        "sha256": "21bda044dbe1074ec281376bfb2ce1ad5ba27606bedeebd0d4528ec38d2d2893",
+        "task": "openbookqa"
+      }
+    ],
+    "split_manifest": {
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/content_group_split_manifest.json",
+      "sha256": "285b5b00cf3598bba075a97b1439b85031ef1cfffdc03b0e7e1775c6338701e0"
+    },
+    "split_sha_file": {
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/content_group_split_manifest.sha256",
+      "sha256": "7a95fb096b1983f1d74f5894d4bda7622db10a22e726eb63d710c3b25d6dee0a"
+    }
+  },
+  "phase": "2A-1",
+  "role": "pre_outcome_design_and_code_freeze",
+  "runtime": {
+    "joblib": "1.5.3",
+    "numpy": "2.2.6",
+    "python": "3.10.20",
+    "scikit_learn": "1.7.1",
+    "scipy": "1.15.3",
+    "sklearn_metadata_routing": false
+  },
+  "schema_version": 1,
+  "split_summary": {
+    "duplicate_content_group_count": 32,
+    "groups_by_task_split": {
+      "ai2-arc": {
+        "calibration": 160,
+        "fit": 351,
+        "model_selection": 186,
+        "test": 453
+      },
+      "mmlu-redux": {
+        "calibration": 843,
+        "fit": 1652,
+        "model_selection": 809,
+        "test": 2279
+      },
+      "openbookqa": {
+        "calibration": 70,
+        "fit": 158,
+        "model_selection": 77,
+        "test": 195
+      }
+    },
+    "rows_by_task_split": {
+      "ai2-arc": {
+        "calibration": 160,
+        "fit": 351,
+        "model_selection": 186,
+        "test": 453
+      },
+      "mmlu-redux": {
+        "calibration": 846,
+        "fit": 1658,
+        "model_selection": 815,
+        "test": 2296
+      },
+      "openbookqa": {
+        "calibration": 70,
+        "fit": 158,
+        "model_selection": 77,
+        "test": 195
+      }
+    },
+    "unique_content_groups": 7233,
+    "unique_rows": 7265
+  },
+  "thread_environment": {
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1"
+  }
+}
