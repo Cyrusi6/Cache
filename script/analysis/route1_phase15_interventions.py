@@ -165,7 +165,12 @@ class ExclusiveLockBusy(RuntimeError):
 
 @contextmanager
 def _exclusive_file_lock(path: Path, *, blocking: bool) -> Iterator[None]:
-    """Hold one advisory exclusive lock, including across NFS clients."""
+    """Hold one advisory lock inside the filesystem's coherence domain.
+
+    ``flock`` behavior across independent NFS clients is deployment-specific.
+    The Phase 1.5 cluster observed duplicate acquisitions across Kubernetes
+    pods, so this helper must not be treated as a cross-pod mutex there.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     handle = path.open("a+")
     flags = fcntl.LOCK_EX
@@ -914,6 +919,9 @@ def run_shard_opportunistic(
 
     This is intentionally a separate entry point: the original ``run-shard``
     keeps its blocking, serial behavior for existing manifests and Jobs.
+    Multiple workers are safe only on a filesystem whose advisory-lock
+    coherence has been verified.  The current shared NFS deployment failed
+    that runtime check, so Kubernetes pods must use explicitly disjoint runs.
     """
     if num_shards <= 0 or not 0 <= shard_index < num_shards:
         raise ValueError("require num_shards > 0 and 0 <= shard_index < num_shards")
@@ -1089,8 +1097,8 @@ def _parser() -> argparse.ArgumentParser:
     opportunistic = subparsers.add_parser(
         "run-shard-opportunistic",
         help=(
-            "Work-steal incomplete runs from one shard without blocking behind "
-            "another worker"
+            "Experimental lock-based work stealing; do not use across pods on "
+            "the current shared NFS deployment"
         ),
     )
     opportunistic.add_argument("--manifest", type=Path, required=True)

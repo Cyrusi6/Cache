@@ -510,4 +510,45 @@ x8 节点失联后，把 shards 2–5 的未完成工作安全迁移到已释放
 
 ### 结论
 
-该改动把 x8 节点故障转换为 resume-safe 的跨节点尾部恢复，不增加实验样本、改变方法或改变统计比较。在旧无锁 x8 worker 已终止的前提下，x4/x48 新 worker 通过共同 per-run NFS lock 动态分担 shard 5；GPU 选择和结果完整性仍可由节点状态文件与最终输出审计复核。
+设计时预期该改动可把 x8 节点故障转换为 resume-safe 的跨节点尾部恢复，不增加实验样本、改变方法或改变统计比较；其中“共同 per-run NFS lock 可安全协调多个 Pod”的预期已被下述真实运行更正所否定。
+
+### 运行时更正
+
+真实跨节点执行否定了上述 NFS 锁安全假设：当前共享路径上的 advisory `flock` 没有在多个 Pod 间形成可靠互斥，两个 shard-5 worker 对 5 个 dataset 产生了重复 bundle。逐例和诊断文件审计证明科学结果一致，仅 latency 与时间戳文件名不同；重复 bundle 已完整隔离到 `local/tmp`，不提交 Git、不进入统计。
+
+因此，`run-shard-opportunistic` 仅保留为已测试的执行原型，不再宣称适用于当前 NFS 的跨 Pod work stealing。Phase 1.5 最终尾部使用显式、互不重叠的一 run 一 Job 分配：init 校验固定 commit、manifest SHA、run index/id、配置存在和输出未启动，容器固定物理 GPU UUID；最终统计前再执行 exactly-one CSV/summary/provenance/gate/length 的严格审计。该更正不改变任何研究方法、checkpoint、逐例预测或统计协议。
+
+## 2026-07-19：Phase 1.5 因果诊断收口与机制主张收缩
+
+### 研究目标
+
+在不新增 transport、router、gate 或 loss 的前提下，用同 checkpoint 推理干预区分 inference-time candidate 数、entropy、learned token/head modulation 与 checkpoint/training-regime、legacy scalar mask、模型对兼容性的作用，并按预注册门槛决定是否进入 query-time prototype。
+
+### 核心改动
+
+- 完成 72 个主 triplets 与 2 个 Qwen2.5 seed44 anomaly triplets 的最终输出合同，统计脚本统一生成 paired accuracy、pair-balanced hierarchical CI、seed 方差、ambiguity interaction 与 oracle abstention。
+- 最终严格审计新增 current-config SHA 与产物 provenance 的字节级对应检查，发现并修复 TinyLlama B2 eval-k4 seed43 的旧 manifest provenance 漂移；旧 bundle 保留在 `local/tmp`，最终 config 显式重跑不改变任何科学字段。
+- `route1_phase15_interventions.py` 与 `route1_phase15_jobs.py` 的 opportunistic CLI 说明改为明确警告：当前共享 NFS 的 advisory lock 不能作为跨 Pod mutex，生产恢复必须显式分配互不重叠的 run ids。
+- 根目录新增英文完整报告与中文机制摘要；大体积逐例和统计文件继续只保留在 `local/` 或 `/netdisk`。
+
+### 实验配置
+
+- 四个 sender→Qwen3-0.6B 模型对、seeds 42/43/44、MMLU-Redux/ARC/OpenBookQA 完整开发集。
+- 同 checkpoint 干预：B2 eval-k4、B3 eval-k1、B6 constant/shuffled entropy、static/forced-on gate；Qwen2.5 seed44 额外拆分 alignment-confidence 与 legacy scalar forced-on。
+- 主 manifest SHA `424d0468a624fee6cd31932bf3795fa42b98bf20f9563ebf84a0afaca5605dd1`；anomaly manifest SHA `bd305268e9a8527cb75407293b49cae4e577bb10516e9643781573e861cfa5d2`。
+- 层级 bootstrap 5,000 次、95% CI、seed `20260718`；Kubernetes 与本地 Conda 独立运行复核。
+
+### 验证结果
+
+- 严格产物审计：74/74 runs、222/222 datasets；x8 120、main 96、anomaly 6，全部 exactly-one CSV/summary/provenance/gate/length，行数、sample key、JSON、checkpoint/intervention 与 SHA 合同通过。
+- 新旧 provenance-repair triplet 除 latency、时间戳与执行路径记录外逐单元格相同；gate/length bitwise identical。
+- 两次统计的 paired/oracle/ambiguity CSV 字节级一致；其余 sample-std 浮点差异最大 `4.337e-19`，不影响任何表格或放行字段。
+- 同 checkpoint B2/B3 eval-k4−k1 为 `−0.01/+0.03 pp`，跨 pair CI 均跨 0；entropy native−constant/shuffled 为 `+0.13/+0.04 pp`，CI 均跨 0；learned−static 为 `−0.01 pp`，CI 跨 0。
+- Qwen2.5 seed44 alignment forced-on 为严格 accuracy null；legacy scalar forced-on `+1.91 pp`、CI `[+1.31,+2.53]`，定位为部分 under-transfer 原因。
+- B6 native oracle headroom `+8.24 pp`、CI `[+6.28,+10.19]`，4/4 pairs 为正；未评测可实现 selector 的校准或预测能力。
+- ambiguity 分桶覆盖存在 task-confounding 与稀疏/退化，故只用于确认没有可靠正向 concentration，不解释负 interaction 为普适机制。
+- 定向 Phase 1.5 测试 `35 passed`；项目全量 `236 passed, 2 warnings`；相关脚本 `py_compile` 与 `git diff --check` 通过。
+
+### 结论
+
+Phase 1.5 没有识别到 inference-time 多 candidate、position-matched entropy 或 learned token/head modulation 是 v2.2 开发集收益的稳定平均因果来源。剩余差异更符合 checkpoint/training-regime 与模型对兼容性的 pair-dependent 变化，Qwen2.5 seed44 还受到 legacy scalar K/V hard masks 的部分影响，但本实验不单独识别训练期 k4、tokenizer 身份或随机优化轨迹。预注册 query-time release gate 失败；删除 entropy-aware 与 adaptive-gate 的已验证机制主张，不进入 query-time transport prototype，后续优先考虑 calibrated null/no-transfer 与 sender–receiver compatibility 诊断。

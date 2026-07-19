@@ -758,13 +758,13 @@ def run_shard_opportunistic(
     idle_poll_seconds: float = DEFAULT_OPPORTUNISTIC_IDLE_POLL_SECONDS,
     runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
 ) -> int:
-    """Run one shard as a lock-aware tail worker on one idle UUID pair.
+    """Run one experimental lock-aware tail worker on one idle UUID pair.
 
     This recovery-only entry point deliberately remains separate from
-    ``run-shard`` and ``run-node``.  Multiple nodes may target the same logical
-    shard when they use the same immutable manifest and distinct state
-    directories; per-run locks in the intervention runner split the remaining
-    triplets without duplicate evaluation.
+    ``run-shard`` and ``run-node``.  It does not establish cross-pod safety:
+    the current shared NFS deployment allowed duplicate advisory-lock holders
+    during Phase 1.5.  Do not target one logical shard from multiple pods;
+    production recovery must allocate disjoint run ids explicitly.
     """
     if num_shards != 7 or not 0 <= shard_index < num_shards:
         raise Phase15JobError("require seven shards and shard-index in [0, 6]")
@@ -968,7 +968,13 @@ def build_parser() -> argparse.ArgumentParser:
     launch.add_argument("--state-dir", type=Path, required=True)
     launch.add_argument("--max-startup-used-mib", type=int, default=4096)
 
-    opportunistic = subparsers.add_parser("run-shard-opportunistic")
+    opportunistic = subparsers.add_parser(
+        "run-shard-opportunistic",
+        help=(
+            "Experimental only; current shared NFS is not lock-coherent "
+            "across Kubernetes pods"
+        ),
+    )
     opportunistic.add_argument("--execution-manifest", type=Path, required=True)
     opportunistic.add_argument("--expected-manifest-sha256", required=True)
     opportunistic.add_argument("--shard-index", type=int, required=True)

@@ -320,3 +320,19 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 节点级 `route1_phase15_jobs.py run-shard-opportunistic` 复用 `nvidia-smi` 显存过滤、双 UUID 选择、`CUDA_VISIBLE_DEVICES` 隔离、manifest SHA 校验、NFS 目录预创建和原子状态记录；不同节点必须使用不同 `--state-dir`，实验输出仍由共同 per-run lock 协调。
 - evaluator 非零或成功返回但 ARC/OpenBookQA/MMLU-Redux 未全部满足唯一 CSV、summary 与 provenance 契约时立即失败；整轮锁忙时按 `(0,60]` 秒有界轮询。原 `run-shard` 与 `run-node` 默认行为不变。
 - Phase 1.5 调度相关测试 `30 passed`；项目全量测试 `236 passed`、保留 2 个既有 Pydantic warnings。该恢复只改变固定矩阵的执行位置与吞吐，不改变方法、checkpoint、逐例预测定义或统计协议。
+
+运行时更正：当前共享 NFS 上的 advisory `flock` 实测不能提供跨 Pod 互斥。两个 shard-5 opportunistic workers 对 5 个 dataset 产生重复 bundle，因此该模式不再用于本轮尾部，也不作为当前集群的安全恢复合同。重复 CSV 除 `answer_latency_ms` 外逐单元格一致，预测、正确性、ambiguity 与 gate 完全一致；gate/length 原始 SHA 一致，summary 仅引用的时间戳 artifact 名不同。20 个 ghost-writer 文件已成组移入 `local/tmp/phase1_5_causal_diagnostics/duplicate_quarantine_20260719/`，保留取证但不进入统计。剩余 run 改为一 run 一 Job 的显式不重叠分配，并用固定 GPU UUID、manifest SHA、run index/id 与空输出 init 校验防止再次竞态。
+
+### 2026-07-19 Phase 1.5 最终因果结果与放行判决
+
+- 最终严格审计通过 74/74 runs、222/222 dataset outputs：主矩阵 96、x8 隔离根 120、Qwen2.5 seed44 anomaly 6；每个 dataset 恰好一份 CSV/summary/provenance/gate/length，ARC/OBQA/MMLU 行数分别为 1,150/500/5,615，sample key、JSON、checkpoint/intervention、内部 provenance SHA 与当前 config SHA 全部一致。主/anomaly manifest SHA 分别为 `424d0468a624fee6cd31932bf3795fa42b98bf20f9563ebf84a0afaca5605dd1` 与 `bd305268e9a8527cb75407293b49cae4e577bb10516e9643781573e861cfa5d2`。
+- 第一次最终审计发现 TinyLlama B2 eval-k4 seed43 三任务来自较早 manifest，当前 YAML 字节 SHA 无法重现。旧 bundle 完整移入 `local/tmp/phase1_5_causal_diagnostics/provenance_quarantine_20260719/` 后按最终 config 显式重跑；新旧除 latency、时间戳与 evaluator checkout 路径外所有逐例科学字段完全一致，gate/length bitwise identical，因此修复 provenance 未改变结果。
+- 统计使用 5,000 次 pair→seed→paired-example hierarchical bootstrap、95% CI、seed `20260718`。Kubernetes 正式运行与本地 Conda 独立复核的 paired/oracle/ambiguity CSV 字节级一致；其余差异仅为 sample std 浮点序列化，最大绝对差 `4.337e-19`。正式输出位于 `local/final_results/phase1_5_causal_diagnostics/rev_0d30852/analysis/`，不提交 Git。
+- 同 checkpoint top-k：B2 eval-k4−k1 `−0.01 pp`、CI `[−0.13,+0.11]`，1/3 异构 pair 为正；B3 `+0.03 pp`、CI `[−0.06,+0.14]`，3/3 为正但实际量级不足 0.1 pp。两个对照均无可靠正向 ambiguity concentration，因此未识别到推理期多 candidate 的平均因果收益。
+- B3-trained−B2-trained 在 eval-k1/k4 下仍为 `+1.25/+1.30 pp`，但 CI `[−0.64,+3.56]` / `[−0.67,+3.63]` 均跨 0、seed std 约 2.4 pp。差异最大的是同 tokenizer Qwen3（+3.12 pp）与 TinyLlama（约 +2.02 pp），Qwen2.5/Llama3.2 约为 0；只能解释为 checkpoint/training-regime 且 pair-dependent，不能单独归因于训练期 k4、tokenizer 身份或随机轨迹。
+- Entropy：native−constant `+0.13 pp`、CI `[−0.13,+0.40]`；native−shuffled `+0.04 pp`、CI `[−0.07,+0.22]`，均仅 1/3 异构 pair 为正且无可靠 ambiguity 集中。预注册的 TinyLlama constant/shuffle seeds43/44 条件不成立，不补重训；删除 entropy-aware 的稳定机制主张。
+- Gate：learned−static `−0.01 pp`、CI `[−0.10,+0.07]`，不支持 learned token/head modulation；learned−forced-on `−0.21 pp`、CI `[−0.98,+0.62]` 且方向随 pair 翻转。后者同时改变 legacy scalar K/V masks，不能作为纯 token/head 对照，也不能声称 forced-on 普遍更优。
+- Qwen2.5 seed44：alignment-confidence forced-on `+0.00 pp`、0 correctness flips；legacy scalar forced-on `+1.91 pp`、CI `[+1.31,+2.53]`，336 改善/197 回退。legacy hard masks 是该 checkpoint 崩塌的部分因果来源，但只恢复约 26% gap，不是通用解法。
+- B6 native oracle abstention headroom 为 `+8.24 pp`、CI `[+6.28,+10.19]`，4/4 pairs 为正。该值是 label-aware 上界，统计文件不含 selector AUROC、校准或 selective-risk 结果，不能推断现有 gate 能实现该收益；只支持后续优先审计 calibrated null/no-transfer。
+- Ambiguity interaction 只作探索性敏感性分析：pooled q75 在多个 pair 上混入 MMLU 与 ARC/OBQA task 差异，absolute 定义又存在 TinyLlama 全 high、其他 pair 稀疏的问题。因此只用“没有可靠正向集中”判定放行失败，不把负 interaction 包装成普适反机制。
+- Query-time prototype 放行失败：B2 正向异构 pair 数不足；B3 虽 3/3 为正，但跨 pair CI 下界 `−0.06 pp`，且无可靠高 ambiguity concentration。本阶段停止，不进入 query-time transport；根目录报告为 `PHASE1_5_CAUSAL_DIAGNOSTICS_REPORT.md` 与 `PHASE1_5_CAUSAL_DIAGNOSTICS_SUMMARY_ZH.md`。
