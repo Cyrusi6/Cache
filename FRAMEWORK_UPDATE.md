@@ -587,3 +587,63 @@ Phase 1.5 没有识别到 inference-time 多 candidate、position-matched entrop
 ### 结论
 
 Calibrated no-transfer 具有足够大的 oracle opportunity，但当前 A 类特征高度冗余且缺少 receiver/fused uncertainty，不能从 headroom 直接推断 selector 可实现性。Phase 2A-0 只完成机会审计与预注册，明确停止在 selector 训练和 instrumentation rerun 之前，等待审查。
+
+## 2026-07-19：FPCT-0 研究线隔离与预注册
+
+### 研究目标
+
+在 Phase 2A-1 结果揭晓前建立完全独立的 query-time factorization-preserving cache transport 研究线，冻结核心问题、`C_pre`/`C_post`/`F` 三个 operator、阶段门槛和机制主张边界，避免并行研究结果造成后验改写。
+
+### 核心改动
+
+- 从固定 commit `9fa1f0ac3bedefd282961a853278ab88fb376fa2` 创建 sibling worktree `/home/lijunsi/projects/Cache-fpct-factorized-transport` 和 branch `research/fpct-factorized-transport`。
+- 新增 `FPCT_PREREGISTRATION.md`，冻结三个 operator 的公式、三个因果对比、第一轮方法限制、endpoints、controls、matched-training 证据规则、六项数值不变量及 FPCT-0 至 FPCT-11 gates。
+- 新增 `FPCT_STATUS.md`，记录阶段状态、依赖、资源授权、决策日志、artifact/path contract 和待人工批准事项。
+- 明确 `F-C_post` 是 query-time factorization preservation 的 headline 主效应；旧 B6 `+8.24pp` 不作为 FPCT headroom；新 checkpoint 必须重新审计 beneficial/harmful events。
+
+### 实验配置
+
+- 文档与 Git 隔离阶段，仅使用 `R0` 环境/路径检查。
+- 未修改模型运行代码，未运行 model forward，未使用 GPU/Kubernetes，未训练或修改 checkpoint。
+- 未查看或使用 Phase 2A-1 未公开结果；原 Phase 2A-1 工作树保持在 `main` 且未被修改。
+
+### 验证结果
+
+- 固定 base SHA、branch、worktree 和初始路径隔离已核对。
+- 未发现 FPCT worktree 中的 `PHASE2A_*`/`phase2a_*` 文件改动；原 Phase 2A-1 工作树保持 `main`/固定 HEAD，其并行产生的 tracked/untracked 状态变化未被打开、修改或停止。
+- 用户确认 FPCT worktree 中的 `math.md` 是其自有公式讨论稿；本任务未修改，并将其作为 non-normative reference 与正式预注册隔离，冲突时以后者为准。
+- FPCT-0 文件保持未提交状态，未 push。
+
+### 结论与下一步
+
+FPCT-0 的隔离、预注册内容和一致性检查已完成，当前判定 `GO`；该判定不授权 FPCT-1。primary task suite、统计规则、seed/budget、数值容差和资源上限等缺乏客观依据的项目等待人工批准，不得在看到自然数据结果后补定。
+
+## 2026-07-19：FPCT-1A ambiguity support audit protocol locking
+
+### 研究目标
+
+在任何新的自然 ambiguity 分布或逐样本 alignment 统计被查看之前，冻结 FPCT-1B 的 input/pair/split universe、candidate legality、effective-support threshold、pair eligibility、pilot selection、zero-support contract 和输出 schema。
+
+### 核心改动
+
+- 新增 `FPCT_1A_AMBIGUITY_PROTOCOL.md` 与 `recipe/eval_recipe/fpct_1a/ambiguity_protocol_manifest.json`，记录三个 heterogeneous pairs、Qwen3 same-tokenizer control、三任务输入、tokenizer/config/code/input hashes 和 FPCT-1B 的机器可读输出合同。
+- 将合法 candidate 固定为 mask/index/padding/finite/positive 的合取，先 mask 后 L1 renormalize；zero-support 独立报告，不填伪 candidate。
+- 推荐 gate-primary `S>=2/3`，并冻结 `S>=1/2`、`S>=3/4` sensitivities；明确 formal matched-training ambiguity population 仍为 `m>=2`。
+- 将 exact no-factorization control（全体 parent `m<=1`）与含 `m=2` 的 below-gate nominal stratum 分开，避免把操作性 support ceiling 误报为数学等价。
+- Pair eligibility 只使用 fit+calibration 的 label-free distinct-content-group support，推荐 3-task task-macro harmonic effective size、9-cell simultaneous Wilson LCB 和结果无关 tie-break。
+
+### 实验配置
+
+- 资源等级 `R0`，只读取静态代码/配置/已有公开 provenance，并编写协议文档与 manifest。
+- 固定 `soft_span_overlap_v2`、top-k 4、uniform score、candidate window 0、legacy position、`a=1`、`g=1`；未修改模型运行路径。
+- FPCT-1B audit、threshold 和 support-floor 数值仍未授权；`delta_pos`、`delta_direct_all` 等待人工批准。
+
+### 验证结果
+
+- FPCT-0 一致性门通过：`F-C_post` 仍是唯一 headline contrast；selector/native null/de-RoPE/re-RoPE/new gate 仍排除，`math.md` 仍为 non-normative。
+- Protocol/manifest 已冻结 split 使用、pilot ranking、GO/LIMITED GO/CROSS-PAIR GO/NO-GO 优先级、CSV/JSON schema、aggregation 与 canonical output root。
+- 本阶段未运行自然 ambiguity audit、完整数据 tokenizer/alignment、model forward、GPU/Kubernetes 或训练；未读取 Phase 2A-1 未公开结果。
+
+### 结论与下一步
+
+FPCT-1A 当前为 `REVIEW REQUIRED`：协议结构已完整，但 gate-primary threshold、`task_macro_cluster` support estimand 和 practical/statistical parameters 需要人工在任何自然 audit 前批准。FPCT-1B 及 FPCT-2 以后均保持 `NOT AUTHORIZED`；未 commit、未 push。

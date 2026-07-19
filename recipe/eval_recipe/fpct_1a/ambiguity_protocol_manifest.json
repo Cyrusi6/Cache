@@ -1,0 +1,643 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_1a_ambiguity_support_v1",
+  "stage": "FPCT-1A",
+  "status": "review_required",
+  "review_required_reasons": [
+    "gate-primary threshold grid requires human approval",
+    "task_macro_cluster support-floor estimand requires human approval",
+    "minimum practical effect and statistical planning parameters require human approval"
+  ],
+  "base_commit": "9fa1f0ac3bedefd282961a853278ab88fb376fa2",
+  "branch": "research/fpct-factorized-transport",
+  "worktree": "/home/lijunsi/projects/Cache-fpct-factorized-transport",
+  "created_before_natural_audit": true,
+  "constraints": {
+    "natural_ambiguity_audit": false,
+    "per_sample_alignment_results": false,
+    "tokenizer_execution_on_full_data": false,
+    "model_forward": false,
+    "gpu": false,
+    "kubernetes": false,
+    "training": false,
+    "checkpoint_mutation": false,
+    "model_code_changes": false,
+    "phase2a_1_results": false,
+    "commit": false,
+    "push": false,
+    "fpct_1b_authorized": false
+  },
+  "fpct0_guard": {
+    "headline_contrast": "F-C_post",
+    "secondary_contrast": "C_post-C_pre",
+    "total_system_contrast": "F-C_pre",
+    "a": 1,
+    "g": 1,
+    "position_mode": "legacy",
+    "receiver_native_null": false,
+    "outer_selector": false,
+    "new_gate": false,
+    "entropy_confidence_legacy_gate": "frozen at base definitions, parameters, and call placement",
+    "math_md": "user-owned non-normative reference; normative protocol wins on conflict"
+  },
+  "source_provenance": {
+    "tracked_files": [
+      {
+        "path": "recipe/train_recipe/identifiability/route1_v22_base.json",
+        "sha256": "188191f21317c49372c2671ef40739bc8dbeb698e6c495721002b71c250be212"
+      },
+      {
+        "path": "recipe/train_recipe/identifiability/hf_cache_requirements.json",
+        "sha256": "dd403a0867f32fbbc5b31b7b9e3b3d381380500169d7ea5108024d3af966e867"
+      },
+      {
+        "path": "recipe/eval_recipe/phase2a_0/opportunity_audit_manifest.json",
+        "sha256": "632984853cb28f80c0484bbb692f1e452e4369c1b11bfd6d6041568635299acb"
+      },
+      {
+        "path": "PHASE2A_0_OPPORTUNITY_AGGREGATES.json",
+        "sha256": "5a23f91808eb5e09a349f7909b7428c338bf1479993c924a093d9faecef1bfe9",
+        "use": "previously public input/content-group provenance only; no selector outcome selection"
+      },
+      {
+        "path": "PHASE2A_PREREGISTRATION.md",
+        "sha256": "99175477cf7c98713d4f9d2e9607ce074e9df4d1b1691e2a297a8637ec007000",
+        "use": "previously frozen content-group split contract only"
+      },
+      {
+        "path": "script/analysis/phase2a_0_opportunity_audit.py",
+        "sha256": "041bc3f752f126d14b220569f9b65c302bd52d0a179105b6cea3eddf9590d907",
+        "use": "static split/input normalization provenance; not executed in FPCT-1A"
+      },
+      {
+        "path": "script/analysis/route1_identifiability_suite.py",
+        "sha256": "ad80774b0ac8ded3426c52a5e1bfafe00a908c7df4a67a3b6db1eab8d8b5d7b2"
+      },
+      {
+        "path": "rosetta/model/aligner.py",
+        "sha256": "56adeb3014bd100fe3139e8876acf98c140eb9361c89bdc007d8b32ac559ab31"
+      },
+      {
+        "path": "script/evaluation/unified_evaluator.py",
+        "sha256": "6d775685657e2022645f9a084cc3ce85a07d66d984d5332a51992aea26946ba0"
+      },
+      {
+        "path": "rosetta/utils/evaluate.py",
+        "sha256": "a02bf790bfe6b11a434d857de978ff4ca102fb2a9b0389599aea695f6678527d"
+      },
+      {
+        "path": "rosetta/utils/dataset_loading.py",
+        "sha256": "b80ebbbd29c9c5b0280df09f853f138778d04ee13a74cbe8ae62ea56a263d926"
+      },
+      {
+        "path": "environment.yml",
+        "sha256": "9ec844f80e488f5c371d2a881076afa56c83d721e15641668377f077298046a6"
+      }
+    ],
+    "document_hashes": {
+      "FPCT_PREREGISTRATION.md": "46ea6c0c8b96958b663bea44eb94e4edd9c8045e963c20689ddd6ce799bc4f21",
+      "FPCT_1A_AMBIGUITY_PROTOCOL.md": "6dced3da6b8f82228666eb64250f51dd6db53e78203249904d47c56e26988ea4"
+    }
+  },
+  "runtime_contract": {
+    "transformers": "4.52.4",
+    "tokenizers": "0.21.4",
+    "sentencepiece": "0.2.1",
+    "jinja2": "3.1.6"
+  },
+  "receiver": {
+    "model_id": "Qwen/Qwen3-0.6B",
+    "expected_revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+    "directory_sha256": "8b68256a049db94119d2fea44d3b9011df83f7c3058cda98b16ab0378a3e7fba",
+    "tokenizer_files": {
+      "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+      "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+    }
+  },
+  "pair_universe": [
+    {
+      "id": "tinyllama",
+      "sender_model_id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "pair_type": "heterogeneous",
+      "heterogeneous": true,
+      "primary_pilot_allowed": true,
+      "expected_revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "directory_sha256": "5f21b2016854b7127cb8d7c6aa6b2ed774e6020751ec8e042de912972f518bec",
+      "tokenizer_files": {
+        "tokenizer_config.json": "7b41ba7d0eb91e77914ca3dafde559ea3e19878769b7e68409e89bed5222e77a",
+        "tokenizer.json": "bcd04f0eadf90287bd26e1a183ac487d8a141b09b06aecb7725bbdd343640f2e",
+        "tokenizer.model": "9e556afd44213b6bd1be2b850ebbbd98f5481437a8021afaf58ee7fb1818d347"
+      }
+    },
+    {
+      "id": "qwen25_0p5b",
+      "sender_model_id": "Qwen/Qwen2.5-0.5B-Instruct",
+      "pair_type": "heterogeneous",
+      "heterogeneous": true,
+      "primary_pilot_allowed": true,
+      "expected_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+      "directory_sha256": "2cc22a9597de3d0d21b73ca737c111b21acc418a14623b6bc5e20bb36644d402",
+      "tokenizer_files": {
+        "tokenizer_config.json": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+        "tokenizer.json": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539"
+      }
+    },
+    {
+      "id": "llama32_1b",
+      "sender_model_id": "meta-llama/Llama-3.2-1B-Instruct",
+      "pair_type": "heterogeneous",
+      "heterogeneous": true,
+      "primary_pilot_allowed": true,
+      "expected_revision": "REQUIRED_BEFORE_FPCT_1B",
+      "directory_sha256": "312b1f2bdd70db0bce29d3e6d0b6001ca1905857d871115b75031b814e863fc8",
+      "tokenizer_files": {
+        "tokenizer_config.json": "9823dcfdc1121869029da45192238e85cf44f0b232a6d9dc20e4fe6f4242a14e",
+        "tokenizer.json": "79e3e522635f3171300913bb421464a87de6222182a0570b9b2ccba2a964b2b4"
+      }
+    },
+    {
+      "id": "qwen3_1p7b",
+      "sender_model_id": "Qwen/Qwen3-1.7B",
+      "pair_type": "same_tokenizer_control",
+      "heterogeneous": false,
+      "primary_pilot_allowed": false,
+      "expected_revision": "REQUIRED_BEFORE_FPCT_1B",
+      "directory_sha256": "b1b46b15937e8eb22d2dc7f0c5a6de698b4873f106f4e7f8d080bc7192879a32",
+      "tokenizer_files": {
+        "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+        "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+      }
+    }
+  ],
+  "task_universe": [
+    {
+      "id": "ai2-arc",
+      "dataset_id": "allenai/ai2_arc",
+      "config": "ARC-Challenge",
+      "split": "test",
+      "expected_rows": 1150,
+      "expected_distinct_content_groups": 1150,
+      "expected_revision": "210d026faf9955653af8916fad021475a3f00453",
+      "directory_sha256": "57aff44115478c094aba1ce9ec3c13ee3556ee47e637eadb3ac728691ad70b51",
+      "content_sha256": "365daa1a31374b5fccde3de93d7aa248b1e1080f326491b7f8aefba6274a0142"
+    },
+    {
+      "id": "openbookqa",
+      "dataset_id": "openbookqa",
+      "config": "main",
+      "split": "test",
+      "expected_rows": 500,
+      "expected_distinct_content_groups": 500,
+      "expected_revision": "388097ea7776314e93a529163e0fea805b8a6454",
+      "directory_sha256": "5f903c0bd9272642eb983c4e30ec71a16e3922c578dc1f08a6cdfb33e99b4ecf",
+      "content_sha256": "803946f36a5cd5ca99b041e6f451b56c80a7b5c4c8f13a32d5c7efdc34a76994"
+    },
+    {
+      "id": "mmlu-redux",
+      "dataset_id": "edinburgh-dawg/mmlu-redux-2.0",
+      "config": "all_57_subjects",
+      "split": "test",
+      "expected_rows": 5615,
+      "expected_distinct_content_groups": 5583,
+      "expected_revision": "372ea425445d51e1ba1188c56e5e893f8138621f",
+      "directory_sha256": "3630ceb45031facee39532ba1110760d49c71270be0bd5de96e6235971cdb402",
+      "content_sha256": "d9284f27cf799e5ba225c3441c2e2822e1ad53f35d6ed58792273d6c7f013291"
+    }
+  ],
+  "input_contract": {
+    "expected_total_rows": 7265,
+    "expected_total_distinct_content_groups": 7233,
+    "dataset_content_sha256": "0366be7e5b129710024543bc065774bef165b6b6bca92541a3d641aea2918114",
+    "answer_method": "generate",
+    "use_cot": false,
+    "use_template": true,
+    "sample_interval": 1,
+    "message_shape": "single user message",
+    "add_generation_prompt": true,
+    "enable_thinking": false,
+    "add_special_tokens": false,
+    "return_offsets_mapping": true,
+    "truncation": false,
+    "allowed_fields": [
+      "question",
+      "choices",
+      "prompt-format metadata"
+    ],
+    "forbidden_fields": [
+      "label",
+      "prediction",
+      "correctness",
+      "beneficial",
+      "harmful",
+      "selector outcome"
+    ]
+  },
+  "split_contract": {
+    "version": "cache-phase2a-v1-29a96947",
+    "group": "normalized question+choices content SHA256",
+    "aggregate_dataset_sha256": "0366be7e5b129710024543bc065774bef165b6b6bca92541a3d641aea2918114",
+    "split_hash": "SHA256(split_version + dataset_content_sha256 + content_hash)",
+    "intervals": {
+      "fit": [0.0, 0.3],
+      "calibration": [0.3, 0.45],
+      "model-selection": [0.45, 0.6],
+      "test": [0.6, 1.0]
+    },
+    "interval_semantics": "all intervals are left-closed and right-open; normalized SHA256 variate lies in [0,1)",
+    "selection_splits": ["fit", "calibration"],
+    "model_selection_can_change_pair": false,
+    "test_can_change_pair_threshold_or_pilot": false,
+    "materialized_split_manifest": "REQUIRED_BEFORE_FPCT_1B",
+    "execution_sequence": [
+      "resolve tokenizer revisions and materialize/hash all content-group split assignments without tokenizer/alignment execution",
+      "before any support audit, freeze/hash analysis code, protocol/manifest, thresholds, support-floor parameters, tokenizer/config/input/split provenance",
+      "run fit+calibration label-free support audit once",
+      "mechanically write and hash pilot_selection_lock.json without changing code/config/threshold/floor",
+      "materialize model-selection/test reporting"
+    ]
+  },
+  "alignment_contract": {
+    "alignment_strategy": "soft_span_overlap_v2",
+    "soft_alignment_top_k": 4,
+    "soft_alignment_score_mode": "uniform",
+    "soft_alignment_boundary_bonus": 0.5,
+    "soft_alignment_boundary_tolerance": 1,
+    "soft_alignment_min_weight": 0.0,
+    "soft_alignment_candidate_window": 0,
+    "soft_alignment_reweight_mode": "none",
+    "soft_alignment_reweight_strength": 1.0,
+    "soft_alignment_reweight_power": 2.0,
+    "selection_order": [
+      "weight_score_desc",
+      "overlap_desc",
+      "source_token_length_desc",
+      "source_index_asc"
+    ],
+    "normalization": "mask invalid candidates first; row-wise L1 normalize remaining finite positive raw source_weights",
+    "alignment_mass_source": "raw source_weights only; never confidence/entropy/gate/selector scaled"
+  },
+  "parent_candidate_contract": {
+    "eligible_parent": "message_mask == true AND receiver_padding_mask == false",
+    "template_native_rows_in_zero_support_denominator": false,
+    "valid_candidate": [
+      "standalone valid mask true when present",
+      "0 <= source_index < sender_token_count",
+      "source index is non-padding",
+      "raw A is finite",
+      "raw A > 0"
+    ],
+    "expected_inactive_slot": "valid-mask false, sentinel/out-of-range index, or in-range zero-mass slot with finite raw A exactly 0; mask and count separately; not integrity failure",
+    "integrity_failures": [
+      "positive mass on valid-mask-false, out-of-range, or sender-padding slot",
+      "any nonfinite raw weight",
+      "any negative raw weight",
+      "duplicate legal source index",
+      "legal-row normalization failure",
+      "uniform-grid identity failure"
+    ],
+    "normal_padding_example": "(-1, 0) is expected inactive padding, not an integrity failure",
+    "duplicate_legal_source_index": "integrity_failure",
+    "legal_count_source": "post-top-k legal source_weights; never positive_overlap_counts",
+    "zero_support": {
+      "m": 0,
+      "a_max": null,
+      "secondary_mass": null,
+      "n_eff": null,
+      "one_to_one": false,
+      "mechanism_population": false,
+      "pseudo_candidate_fill": false,
+      "report_separately": true
+    },
+    "fallback_candidate": "if index-valid, finite, and positive, classify one-to-one and also set fallback_flag"
+  },
+  "ambiguity_metrics": {
+    "legal_candidate_count": "m_i = sum_j 1[legal_j]",
+    "n_eff": "1 / sum_j A_ij^2",
+    "a_max": "max_j A_ij",
+    "secondary_mass": "1 - A_max",
+    "nominal_ambiguous": "m_i >= 2",
+    "formal_performance_ambiguity_population": "sample has at least one legal m_i >= 2 parent; unchanged from FPCT-0",
+    "sample_has_effective": "at least one eligible parent passes threshold",
+    "exact_no_factorization_control": "all eligible parents have m_i <= 1",
+    "below_gate_primary_nominal_control": "sample has m_i >= 2 but no gate-primary-effective parent",
+    "nominal_direct_support_ceiling": "sample fraction with at least one m_i >= 2 parent",
+    "direct_effect_ceiling": "operational gate-primary sample fraction; not a strict bound on all fixed-state F-C_post differences",
+    "quantiles": [0.0, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99, 1.0],
+    "quantile_method": "linear interpolation",
+    "empty_metric": "JSON null; CSV empty field"
+  },
+  "effective_thresholds": {
+    "approval_status": "human_approval_required",
+    "uniform_grid_identity": "A=1/m, S=1-1/m, N_eff=m",
+    "recommended_gate_primary_id": "primary_s67",
+    "formal_performance_primary_unchanged": "m>=2 structural eligibility",
+    "definitions": [
+      {
+        "id": "lenient_s50",
+        "role": "sensitivity",
+        "m_min": 2,
+        "secondary_mass_min": 0.5,
+        "n_eff_equivalent_under_uniform": 2,
+        "meaning": "non-top1 mass is at least 50 percent"
+      },
+      {
+        "id": "primary_s67",
+        "role": "recommended_gate_primary",
+        "m_min": 2,
+        "secondary_mass_min": 0.6666666666666666,
+        "n_eff_equivalent_under_uniform": 3,
+        "meaning": "non-top1 mass is at least twice top1 mass"
+      },
+      {
+        "id": "strict_s75",
+        "role": "sensitivity",
+        "m_min": 2,
+        "secondary_mass_min": 0.75,
+        "n_eff_equivalent_under_uniform": 4,
+        "meaning": "non-top1 mass is at least three times top1 mass"
+      }
+    ],
+    "comparison": "under frozen uniform contract classify by exact integer m equivalence: m>=2, m>=3, m=4",
+    "integrity_rule": "observed float64 A/S/N_eff verify the uniform identity only; mismatch is failure; do not patch with result-dependent epsilon",
+    "sensitivity_can_rerank_pilot": false
+  },
+  "support_floor": {
+    "approval_status": "human_approval_required",
+    "selection_population": "distinct content groups in fit+calibration",
+    "selection_estimand": {
+      "approved": null,
+      "recommended": "task_macro_cluster",
+      "meaning": "three tasks equal-weighted; distinct content group is the planning/selection unit"
+    },
+    "selection_cells": "3 heterogeneous pairs x 3 tasks = 9",
+    "task_support_rate": "C_hat_pt = gate_primary_effective_content_groups / all_content_groups",
+    "lower_bound": {
+      "method": "simultaneous one-sided Wilson with Bonferroni across 9 selection cells",
+      "familywise_confidence": null,
+      "recommended_familywise_confidence": 0.95,
+      "cell_error": "eta / 9",
+      "formula": "(p_hat + z^2/(2n) - z*sqrt(p_hat*(1-p_hat)/n + z^2/(4n^2))) / (1 + z^2/n), z=z_(1-eta/9)",
+      "zero_n_policy": "incomplete"
+    },
+    "minimum_practical_effect": {
+      "delta_pos": null,
+      "delta_direct_all": null,
+      "constraint": "0 < delta_direct_all <= delta_pos <= 1",
+      "scope": "fixed-state/direct mechanism reach only; not a matched-training accuracy futility bound"
+    },
+    "test_parameters": {
+      "alpha": null,
+      "recommended_alpha": 0.05,
+      "power": null,
+      "recommended_power": 0.8,
+      "q_star": 1.0
+    },
+    "n_required_formula": "ceil(q_star * (z_(1-alpha/2) + z_(power))^2 / delta_pos^2)",
+    "full_task_unit": "distinct content-group count; never raw row or receiver-token count",
+    "projected_positive_formula": "n_tilde_pt = floor(full_task_distinct_group_count * task_support_LCB)",
+    "macro_effective_group_formula": "9 / sum_t(1 / n_tilde_pt) when every task n_tilde_pt > 0; else 0",
+    "macro_support_lower_bound": "unweighted mean of three task LCBs",
+    "direct_reach_rule": "macro_support_lower_bound * delta_pos >= delta_direct_all",
+    "exchangeability_assumption": "frozen content-hash split is an exchangeable partition for label-free support projection",
+    "eligibility_conjuncts": [
+      "heterogeneous pair",
+      "macro effective projected content groups >= n_required",
+      "macro support lower bound * delta_pos >= delta_direct_all",
+      "analysis code/config/threshold/support/tokenizer/input/split hashes frozen before audit",
+      "distinct content-group weighting",
+      "no integrity failure"
+    ]
+  },
+  "pilot_selection": {
+    "score": "unweighted mean of three task-level simultaneous one-sided support LCBs",
+    "eligible_pairs_only": true,
+    "same_tokenizer_can_rank": false,
+    "tie_break": [
+      "support_score_desc",
+      "minimum_task_lcb_desc",
+      "macro_effective_group_count_desc",
+      "pooled_projected_positive_group_count_desc",
+      "canonical_pair_id_lexicographic_asc"
+    ],
+    "forbidden_inputs": [
+      "accuracy",
+      "correctness",
+      "beneficial/harmful",
+      "Phase2A selector outcome",
+      "test support",
+      "token-micro rate",
+      "posterior/gate statistics",
+      "sensitivity-threshold ranking"
+    ]
+  },
+  "output_contract": {
+    "root": "local/final_results/fpct_factorized_transport/fpct_1b_ambiguity_support/rev_<execution-sha>",
+    "files": {
+      "parent_support.csv": {
+        "row_unit": "pair/task/split/canonical-sample/eligible-parent",
+        "columns": [
+          "schema_version", "pair", "pair_type", "task", "split",
+          "content_group_sha256", "sample_key_sha256", "parent_index",
+          "fallback_flag", "raw_candidate_slot_count", "expected_inactive_slot_count",
+          "invalid_positive_mass_count", "negative_weight_count",
+          "nonfinite_weight_count", "duplicate_source_index_count",
+          "normalization_error", "uniform_identity_error", "legal_candidate_count",
+          "raw_legal_weight_sum", "a_max", "secondary_mass", "n_eff",
+          "zero_support", "one_to_one", "nominal_ambiguous",
+          "effective_lenient_s50", "effective_primary_s67", "effective_strict_s75"
+        ]
+      },
+      "sample_support.csv": {
+        "row_unit": "pair/task/split/canonical-sample",
+        "columns": [
+          "schema_version", "pair", "pair_type", "task", "split",
+          "content_group_sha256", "sample_key_sha256", "receiver_parent_count",
+          "zero_support_count", "zero_support_rate", "one_to_one_count",
+          "one_to_one_rate", "nominal_ambiguity_count", "nominal_ambiguity_rate",
+          "effective_lenient_count", "effective_lenient_rate",
+          "effective_primary_count", "effective_primary_rate",
+          "effective_strict_count", "effective_strict_rate",
+          "has_nominal_ambiguity", "has_effective_lenient", "has_effective_primary",
+          "has_effective_strict", "exact_no_factorization_control",
+          "below_gate_primary_nominal_control", "fallback_count",
+          "expected_inactive_slot_count", "invalid_positive_mass_count",
+          "negative_weight_count", "nonfinite_weight_count",
+          "duplicate_source_index_count", "normalization_error_count",
+          "uniform_identity_error_count", "n_eff_mean", "n_eff_max",
+          "n_eff_p25", "n_eff_p50", "n_eff_p75", "n_eff_p90", "n_eff_p95",
+          "secondary_mass_mean", "secondary_mass_max", "secondary_mass_p25",
+          "secondary_mass_p50", "secondary_mass_p75", "secondary_mass_p90",
+          "secondary_mass_p95"
+        ]
+      },
+      "content_group_support.csv": {
+        "row_unit": "pair/task/split/distinct-content-group",
+        "columns": [
+          "schema_version", "pair", "pair_type", "task", "split",
+          "content_group_sha256", "group_member_count",
+          "representative_sample_key_sha256", "member_support_consistent",
+          "has_nominal_ambiguity", "has_effective_lenient",
+          "has_effective_primary", "has_effective_strict",
+          "exact_no_factorization_control", "below_gate_primary_nominal_control",
+          "integrity_failure"
+        ],
+        "representative_rule": "lexicographic minimum sample_key_sha256",
+        "member_mismatch_policy": "INCONCLUSIVE integrity failure; never select one member"
+      },
+      "aggregate_support.csv": {
+        "row_unit": "threshold/aggregation/pair/task/split",
+        "columns": [
+          "schema_version", "threshold_id", "aggregation_level", "pair",
+          "pair_type", "task", "split", "raw_sample_count",
+          "distinct_content_group_count", "receiver_parent_count",
+          "zero_support_count", "zero_support_rate", "one_to_one_count",
+          "one_to_one_rate", "nominal_ambiguity_count",
+          "nominal_ambiguity_rate", "effective_ambiguity_count",
+          "effective_ambiguity_rate", "nominal_positive_sample_count",
+          "nominal_sample_support", "nominal_direct_support_ceiling",
+          "effective_positive_sample_count", "sample_level_support",
+          "direct_effect_ceiling", "exact_control_sample_count",
+          "exact_control_sample_rate", "below_gate_primary_nominal_sample_count",
+          "below_gate_primary_nominal_sample_rate", "n_eff_count",
+          "n_eff_mean", "n_eff_min", "n_eff_p25", "n_eff_p50",
+          "n_eff_p75", "n_eff_p90", "n_eff_p95", "n_eff_p99",
+          "n_eff_max", "secondary_mass_count", "secondary_mass_mean",
+          "secondary_mass_min", "secondary_mass_p25", "secondary_mass_p50",
+          "secondary_mass_p75", "secondary_mass_p90", "secondary_mass_p95",
+          "secondary_mass_p99", "secondary_mass_max", "support_lcb",
+          "projected_positive_group_count", "support_score",
+          "macro_effective_group_count", "pilot_eligible",
+          "eligibility_failure_reason", "pilot_rank", "pilot_selected"
+        ]
+      },
+      "pair_eligibility.csv": {
+        "row_unit": "pair",
+        "columns": [
+          "schema_version", "pair", "pair_type", "heterogeneous",
+          "primary_pilot_allowed", "support_score", "minimum_task_lcb",
+          "projected_positive_group_count", "macro_effective_group_count",
+          "delta_pos", "delta_direct_all", "direct_reach_lhs",
+          "n_required", "support_floor_pass",
+          "eligibility_failure_reason", "pilot_rank", "pilot_selected"
+        ]
+      },
+      "pilot_selection_lock.json": {
+        "required_fields": [
+          "protocol_id", "execution_commit", "analysis_code_sha256",
+          "config_sha256", "input_sha256", "split_manifest_sha256",
+          "thresholds", "support_floor_parameters", "pre_audit_lock_sha256",
+          "fit_calibration_output_sha256", "pair_decisions",
+          "selected_pilot", "created_before_model_selection_or_test_reporting"
+        ],
+        "created_before_model_selection_or_test_reporting": true
+      },
+      "audit_summary.json": {
+        "required_fields": [
+          "protocol", "provenance", "integrity", "aggregations",
+          "pair_eligibility", "pilot_selection", "fpct_1b_decision"
+        ],
+        "derived_from": [
+          "parent_support.csv", "sample_support.csv",
+          "content_group_support.csv", "aggregate_support.csv",
+          "pair_eligibility.csv", "pilot_selection_lock.json"
+        ]
+      },
+      "provenance.json": {
+        "required_fields": [
+          "base_commit", "execution_commit", "protocol_sha256",
+          "manifest_sha256", "analysis_code_sha256", "tokenizer_sha256",
+          "resolved_tokenizer_revisions", "alignment_config_sha256",
+          "threshold_contract_sha256", "support_floor_parameters_sha256",
+          "input_sha256", "content_group_manifest_sha256",
+          "split_manifest_sha256", "pre_audit_lock_sha256"
+        ]
+      }
+    },
+    "aggregations": [
+      "token_micro", "sample_weighted", "content_group_weighted", "task_macro"
+    ],
+    "pair_decomposition_required": true,
+    "task_macro_task_sentinel": "__TASK_MACRO__",
+    "task_macro_count_policy": "non-additive raw count fields are null; equal-weight macro rates/distributions are populated",
+    "selection_field_applicability": {
+      "common": "threshold=primary_s67, split=fit_calibration, aggregation=content_group_weighted",
+      "task_rows": ["support_lcb", "projected_positive_group_count"],
+      "pair_task_macro_rows": [
+        "support_score", "macro_effective_group_count", "pilot_eligible",
+        "eligibility_failure_reason", "pilot_rank", "pilot_selected"
+      ],
+      "other_rows": "selection-only fields are null; columns are never omitted"
+    },
+    "sort_order": {
+      "pair": ["tinyllama", "qwen25_0p5b", "llama32_1b", "qwen3_1p7b"],
+      "task": ["ai2-arc", "openbookqa", "mmlu-redux"],
+      "split": ["fit", "calibration", "fit_calibration", "model-selection", "test"],
+      "threshold": ["lenient_s50", "primary_s67", "strict_s75"],
+      "aggregation": ["token_micro", "sample_weighted", "content_group_weighted", "task_macro"]
+    },
+    "failure_reason_enum": [
+      "control_only",
+      "missing_input_or_hash",
+      "integrity_failure",
+      "insufficient_macro_effective_groups",
+      "insufficient_direct_reach",
+      "eligible"
+    ],
+    "failure_reason_precedence": "first applicable enum in listed order; all conjunct booleans and raw planning values are still emitted",
+    "ranking_precision": "use unrounded float64 values and exact rational threshold classification; display rounding never enters tie-break",
+    "missing_task_policy": "audit incomplete; never remove from task-macro denominator",
+    "empty_metric_policy": "JSON null; CSV empty; never NaN",
+    "json_contract": {
+      "enum_source": "pair/task/split/threshold/aggregation/failure enums in this manifest",
+      "nullability": "fields outside frozen applicability are explicit JSON null / CSV empty; required keys and columns are never omitted",
+      "derivation": "audit_summary.json and pilot_selection_lock.json are deterministic reductions of the frozen CSVs plus provenance"
+    },
+    "serialization": {
+      "csv_encoding": "UTF-8",
+      "csv_newline": "LF",
+      "csv_header": "exact listed column order; no omitted or extra columns",
+      "boolean": "lowercase true/false",
+      "integer": "base-10",
+      "float": "17 significant digits, round-trip capable",
+      "csv_null": "empty field",
+      "json": "RFC 8259-compatible UTF-8, lexicographic keys, indent 2, allow_nan=false",
+      "schema_change": "increment schema_version and obtain human review before audit"
+    },
+    "column_type_contract": {
+      "schema_version": "positive integer",
+      "hash_fields": "lowercase 64-hex string",
+      "enum_fields": "exact manifest enum string",
+      "index_and_count_fields": "non-negative integer unless explicit sentinel/null policy applies",
+      "normalized_rate_mass_and_ceiling_fields": "float in [0,1] or null",
+      "raw_legal_weight_sum": "finite float >=0",
+      "n_eff_fields": "float >=1 for supported parent/distribution or null",
+      "boolean_fields": "boolean",
+      "pilot_rank": "positive integer or null",
+      "eligibility_failure_reason": "failure_reason_enum"
+    }
+  },
+  "fpct_1b_decision": {
+    "priority": "any required pair/task/input/hash/schema incomplete or unresolved integrity failure => INCONCLUSIVE before counting pair passes",
+    "inconclusive": "audit/hash/schema incomplete or unresolved integrity failure",
+    "no_go": "zero heterogeneous pairs pass support floor",
+    "limited_go": "exactly one heterogeneous pair passes; may enter single-pair pilot only; any future mechanism claim remains pair-limited and requires later evidence",
+    "cross_pair_go": "at least two heterogeneous pairs pass",
+    "same_tokenizer_counts_toward_go": false,
+    "claim_boundary": "support decision measures identifiability only, not mathematical validity or task benefit"
+  },
+  "human_approval_required": [
+    "gate-primary primary_s67 and sensitivity grid",
+    "support-floor estimand task_macro_cluster",
+    "delta_pos",
+    "delta_direct_all",
+    "alpha",
+    "power",
+    "familywise Wilson LCB confidence"
+  ],
+  "authorization": {
+    "fpct_1a": "review_required",
+    "fpct_1b": "not_authorized",
+    "fpct_1c": "not_authorized",
+    "fpct_2_and_later": "not_authorized"
+  }
+}
