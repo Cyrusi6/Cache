@@ -647,3 +647,37 @@ FPCT-0 的隔离、预注册内容和一致性检查已完成，当前判定 `GO
 ### 结论与下一步
 
 FPCT-1A 当前为 `REVIEW REQUIRED`：协议结构已完整，但 gate-primary threshold、`task_macro_cluster` support estimand 和 practical/statistical parameters 需要人工在任何自然 audit 前批准。FPCT-1B 及 FPCT-2 以后均保持 `NOT AUTHORIZED`；未 commit、未 push。
+
+## 2026-07-19：FPCT-1A-R human decision lock and prospective amendment
+
+### 研究目标
+
+在任何新的自然 structural-support 数据、逐样本 alignment 统计或 operator result 出现前，完成 FPCT-1A 人工决策锁定，将 v1 中过强的 high-cardinality/power gate 修订为可审计的 structural-opportunity 与工程 readiness 协议。
+
+### 核心改动
+
+- 保留 `FPCT_1A_AMBIGUITY_PROTOCOL.md` 与 v1 manifest 为 never-executed 历史记录，新建 `FPCT_1A_APPROVAL_ADDENDUM.md` 和 schema-v2 `ambiguity_protocol_manifest_v2.json`。
+- 将 primary structural support 冻结为 `primary_structural_m2: m>=2`；`m>=3` 与 `m=4` 仅作 sensitivity/enrichment，不能否决 pair、改变 ranking 或替代 headline ceiling。
+- 冻结 `D_s=1[样本存在 m>=2 parent]` 与 direct structural-support ceiling；明确 `m=2` 是 mechanism-positive low-cardinality，只有所有 eligible parents `m<=1` 才是 exact `F=C_post` control。
+- 冻结 `m=0/1/2/3/4` 五个互斥 strata，并完整保留 zero-support/no-pseudo-candidate contract。
+- 将 FPCT-1B 限定为 label-free structural-support audit：普通 95% Wilson interval用于描述，9-cell Bonferroni LCB 只作 sensitivity；formal delta/n_req/power gate deferred。
+- 工程 readiness 冻结为每 task 至少 30、三任务 pooled 至少 100 个 primary-positive distinct groups，并使用最弱任务 count、task-macro observed rate、pooled count、pair ID 进行 label-free ranking。
+
+### 实验配置
+
+- Source commit：`7207aafffc7f72976473815bc11102f8b06dddc1`；独立 branch `research/fpct-factorized-transport`。
+- v1 的 `commit=false/push=false` 是当时执行边界；用户随后单独授权并已将 source commit `7207aaff...` 推送到同名 research branch，不视为历史错误。
+- 资源等级 `R0`；只修改 FPCT protocol 文档与 manifest。
+- v1 input/pair/split/alignment/candidate legality/provenance/serialization contracts中未冲突部分继续继承。
+- `D_K`、`D_V`、candidate-logit variance、Jensen gap 只登记为后续 operator pilot diagnostics，本阶段不计算。
+
+### 验证结果
+
+- v1 protocol/manifest SHA256 被固定并保持原样；v1 标记为 `superseded_before_natural_data`、`executed=false`。
+- Operative protocol 明确由 v1 + approval addendum + v2 manifest 组成。
+- `math.md` 保持 non-normative 且 byte-identical；未修改 `main`、其他 worktree、Phase2A 文件或模型代码。
+- 本阶段未运行 ambiguity audit、完整 tokenizer/alignment、model forward、GPU/Kubernetes、训练或 checkpoint 操作。
+
+### 结论与下一步
+
+FPCT-1A-R 判定 `GO`，只表示 human decision lock 和 prospective amendment 完成。FPCT-1B、FPCT-1C、FPCT-2 及以后继续 `NOT AUTHORIZED`。验证通过后只允许 commit/push 当前 research branch；不创建 PR、不合并 `main`、不 rebase。
