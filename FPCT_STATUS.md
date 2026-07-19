@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-1B——Structural Support Audit complete
-> 当前判定：`SINGLE_PAIR_PILOT_READY`
-> 下一阶段：FPCT-1C reference oracle（本次 prompt 已条件授权）
+> 当前阶段：FPCT-CPU-GATE 完成；FPCT-4 non-operative draft
+> 当前判定：FPCT-1B `SINGLE_PAIR_PILOT_READY`；FPCT-1C/2/3 `GO`；FPCT-4 `REVIEW REQUIRED / GPU NOT AUTHORIZED`
+> 下一阶段：人工前瞻锁定 GPU 数值、seed、预算、effect/power 与停止规则
 > 更新时间：2026-07-19（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -42,6 +42,8 @@
 - 执行 FPCT-1B 本地 tokenizer、canonical prompt 和 production alignment audit；
 - 执行纯 tiny-tensor FPCT-1C reference forward/autograd；
 - 在 FPCT-1B READY 且 FPCT-1C GO 时，条件式执行 FPCT-2/3 CPU production path 与 tests；
+- 基于冻结的真实 `m` 分布进行 CPU 静态资源估算；
+- 在 FPCT-2/3 GO 后生成 FPCT-4 non-operative GPU pilot draft；
 - 只在当前 `research/fpct-factorized-transport` commit 并 push。
 
 仍明确未授权：
@@ -64,10 +66,10 @@
 | FPCT-1A | `SUPERSEDED BEFORE NATURAL DATA` | FPCT-0 GO | R0 | 历史完成 | never-executed v1 保留 |
 | FPCT-1A-R | `GO` | FPCT-1A v1 + source commit `7207aaff...` | R0 | 是，仅 prospective amendment | human decisions locked；v2 operative |
 | FPCT-1B | `SINGLE_PAIR_PILOT_READY` | FPCT-1A-R GO + 本次显式授权 | R1 CPU | 已完成 | TinyLlama 唯一 ready/rank-1；无 integrity failure |
-| FPCT-1C | `AUTHORIZED / PENDING EXECUTION` | FPCT-1B complete，无 integrity failure | R1 | 是 | reference equations/oracle/numerical rule |
-| FPCT-2 | `CONDITIONALLY AUTHORIZED` | FPCT-1B READY + FPCT-1C GO | R1 | 条件满足后 | 实现 `C_post`/`F` 与 manifest plumbing |
-| FPCT-3 | `CONDITIONALLY AUTHORIZED` | FPCT-2 GO | R1 | 条件满足后 | CPU 数值、mask、gradient、退化测试 |
-| FPCT-4 | `DRAFT ONLY IF FPCT-2/3 GO` | FPCT-3 GO | R0/R1 | 非 operative draft | 不锁 seed/budget/effect threshold，不启动 GPU |
+| FPCT-1C | `GO` | FPCT-1B complete，无 integrity failure | R1 CPU | 已完成 | reference equations/oracle；19 tests pass |
+| FPCT-2 | `GO` | FPCT-1B READY + FPCT-1C GO | R1 CPU | 已完成 | shared candidate fuser + sidecar/packed global attention |
+| FPCT-3 | `GO` | FPCT-2 GO | R1 CPU | 已完成 | targeted 52 pass；CPU-safe full suite 288 pass |
+| FPCT-4 | `REVIEW REQUIRED / GPU NOT AUTHORIZED` | FPCT-3 GO | R0/R1 draft | 仅 non-operative draft | seed/budget/effect/power/tolerance 尚未锁；未启动 GPU |
 | FPCT-5 | `NOT AUTHORIZED` | FPCT-4 GO | R2 | 否 | fixed-checkpoint diagnostic |
 | FPCT-6 | `NOT AUTHORIZED` | FPCT-5 GO | R3 | 否 | matched-training pipeline smoke |
 | FPCT-7 | `NOT AUTHORIZED` | FPCT-6 GO | R3 | 否 | confirmatory-disjoint development-only pilot |
@@ -101,6 +103,12 @@
 - [x] 人工显式授权并完整执行 FPCT-1B。
 - [x] Commit A `7f8af719...` 在自然 audit 前推送并作为 execution SHA。
 - [x] Fit+calibration selection、pilot lock、reporting 与独立 verify 完成。
+- [x] FPCT-1C reference oracle 的 forward/gradient/degeneration/invariance tests 全部通过。
+- [x] FPCT-2 nuisance callgraph 与 production seam 无歧义。
+- [x] FPCT-2/3 candidate sidecar、packed global attention、config plumbing 与 CPU tests 完成。
+- [x] Legacy-default/state-dict regression 通过；未新增 F-only 参数。
+- [x] 基于 FPCT-1B 真实 `m` 分布完成 CPU 静态 expansion/cache/FLOP 估算。
+- [x] 仅生成 FPCT-4 non-operative draft；未生成 Kubernetes Job，未启动 GPU。
 
 ### 4.1 FPCT-1A protocol checklist
 
@@ -147,6 +155,11 @@
 | FPCT-D024 | 2026-07-19 | Commit A `7f8af71968a39bc6cba2e4e34de762b291cda834` 定义为 FPCT-1B execution SHA | prepare 只生成 hash-only split/provenance；Commit A 推送并确认 local/upstream 相同后才 freeze |
 | FPCT-D025 | 2026-07-19 | FPCT-1B=`SINGLE_PAIR_PILOT_READY`，唯一 ready/rank-1/selected pair 为 `tinyllama` | selection 只用 fit+calibration distinct groups；TinyLlama 三任务 positive groups 511/228/2495；其他 heterogeneous pairs 不过门槛 |
 | FPCT-D026 | 2026-07-19 | Reporting split 不改变 pilot lock，same-tokenizer control 不参与 ranking | verifier 对 60 rows、Wilson、provenance、deterministic reduction 全部通过 |
+| FPCT-D027 | 2026-07-19 | FPCT-1C=`GO` | 19 个 pure-tensor oracle tests 在预批准 float64/float32/gradcheck tolerance 下通过；未放宽 tolerance |
+| FPCT-D028 | 2026-07-19 | FPCT-2 production seam 采用 candidate sidecar + ambiguous-only packed global attention | children 继承 parent mask/bias；`A` 只以 `log A` 使用一次；不伪造 DynamicCache position |
+| FPCT-D029 | 2026-07-19 | Parent nuisance 在 `C_post/F` 中只计算/采样一次并广播 | entropy/confidence/legacy gate/Gumbel 保持 parent-level；candidate-specific nonlinear core 共享 |
+| FPCT-D030 | 2026-07-19 | FPCT-2/3=`GO` | targeted 52 pass；CPU-safe full suite 288 pass；default/c_pre state_dict 与 legacy gather regression 通过 |
+| FPCT-D031 | 2026-07-19 | FPCT-4 只形成 non-operative draft | seed、budget、effect/power、fp16/bfloat16 tolerance 与 GPU resource ceiling 必须另行人工前瞻批准 |
 
 ## 6. 已锁定决定与 deferred items
 
@@ -157,7 +170,7 @@
 3. distinct content-group descriptive audit、ordinary 95% Wilson、sensitivity-only Bonferroni LCB；
 4. 工程 readiness 30/task + 100 pooled 与 label-free ranking。
 
-Deferred：`delta_pos`、`delta_direct_all`、`n_req`、paired-discordance power 和 matched-training seed-variance rule。Deferred 不等于待在 FPCT-1B 结果后补写；必须等 operator evidence 存在后，以单独前瞻性人工批准锁定。
+Deferred：`delta_pos`、`delta_direct_all`、`n_req`、paired-discordance power、matched-training seed count/identities、training budget、checkpoint-selection rule、fp16/bfloat16 tolerance、GPU resource ceiling 和 stopping rules。Deferred 不等于在对应自然结果出现后补写；必须由单独的前瞻性人工批准锁定。
 
 ## 7. Artifact/path contract
 
@@ -168,6 +181,7 @@ Deferred：`delta_pos`、`delta_direct_all`、`n_req`、paired-discordance power
 - 每个 formal run 必须带 `matched_group_id`、execution commit、preregistration hash、config/data-order/init hashes、seed/budget 和 evidence class。
 - 禁止写入 `PHASE2A_*`、`phase2a_*` 或既有 checkpoint/result 目录。
 - FPCT-1B 详细 artifact 位于 `local/final_results/fpct_factorized_transport/fpct_1b_ambiguity_support/rev_7f8af71968a39bc6cba2e4e34de762b291cda834/`，不提交；tracked result manifest 只记录 SHA、row count 与 byte size。
+- 同目录下 `resource_estimate.json` 为不提交的 CPU 静态资源明细；tracked 摘要为 `FPCT_CPU_RESOURCE_ESTIMATE.md`。
 
 ## 8. 当前判定
 
@@ -183,14 +197,21 @@ Human decisions、approval addendum、v2 manifest、operative provenance 与 sch
 
 完整 CPU structural-support audit 与独立 verify 通过。TinyLlama 是唯一 ready pair，因此只允许 single-pair pilot，不允许 cross-pair confirmatory claim。
 
-### FPCT-1C：AUTHORIZED / PENDING EXECUTION
+### FPCT-1C：GO
 
-因 FPCT-1B 完整且无 integrity failure，本次 prompt 已授权 reference oracle。
+Reference equations、flat/hierarchical、退化、refinement/permutation、mask、global denominator、forward/gradient、Jensen 与 future-general `g=0` recovery 全部通过预批准 tolerance。该 GO 仅表示数学/数值 reference 正确。
 
-### FPCT-2/3：CONDITIONALLY AUTHORIZED
+### FPCT-2/3：GO
 
-只有 FPCT-1C GO 后才执行。任何 invariant/test failure 都会阻止 GPU draft。
+Production seam、shared candidate fuser、parent nuisance broadcast、ambiguous-only packed global attention、GQA/MQA、gradient、default/state-dict/config regression 均通过 CPU tests。没有运行 HF/LLM forward，因此该 GO 不构成 real-model activation 或 accuracy 证据。
 
-### FPCT-4：GPU NOT AUTHORIZED
+### FPCT-4：REVIEW REQUIRED / GPU NOT AUTHORIZED
 
-即使 FPCT-2/3 GO，也只允许 non-operative draft；不得提交 Kubernetes Job 或启动 GPU。
+已生成 non-operative draft，包含 fixed-checkpoint smoke、三个 matched arms、`Y_CC/Y_CF/Y_FC/Y_FF` 2×2 intervention、replicated-collapse、`m<=1` exact control 和 mechanism/resource diagnostics。Seed、训练预算、effect/power、fp16/bfloat16 tolerance 与 resource/stopping rule 未锁；不得提交 Kubernetes Job 或启动 GPU。
+
+## 9. FPCT-CPU-GATE 最终隔离复查
+
+- `/home/lijunsi/projects/Cache` 保持 `main`，HEAD `a320777ee3d8e2c5fbf988ad6cd840b560aab28b`，复查时 clean。
+- `/home/lijunsi/projects/Cache-phase2a2-cache-geometry` 保持 `research/phase2a2-cache-geometry`，复查时 HEAD `00db4c7eeffc57a852c67fd1aedad9fd823ca528` 且 clean。该 worktree 在本任务期间由并行活动从操作前记录的 `b1748bd...` 前进；FPCT 未在其中执行写操作、切换分支或读取结果文件。
+- 当前 diff 不包含 `PHASE2A_*`/`phase2a_*` 文件；v1 protocol、v1/v2 manifest、approval addendum 与 `math.md` 均无 diff。
+- `math.md` SHA256 仍为 `98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad`；operative v2 manifest SHA256 仍为 `f7c8bd7fbc456484d1a40ca88d32dc8da3104c422a5addd89f7d033b12c82511`。

@@ -7,7 +7,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 from transformers import Cache, DynamicCache
-from typing import Optional, Tuple, Literal, Union
+from typing import Dict, Optional, Tuple, Literal, Union
 import copy
 import math
 
@@ -4463,6 +4463,8 @@ class C2CProjector(Projector):
         source_weights: Optional[Tensor] = None,
         source_entropy: Optional[Tensor] = None,
         source_entropy_override: Optional[Tensor] = None,
+        fpct_parent_nuisance: Optional[Dict[str, Tensor]] = None,
+        fpct_capture_parent_nuisance: bool = False,
     ) -> Tuple[Tensor, Tensor]:
         source_key, source_value = source_kv
         target_key, target_value = target_kv
@@ -4521,7 +4523,23 @@ class C2CProjector(Projector):
         # Key/value gates: element-wise Gumbel noise with scalar logits (broadcast over channels)
         key_gate_logit = self.key_gate_logit.view(1, 1, 1, 1)
         value_gate_logit = self.value_gate_logit.view(1, 1, 1, 1)
-        if getattr(self, "legacy_scalar_gate_eval_mode", "checkpoint_native") == "forced_on":
+        if fpct_parent_nuisance is not None:
+            key_gate = fpct_parent_nuisance["legacy_key_gate"].to(
+                device=target_key.device, dtype=target_key.dtype
+            )
+            value_gate = fpct_parent_nuisance["legacy_value_gate"].to(
+                device=target_value.device, dtype=target_value.dtype
+            )
+            expected_gate_shape = (B, Ht, N, 1)
+            try:
+                key_gate = torch.broadcast_to(key_gate, expected_gate_shape)
+                value_gate = torch.broadcast_to(value_gate, expected_gate_shape)
+            except RuntimeError as exc:
+                raise ValueError(
+                    "FPCT parent legacy gates must have shape "
+                    f"broadcastable to {expected_gate_shape}"
+                ) from exc
+        elif getattr(self, "legacy_scalar_gate_eval_mode", "checkpoint_native") == "forced_on":
             key_gate = torch.ones(
                 B, Ht, N, 1, device=target_key.device, dtype=target_key.dtype
             )
@@ -4553,19 +4571,36 @@ class C2CProjector(Projector):
         norm_key_scalar = torch.sigmoid(key_scalar)
         norm_value_scalar = torch.sigmoid(value_scalar)
 
-        key_alignment_confidence, value_alignment_confidence = (
-            self._compute_alignment_confidence(
-                source_confidence=source_confidence,
-                source_weights=source_weights,
-                source_entropy=source_entropy,
-                source_entropy_override=source_entropy_override,
-                key_hidden=key_hidden,
-                value_hidden=value_hidden,
-                target_shape=(B, Ht, N, Dt),
-                dtype=target_key.dtype,
-                device=target_key.device,
+        if fpct_parent_nuisance is not None:
+            key_alignment_confidence = fpct_parent_nuisance[
+                "key_alignment_confidence"
+            ].to(device=target_key.device, dtype=target_key.dtype)
+            value_alignment_confidence = fpct_parent_nuisance[
+                "value_alignment_confidence"
+            ].to(device=target_value.device, dtype=target_value.dtype)
+            expected_confidence_shape = (B, Ht, N, 1)
+            if (
+                key_alignment_confidence.shape != expected_confidence_shape
+                or value_alignment_confidence.shape != expected_confidence_shape
+            ):
+                raise ValueError(
+                    "FPCT parent confidence must have shape "
+                    f"{expected_confidence_shape}"
+                )
+        else:
+            key_alignment_confidence, value_alignment_confidence = (
+                self._compute_alignment_confidence(
+                    source_confidence=source_confidence,
+                    source_weights=source_weights,
+                    source_entropy=source_entropy,
+                    source_entropy_override=source_entropy_override,
+                    key_hidden=key_hidden,
+                    value_hidden=value_hidden,
+                    target_shape=(B, Ht, N, Dt),
+                    dtype=target_key.dtype,
+                    device=target_key.device,
+                )
             )
-        )
         key_residual_scale, value_residual_scale = (
             self._current_alignment_residual_scales(
                 dtype=target_key.dtype,
@@ -4588,6 +4623,14 @@ class C2CProjector(Projector):
                 device=target_key.device,
             )
         )
+
+        if fpct_capture_parent_nuisance:
+            self._fpct_last_parent_nuisance = {
+                "legacy_key_gate": key_gate,
+                "legacy_value_gate": value_gate,
+                "key_alignment_confidence": key_alignment_confidence,
+                "value_alignment_confidence": value_alignment_confidence,
+            }
 
         # Combine (preserve_target_weight=False, add_self=True)
         output_key = (

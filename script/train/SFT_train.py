@@ -1339,6 +1339,7 @@ def setup_models(
                 multi_source_fusion_mode=model_config.get(
                     "multi_source_fusion_mode", "sequential"
                 ),
+                fpct_operator=model_config.get("fpct_operator"),
             )
             .to(device)
             .eval()

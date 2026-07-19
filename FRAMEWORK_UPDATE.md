@@ -714,3 +714,40 @@ FPCT-1A-R 判定 `GO`，只表示 human decision lock 和 prospective amendment 
 ### 结论
 
 FPCT-1B 判定 `SINGLE_PAIR_PILOT_READY`。这只说明 TinyLlama pair 在现有数据上具有充分 structural opportunity，允许 single-pair operator pilot；不支持 cross-pair confirmatory claim，也不证明 query-time separability、accuracy benefit 或 FPCT 数学有效性。因 audit 完整且无 integrity failure，本次条件授权允许进入 FPCT-1C reference oracle；仍未授权任何 GPU、训练、checkpoint 或正式 accuracy evaluation。
+
+## 2026-07-19：FPCT-1C/2/3 CPU operator gate 与 FPCT-4 non-operative draft
+
+### 研究目标
+
+在 FPCT-1B 唯一 ready 的 TinyLlama structural-support 条件下，先建立独立 pure-tensor reference oracle，再验证现有 `C_pre` 生产路径是否存在无歧义的 candidate-factorization seam；只有数学、mask、gradient、nuisance 与 legacy-default invariants 全部通过后，生成 GPU pilot 的非操作性草案。
+
+### 核心改动
+
+- 新增 `FPCT_1C_OPERATOR_CONTRACT.md`、pure-tensor reference 与 manifest，完整实现 `C_pre`、`C_post`、flat/hierarchical `F` 和 replicated-collapse diagnostic。
+- 新增 `FPCT_NUISANCE_CALLGRAPH.md`，将 alignment prior、entropy、confidence、legacy scalar gate、residual、fuser、position 与 attention 的现有所有权映射到候选轴处理边界。
+- 新增 `rosetta/model/fpct_attention.py`：保存 `[B,Hkv,N,K,D]` candidate sidecar，只对 `m>=2` parents 做 ambiguous-only packing；children 继承 parent mask/bias，并在同一个 global denominator 中加入一次 `log A`。
+- 修改 wrapper/projector，使 `C_post/F` 使用同一个 candidate-specific fuser；parent confidence、entropy 与 legacy Gumbel/hard gate 只计算/采样一次后广播。`m=1` 保持单 slot，`m=0` 保留 native fallback。
+- 增加 `fpct_operator=c_pre|c_post|f` 的训练/评测配置 plumbing；flag 未设置时保持 legacy 路径和 state dict，不新增 F-only trainable parameter。
+- 新增 CPU production tests，覆盖 reference/production、dense/packed、K=1 eval/training、shared Gumbel、global/hierarchical、replicated collapse、refinement/permutation、causal/padding/zero support、all-invalid、GQA/MQA、gradient、config/state-dict/default regression 与 prior single-use。
+- 基于 FPCT-1B 的真实 `m` 分布和静态 receiver config 生成 expansion/cache/FLOP 估算；新增 FPCT-4 non-operative GPU draft，但没有生成 Kubernetes Job。
+
+### 实验配置
+
+- 全部命令显式 `CUDA_VISIBLE_DEVICES=""`；Conda 环境 `c2c-py310-cu124`。
+- Reference tolerance：float64 `atol=1e-10, rtol=1e-8`；float32 `atol=rtol=2e-5`；gradcheck `eps=1e-6, atol=1e-5, rtol=1e-3`；invalid probability/gradient exact zero。
+- 第一轮仍固定 `a=1`、`g=1`、`position_mode=legacy`；无 native null、selector、Route3 router、de-RoPE/re-RoPE 或新 gate。
+- CPU-safe full suite 排除 `test/test_phase2a_0_opportunity_audit.py`，避免越过独立研究线的 Phase2A outcome firewall。
+- 资源估算使用本地 Qwen3-0.6B `config.json`：28 layers、16 query heads、8 KV heads、head dim 128、bfloat16；未加载模型权重。
+
+### 验证结果
+
+- FPCT-1C reference tests：`19 passed`；全部冻结 invariants 和预批准 tolerance 通过，未放宽 tolerance。
+- FPCT targeted（1B audit + 1C reference + production path）：`52 passed`。
+- CPU-safe full suite：`288 passed, 2 warnings`。
+- Default、`c_pre` 与 `f` 在 matched seed 下 state-dict keys/tensors 相同；legacy weighted-gather regression 通过。
+- Selected TinyLlama pair 的 mean expansion ratio 为 ARC `1.2376`、OpenBookQA `1.2392`、MMLU-Redux `1.2271`；p95 分别为 `1.2975/1.2821/1.3015`。Dense top-k4 mean ratio 为 `3.7387/3.6921/3.7621`。
+- TinyLlama ambiguous-only mean K/V sidecar 每层约 `236.42/200.78/265.32 KiB`；28 层增量 cache 约 `3.63/3.07/4.04 MiB`。
+
+### 结论与下一步
+
+FPCT-1C、FPCT-2 和 FPCT-3 判定 `GO`，只建立 mathematical/reference 与 CPU implementation correctness，不代表真实模型中机制已激活或 task accuracy 改善。FPCT-4 draft 标记 `REVIEW REQUIRED / GPU NOT AUTHORIZED`。下一次人工批准必须在任何 GPU 结果前冻结 seed、matched training budget、checkpoint rule、formal effect/power gate、fp16/bfloat16 tolerance、resource ceiling 与 stopping rules；`F-C_post` 仍是唯一 headline。

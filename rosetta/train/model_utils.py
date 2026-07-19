@@ -141,6 +141,7 @@ def setup_models(
         model_list=[base_model, teacher_model],
         base_model_idx=0,
         projector_list=[projector],
+        fpct_operator=model_config.get("fpct_operator"),
     ).to(device)
 
     # Configure projector mappings

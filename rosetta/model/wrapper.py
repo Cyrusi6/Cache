@@ -11,6 +11,12 @@ from transformers.modeling_outputs import CausalLMOutputWithPast
 import json
 
 from rosetta.model.projector import Projector
+from rosetta.model.fpct_attention import (
+    FPCTSidecarSegment,
+    normalize_fpct_operator,
+    normalize_prior as normalize_fpct_prior,
+    pack_fpct_memory,
+)
 from rosetta.model.sampling import sample_token
 from transformers.utils import ModelOutput
 
@@ -62,6 +68,7 @@ class RosettaModel(nn.Module):
         projector_list: List[Projector] = [],
         include_response: bool = False,
         multi_source_fusion_mode: str = "parallel",
+        fpct_operator: Optional[str] = None,
     ):
         super().__init__()
         # model list: a list of model, model 0 by default is the base model
@@ -82,16 +89,23 @@ class RosettaModel(nn.Module):
         self.projector_dict = {}
         self.kv_cache_dict = {}
         self._generation_hook_handlers = []
+        self.fpct_operator = normalize_fpct_operator(fpct_operator)
+        self._fpct_sidecars: Dict[int, List[FPCTSidecarSegment]] = {}
 
         # Multi-source fusion mode:
         # "sequential" (default): each source updates base cache iteratively
         # "parallel": all sources project from clean base cache, then sum projections
         self.include_response = include_response
+        if self.fpct_operator == "f" and include_response:
+            raise ValueError("FPCT F does not support include_response hooks")
         if multi_source_fusion_mode not in ["sequential", "parallel"]:
             raise ValueError(
                 f"multi_source_fusion_mode must be 'sequential' or 'parallel', got '{multi_source_fusion_mode}'"
             )
         self.multi_source_fusion_mode = multi_source_fusion_mode
+
+    def fpct_config_dict(self) -> Dict[str, Optional[str]]:
+        return {"operator": self.fpct_operator, "position_mode": "legacy", "a": "1", "g": "1"}
 
     @property
     def device(self):
@@ -221,7 +235,12 @@ class RosettaModel(nn.Module):
             self.kv_cache_dict[target_model_idx][source_model_idx] = cache
 
     @staticmethod
-    def _monkeypatch_qwen3_attention_forward(attn_module, new_k_cache, new_v_cache):
+    def _monkeypatch_qwen3_attention_forward(
+        attn_module,
+        new_k_cache,
+        new_v_cache,
+        fpct_sidecars: Optional[List[FPCTSidecarSegment]] = None,
+    ):
         """
         Monkeypatch Qwen3Attention.forward so that *current step* attention uses the
         provided key/value (in cache space) before computing attention.
@@ -290,6 +309,18 @@ class RosettaModel(nn.Module):
                     key_states, value_states, self.layer_idx, cache_kwargs
                 )
 
+            if fpct_sidecars:
+                packed = pack_fpct_memory(
+                    key_states,
+                    value_states,
+                    attention_mask,
+                    fpct_sidecars,
+                    query_length=query_states.shape[-2],
+                )
+                key_states = packed.key
+                value_states = packed.value
+                attention_mask = packed.attention_mask
+
             attention_interface = eager_attention_forward
             if self.config._attn_implementation != "eager":
                 if self.config._attn_implementation == "sdpa" and kwargs.get(
@@ -320,6 +351,32 @@ class RosettaModel(nn.Module):
 
         attn_module.forward = types.MethodType(patched_forward, attn_module)
         return orig_forward
+
+    def _install_fpct_attention_hooks(self):
+        if self.fpct_operator != "f" or not self._fpct_sidecars:
+            return []
+        handlers = []
+        for layer_idx, segments in sorted(self._fpct_sidecars.items()):
+            if not segments:
+                continue
+            attn = self.model_list[self.base_model_idx].model.layers[
+                layer_idx
+            ].self_attn
+            original = self._monkeypatch_qwen3_attention_forward(
+                attn,
+                None,
+                None,
+                fpct_sidecars=segments,
+            )
+            handlers.append((attn, original))
+        return handlers
+
+    def _base_model_forward_with_fpct(self, **kwargs):
+        handlers = self._install_fpct_attention_hooks()
+        try:
+            return self.model_list[self.base_model_idx].forward(**kwargs)
+        finally:
+            self.remove_hooks(handlers)
 
     def register_hooks(
         self,
@@ -533,6 +590,193 @@ class RosettaModel(nn.Module):
         return gathered_key * valid_expanded, gathered_value * valid_expanded, valid
 
     @staticmethod
+    def _fpct_legal_prior(
+        source_indices: torch.Tensor,
+        source_weights: torch.Tensor,
+        source_length: int,
+        dtype: torch.dtype,
+        device: torch.device,
+    ) -> tuple:
+        indices = source_indices.to(device=device)
+        weights = source_weights.to(device=device, dtype=dtype)
+        finite = torch.isfinite(weights)
+        if torch.any(~finite):
+            raise ValueError("FPCT source prior contains nonfinite mass")
+        if torch.any(weights < 0):
+            raise ValueError("FPCT source prior contains negative mass")
+        index_valid = (indices >= 0) & (indices < source_length)
+        if torch.any((weights > 0) & ~index_valid):
+            raise ValueError("FPCT source prior assigns positive mass to an invalid index")
+        legal = index_valid & (weights > 0)
+        safe = indices.masked_fill(~legal, -1)
+        sorted_indices = safe.sort(dim=-1).values
+        duplicate = (
+            (sorted_indices[..., 1:] == sorted_indices[..., :-1])
+            & (sorted_indices[..., 1:] >= 0)
+        )
+        if torch.any(duplicate):
+            raise ValueError("FPCT source prior contains a duplicate legal index")
+        normalized, legal = normalize_fpct_prior(weights, legal)
+        return normalized, legal
+
+    @staticmethod
+    def _fpct_projector_is_supported(projector: Projector) -> bool:
+        return (
+            hasattr(projector, "_compute_alignment_confidence")
+            and getattr(projector, "alignment_weight_calibration_mode", "none")
+            == "none"
+            and getattr(projector, "learned_alignment_mode", "none") == "none"
+            and getattr(projector, "learned_alignment_injection_gate_mode", "none")
+            == "none"
+            and getattr(projector, "learned_alignment_transfer_gate_mode", "none")
+            == "none"
+        )
+
+    def _project_fpct_candidates(
+        self,
+        *,
+        projector: Projector,
+        source_key_cache: torch.Tensor,
+        source_value_cache: torch.Tensor,
+        base_kv: tuple,
+        source_indices: torch.Tensor,
+        source_weights: torch.Tensor,
+        soft_section: dict,
+    ) -> tuple:
+        if not self._fpct_projector_is_supported(projector):
+            raise ValueError(
+                "FPCT c_post/f requires the frozen C2C projector path and rejects "
+                "learned alignment/router/injection/transfer gates"
+            )
+        source_candidates_k, source_candidates_v, index_valid = (
+            self._source_kv_candidates_from_indices(
+                source_key_cache,
+                source_value_cache,
+                source_indices,
+            )
+        )
+        prior, legal = self._fpct_legal_prior(
+            source_indices,
+            source_weights,
+            source_key_cache.shape[2],
+            source_key_cache.dtype,
+            source_key_cache.device,
+        )
+        legal = legal & index_valid.to(device=legal.device)
+        prior, legal = normalize_fpct_prior(prior, legal)
+        weights = prior[:, None, :, :, None]
+        averaged_source = (
+            (source_candidates_k * weights).sum(dim=3),
+            (source_candidates_v * weights).sum(dim=3),
+        )
+        projector_uses_confidence = (
+            hasattr(projector, "uses_internal_source_confidence")
+            and projector.uses_internal_source_confidence()
+        )
+        projector_kwargs = {}
+        if projector_uses_confidence:
+            projector_kwargs = {
+                "source_confidence": soft_section.get("source_confidence"),
+                "source_weights": prior,
+                "source_entropy": soft_section.get("source_entropy"),
+                "source_entropy_override": soft_section.get(
+                    "source_entropy_override"
+                ),
+            }
+        parent_projected = projector.forward(
+            averaged_source,
+            base_kv,
+            fpct_capture_parent_nuisance=True,
+            **projector_kwargs,
+        )
+        parent_confidence_aux = getattr(
+            projector, "_last_alignment_confidence_aux_loss", None
+        )
+        parent_residual_aux = getattr(
+            projector, "_last_alignment_residual_scale_aux_loss", None
+        )
+        nuisance = getattr(projector, "_fpct_last_parent_nuisance", None)
+        if not isinstance(nuisance, dict):
+            raise ValueError("FPCT projector did not expose parent nuisance")
+        if not projector_uses_confidence:
+            parent_projected = self._apply_source_confidence_to_projected_kv(
+                parent_projected[0],
+                parent_projected[1],
+                base_kv[0],
+                base_kv[1],
+                soft_section,
+            )
+
+        candidate_keys = []
+        candidate_values = []
+        for candidate_idx in range(source_candidates_k.shape[3]):
+            projected_key, projected_value = projector.forward(
+                (
+                    source_candidates_k[:, :, :, candidate_idx, :],
+                    source_candidates_v[:, :, :, candidate_idx, :],
+                ),
+                base_kv,
+                fpct_parent_nuisance=nuisance,
+                **projector_kwargs,
+            )
+            if not projector_uses_confidence:
+                projected_key, projected_value = (
+                    self._apply_source_confidence_to_projected_kv(
+                        projected_key,
+                        projected_value,
+                        base_kv[0],
+                        base_kv[1],
+                        soft_section,
+                    )
+                )
+            candidate_keys.append(projected_key)
+            candidate_values.append(projected_value)
+        fused_key = torch.stack(candidate_keys, dim=3)
+        fused_value = torch.stack(candidate_values, dim=3)
+        projector._last_alignment_confidence_aux_loss = parent_confidence_aux
+        projector._last_alignment_residual_scale_aux_loss = parent_residual_aux
+        collapsed_key = (fused_key * weights).sum(dim=3)
+        collapsed_value = (fused_value * weights).sum(dim=3)
+        has_support = legal.any(dim=-1)[:, None, :, None]
+        collapsed_key = torch.where(has_support, collapsed_key, base_kv[0])
+        collapsed_value = torch.where(has_support, collapsed_value, base_kv[1])
+        return (
+            collapsed_key,
+            collapsed_value,
+            fused_key,
+            fused_value,
+            prior,
+            legal,
+            parent_projected,
+            nuisance,
+        )
+
+    def _store_fpct_sidecar(
+        self,
+        target_layer_idx: int,
+        parent_start: int,
+        fused_key: torch.Tensor,
+        fused_value: torch.Tensor,
+        prior: torch.Tensor,
+        legal: torch.Tensor,
+    ) -> None:
+        segment = FPCTSidecarSegment(
+            parent_start=parent_start,
+            key=fused_key,
+            value=fused_value,
+            prior=prior,
+            valid=legal,
+        )
+        segment.validate()
+        segments = self._fpct_sidecars.setdefault(target_layer_idx, [])
+        new_end = parent_start + fused_key.shape[2]
+        for existing in segments:
+            existing_end = existing.parent_start + existing.key.shape[2]
+            if parent_start < existing_end and existing.parent_start < new_end:
+                raise ValueError("overlapping FPCT sidecar segments")
+        segments.append(segment)
+
+    @staticmethod
     def _apply_source_confidence_to_projected_kv(
         projected_key: torch.Tensor,
         projected_value: torch.Tensor,
@@ -617,6 +861,7 @@ class RosettaModel(nn.Module):
 
         if seqlen > 1:
             self.kv_cache_dict = dict()
+            self._fpct_sidecars = {}
 
         num_sections = len(kv_cache_index) if kv_cache_index is not None else 1
         use_soft_alignment = soft_alignment is not None
@@ -675,7 +920,7 @@ class RosettaModel(nn.Module):
                     )
 
                 # calculate target model kvcache
-                output = self.model_list[self.base_model_idx].forward(
+                output = self._base_model_forward_with_fpct(
                     input_ids=prefill_input_ids,
                     attention_mask=prefill_attention_mask,
                     position_ids=prefill_position_ids,
@@ -700,7 +945,7 @@ class RosettaModel(nn.Module):
 
             else:
 
-                output = self.model_list[self.base_model_idx].forward(
+                output = self._base_model_forward_with_fpct(
                     input_ids=prefill_input_ids,
                     attention_mask=prefill_attention_mask,
                     position_ids=prefill_position_ids,
@@ -836,6 +1081,7 @@ class RosettaModel(nn.Module):
 
                                 projected_kv_list = []
                                 source_kv_list = []
+                                fpct_candidate_records = []
                                 for source_model_layer_idx, projector_idx in pair_list:
                                     source_key_cache, source_value_cache = (
                                         self.kv_cache_dict[self.base_model_idx][
@@ -846,6 +1092,24 @@ class RosettaModel(nn.Module):
                                     if use_soft_alignment:
                                         soft_section = soft_alignment[i]
                                         source_weights = soft_section["source_weights"]
+                                        if self.fpct_operator in {"c_post", "f"}:
+                                            fpct_record = self._project_fpct_candidates(
+                                                projector=projector,
+                                                source_key_cache=source_key_cache,
+                                                source_value_cache=source_value_cache,
+                                                base_kv=new_base_kv_cache,
+                                                source_indices=soft_section[
+                                                    "source_indices"
+                                                ],
+                                                source_weights=source_weights,
+                                                soft_section=soft_section,
+                                            )
+                                            projected_kv_list.append(
+                                                (fpct_record[0], fpct_record[1])
+                                            )
+                                            source_kv_list.append(fpct_record[6])
+                                            fpct_candidate_records.append(fpct_record)
+                                            continue
                                         projector_uses_learned_alignment = (
                                             hasattr(
                                                 projector,
@@ -965,6 +1229,20 @@ class RosettaModel(nn.Module):
 
                                 # Use first projector result
                                 agg_key, agg_value = projected_kv_list[0]
+                                if self.fpct_operator == "f":
+                                    if not fpct_candidate_records:
+                                        raise ValueError(
+                                            "FPCT F requires soft-alignment candidate records"
+                                        )
+                                    fpct_record = fpct_candidate_records[0]
+                                    self._store_fpct_sidecar(
+                                        target_layer_idx=target_layer_idx,
+                                        parent_start=start,
+                                        fused_key=fpct_record[2],
+                                        fused_value=fpct_record[3],
+                                        prior=fpct_record[4],
+                                        legal=fpct_record[5],
+                                    )
 
                                 # Collect or apply projection based on mode
                                 if self.multi_source_fusion_mode == "sequential":

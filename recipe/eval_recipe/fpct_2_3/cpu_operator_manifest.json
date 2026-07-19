@@ -1,0 +1,113 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_2_3_cpu_operator_v1",
+  "stages": {
+    "fpct_2": "GO",
+    "fpct_3": "GO"
+  },
+  "implementation_base_commit": "1c2ff365f3cf90e01d4c19066cdb889201094e75",
+  "dependencies": {
+    "fpct_1b_status": "SINGLE_PAIR_PILOT_READY",
+    "fpct_1b_integrity_failure": false,
+    "fpct_1b_result_manifest": {
+      "path": "recipe/eval_recipe/fpct_1b/fpct_1b_result_manifest.json",
+      "sha256": "e2069130ee5db4be8a2082b53c133409ff517cb951eebd6a45de9865c980351b"
+    },
+    "fpct_1c_status": "GO",
+    "fpct_1c_manifest": {
+      "path": "recipe/eval_recipe/fpct_1c/operator_contract_manifest.json",
+      "sha256": "b041b957697fd128359bb0b8bb2491631c9cd2553036ce28d3c69ef105d83b35"
+    }
+  },
+  "operators": {
+    "allowed": [
+      "c_pre",
+      "c_post",
+      "f"
+    ],
+    "default_unset": "legacy_c_pre_behavior",
+    "headline_contrast": "f-c_post",
+    "secondary_contrast": "c_post-c_pre",
+    "overall_nonmechanistic_contrast": "f-c_pre",
+    "position_mode": "legacy",
+    "a": 1,
+    "g": 1,
+    "candidate_prior": "raw_mask_then_l1_normalize_logA_once",
+    "native_null": false,
+    "route3_router": false,
+    "new_trainable_parameters": false
+  },
+  "artifacts": {
+    "callgraph": {
+      "path": "FPCT_NUISANCE_CALLGRAPH.md",
+      "sha256": "86af3175ff718af0cdcf14ef90528ab069db42c2d5de01e3a03b78887c72169b"
+    },
+    "stage_report": {
+      "path": "FPCT_2_3_CPU_IMPLEMENTATION.md",
+      "sha256": "41836ac4b637db31db0292f9edd1be8a485f6129c6706c0ced69bef70f08a518"
+    },
+    "attention": {
+      "path": "rosetta/model/fpct_attention.py",
+      "sha256": "1ed57fc188f70b82c7a4936395f459255cb111e4a152c705c1a0a12343c15375"
+    },
+    "wrapper": {
+      "path": "rosetta/model/wrapper.py",
+      "sha256": "0522271b1fd8764d5ff4df2424efb61d5862ff0a7e53b765f890041645b98cab"
+    },
+    "projector": {
+      "path": "rosetta/model/projector.py",
+      "sha256": "f7ff342706dd28d2ea06721e64a4955d19c9b6f0a68823a5a9ea625bd69cb322"
+    },
+    "training_plumbing": {
+      "path": "rosetta/train/model_utils.py",
+      "sha256": "1af2bf6dbf867e9bb9d17e13c84068a5802e1fd08f4aa34aa923947c59cdc160"
+    },
+    "evaluation_plumbing": {
+      "path": "rosetta/utils/evaluate.py",
+      "sha256": "c36b3b2f0490d8a895bd24449b065013bedd11517ac34781b08f9513ce4934c9"
+    },
+    "sft_plumbing": {
+      "path": "script/train/SFT_train.py",
+      "sha256": "9878ea3dde96438857e39b256cae59a08f2da56ea484c9fcf508bb7e3fd79239"
+    },
+    "production_tests": {
+      "path": "test/test_fpct_production_path.py",
+      "sha256": "003f4c01547294ecdedd8dae370c1d3e6a586e6ab4b86574b15742e208ff93ce"
+    }
+  },
+  "slot_contract": {
+    "m0": "original_native_fallback",
+    "m1": "one_slot",
+    "m_ge_2": "legal_children_only",
+    "children_in_dynamic_cache_positions": false,
+    "child_mask_bias": "inherit_parent",
+    "global_denominator": true
+  },
+  "nuisance_contract": {
+    "entropy_confidence": "compute_once_per_parent_and_broadcast",
+    "legacy_gumbel_gate": "sample_once_per_parent_head_and_broadcast",
+    "candidate_fuser": "shared_between_c_post_and_f",
+    "candidate_outputs_matched": true
+  },
+  "tests": {
+    "targeted_command": "CUDA_VISIBLE_DEVICES=\"\" PYTHONPATH=/home/lijunsi/projects/Cache-fpct-factorized-transport /home/lijunsi/miniconda3/envs/c2c-py310-cu124/bin/python -m pytest -q --no-cov --basetemp=local/tmp/pytest-fpct-targeted test/test_fpct_reference_operator.py test/test_fpct_production_path.py test/test_fpct_1b_structural_support_audit.py",
+    "targeted_result": "52 passed",
+    "cpu_safe_full_suite_command": "CUDA_VISIBLE_DEVICES=\"\" PYTHONPATH=/home/lijunsi/projects/Cache-fpct-factorized-transport /home/lijunsi/miniconda3/envs/c2c-py310-cu124/bin/python -m pytest -q --no-cov --basetemp=local/tmp/pytest-fpct-full --ignore=test/test_phase2a_0_opportunity_audit.py",
+    "cpu_safe_full_suite_result": "288 passed, 2 warnings",
+    "excluded_by_firewall": [
+      "test/test_phase2a_0_opportunity_audit.py"
+    ],
+    "tolerance_relaxed": false,
+    "legacy_default_regression": "pass"
+  },
+  "boundaries": {
+    "hf_llm_forward": false,
+    "model_weights_loaded": false,
+    "checkpoint_access": false,
+    "gpu": false,
+    "kubernetes": false,
+    "training": false,
+    "formal_accuracy_evaluation": false
+  },
+  "claim_boundary": "CPU implementation and invariant correctness only; no real-model activation, task-accuracy, GPU or training claim"
+}

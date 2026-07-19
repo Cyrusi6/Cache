@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "stage": "FPCT-1C",
+  "status": "GO",
+  "source_commit": "1c2ff365f3cf90e01d4c19066cdb889201094e75",
+  "dependency": {
+    "fpct_1b_status": "SINGLE_PAIR_PILOT_READY",
+    "fpct_1b_integrity_failure": false,
+    "fpct_1b_result_manifest": {
+      "path": "recipe/eval_recipe/fpct_1b/fpct_1b_result_manifest.json",
+      "sha256": "e2069130ee5db4be8a2082b53c133409ff517cb951eebd6a45de9865c980351b"
+    }
+  },
+  "artifacts": {
+    "contract": {
+      "path": "FPCT_1C_OPERATOR_CONTRACT.md",
+      "sha256": "eb9da4ceb3169ee7ec9c76bf0dc70358a440474ceed3db3d748041200a420478"
+    },
+    "reference": {
+      "path": "script/analysis/fpct_reference_operator.py",
+      "sha256": "51607981f4e47e54e534e9e7cd809eaa08cb985cd7ba141320be5870ff7e189b"
+    },
+    "tests": {
+      "path": "test/test_fpct_reference_operator.py",
+      "sha256": "34e537d379b87c398960c60c128d2a861b6be492c7d410704005f3587ef7e208"
+    }
+  },
+  "operators": [
+    "c_pre",
+    "c_post",
+    "f"
+  ],
+  "diagnostic": "replicated_collapse",
+  "input_contract": {
+    "Q": "[B,Hq,T,D]",
+    "native_KV": "[B,Hkv,N,D]",
+    "source_candidates": "[B,Hs,N,K,Ds]",
+    "fused_candidates": "[B,Hkv,N,K,D]",
+    "A_valid": "[B,N,K]",
+    "parent_bias_mask": "broadcastable to [B,Hq,T,N]",
+    "gqa_rule": "Hq must be divisible by Hkv"
+  },
+  "numerical_rules": {
+    "float64": {
+      "atol": 1e-10,
+      "rtol": 1e-8
+    },
+    "float32": {
+      "atol": 2e-5,
+      "rtol": 2e-5
+    },
+    "gradcheck": {
+      "eps": 1e-6,
+      "atol": 1e-5,
+      "rtol": 0.001
+    },
+    "invalid_probability_gradient": "exact_zero",
+    "fp16_bfloat16": "deferred_before_gpu"
+  },
+  "invariants": {
+    "flat_hierarchical_equivalence": "pass",
+    "m_le_1_degeneration": "pass",
+    "affine_fuser_cpre_cpost": "pass",
+    "replicated_collapse_cpost": "pass",
+    "refinement_duplicate_invariance": "pass",
+    "candidate_permutation": "pass",
+    "causal_parent_mask": "pass",
+    "invalid_padding_zero_support_exact_zero": "pass",
+    "single_global_denominator": "pass",
+    "forward_gradient_reference": "pass",
+    "jensen_gap": "pass",
+    "future_g0_receiver_recovery": "pass"
+  },
+  "targeted_tests": {
+    "command": "CUDA_VISIBLE_DEVICES=\"\" python -m pytest -q --no-cov test/test_fpct_reference_operator.py",
+    "result": "19 passed",
+    "tolerance_relaxed": false
+  },
+  "boundaries": {
+    "hf_model_forward": false,
+    "model_weights": false,
+    "checkpoint": false,
+    "gpu": false,
+    "training": false,
+    "production_path_change": false,
+    "future_g0_first_round_production": false
+  },
+  "claim_boundary": "mathematical/numerical reference correctness only; no real-data mechanism activation or task-accuracy claim"
+}

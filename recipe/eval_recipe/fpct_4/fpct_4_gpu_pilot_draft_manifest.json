@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_4_gpu_pilot_nonoperative_draft_v1",
+  "stage": "FPCT-4",
+  "status": "REVIEW_REQUIRED_GPU_NOT_AUTHORIZED",
+  "operative": false,
+  "implementation_base_commit": "1c2ff365f3cf90e01d4c19066cdb889201094e75",
+  "dependencies": {
+    "fpct_1b": "SINGLE_PAIR_PILOT_READY",
+    "selected_pair": "tinyllama",
+    "cross_pair_claim": false,
+    "fpct_1c": "GO",
+    "fpct_2": "GO",
+    "fpct_3": "GO"
+  },
+  "draft": {
+    "path": "FPCT_4_GPU_PILOT_DRAFT.md",
+    "sha256": "d39c9392930f605aabc0d8ac52eb70997fab51a3a770aec1cfda1dd8dcde5c35"
+  },
+  "resource_estimate": {
+    "report_path": "FPCT_CPU_RESOURCE_ESTIMATE.md",
+    "report_sha256": "08a4b96b2d8db65454e0882ae9abe153defbbcfd6ba0e4877bf415346a9678fa",
+    "local_json_path": "local/final_results/fpct_factorized_transport/fpct_1b_ambiguity_support/rev_7f8af71968a39bc6cba2e4e34de762b291cda834/resource_estimate.json",
+    "local_json_sha256": "51532857ebc6f3984ad0670ef8adf13ce5cb2f8b36757fd4575985ac088c5edc"
+  },
+  "required_arms": [
+    "c_pre",
+    "c_post",
+    "f"
+  ],
+  "headline_contrast": "f-c_post",
+  "inference_intervention": {
+    "Y_CC": "cpost_trained+cpost_inference",
+    "Y_CF": "cpost_trained+f_inference",
+    "Y_FC": "f_trained+cpost_inference",
+    "Y_FF": "f_trained+f_inference",
+    "interaction": "(Y_FF-Y_FC)-(Y_CF-Y_CC)"
+  },
+  "required_controls": [
+    "fixed_checkpoint_activation_smoke_diagnostic_only",
+    "replicated_collapse_inference",
+    "m_le_1_exact_control",
+    "candidate_permutation_refinement"
+  ],
+  "required_diagnostics": [
+    "gamma",
+    "candidate_logit_variance",
+    "candidate_logit_range",
+    "kl_gamma_prior",
+    "jensen_gap",
+    "D_K",
+    "D_V",
+    "latency",
+    "peak_hbm",
+    "expanded_slot_ratio",
+    "beneficial_harmful_event_reaudit"
+  ],
+  "human_approval_required": [
+    "diagnostic_checkpoint_and_initialization_rule",
+    "seed_count_and_identities",
+    "matched_training_budget_optimizer_checkpoint_selection",
+    "formal_effect_threshold_and_decision_rule",
+    "paired_power_analysis",
+    "fp16_bfloat16_tolerances",
+    "evaluation_split_release_and_event_schema",
+    "latency_hbm_protocol_and_resource_ceiling",
+    "failure_stopping_rules"
+  ],
+  "forbidden": {
+    "kubernetes_job_manifest": true,
+    "gpu_launch": true,
+    "model_or_checkpoint_load": true,
+    "training": true,
+    "accuracy_evaluation": true
+  }
+}
