@@ -4,6 +4,7 @@ from contextlib import contextmanager
 import json
 import copy
 from pathlib import Path
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -523,6 +524,11 @@ def _mark_dataset_complete(config_path: Path) -> None:
     )
 
 
+def _mark_triplet_complete(config_paths: dict[str, Path]) -> None:
+    for config_path in config_paths.values():
+        _mark_dataset_complete(config_path)
+
+
 def test_small_benchmark_stager_uses_original_configs_and_sequential_masks(
     tmp_path: Path,
 ) -> None:
@@ -673,6 +679,147 @@ def test_main_lane_rechecks_completion_after_acquiring_stager_lock(
 
     monkeypatch.setattr(phase15, "run_triplet", unexpected_triplet)
     assert phase15.run_shard(manifest_path, 0, 1) == 0
+
+
+def test_opportunistic_shard_skips_locked_run_then_backfills_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path, paths = _write_small_benchmark_stager_fixture(
+        tmp_path, run_ids=("run0", "run1")
+    )
+    run0_lock = phase15._run_lock_path(manifest_path, "run0")
+    lock_acquired = threading.Event()
+    release_lock = threading.Event()
+    lock_released = threading.Event()
+
+    def hold_run0_lock() -> None:
+        with phase15._exclusive_file_lock(run0_lock, blocking=True):
+            lock_acquired.set()
+            assert release_lock.wait(timeout=5.0)
+        lock_released.set()
+
+    holder = threading.Thread(target=hold_run0_lock, daemon=True)
+    holder.start()
+    assert lock_acquired.wait(timeout=5.0)
+    events: list[str] = []
+
+    def run_triplet(**kwargs) -> int:
+        run_id = kwargs["arc_config"].parent.name
+        events.append(run_id)
+        _mark_triplet_complete(paths[run_id])
+        if run_id == "run1":
+            release_lock.set()
+            assert lock_released.wait(timeout=5.0)
+        return 0
+
+    monkeypatch.setattr(phase15, "run_triplet", run_triplet)
+    try:
+        assert (
+            phase15.run_shard_opportunistic(
+                manifest_path,
+                0,
+                1,
+                idle_poll_seconds=0.01,
+                sleep_fn=lambda _seconds: None,
+            )
+            == 0
+        )
+    finally:
+        release_lock.set()
+        holder.join(timeout=5.0)
+
+    assert not holder.is_alive()
+    assert events == ["run1", "run0"]
+
+
+def test_opportunistic_shard_polls_at_bounded_interval_when_all_runs_locked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path, paths = _write_small_benchmark_stager_fixture(tmp_path)
+    attempts = 0
+
+    @contextmanager
+    def busy_once(_path, *, blocking):
+        nonlocal attempts
+        assert blocking is False
+        attempts += 1
+        if attempts == 1:
+            raise phase15.ExclusiveLockBusy("busy for one scan")
+        yield
+
+    sleeps: list[float] = []
+
+    def run_triplet(**_kwargs) -> int:
+        _mark_triplet_complete(paths["run0"])
+        return 0
+
+    monkeypatch.setattr(phase15, "_exclusive_file_lock", busy_once)
+    monkeypatch.setattr(phase15, "run_triplet", run_triplet)
+
+    assert (
+        phase15.run_shard_opportunistic(
+            manifest_path,
+            0,
+            1,
+            idle_poll_seconds=0.25,
+            sleep_fn=sleeps.append,
+        )
+        == 0
+    )
+    assert sleeps == [0.25]
+    assert attempts == 2
+
+    with pytest.raises(ValueError, match="at most 60"):
+        phase15.run_shard_opportunistic(
+            manifest_path,
+            0,
+            1,
+            idle_poll_seconds=60.01,
+        )
+
+
+def test_opportunistic_shard_exits_when_all_triplets_are_complete(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path, paths = _write_small_benchmark_stager_fixture(
+        tmp_path, run_ids=("run0", "run1")
+    )
+    for config_paths in paths.values():
+        _mark_triplet_complete(config_paths)
+
+    def unexpected_triplet(**_kwargs):
+        raise AssertionError("completed triplets must not be evaluated")
+
+    def unexpected_sleep(_seconds):
+        raise AssertionError("completed shard must not idle-poll")
+
+    monkeypatch.setattr(phase15, "run_triplet", unexpected_triplet)
+    assert (
+        phase15.run_shard_opportunistic(
+            manifest_path,
+            0,
+            1,
+            sleep_fn=unexpected_sleep,
+        )
+        == 0
+    )
+
+
+def test_opportunistic_shard_propagates_failure_without_starting_later_runs(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    manifest_path, _paths = _write_small_benchmark_stager_fixture(
+        tmp_path, run_ids=("run0", "run1")
+    )
+    events: list[str] = []
+
+    def fail_first(**kwargs) -> int:
+        events.append(kwargs["arc_config"].parent.name)
+        return 23
+
+    monkeypatch.setattr(phase15, "run_triplet", fail_first)
+    assert phase15.run_shard_opportunistic(manifest_path, 0, 1) == 23
+    assert events == ["run0"]
 
 
 def test_small_benchmark_stager_requires_complete_output_contract(

@@ -187,6 +187,117 @@ def test_run_shard_records_gpu_allocation_and_completion(
     assert child_env["C2C_PRESERVE_CUDA_VISIBLE_DEVICES"] == "1"
 
 
+def test_run_shard_opportunistic_selects_idle_pair_and_forwards_tail_mode(
+    tmp_path: Path,
+) -> None:
+    manifest = _manifest(tmp_path / "manifest.json")
+    digest = jobs._sha256(manifest)
+    state_dir = tmp_path / "x4-tail"
+    calls = []
+
+    def runner(command, **kwargs):
+        if command[0] == "nvidia-smi":
+            return subprocess.CompletedProcess(
+                command,
+                0,
+                stdout=(
+                    "GPU-a, 12\nGPU-hidden, 19456\n"
+                    "GPU-c, 18\nGPU-d, 24\n"
+                ),
+                stderr="",
+            )
+        calls.append((command, kwargs))
+        return subprocess.CompletedProcess(command, 0)
+
+    assert jobs.run_shard_opportunistic(
+        execution_manifest=manifest,
+        expected_manifest_sha256=digest,
+        shard_index=5,
+        num_shards=7,
+        state_dir=state_dir,
+        max_startup_used_mib=4096,
+        idle_poll_seconds=2.5,
+        runner=runner,
+    ) == 0
+
+    assert len(calls) == 1
+    command, kwargs = calls[0]
+    assert "run-shard-opportunistic" in command
+    assert command[command.index("--shard-index") + 1] == "5"
+    assert command[command.index("--idle-poll-seconds") + 1] == "2.5"
+    assert kwargs["env"]["CUDA_VISIBLE_DEVICES"] == "GPU-a,GPU-c"
+    assert kwargs["env"]["C2C_PRESERVE_CUDA_VISIBLE_DEVICES"] == "1"
+    completed = json.loads((state_dir / "shard_05/completed.json").read_text())
+    assert completed["runner_mode"] == "opportunistic"
+    assert completed["idle_poll_seconds"] == 2.5
+    assert all(
+        (tmp_path / "results" / str(index)).is_dir()
+        for index in range(72)
+        if index % 7 == 5
+    )
+
+
+def test_run_shard_opportunistic_rejects_unbounded_poll_before_gpu_query(
+    tmp_path: Path,
+) -> None:
+    manifest = _manifest(tmp_path / "manifest.json")
+
+    def unexpected_runner(*_args, **_kwargs):
+        raise AssertionError("invalid polling must fail before querying GPUs")
+
+    with pytest.raises(jobs.Phase15JobError, match="at most 60"):
+        jobs.run_shard_opportunistic(
+            execution_manifest=manifest,
+            expected_manifest_sha256=jobs._sha256(manifest),
+            shard_index=5,
+            num_shards=7,
+            state_dir=tmp_path / "tail",
+            max_startup_used_mib=4096,
+            idle_poll_seconds=60.01,
+            runner=unexpected_runner,
+        )
+
+
+def test_main_routes_opportunistic_recovery_cli(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    captured = {}
+
+    def opportunistic(**kwargs):
+        captured.update(kwargs)
+        return 17
+
+    monkeypatch.setattr(jobs, "run_shard_opportunistic", opportunistic)
+    assert jobs.main(
+        [
+            "run-shard-opportunistic",
+            "--execution-manifest",
+            str(tmp_path / "manifest.json"),
+            "--expected-manifest-sha256",
+            "a" * 64,
+            "--shard-index",
+            "5",
+            "--num-shards",
+            "7",
+            "--state-dir",
+            str(tmp_path / "tail-state"),
+            "--max-startup-used-mib",
+            "3072",
+            "--idle-poll-seconds",
+            "3.5",
+        ]
+    ) == 17
+    assert captured == {
+        "execution_manifest": tmp_path / "manifest.json",
+        "expected_manifest_sha256": "a" * 64,
+        "shard_index": 5,
+        "num_shards": 7,
+        "state_dir": tmp_path / "tail-state",
+        "max_startup_used_mib": 3072,
+        "idle_poll_seconds": 3.5,
+    }
+
+
 def test_run_node_x4_filters_hidden_busy_gpu_and_serializes_two_shards(
     tmp_path: Path,
 ) -> None:

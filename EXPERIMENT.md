@@ -311,3 +311,12 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 为避免修改仍被 x8/x48 Pending Jobs 核验的 canonical checkout，节点级 launcher 支持 `C2C_PHASE15_WORKSPACE_ROOT`；x4 resume 使用独立的精确 commit checkout，manifest、checkpoint 与结果路径仍指向同一份共享 `local/` 资产。
 - 预取器只用于尚未开始的 shard 1；MMLU 仍保持原双卡 subject 分片。按已观察首个 triplet 约 31.6 分钟与历史子任务耗时估算，预取可把 x4 关键路径缩短约 28%。x48 完成 shard 6 与 anomaly 后，还会按已完成 summary 对 x4/x8 未启动尾部做无重叠再平衡。
 - 调度改动验证为预取器聚焦 `15 passed`、全量 `229 passed`，保留 2 个既有 Pydantic warnings；未改变任何 Phase 1.5 方法、checkpoint 或统计比较。
+
+### 2026-07-19 Phase 1.5 x8 失联恢复与机会式再均衡
+
+- x8 节点失联后，主 manifest 的 shards 2–5 严格审计为 84/120 个 dataset outputs 完整、3 个 MMLU provenance-only partial、33 个完全未启动；即 14 个 incomplete triplets、36 个待恢复 dataset eval。shards 0/1/6 与 Qwen2.5 seed 44 anomaly 已完成。
+- 旧 x8 Job 基于未实现 run lock 的 `2b0d6a2`；只有在 Kubernetes 已将该 Job 标为 `FailureTarget`/failed、旧 worker 不再可能写结果后，才允许 x4/x48 接管。恢复继续使用同一 manifest SHA `424d0468a624fee6cd31932bf3795fa42b98bf20f9563ebf84a0afaca5605dd1` 和原绝对输出路径。
+- 新增 `run-shard-opportunistic`：逐 run 非阻塞获取 NFS lock，锁忙立即后移；取得锁后重新检查 triplet 完整性。shards 2–4 先 resume 三个 MMLU-only partial 和一个 full triplet，随后 x4/x48 可同时指向 shard 5，动态分担其 10 个 full triplets。
+- 节点级 `route1_phase15_jobs.py run-shard-opportunistic` 复用 `nvidia-smi` 显存过滤、双 UUID 选择、`CUDA_VISIBLE_DEVICES` 隔离、manifest SHA 校验、NFS 目录预创建和原子状态记录；不同节点必须使用不同 `--state-dir`，实验输出仍由共同 per-run lock 协调。
+- evaluator 非零或成功返回但 ARC/OpenBookQA/MMLU-Redux 未全部满足唯一 CSV、summary 与 provenance 契约时立即失败；整轮锁忙时按 `(0,60]` 秒有界轮询。原 `run-shard` 与 `run-node` 默认行为不变。
+- Phase 1.5 调度相关测试 `30 passed`；项目全量测试 `236 passed`、保留 2 个既有 Pydantic warnings。该恢复只改变固定矩阵的执行位置与吞吐，不改变方法、checkpoint、逐例预测定义或统计协议。

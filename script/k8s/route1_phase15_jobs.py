@@ -41,6 +41,8 @@ DEFAULT_CONTEXT = "default"
 DEFAULT_NAMESPACE = "c2c-research"
 DEFAULT_NAME_PREFIX = "r1-p15"
 DEFAULT_SHARED_HOST_PATH = "/netdisk"
+DEFAULT_OPPORTUNISTIC_IDLE_POLL_SECONDS = 5.0
+MAX_OPPORTUNISTIC_IDLE_POLL_SECONDS = 60.0
 EXPERIMENT_ROOT = PurePosixPath("/netdisk/lijunsi/c2c-route1-identifiability")
 WORKSPACE_ROOT = PurePosixPath(
     os.environ.get(
@@ -661,6 +663,7 @@ def _run_shard_on_gpu_pair(
     *, execution_manifest: Path, manifest: Mapping[str, Any],
     manifest_sha256: str, shard_index: int, num_shards: int,
     state_dir: Path, selected_uuids: Sequence[str], used_mib: Sequence[int],
+    opportunistic_idle_poll_seconds: float | None = None,
     runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
 ) -> int:
     if len(selected_uuids) != 2 or len(used_mib) != 2:
@@ -681,15 +684,27 @@ def _run_shard_on_gpu_pair(
         "selected_gpu_uuids": list(selected_uuids),
         "selected_gpu_used_mib_at_start": list(used_mib),
     }
+    intervention_command = "run-shard"
+    if opportunistic_idle_poll_seconds is not None:
+        intervention_command = "run-shard-opportunistic"
+        base["runner_mode"] = "opportunistic"
+        base["idle_poll_seconds"] = opportunistic_idle_poll_seconds
     _atomic_json(
         shard_state / "started.json",
         {**base, "started_at": datetime.now(timezone.utc).isoformat()},
     )
     command = [
-        sys.executable, str(INTERVENTION_SCRIPT), "run-shard",
+        sys.executable, str(INTERVENTION_SCRIPT), intervention_command,
         "--manifest", str(execution_manifest.resolve()),
         "--shard-index", str(shard_index), "--num-shards", str(num_shards),
     ]
+    if opportunistic_idle_poll_seconds is not None:
+        command.extend(
+            [
+                "--idle-poll-seconds",
+                f"{opportunistic_idle_poll_seconds:g}",
+            ]
+        )
     result = runner(command, cwd=str(WORKSPACE_ROOT), env=child_env, check=False)
     finished = datetime.now(timezone.utc).isoformat()
     if result.returncode == 0:
@@ -732,6 +747,63 @@ def run_shard(
         state_dir=state_dir.parent if state_dir.name == f"shard_{shard_index:02d}" else state_dir,
         selected_uuids=selected_uuids,
         used_mib=used_mib,
+        runner=runner,
+    )
+
+
+def run_shard_opportunistic(
+    *, execution_manifest: Path, expected_manifest_sha256: str,
+    shard_index: int, num_shards: int, state_dir: Path,
+    max_startup_used_mib: int,
+    idle_poll_seconds: float = DEFAULT_OPPORTUNISTIC_IDLE_POLL_SECONDS,
+    runner: Callable[..., subprocess.CompletedProcess[Any]] = subprocess.run,
+) -> int:
+    """Run one shard as a lock-aware tail worker on one idle UUID pair.
+
+    This recovery-only entry point deliberately remains separate from
+    ``run-shard`` and ``run-node``.  Multiple nodes may target the same logical
+    shard when they use the same immutable manifest and distinct state
+    directories; per-run locks in the intervention runner split the remaining
+    triplets without duplicate evaluation.
+    """
+    if num_shards != 7 or not 0 <= shard_index < num_shards:
+        raise Phase15JobError("require seven shards and shard-index in [0, 6]")
+    if not 0.0 < idle_poll_seconds <= MAX_OPPORTUNISTIC_IDLE_POLL_SECONDS:
+        raise Phase15JobError(
+            "idle-poll-seconds must be greater than 0 and at most "
+            f"{MAX_OPPORTUNISTIC_IDLE_POLL_SECONDS:g}"
+        )
+    actual_sha = _sha256(execution_manifest)
+    if actual_sha != expected_manifest_sha256:
+        raise Phase15JobError("execution manifest SHA changed after rendering")
+    manifest = json.loads(execution_manifest.read_text(encoding="utf-8"))
+
+    # The failed x8 pool used a node-isolated result root.  Precreating its
+    # assigned paths from the recovery node avoids stale negative NFS dentries
+    # before evaluator subprocesses start.
+    _precreate_assigned_output_dirs(
+        manifest,
+        shard_indices=(shard_index,),
+        num_shards=num_shards,
+    )
+    groups, _inventory = _select_idle_gpu_groups(
+        max_startup_used_mib, max_groups=1, runner=runner
+    )
+    selected_uuids, used_mib = groups[0]
+    return _run_shard_on_gpu_pair(
+        execution_manifest=execution_manifest,
+        manifest=manifest,
+        manifest_sha256=actual_sha,
+        shard_index=shard_index,
+        num_shards=num_shards,
+        state_dir=(
+            state_dir.parent
+            if state_dir.name == f"shard_{shard_index:02d}"
+            else state_dir
+        ),
+        selected_uuids=selected_uuids,
+        used_mib=used_mib,
+        opportunistic_idle_poll_seconds=idle_poll_seconds,
         runner=runner,
     )
 
@@ -896,6 +968,19 @@ def build_parser() -> argparse.ArgumentParser:
     launch.add_argument("--state-dir", type=Path, required=True)
     launch.add_argument("--max-startup-used-mib", type=int, default=4096)
 
+    opportunistic = subparsers.add_parser("run-shard-opportunistic")
+    opportunistic.add_argument("--execution-manifest", type=Path, required=True)
+    opportunistic.add_argument("--expected-manifest-sha256", required=True)
+    opportunistic.add_argument("--shard-index", type=int, required=True)
+    opportunistic.add_argument("--num-shards", type=int, required=True)
+    opportunistic.add_argument("--state-dir", type=Path, required=True)
+    opportunistic.add_argument("--max-startup-used-mib", type=int, default=4096)
+    opportunistic.add_argument(
+        "--idle-poll-seconds",
+        type=float,
+        default=DEFAULT_OPPORTUNISTIC_IDLE_POLL_SECONDS,
+    )
+
     node = subparsers.add_parser("run-node")
     node.add_argument("--execution-manifest", type=Path, required=True)
     node.add_argument("--expected-manifest-sha256", required=True)
@@ -922,6 +1007,16 @@ def main(argv: Sequence[str] | None = None) -> int:
                 num_shards=args.num_shards,
                 state_dir=args.state_dir,
                 max_startup_used_mib=args.max_startup_used_mib,
+            )
+        if args.command == "run-shard-opportunistic":
+            return run_shard_opportunistic(
+                execution_manifest=args.execution_manifest,
+                expected_manifest_sha256=args.expected_manifest_sha256,
+                shard_index=args.shard_index,
+                num_shards=args.num_shards,
+                state_dir=args.state_dir,
+                max_startup_used_mib=args.max_startup_used_mib,
+                idle_poll_seconds=args.idle_poll_seconds,
             )
         if args.command == "run-node":
             return run_node(

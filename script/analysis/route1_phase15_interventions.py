@@ -35,6 +35,8 @@ GPU_LAYOUT = {"ai2-arc": [0], "openbookqa": [1], "mmlu-redux": [0, 1]}
 PAIRS = ("tinyllama", "qwen3_1p7b", "qwen25_0p5b", "llama32_1b")
 SEEDS = (42, 43, 44)
 DEFAULT_CONSTANT_CONFIDENCE = 0.93
+DEFAULT_OPPORTUNISTIC_IDLE_POLL_SECONDS = 5.0
+MAX_OPPORTUNISTIC_IDLE_POLL_SECONDS = 60.0
 
 INTERVENTIONS: tuple[dict[str, Any], ...] = (
     {
@@ -893,6 +895,137 @@ def run_shard(manifest_path: Path, shard_index: int, num_shards: int) -> int:
     return 0
 
 
+def run_shard_opportunistic(
+    manifest_path: Path,
+    shard_index: int,
+    num_shards: int,
+    *,
+    idle_poll_seconds: float = DEFAULT_OPPORTUNISTIC_IDLE_POLL_SECONDS,
+    sleep_fn: Any = time.sleep,
+) -> int:
+    """Run an existing shard without blocking behind another worker's run.
+
+    Every pass considers the shard's incomplete runs in manifest order and
+    attempts each per-run lock non-blockingly.  A busy run is deferred so the
+    worker can steal later work from the same logical shard.  Once a pass makes
+    no progress, the worker waits for a bounded polling interval before
+    rescanning.  It exits only after every selected triplet satisfies the
+    existing output contract, or immediately when an evaluator fails.
+
+    This is intentionally a separate entry point: the original ``run-shard``
+    keeps its blocking, serial behavior for existing manifests and Jobs.
+    """
+    if num_shards <= 0 or not 0 <= shard_index < num_shards:
+        raise ValueError("require num_shards > 0 and 0 <= shard_index < num_shards")
+    if not 0.0 < idle_poll_seconds <= MAX_OPPORTUNISTIC_IDLE_POLL_SECONDS:
+        raise ValueError(
+            "idle_poll_seconds must be greater than 0 and at most "
+            f"{MAX_OPPORTUNISTIC_IDLE_POLL_SECONDS:g}"
+        )
+
+    manifest_path = manifest_path.resolve()
+    manifest = _read_json(manifest_path)
+    selected = [
+        run
+        for index, run in enumerate(manifest["runs"])
+        if index % num_shards == shard_index
+    ]
+    shard_label = f"opportunistic shard {shard_index}/{num_shards}"
+    print(
+        f"[{shard_label}] selected {len(selected)} runs; "
+        f"idle_poll_seconds={idle_poll_seconds:g}",
+        flush=True,
+    )
+
+    scan = 0
+    while True:
+        incomplete = [run for run in selected if not _triplet_complete(run)]
+        if not incomplete:
+            print(
+                f"[{shard_label}] all {len(selected)} triplets complete",
+                flush=True,
+            )
+            return 0
+
+        scan += 1
+        completed_count = len(selected) - len(incomplete)
+        print(
+            f"[{shard_label}] scan {scan}: complete={completed_count}, "
+            f"incomplete={len(incomplete)}",
+            flush=True,
+        )
+        launched = 0
+        locked = 0
+        for run in incomplete:
+            run_id = str(run["id"])
+            try:
+                with _exclusive_file_lock(
+                    _run_lock_path(manifest_path, run_id), blocking=False
+                ):
+                    # A sibling worker may have completed the triplet between
+                    # this scan and our successful non-blocking lock attempt.
+                    if _triplet_complete(run):
+                        print(
+                            f"[{run_id}] complete after lock acquisition; skipping",
+                            flush=True,
+                        )
+                        continue
+                    print(f"[{run_id}] opportunistic starting", flush=True)
+                    configs = run["eval_configs"]
+                    return_code = run_triplet(
+                        arc_config=_resolve_under(REPO_ROOT, configs["ai2-arc"]),
+                        openbookqa_config=_resolve_under(
+                            REPO_ROOT, configs["openbookqa"]
+                        ),
+                        mmlu_config=_resolve_under(
+                            REPO_ROOT, configs["mmlu-redux"]
+                        ),
+                    )
+                    launched += 1
+                    if return_code != 0:
+                        print(
+                            f"[{run_id}] failed with {return_code}; "
+                            f"{shard_label} stopping immediately",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+                        return return_code
+                    if not _triplet_complete(run):
+                        print(
+                            f"[{run_id}] evaluator returned success but the "
+                            "triplet output contract is incomplete; "
+                            f"{shard_label} stopping immediately",
+                            file=sys.stderr,
+                            flush=True,
+                        )
+                        return 1
+                    print(f"[{run_id}] opportunistic complete", flush=True)
+            except ExclusiveLockBusy:
+                locked += 1
+                print(f"[{run_id}] locked by another worker; deferring", flush=True)
+
+        remaining = sum(not _triplet_complete(run) for run in selected)
+        if remaining == 0:
+            print(
+                f"[{shard_label}] all {len(selected)} triplets complete",
+                flush=True,
+            )
+            return 0
+        if launched:
+            print(
+                f"[{shard_label}] scan {scan} made progress; "
+                f"remaining={remaining}, rescanning immediately",
+                flush=True,
+            )
+            continue
+        print(
+            f"[{shard_label}] scan {scan} idle: remaining={remaining}, "
+            f"locked={locked}; polling again in {idle_poll_seconds:g}s",
+            flush=True,
+        )
+        sleep_fn(idle_poll_seconds)
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -952,6 +1085,26 @@ def _parser() -> argparse.ArgumentParser:
     shard.add_argument("--manifest", type=Path, required=True)
     shard.add_argument("--shard-index", type=int, required=True)
     shard.add_argument("--num-shards", type=int, required=True)
+
+    opportunistic = subparsers.add_parser(
+        "run-shard-opportunistic",
+        help=(
+            "Work-steal incomplete runs from one shard without blocking behind "
+            "another worker"
+        ),
+    )
+    opportunistic.add_argument("--manifest", type=Path, required=True)
+    opportunistic.add_argument("--shard-index", type=int, required=True)
+    opportunistic.add_argument("--num-shards", type=int, required=True)
+    opportunistic.add_argument(
+        "--idle-poll-seconds",
+        type=float,
+        default=DEFAULT_OPPORTUNISTIC_IDLE_POLL_SECONDS,
+        help=(
+            "Seconds to wait after a full scan finds no acquirable run "
+            f"(0 < value <= {MAX_OPPORTUNISTIC_IDLE_POLL_SECONDS:g})"
+        ),
+    )
 
     stager = subparsers.add_parser(
         "stage-small-benchmarks",
@@ -1018,6 +1171,13 @@ def main() -> int:
         )
     if args.command == "run-shard":
         return run_shard(args.manifest, args.shard_index, args.num_shards)
+    if args.command == "run-shard-opportunistic":
+        return run_shard_opportunistic(
+            args.manifest,
+            args.shard_index,
+            args.num_shards,
+            idle_poll_seconds=args.idle_poll_seconds,
+        )
     return run_small_benchmark_stager(
         manifest_path=args.manifest,
         shard_index=args.shard_index,

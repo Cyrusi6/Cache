@@ -477,3 +477,37 @@ Phase1 的筛选门控已通过，conditional 30 runs 正在使用全部 14 张 
 ### 结论与下一步
 
 该改动只优化同一评测矩阵的调度，不引入新方法或统计口径。按历史 ARC、OpenBookQA 与 MMLU 耗时，x4 节点的单 triplet 关键路径预计由约 32 分钟降至约 23 分钟；正式启用时必须在旧 commit 主 lane 完成当前 triplet 后 resume-safe 切换到新版，使主 lane 与预取器共同遵守 run lock。
+
+## 2026-07-19：Phase 1.5 x8 失联恢复与机会式 work stealing
+
+### 研究目标
+
+x8 节点失联后，把 shards 2–5 的未完成工作安全迁移到已释放的 x4/x48 节点，并允许两个恢复 worker 动态分担 shard 5 的 10 个 full triplets；不改变 checkpoint、干预方法、评测配置、逐例输出或统计口径。
+
+### 核心改动
+
+- `route1_phase15_interventions.py` 新增独立 `run-shard-opportunistic` CLI；原 `run-shard` 的阻塞串行语义与默认 Job 行为保持完全不变。
+- 机会式 runner 按 manifest 顺序扫描指定逻辑 shard，对每个 incomplete run 使用既有 per-run NFS advisory lock 的非阻塞获取；锁忙时记录并跳到后续 run，使同一 shard 的两个 worker 能安全分担不同 triplet。
+- 每次成功取得锁后重新检查完整性，防止 sibling worker 刚完成的 triplet 被重复执行；evaluator 返回 0 后仍要求三个任务全部满足唯一 prediction CSV、summary JSON 和 provenance 的既有输出契约。
+- evaluator 非零或成功返回但输出契约不完整时立即停止并传播失败；若整轮没有可取得的 run，按 `--idle-poll-seconds` 休眠后重扫，该间隔被限制在 `(0, 60]` 秒，避免 busy spin 或过长失联。
+- 日志逐轮报告 complete/incomplete/locked/remaining 状态，并逐 run 标记 deferred、starting、complete 或 failure，便于 Kubernetes logs 直接审计 work stealing 过程。
+- `route1_phase15_jobs.py` 新增同名显式恢复入口：核验 immutable manifest SHA，预创建指定 shard 的 NFS 输出树，从 `nvidia-smi` 过滤物理高占用卡并选择一对空闲 UUID，再以 `C2C_PRESERVE_CUDA_VISIBLE_DEVICES=1` 调用机会式 runner。
+- 节点入口继续原子记录所选 GPU UUID、启动显存、run ids、poll interval 和退出码；默认 `run-shard`/`run-node` 命令和三节点 renderer 均未改为机会式模式。
+
+### 实验配置
+
+- 失联时审计结果：shards 2–5 共 120 个 dataset outputs，其中 84 个完整、3 个 MMLU provenance-only partial、33 个完全未启动；剩余等价于 36 个 dataset eval，涉及 14 个 incomplete triplets。shards 0/1/6 和 anomaly 已完成。
+- 旧 x8 Job 运行 commit `2b0d6a2`，尚未使用 per-run lock；因此恢复的安全前提是 Kubernetes 已确认旧 Job `FailureTarget`/failed、x8 worker 不再写入。不能在旧 x8 worker 仍活跃时直接 work-steal。
+- shards 2–4 先 resume 三个 MMLU-only partial 和一个 full triplet；其后 x4 与 x48 使用同一 manifest SHA `424d0468a624fee6cd31932bf3795fa42b98bf20f9563ebf84a0afaca5605dd1` 同时运行 shard 5 的机会式 worker。
+- 节点内入口示例：`python script/k8s/route1_phase15_jobs.py run-shard-opportunistic --execution-manifest <phase1.5-manifest.json> --expected-manifest-sha256 424d0468a624fee6cd31932bf3795fa42b98bf20f9563ebf84a0afaca5605dd1 --shard-index 5 --num-shards 7 --state-dir <node-unique-state-dir> --max-startup-used-mib 4096 --idle-poll-seconds 5`。
+- x4/x48 必须使用不同 state directories，但共享同一 manifest、结果目录和 run locks；任一 worker 遇到 sibling 正在执行的 run 会跳到后续 incomplete run，全部完成后均可 resume-safe 退出。
+
+### 验证结果
+
+- 新增测试覆盖：run 0 锁忙时先执行 run 1、锁释放后下一轮回补 run 0、整 shard 已完成时零评测/零等待退出、整轮锁忙时按受限间隔轮询，以及 evaluator 非零时不启动后续 run 并原样传播返回码。
+- K8s 入口测试额外覆盖 hidden-busy GPU 过滤、空闲双 UUID 选择、poll 参数转发、CUDA mask 保留、NFS 结果树预创建、机会式状态记录、CLI 路由和非法 poll interval 在 GPU 查询前失败。
+- Phase 1.5 调度相关测试 `30 passed`；项目全量测试 `236 passed`，保留 2 个既有 Pydantic warnings；`git diff --check` 和两个修改脚本的 `py_compile` 均通过。
+
+### 结论
+
+该改动把 x8 节点故障转换为 resume-safe 的跨节点尾部恢复，不增加实验样本、改变方法或改变统计比较。在旧无锁 x8 worker 已终止的前提下，x4/x48 新 worker 通过共同 per-run NFS lock 动态分担 shard 5；GPU 选择和结果完整性仍可由节点状态文件与最终输出审计复核。
