@@ -1430,6 +1430,7 @@ class UnifiedEvaluator:
                 "soft_span_overlap",
                 "soft_span_overlap_v2",
                 "learned_span_alignment",
+                "exact_identity",
             }:
                 details = aligner.align_chat_messages_soft(
                     messages,
@@ -1439,6 +1440,15 @@ class UnifiedEvaluator:
                     remove_last_surfix=remove_last_surfix,
                     top_k=soft_alignment_top_k,
                 )
+
+                if self.model_config["rosetta_config"].get(
+                    "fpct_alignment_sanitizer", "none"
+                ) == "certified_slot0_v1":
+                    details = aligner.sanitize_fpct_soft_alignment(
+                        details,
+                        target_length=len(details["slm_ids"]),
+                        source_length=len(details["llm_ids"]),
+                    )
 
                 slm_ids = torch.tensor(details["slm_ids"]).unsqueeze(0).to(device)
                 llm_ids = torch.tensor(details["llm_ids"]).unsqueeze(0).to(device)

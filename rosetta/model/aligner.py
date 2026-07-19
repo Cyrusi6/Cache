@@ -5,8 +5,11 @@ This module provides functionality to align tokens between two different tokeniz
 handling cases where the same text is tokenized differently.
 """
 
+import copy
 import hashlib
+import json
 import math
+from pathlib import Path
 from typing import Any, List, Tuple, Optional, Dict, Literal, Union
 import torch
 from transformers import PreTrainedTokenizerBase
@@ -22,6 +25,7 @@ class AlignmentStrategy(Enum):
     SOFT_SPAN_OVERLAP = "soft_span_overlap"  # Keep top-k overlap weights
     SOFT_SPAN_OVERLAP_V2 = "soft_span_overlap_v2"  # Configurable top-k overlap weights
     LEARNED_SPAN_ALIGNMENT = "learned_span_alignment"  # Route-3 learned KV router
+    EXACT_IDENTITY = "exact_identity"  # Hard K=1 alignment for runtime-identical tokenizers
 
 
 class TokenAligner:
@@ -120,6 +124,19 @@ class TokenAligner:
         if isinstance(strategy, str):
             strategy = AlignmentStrategy(strategy.lower())
         self.strategy = strategy
+        self._exact_identity_behavior_fingerprint: Optional[str] = None
+        if self.strategy == AlignmentStrategy.EXACT_IDENTITY:
+            slm_fingerprint = self._tokenizer_behavior_fingerprint(
+                self.slm_tokenizer
+            )
+            llm_fingerprint = self._tokenizer_behavior_fingerprint(
+                self.llm_tokenizer
+            )
+            if slm_fingerprint != llm_fingerprint:
+                raise ValueError(
+                    "exact_identity tokenizer behavior fingerprint mismatch"
+                )
+            self._exact_identity_behavior_fingerprint = slm_fingerprint
         valid_score_modes = {
             "overlap",
             "uniform",
@@ -526,6 +543,94 @@ class TokenAligner:
         """Clear the alignment cache."""
         self._alignment_cache.clear()
 
+    @staticmethod
+    def _stable_tokenizer_value(value: Any) -> Any:
+        if isinstance(value, dict):
+            return {
+                str(key): TokenAligner._stable_tokenizer_value(item)
+                for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+            }
+        if isinstance(value, set):
+            return sorted(
+                TokenAligner._stable_tokenizer_value(item) for item in value
+            )
+        if isinstance(value, (list, tuple)):
+            return [TokenAligner._stable_tokenizer_value(item) for item in value]
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
+        return str(value)
+
+    @staticmethod
+    def _tokenizer_relevant_file_hashes(
+        tokenizer: PreTrainedTokenizerBase,
+    ) -> Dict[str, str]:
+        directory = Path(str(getattr(tokenizer, "name_or_path", "")))
+        if not directory.is_dir():
+            raise ValueError(
+                "exact_identity requires a local tokenizer directory"
+            )
+        names = (
+            "tokenizer.json",
+            "tokenizer_config.json",
+            "tokenizer.model",
+            "special_tokens_map.json",
+            "added_tokens.json",
+            "vocab.json",
+            "merges.txt",
+        )
+        files: Dict[str, str] = {}
+        for name in names:
+            path = directory / name
+            if not path.is_file():
+                continue
+            digest = hashlib.sha256()
+            with path.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            files[name] = digest.hexdigest()
+        if not files:
+            raise ValueError(
+                f"exact_identity tokenizer directory has no tokenizer files: {directory}"
+            )
+        return files
+
+    @classmethod
+    def _tokenizer_behavior_fingerprint(
+        cls, tokenizer: PreTrainedTokenizerBase
+    ) -> str:
+        backend = getattr(tokenizer, "backend_tokenizer", None)
+        if backend is None or not hasattr(backend, "to_str"):
+            raise ValueError("exact_identity requires a fast tokenizer backend")
+        payload = {
+            "tokenizer_class": tokenizer.__class__.__name__,
+            "is_fast": bool(getattr(tokenizer, "is_fast", False)),
+            "backend": json.loads(backend.to_str()),
+            "vocab": sorted(
+                (str(token), int(token_id))
+                for token, token_id in tokenizer.get_vocab().items()
+            ),
+            "added_vocab": sorted(
+                (str(token), int(token_id))
+                for token, token_id in tokenizer.get_added_vocab().items()
+            ),
+            "special_tokens_map": cls._stable_tokenizer_value(
+                tokenizer.special_tokens_map_extended
+            ),
+            "all_special_tokens": list(tokenizer.all_special_tokens),
+            "all_special_ids": [
+                int(token_id) for token_id in tokenizer.all_special_ids
+            ],
+            "chat_template": tokenizer.chat_template,
+            "tokenizer_files": cls._tokenizer_relevant_file_hashes(tokenizer),
+        }
+        encoded = json.dumps(
+            payload,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return hashlib.sha256(encoded).hexdigest()
+
     # ========================
     # Chat messages alignment
     # ========================
@@ -733,6 +838,283 @@ class TokenAligner:
                 end_idx += 1
             ranges.append((start_idx, end_idx))
         return ranges
+
+    @staticmethod
+    def _validate_content_spans_exact(
+        templated_text: str,
+        messages: List[Dict[str, str]],
+        spans: List[Tuple[int, int]],
+    ) -> None:
+        expected = [
+            message["content"]
+            for message in messages
+            if isinstance(message.get("content"), str) and message["content"]
+        ]
+        if len(expected) != len(spans):
+            raise ValueError("exact_identity content span count mismatch")
+        for content, (start, end) in zip(expected, spans):
+            if templated_text[start:end] != content:
+                raise ValueError(
+                    "exact_identity content span does not recover message content"
+                )
+
+    @staticmethod
+    def _relative_interval(
+        interval: Tuple[int, int], span: Tuple[int, int]
+    ) -> Tuple[int, int]:
+        return (
+            max(int(interval[0]), int(span[0])) - int(span[0]),
+            min(int(interval[1]), int(span[1])) - int(span[0]),
+        )
+
+    @staticmethod
+    def _interval_overlap(
+        left: Tuple[int, int], right: Tuple[int, int]
+    ) -> int:
+        return max(0, min(left[1], right[1]) - max(left[0], right[0]))
+
+    @classmethod
+    def _certify_soft_alignment_row(
+        cls,
+        *,
+        parent_index: int,
+        legal_indices: List[int],
+        positive_overlap_count: int,
+        slm_offsets: List[Tuple[int, int]],
+        llm_offsets: List[Tuple[int, int]],
+        slm_range: Tuple[int, int],
+        slm_span: Tuple[int, int],
+        llm_span: Tuple[int, int],
+    ) -> Tuple[bool, str]:
+        receiver = cls._relative_interval(slm_offsets[parent_index], slm_span)
+        if receiver[1] <= receiver[0]:
+            return False, "zero_length_receiver_interval"
+        for other_index in range(slm_range[0], slm_range[1]):
+            if other_index == parent_index:
+                continue
+            other = cls._relative_interval(slm_offsets[other_index], slm_span)
+            if other[1] > other[0] and cls._interval_overlap(receiver, other) > 0:
+                return False, "duplicate_or_overlap_receiver_offsets"
+        if len(set(legal_indices)) != len(legal_indices):
+            raise ValueError("duplicate legal source index in FPCT alignment")
+        if positive_overlap_count != len(legal_indices):
+            return False, "positive_overlap_set_not_exhausted"
+        candidates = [
+            cls._relative_interval(llm_offsets[index], llm_span)
+            for index in legal_indices
+        ]
+        if any(end <= start for start, end in candidates):
+            return False, "zero_length_source_interval"
+        if len(set(candidates)) != len(candidates):
+            return False, "exact_duplicate_source_offsets"
+        ordered = sorted(zip(candidates, legal_indices))
+        for (left, _left_index), (right, _right_index) in zip(
+            ordered, ordered[1:]
+        ):
+            if cls._interval_overlap(left, right) > 0:
+                return False, "partial_overlap_source_offsets"
+        intersections = [
+            (max(receiver[0], start), min(receiver[1], end))
+            for start, end in candidates
+        ]
+        if any(end <= start for start, end in intersections):
+            return False, "candidate_without_receiver_intersection"
+        ordered_intersections = sorted(intersections)
+        cursor = receiver[0]
+        for start, end in ordered_intersections:
+            if start != cursor:
+                return False, "candidate_intersection_coverage_gap"
+            cursor = end
+        if cursor != receiver[1]:
+            return False, "candidate_intersection_coverage_gap"
+        source_index_order = [index for _interval, index in ordered]
+        if source_index_order != sorted(source_index_order):
+            return False, "source_indices_not_monotonic_by_span"
+        return True, "certified_disjoint_partition"
+
+    @classmethod
+    def sanitize_fpct_soft_alignment(
+        cls,
+        details: Dict[str, Any],
+        *,
+        target_length: Optional[int] = None,
+        source_length: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """Apply the common certified/slot-0 sanitizer for all FPCT arms.
+
+        The operation runs on CPU alignment metadata after effective sequence
+        truncation is known.  It never applies to the legacy/default path unless
+        explicitly called by an FPCT recipe.
+        """
+        sanitized = copy.deepcopy(details)
+        required = (
+            "slm_offsets",
+            "llm_offsets",
+            "content_spans_slm",
+            "content_spans_llm",
+            "sections",
+        )
+        if any(name not in sanitized for name in required):
+            raise ValueError("FPCT sanitizer requires detailed alignment metadata")
+        soft = sanitized["soft_alignment"]
+        indices = soft["source_indices"]
+        weights = soft["source_weights"]
+        target_length = min(
+            len(sanitized["slm_ids"]),
+            len(indices),
+            target_length if target_length is not None else len(indices),
+        )
+        source_length = min(
+            len(sanitized["llm_ids"]),
+            source_length if source_length is not None else len(sanitized["llm_ids"]),
+        )
+        original_source_length = len(sanitized["llm_ids"])
+        message_sections: List[Tuple[int, Dict[str, Any]]] = []
+        message_ordinal = 0
+        for section in sanitized["sections"]:
+            if section["type"] == "message":
+                message_sections.append((message_ordinal, section))
+                message_ordinal += 1
+
+        certified_mask = [False] * len(indices)
+        offset_uncertified_mask = [False] * len(indices)
+        raw_candidate_count = [0] * len(indices)
+        sanitized_candidate_count = [0] * len(indices)
+        reasons = [""] * len(indices)
+        entropy = list(soft.get("source_entropy", [0.0] * len(indices)))
+
+        for parent_index in range(target_length):
+            row_indices = [int(value) for value in indices[parent_index]]
+            row_weights = [float(value) for value in weights[parent_index]]
+            for slot, (source_index, weight) in enumerate(
+                zip(row_indices, row_weights)
+            ):
+                if not math.isfinite(weight):
+                    raise ValueError("nonfinite alignment mass in FPCT sanitizer")
+                if weight < 0:
+                    raise ValueError("negative alignment mass in FPCT sanitizer")
+                if weight > 0 and not (0 <= source_index < original_source_length):
+                    raise ValueError(
+                        "positive alignment mass on invalid source index in FPCT sanitizer"
+                    )
+                if (
+                    source_index < 0
+                    or source_index >= source_length
+                    or weight <= 0
+                ):
+                    row_indices[slot] = -1
+                    row_weights[slot] = 0.0
+            legal_slots = [
+                slot
+                for slot, (source_index, weight) in enumerate(
+                    zip(row_indices, row_weights)
+                )
+                if source_index >= 0 and weight > 0
+            ]
+            legal_indices = [row_indices[slot] for slot in legal_slots]
+            if len(set(legal_indices)) != len(legal_indices):
+                raise ValueError("duplicate legal source index in FPCT sanitizer")
+            total = sum(row_weights[slot] for slot in legal_slots)
+            if total > 0:
+                for slot in legal_slots:
+                    row_weights[slot] /= total
+            raw_m = len(legal_slots)
+            raw_candidate_count[parent_index] = raw_m
+            is_message = bool(sanitized["message_mask"][parent_index])
+            if is_message and raw_m >= 2:
+                section_record = next(
+                    (
+                        (ordinal, section)
+                        for ordinal, section in message_sections
+                        if section["slm_range"][0]
+                        <= parent_index
+                        < section["slm_range"][1]
+                    ),
+                    None,
+                )
+                if section_record is None:
+                    raise ValueError("eligible FPCT parent outside message section")
+                ordinal, section = section_record
+                receiver = cls._relative_interval(
+                    sanitized["slm_offsets"][parent_index],
+                    tuple(sanitized["content_spans_slm"][ordinal]),
+                )
+                retained_source_range = (
+                    int(section["llm_range"][0]),
+                    min(int(section["llm_range"][1]), source_length),
+                )
+                retained_positive_overlap_count = sum(
+                    1
+                    for source_index in range(*retained_source_range)
+                    if (
+                        (lambda interval: interval[1] > interval[0]
+                         and cls._interval_overlap(receiver, interval) > 0)(
+                            cls._relative_interval(
+                                sanitized["llm_offsets"][source_index],
+                                tuple(sanitized["content_spans_llm"][ordinal]),
+                            )
+                        )
+                    )
+                )
+                certified, reason = cls._certify_soft_alignment_row(
+                    parent_index=parent_index,
+                    legal_indices=legal_indices,
+                    positive_overlap_count=retained_positive_overlap_count,
+                    slm_offsets=sanitized["slm_offsets"],
+                    llm_offsets=sanitized["llm_offsets"],
+                    slm_range=(
+                        int(section["slm_range"][0]),
+                        min(int(section["slm_range"][1]), target_length),
+                    ),
+                    slm_span=tuple(sanitized["content_spans_slm"][ordinal]),
+                    llm_span=tuple(sanitized["content_spans_llm"][ordinal]),
+                )
+                reasons[parent_index] = reason
+                if certified:
+                    certified_mask[parent_index] = True
+                else:
+                    offset_uncertified_mask[parent_index] = True
+                    if (
+                        row_indices[0] < 0
+                        or not math.isfinite(row_weights[0])
+                        or row_weights[0] <= 0
+                    ):
+                        raise ValueError(
+                            "uncertified FPCT row has no legal positive slot-0 anchor"
+                        )
+                    anchor = row_indices[0]
+                    row_indices = [anchor] + [-1] * (len(row_indices) - 1)
+                    row_weights = [1.0] + [0.0] * (len(row_weights) - 1)
+            indices[parent_index] = row_indices
+            weights[parent_index] = row_weights
+            final_weights = [value for value in row_weights if value > 0]
+            sanitized_candidate_count[parent_index] = len(final_weights)
+            if len(final_weights) <= 1:
+                entropy[parent_index] = 0.0
+            else:
+                value = -sum(weight * math.log(weight) for weight in final_weights)
+                entropy[parent_index] = value / math.log(len(final_weights))
+
+        soft["source_indices"] = indices
+        soft["source_weights"] = weights
+        soft["source_entropy"] = entropy
+        soft["fpct_certified_mask"] = certified_mask
+        soft["fpct_offset_uncertified_mask"] = offset_uncertified_mask
+        soft["fpct_raw_candidate_count"] = raw_candidate_count
+        soft["fpct_sanitized_candidate_count"] = sanitized_candidate_count
+        soft["fpct_raw_extra_slots"] = sum(
+            max(raw_candidate_count[index] - 1, 0)
+            for index in range(target_length)
+            if bool(sanitized["message_mask"][index])
+        )
+        soft["fpct_extra_slots"] = sum(
+            max(sanitized_candidate_count[index] - 1, 0)
+            for index in range(target_length)
+            if bool(sanitized["message_mask"][index])
+        )
+        soft["fpct_certification_reason"] = reasons
+        soft["fpct_sanitizer_mode"] = "certified_slot0_v1"
+        return sanitized
 
     @staticmethod
     def _overlap_len(a_start: int, a_end: int, b_start: int, b_end: int) -> int:
@@ -1429,6 +1811,104 @@ class TokenAligner:
         slm_sections = build_sections(len(slm_ids), slm_msg_ranges)
         llm_sections = build_sections(len(llm_ids), llm_msg_ranges)
         assert len(slm_sections) == len(llm_sections), "Section count mismatch"
+
+        if self.strategy == AlignmentStrategy.EXACT_IDENTITY:
+            self._validate_content_spans_exact(slm_text, messages, content_spans_slm)
+            self._validate_content_spans_exact(llm_text, messages, content_spans_llm)
+            identity_checks = (
+                ("rendered chat text", slm_text, llm_text),
+                ("input IDs", slm_ids, llm_ids),
+                ("offset mappings", slm_offsets, llm_offsets),
+                ("content spans", content_spans_slm, content_spans_llm),
+                ("message token ranges", slm_msg_ranges, llm_msg_ranges),
+                ("section layout", slm_sections, llm_sections),
+            )
+            for name, receiver_value, sender_value in identity_checks:
+                if receiver_value != sender_value:
+                    raise ValueError(f"exact_identity {name} mismatch")
+            message_mask = [False] * len(slm_ids)
+            source_indices = [[-1] * top_k for _ in slm_ids]
+            source_weights = [[0.0] * top_k for _ in slm_ids]
+            source_confidence = [1.0] * len(slm_ids)
+            source_entropy = [0.0] * len(slm_ids)
+            fallback_mask = [False] * len(slm_ids)
+            positive_overlap_counts = [0] * len(slm_ids)
+            top1_boundary_hit_mask = [False] * len(slm_ids)
+            detailed_sections: List[
+                Dict[str, Union[str, Tuple[int, int]]]
+            ] = []
+            for receiver_section, sender_section in zip(
+                slm_sections, llm_sections
+            ):
+                stype, start, end = receiver_section
+                detailed_sections.append(
+                    {
+                        "type": stype,
+                        "slm_range": (start, end),
+                        "llm_range": (
+                            sender_section[1],
+                            sender_section[2],
+                        ),
+                    }
+                )
+                if stype != "message":
+                    continue
+                for parent_index in range(start, end):
+                    message_mask[parent_index] = True
+                    source_indices[parent_index][0] = parent_index
+                    source_weights[parent_index][0] = 1.0
+                    positive_overlap_counts[parent_index] = 1
+                    top1_boundary_hit_mask[parent_index] = True
+            if apply_confidence_control:
+                (
+                    source_confidence,
+                    source_entropy,
+                    source_entropy_override,
+                ) = self._apply_confidence_control(
+                    source_confidence=source_confidence,
+                    source_entropy=source_entropy,
+                    message_mask=message_mask,
+                    token_ids=slm_ids,
+                    shuffle_active_mask=message_mask,
+                )
+            else:
+                source_entropy_override = [False] * len(source_confidence)
+            result: Dict[str, Any] = {
+                "slm_ids": slm_ids,
+                "llm_ids": llm_ids,
+                "slm_ids_padded": slm_ids,
+                "llm_ids_padded": llm_ids,
+                "message_mask": message_mask,
+                "slm_padding_mask": [False] * len(slm_ids),
+                "llm_padding_mask": [False] * len(llm_ids),
+                "soft_alignment": {
+                    "source_indices": source_indices,
+                    "source_weights": source_weights,
+                    "source_confidence": source_confidence,
+                    "source_entropy": source_entropy,
+                    "source_entropy_override": source_entropy_override,
+                    "fallback_mask": fallback_mask,
+                    "positive_overlap_counts": positive_overlap_counts,
+                    "top1_boundary_hit_mask": top1_boundary_hit_mask,
+                    "top_k": top_k,
+                    "score_mode": "exact_identity",
+                    "confidence_control_applied": apply_confidence_control,
+                    "fpct_exact_identity": True,
+                    "fpct_extra_slots": 0,
+                    "tokenizer_behavior_fingerprint": (
+                        self._exact_identity_behavior_fingerprint
+                    ),
+                },
+                "sections": detailed_sections,
+                "slm_text": slm_text,
+                "llm_text": llm_text,
+            }
+            if return_details:
+                result["content_spans_slm"] = content_spans_slm
+                result["content_spans_llm"] = content_spans_llm
+                result["slm_offsets"] = slm_offsets
+                result["llm_offsets"] = llm_offsets
+            return result
 
         message_mask = [False] * len(slm_ids)
         source_indices = [[-1] * top_k for _ in slm_ids]

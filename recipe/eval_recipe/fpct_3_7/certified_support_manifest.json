@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_3_7_certified_support_v1",
+  "stage": "FPCT-3.7",
+  "status": "LOCKS_WHEN_CONTAINING_COMMIT_IS_CLEAN_AND_PUSHED",
+  "natural_certified_audit_started": false,
+  "dependency": {
+    "fpct_3_5_status": "IDENTITY_FORENSIC_GO_TO_CONDITIONAL_CORRECTION",
+    "pre_data_execution_sha": "0398d26b63e96263b813730368275ee66e313f66",
+    "result_manifest": {
+      "path": "recipe/eval_recipe/fpct_3_5/alignment_correctness_result_manifest.json",
+      "sha256": "3103f13c7c9cbf925c8ea8d4a5baf45b38f8130d74ebd5e5f4dd830fcbae17b3"
+    },
+    "forensic_report": {
+      "path": "FPCT_3_5_ALIGNMENT_CORRECTNESS_REPORT.md",
+      "sha256": "277d39c20115d72209dcdaacd62d07e50a092e30d929dd85ec4d5f05e02fa150"
+    }
+  },
+  "canonical_input": {
+    "rows": 7265,
+    "distinct_content_groups": 7233,
+    "input_sha256": "0366be7e5b129710024543bc065774bef165b6b6bca92541a3d641aea2918114",
+    "split_manifest_sha256": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050",
+    "max_length": 1024,
+    "pairs": [
+      "tinyllama",
+      "qwen25_0p5b",
+      "llama32_1b",
+      "qwen3_1p7b"
+    ],
+    "tasks": [
+      "ai2-arc",
+      "openbookqa",
+      "mmlu-redux"
+    ],
+    "splits": [
+      "fit",
+      "calibration",
+      "model-selection",
+      "test"
+    ]
+  },
+  "production_correction": {
+    "exact_identity": {
+      "strategy_id": "exact_identity",
+      "same_tokenizer_control_only": true,
+      "eligible_row": {
+        "source_indices": [
+          "parent_index",
+          -1,
+          -1,
+          -1
+        ],
+        "source_weights": [
+          1.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fallback": false
+      },
+      "mismatch": "hard_error"
+    },
+    "sanitizer": {
+      "mode": "certified_slot0_v1",
+      "applies_to": [
+        "c_pre",
+        "c_post",
+        "f"
+      ],
+      "raw_m_le_1": "preserve",
+      "certified_m_ge_2": "preserve",
+      "uncertified_m_ge_2": "raw_slot0_one_hot",
+      "post_truncation_revalidation": true,
+      "retained_receiver_and_source_universe_only": true,
+      "nonfinite_negative_or_originally_invalid_positive_mass": "hard_error",
+      "source_truncation": "mask_then_recompute_retained_overlap_exhaustiveness",
+      "entropy_contract": "deterministic function of the final sanitized prior and identical across arms",
+      "legacy_default_unchanged": true
+    }
+  },
+  "alignment": {
+    "raw_strategy": "soft_span_overlap_v2",
+    "top_k": 4,
+    "score_mode": "uniform",
+    "boundary_bonus": 0.5,
+    "boundary_tolerance": 1,
+    "min_weight": 0.0,
+    "candidate_window": 0,
+    "reweight_mode": "none",
+    "apply_confidence_control": false
+  },
+  "readiness": {
+    "primary": "certified_sanitized_m_ge_2",
+    "minimum_positive_groups_each_task": 30,
+    "minimum_pooled_positive_groups": 100,
+    "ranking": [
+      "minimum_task_positive_group_count_desc",
+      "equal_weight_task_macro_support_rate_desc",
+      "pooled_positive_group_count_desc",
+      "canonical_pair_id_asc"
+    ],
+    "same_tokenizer_control_ranked": false,
+    "global_states": [
+      "NO_SUPPORT",
+      "DIAGNOSTIC_ONLY",
+      "SINGLE_PAIR_PILOT_READY",
+      "CROSS_PAIR_PILOT_READY"
+    ],
+    "confirmatory_pair": "tinyllama",
+    "confirmatory_continuation_depends_on_own_floor_not_global_rank_one": true,
+    "tinyllama_failure_action": "NO_GO_GPU"
+  },
+  "outputs": {
+    "local_root": "local/final_results/fpct_factorized_transport/fpct_3_7_certified_support/rev_<execution_sha>",
+    "task_pair_shards": 12,
+    "exception_parent_rows_only": true,
+    "sample_rows": 29060,
+    "group_rows": 28932,
+    "pair_task_rows": 60,
+    "compact_fit_calibration_rows": 12,
+    "resource_rows": 12,
+    "ordinary_wilson_for_raw_and_certified": true,
+    "bonferroni9_lcb_sensitivity_only": true,
+    "m3_m4_sensitivity_only": true,
+    "offset_uncertified_parent_sample_group_counts": true,
+    "raw_minus_certified_support_delta": true,
+    "raw_certified_dense_topk4_resource_comparison": true,
+    "raw_qwen_soft_span_reported": true,
+    "qwen_exact_identity_reported": true,
+    "labels_answers_predictions_correctness_forbidden": true,
+    "completed_artifact_overwrite": false
+  },
+  "tracked_artifacts": {
+    "aligner": {
+      "path": "rosetta/model/aligner.py",
+      "sha256": "fe77d72fb7103ca103fe87fa602bed545e0caf6fc75b1741b8736b41e9daf7d8"
+    },
+    "dataset_adapter": {
+      "path": "rosetta/train/dataset_adapters.py",
+      "sha256": "fca9a7f66bc6649f6c431b341e97ac8de783d8d5762759a9c39d58d244cc5e2a"
+    },
+    "training_entry": {
+      "path": "script/train/SFT_train.py",
+      "sha256": "06c25ca9c5abd387e18e08c832455cd8a4f84a55157a33091af0eb2c112434d3"
+    },
+    "evaluation_entry": {
+      "path": "script/evaluation/unified_evaluator.py",
+      "sha256": "a0b337ef5caf1ba5db36d336e02587e151611f23e7c389110116f9c03710f3ec"
+    },
+    "audit": {
+      "path": "script/analysis/fpct_3_7_certified_support_audit.py",
+      "sha256": "dda4c657f35a74014009479a93f2903a2411a9df5f0c53bee7283dedf8c21730"
+    },
+    "alignment_tests": {
+      "path": "test/test_fpct_alignment_sanitizer.py",
+      "sha256": "8bed3207bd44ac160ef7da26ffcd5afbee34a14cdf948108510b5ae48131dc34"
+    },
+    "audit_tests": {
+      "path": "test/test_fpct_certified_support_audit.py",
+      "sha256": "1756da6338ca4a529e8f373771330f33eb6ea82ca0c45fdaf1309f8c9ea3a921"
+    },
+    "fpct_1b_analysis": {
+      "path": "script/analysis/fpct_1b_structural_support_audit.py",
+      "sha256": "5c20cb09c6745a9b35bd438017a76794575fe34b98147e08a67306a6a32f922c"
+    },
+    "fpct_1b_lock": {
+      "path": "recipe/eval_recipe/fpct_1b/pre_audit_lock.json",
+      "sha256": "7e882a9b0253f0ae8bc613a54c3ad088540bd229eed45be8a746c78eac3ff80c"
+    },
+    "content_group_splits": {
+      "path": "recipe/eval_recipe/fpct_1b/content_group_split_manifest.csv",
+      "sha256": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050"
+    },
+    "prompt_source": {
+      "path": "rosetta/utils/evaluate.py",
+      "sha256": "c36b3b2f0490d8a895bd24449b065013bedd11517ac34781b08f9513ce4934c9"
+    },
+    "alignment_protocol": {
+      "path": "FPCT_3_5_ALIGNMENT_CORRECTNESS_PROTOCOL.md",
+      "sha256": "a7c4aba59d48657103fb45417edda0c61e8e587f909637c2cf750dbc92f90f1b"
+    },
+    "alignment_report": {
+      "path": "FPCT_3_5_ALIGNMENT_CORRECTNESS_REPORT.md",
+      "sha256": "277d39c20115d72209dcdaacd62d07e50a092e30d929dd85ec4d5f05e02fa150"
+    },
+    "alignment_result_manifest": {
+      "path": "recipe/eval_recipe/fpct_3_5/alignment_correctness_result_manifest.json",
+      "sha256": "3103f13c7c9cbf925c8ea8d4a5baf45b38f8130d74ebd5e5f4dd830fcbae17b3"
+    }
+  },
+  "tests": {
+    "targeted_result": "102 passed, 2 warnings",
+    "synthetic_finalize_verify_round_trip": "pass",
+    "independent_verifier": "recomputes 60 aggregates, Wilson, readiness, all-split identity and resources from frozen shards",
+    "natural_certified_audit": "not_started"
+  },
+  "gpu_authorized": false,
+  "claim_boundary": "raw versus certified structural support and resource opportunity only; no query separability, model activation or accuracy claim"
+}

@@ -783,3 +783,41 @@ FPCT-1C、FPCT-2 和 FPCT-3 判定 `GO`，只建立 mathematical/reference 与 C
 ### 结论与下一步
 
 FPCT-3.5 当前为 `PRE-DATA LOCK PENDING COMMIT`。下一步只允许提交并推送 pre-data protocol commit，再从 clean execution SHA 生成 local lock。若 Qwen3 runtime identity、410-parent taxonomy或路径 provenance 任一失败，整个 overnight run 立即停止且不进入 GPU。
+
+## 2026-07-20：FPCT-3.5 identity forensic 与 FPCT-3.6 conditional correction
+
+### 研究目标
+
+在 pre-data protocol commit 后，对全部 7,265 canonical samples 解释 Qwen3 same-tokenizer raw soft-span anomalies；只有 identity/path/taxonomy 全部通过时，才实现 exact identity 和三臂共用的 conservative sanitizer。
+
+### 核心改动
+
+- 从 pre-data commit `0398d26b63e96263b813730368275ee66e313f66` 生成 local lock 后，完成 ARC、OpenBookQA、MMLU 三个 resumable forensic shards。
+- 新增完整 correctness report/result manifest，记录 local ledger、row comparison、runtime fingerprint 和 root-cause hashes。
+- Production `TokenAligner` 增加 `exact_identity`：tokenizer behavior fingerprint 与逐样本 rendered text/IDs/offset/content spans/message ranges 全部相等后，每个 eligible parent 强制 identity one-hot。
+- 增加 `certified_slot0_v1` sanitizer：只在显式 FPCT recipe 中启用；certified rows 保留，uncertified m>=2 三臂共同退化为 raw slot-0 one-hot，source truncation 后重验并重算 entropy。
+- 训练 dataset 与 unified evaluator 接入同一 opt-in sanitizer；非 FPCT legacy/default 路径保持不变。
+- 新增 certified-support audit/state machine，冻结 12-cell raw/certified support、resource、Qwen raw/exact control 和 readiness/ranking 输出；shard 采用 staging-directory 原子发布，可清理未完成 staging 后安全恢复，完成 shard 不覆盖。
+- Freeze/verify 直接锁定并复核 current HEAD/upstream、FPCT-1B helper、prompt source、7,265-row split manifest、tokenizer/dataset assets、runtime、sanitizer tests 与所有 production entry SHA。
+- Independent verify 从 shard CSV 重算 60-row aggregate、ordinary/raw Wilson、Bonferroni-9 sensitivity、readiness/ranking、all-split Qwen identity 和 resource estimates；合法 NO-GO 结果完整保存，不冒充 integrity failure。
+
+### 实验配置
+
+- Forensic 全程 CPU/offline，未运行模型 forward、GPU、Kubernetes、训练或 accuracy。
+- Runtime identity fingerprint：Qwen3 receiver/control 均为 `ccf72f82...`；Qwen2.5 为 distinct `8fe3f6d6...`。
+- Pre-data consistency：fit+calibration 56 positive groups、410 m2 parents。
+- Corrected production max-length certification boundary：1024 tokens；receiver/source retained universe 在 truncation 后重验。
+
+### 验证结果
+
+- 7,265/7,265 Qwen3 samples 的 rendered text、IDs、offsets、content spans、message ranges 和 tokenizer behavior 全部相等。
+- All-split raw anomalies 为 802 m2 parents、104 groups；802/802 taxonomy 均为 `duplicate_or_overlap_receiver_offsets`，0 unexplained。
+- 802 parents 形成 401 个成对 alias：常见形式是 leading-space-plus-symbol token 与 symbol-only token offsets 嵌套；每行 raw weights 为 `[0.5,0.5]` 且包含 identity candidate。
+- Qwen3 与 Qwen2.5 的 positive group、`(sample,parent)`、relative offset、candidate-ID sets 全部逐行相等，Jaccard 1.0；sender path 和 runtime fingerprint 不同，排除 path/object mix-up。
+- Exact-identity/sanitizer/certified-audit/legacy aligner targeted suite：`102 passed, 2 warnings`，其中包含 synthetic finalize + independent verify 全链路 round trip。
+- Sanitizer 对 nonfinite、negative 和原始序列非法 positive index hard error；合法 source truncation 先 mask，再按 retained overlap universe 重算 exhaustiveness。
+- Certified aggregates 同时保留 raw/certified m0–m4、m>=3/m=4 sensitivity、uncertified parent/sample/group、support delta、raw/certified expansion、sidecar cache、packed-extra KV、attention FLOP 与 dense-top-k4 对照。
+
+### 结论与下一步
+
+FPCT-3.5 和 FPCT-3.6 判定 `GO`。Same-tokenizer raw soft-span support 被确认是 offset alias，不能作为 tokenizer factorization support。下一步必须先提交并推送 corrected execution commit，再运行全 pair/task/split certified reaudit；TinyLlama 未通过 certified readiness 前仍禁止 GPU。

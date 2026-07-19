@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-3.5 pre-data alignment-correctness protocol locking
-> 当前判定：`PRE-DATA LOCK PENDING COMMIT`；自然 forensic、GPU、Kubernetes、训练和 accuracy 尚未开始
-> 下一阶段：推送 clean pre-data commit，生成 local lock 后执行 Qwen3 identity forensic
+> 当前阶段：FPCT-3.6 correction complete；FPCT-3.7 certified-support audit lock pending commit
+> 当前判定：FPCT-3.5 identity forensic `GO`；exact_identity/sanitizer CPU tests pass；后续资源获条件授权但 correctness gate 尚未开放
+> 下一阶段：推送 corrected execution commit，freeze 后运行 12-cell certified support reaudit
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -15,6 +15,9 @@
 | FPCT worktree | `/home/lijunsi/projects/Cache-fpct-factorized-transport` |
 | FPCT branch | `research/fpct-factorized-transport` |
 | FPCT base SHA | `9fa1f0ac3bedefd282961a853278ab88fb376fa2` |
+| FPCT-OVERNIGHT starting SHA | `d296a18be9cc3b0dce3c07f4c2d7244145f2e3ac` |
+| FPCT-3.5 pre-data execution SHA | `0398d26b63e96263b813730368275ee66e313f66` |
+| 当前 local/upstream | `0398d26...` / `0398d26...`；corrected execution commit pending |
 | FPCT-1A-R source commit | `7207aafffc7f72976473815bc11102f8b06dddc1` |
 | 研究线启动时间边界 | Phase 2A-1 结果揭晓前 |
 | Phase 2A-1 未公开结果 | 未查看、未使用 |
@@ -46,15 +49,18 @@
 - 在 FPCT-2/3 GO 后生成 FPCT-4 non-operative GPU pilot draft；
 - 只在当前 `research/fpct-factorized-transport` commit 并 push。
 
-本次 `FPCT-OVERNIGHT` 进一步提供条件式 R1–R4 授权，但严格受 correctness gate 约束。当前 pre-data commit 之前只允许编写 protocol、manifest、diagnostic 和 synthetic tests；不得执行新的逐 parent 自然 forensic。只有 FPCT-3.5 identity/certified-support、FPCT-3.8 production hardening 和 FPCT-3.9 真实 Qwen CPU integration 全部通过后，才允许冻结 GPU/K8s formal manifest。
+本次 `FPCT-OVERNIGHT` 进一步提供条件式 R1–R4 授权，但严格受 correctness gate 约束。FPCT-3.5 pre-data commit 已先于 forensic 推送；当前 corrected execution commit 仍须在 certified-support 自然 audit 前推送。只有 FPCT-3.7 certified support、FPCT-3.8 production hardening 和 FPCT-3.9 真实 Qwen CPU integration 全部通过后，才允许冻结 GPU/K8s formal manifest。
 
-仍明确未授权：
+当前 gate 尚未开放，因此此刻不得执行、但在前置 gate 通过后已获条件授权：
 
 - 运行任何 Hugging Face/LLM model forward；
-- 使用 GPU 或提交/查询 Kubernetes FPCT job；
+- 使用 GPU 或提交 Kubernetes FPCT job；
 - 训练、评测模型或修改 checkpoint；
-- 查看/使用 Phase 2A-1 未公开结果；
 - 加载模型权重或 checkpoint；
+
+全程仍明确禁止：
+
+- 查看/使用 Phase 2A-1 未公开结果；
 - 创建 PR、合并 `main` 或 rebase；
 - 修改 `/home/lijunsi/projects/Cache`、其他 worktree 或 `math.md`。
 
@@ -71,19 +77,19 @@
 | FPCT-1C | `GO` | FPCT-1B complete，无 integrity failure | R1 CPU | 已完成 | reference equations/oracle；19 tests pass |
 | FPCT-2 | `GO` | FPCT-1B READY + FPCT-1C GO | R1 CPU | 已完成 | shared candidate fuser + sidecar/packed global attention |
 | FPCT-3 | `GO` | FPCT-2 GO | R1 CPU | 已完成 | targeted 52 pass；CPU-safe full suite 288 pass |
-| FPCT-3.5 | `PRE-DATA LOCK PENDING COMMIT` | FPCT-3 GO + expected start SHA | R0/R1 | 仅 protocol/code/tests | exact identity、taxonomy、certification、forensic schema 已前瞻定义；未扫自然异常 |
-| FPCT-3.6 | `NOT STARTED / CONDITIONAL` | FPCT-3.5 identity forensic GO | R1 | 条件式 | exact_identity production mode + common sanitizer |
-| FPCT-3.7 | `NOT STARTED / CONDITIONAL` | FPCT-3.6 tests pass | R1 | 条件式 | 全 pair/task/split certified support re-audit |
+| FPCT-3.5 | `GO` | pre-data SHA `0398d26...` | R1 CPU | 已完成 | 7,265/7,265 identity；802 raw anomalies 全为 receiver-offset overlap alias |
+| FPCT-3.6 | `IMPLEMENTATION/TEST GO; PROVENANCE LOCK PENDING` | FPCT-3.5 identity forensic GO | R1 CPU | 已完成代码与测试 | explicit exact_identity + common certified slot-0 sanitizer；102 tests pass |
+| FPCT-3.7 | `LOCK PENDING COMMIT` | FPCT-3.6 tests pass | R1 CPU | 仅 audit freeze 前 | 12-cell raw/certified reaudit code/manifest ready；尚未执行 |
 | FPCT-3.8 | `NOT STARTED / CONDITIONAL` | certified TinyLlama readiness | R1/R2 | 条件式 | vectorized layout、instrumentation、dropout/RNG hardening |
 | FPCT-3.9 | `NOT STARTED / CONDITIONAL` | FPCT-3.8 GO | R1 CPU | 条件式 | real Qwen random-config integration gate |
 | FPCT-4 | `BLOCKED ON FPCT-3.5–3.9` | FPCT-3.9 GO | R2+ | 条件式 | pre-output GPU/K8s manifest only after all correctness gates |
-| FPCT-5 | `NOT AUTHORIZED` | FPCT-4 GO | R2 | 否 | fixed-checkpoint diagnostic |
-| FPCT-6 | `NOT AUTHORIZED` | FPCT-5 GO | R3 | 否 | matched-training pipeline smoke |
-| FPCT-7 | `NOT AUTHORIZED` | FPCT-6 GO | R3 | 否 | confirmatory-disjoint development-only pilot |
-| FPCT-8 | `NOT AUTHORIZED` | FPCT-7 GO | R4 | 否 | 正式多 seed matched retraining |
-| FPCT-9 | `NOT AUTHORIZED` | FPCT-8 GO | R4 | 否 | 执行冻结 evaluation |
-| FPCT-10 | `NOT AUTHORIZED` | FPCT-9 decision | R5 | 否 | mechanism/event re-audit/replication |
-| FPCT-11 | `NOT AUTHORIZED` | FPCT-10 decision | R0/R5 | 否 | claim freeze 与归档 |
+| FPCT-5 | `CONDITIONAL / GATE CLOSED` | FPCT-4 GO | R2 | 条件式 | fixed-checkpoint diagnostic |
+| FPCT-6 | `CONDITIONAL / GATE CLOSED` | FPCT-5 GO | R3 | 条件式 | matched-training pipeline smoke |
+| FPCT-7 | `CONDITIONAL / GATE CLOSED` | FPCT-6 GO | R3 | 条件式 | confirmatory execution lock/smoke |
+| FPCT-8 | `CONDITIONAL / GATE CLOSED` | FPCT-7 GO | R4 | 条件式 | 12-seed three-arm matched retraining |
+| FPCT-9 | `CONDITIONAL / GATE CLOSED` | FPCT-8 GO | R4 | 条件式 | model-selection then held-out firewall evaluation |
+| FPCT-10 | `CONDITIONAL / GATE CLOSED` | FPCT-9 decision | R5 | 条件式 | mechanism/event re-audit/replication |
+| FPCT-11 | `CONDITIONAL / GATE CLOSED` | FPCT-10 decision | R0/R5 | 条件式 | claim freeze 与归档 |
 
 本次 prompt 已提供上述条件授权；任何条件不满足时立即停止，不自动扩大范围。
 
@@ -170,6 +176,10 @@
 | FPCT-D032 | 2026-07-20 | FPCT-3.5 在任何新自然 anomaly ledger 前冻结 exact runtime identity、offset taxonomy 与 certified-support oracle | same-tokenizer raw soft-span 只作 historical diagnostic；exact identity 必须 hard K=1，失败即阻断 GPU |
 | FPCT-D033 | 2026-07-20 | Tokenizer behavior fingerprint 排除 model config/generation config，但保留其独立 provenance | exact identity 比较 backend/vocab/added/special/chat template/tokenizer files；`name_or_path` 只用于路径审计 |
 | FPCT-D034 | 2026-07-20 | Certified one-to-many 必须穷尽全部 positive-overlap source tokens | `positive_overlap_counts` 与 retained legal candidates 不相等时不得 certify；source truncation 后必须重验 |
+| FPCT-D035 | 2026-07-20 | Qwen3 runtime identity 通过，raw soft-span 802 parents 全部是 `duplicate_or_overlap_receiver_offsets` | fit+cal 精确复现 56 groups/410 m2；无 path mix-up 或 unexplained row |
+| FPCT-D036 | 2026-07-20 | Qwen3 与 Qwen2.5 raw anomaly sets 逐行完全相等，但 behavior fingerprint 与路径不同 | groups/parents/offset/candidate-ID Jaccard 均 1；解释为共享 offset/token behavior，不是错误 tokenizer object |
+| FPCT-D037 | 2026-07-20 | `exact_identity` 成为 same-tokenizer hard K=1 production strategy | rendered/IDs/offset/content/range/fingerprint 任一不等即 hard error；不 fallback |
+| FPCT-D038 | 2026-07-20 | `certified_slot0_v1` 只在显式 FPCT recipe 中共同作用于三臂 | uncertified m>=2 使用 raw slot0 one-hot；truncate 后重验并重算 parent entropy；legacy default 不变 |
 
 ## 6. 已锁定决定与 deferred items
 
@@ -180,7 +190,7 @@
 3. distinct content-group descriptive audit、ordinary 95% Wilson、sensitivity-only Bonferroni LCB；
 4. 工程 readiness 30/task + 100 pooled 与 label-free ranking。
 
-Deferred：`delta_pos`、`delta_direct_all`、`n_req`、paired-discordance power、matched-training seed count/identities、training budget、checkpoint-selection rule、fp16/bfloat16 tolerance、GPU resource ceiling 和 stopping rules。Deferred 不等于在对应自然结果出现后补写；必须由单独的前瞻性人工批准锁定。
+历史 FPCT-1A-R 中 deferred 的 formal effect/power gate 仍不回填到 structural-support audit。本次 `FPCT-OVERNIGHT` 已另行前瞻锁定 confirmatory seeds `45–56`、64-step matched budget、final-step-64 checkpoint rule、BF16/FP16 numerical tolerances、resource ceilings、futility gate、held-out thresholds 和 stopping/retry rules；这些不能根据后续输出修改。尚待执行前解析并冻结的是 container image digest、实际可用硬件/node inventory、model file hashes 和 synthetic activation-null floor，均必须发生在对应输出之前。
 
 ## 7. Artifact/path contract
 
@@ -215,17 +225,26 @@ Reference equations、flat/hierarchical、退化、refinement/permutation、mask
 
 Production seam、shared candidate fuser、parent nuisance broadcast、ambiguous-only packed global attention、GQA/MQA、gradient、default/state-dict/config regression 均通过 CPU tests。没有运行 HF/LLM forward，因此该 GO 不构成 real-model activation 或 accuracy 证据。
 
-### FPCT-4：REVIEW REQUIRED / GPU NOT AUTHORIZED
+### 历史 FPCT-4 draft：SUPERSEDED / CURRENT GPU GATE CLOSED
 
-已生成 non-operative draft，包含 fixed-checkpoint smoke、三个 matched arms、`Y_CC/Y_CF/Y_FC/Y_FF` 2×2 intervention、replicated-collapse、`m<=1` exact control 和 mechanism/resource diagnostics。Seed、训练预算、effect/power、fp16/bfloat16 tolerance 与 resource/stopping rule 未锁；不得提交 Kubernetes Job 或启动 GPU。
+旧 CPU-GATE 生成的 non-operative draft 作为历史记录保留。本次 `FPCT-OVERNIGHT` 已前瞻锁定三臂、12 seeds、2×2 intervention、统计、numerical/resource 与 retry/stopping contract；但当前仍须完成 FPCT-3.7–3.9 correctness gates，现阶段不得提交 Kubernetes Job 或启动 GPU。
 
-### FPCT-3.5：PRE-DATA LOCK PENDING COMMIT
+### FPCT-3.5：GO
 
-已完成前瞻性 protocol、machine-readable manifest、diagnostic state-machine skeleton 和 13 个 synthetic tests。尚未调用本地自然 tokenizer、未生成逐 parent ledger。必须先 commit/push，并由 clean commit 生成 local `pre_data_lock.json` 后才能开始 Qwen3/Qwen2.5 forensic。
+Pre-data commit `0398d26...` 已在自然结果前推送。全量 forensic 证明 Qwen3 runtime identity；802/802 raw m2 rows 均由重叠 receiver offsets 产生，fit+cal 为 410 parents/56 groups。Qwen3/Qwen2.5 四类 row sets 全等且路径/fingerprint distinct，无 tokenizer mix-up。
+
+### FPCT-3.6：GO
+
+生产 aligner 已增加 hard `exact_identity`；dataset/evaluator 已增加 opt-in `certified_slot0_v1` sanitizer。Synthetic、production aligner、audit finalize/independent-verify round trip 与既有回归合计 `102 passed, 2 warnings`。代码/测试 gate 通过，但 corrected execution provenance 尚待 commit/push，因此尚未运行 certified natural audit。
+
+### FPCT-3.7：LOCK PENDING COMMIT
+
+Raw/certified 12-cell audit、resource re-estimate、Qwen raw/exact dual reporting 和 frozen readiness ranking 已实现。必须先从 clean corrected commit freeze，之后才能运行自然 certified audit。
 
 ## 9. FPCT-CPU-GATE 最终隔离复查
 
 - `/home/lijunsi/projects/Cache` 保持 `main`，HEAD `a320777ee3d8e2c5fbf988ad6cd840b560aab28b`，复查时 clean。
 - `/home/lijunsi/projects/Cache-phase2a2-cache-geometry` 保持 `research/phase2a2-cache-geometry`，复查时 HEAD `00db4c7eeffc57a852c67fd1aedad9fd823ca528` 且 clean。该 worktree 在本任务期间由并行活动从操作前记录的 `b1748bd...` 前进；FPCT 未在其中执行写操作、切换分支或读取结果文件。
+- `/home/lijunsi/projects/Cache-phase2a2-equivalence-debug` 保持 `research/phase2a2-equivalence-debug`，复查时 HEAD `f1059dee343969661bb9492f0231d9bb58261706` 且 clean；FPCT 未在其中执行写操作、切换分支或读取结果文件。
 - 当前 diff 不包含 `PHASE2A_*`/`phase2a_*` 文件；v1 protocol、v1/v2 manifest、approval addendum 与 `math.md` 均无 diff。
 - `math.md` SHA256 仍为 `98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad`；operative v2 manifest SHA256 仍为 `f7c8bd7fbc456484d1a40ca88d32dc8da3104c422a5addd89f7d033b12c82511`。

@@ -1316,11 +1316,18 @@ class AlignedChatDataset(Dataset):
         max_length: int = 32768,
         soft_alignment_top_k: int = 4,
         candidate_replay_cache_path: Optional[str] = None,
+        fpct_alignment_sanitizer: str = "none",
     ):
         self.dataset = instruct_dataset
         self.aligner = aligner
         self.max_length = max_length
         self.soft_alignment_top_k = max(1, int(soft_alignment_top_k))
+        if fpct_alignment_sanitizer not in {"none", "certified_slot0_v1"}:
+            raise ValueError(
+                "fpct_alignment_sanitizer must be 'none' or "
+                "'certified_slot0_v1'"
+            )
+        self.fpct_alignment_sanitizer = fpct_alignment_sanitizer
         self.candidate_replay_cache = self._load_candidate_replay_cache(
             candidate_replay_cache_path
         )
@@ -1334,6 +1341,7 @@ class AlignedChatDataset(Dataset):
             AlignmentStrategy.SOFT_SPAN_OVERLAP,
             AlignmentStrategy.SOFT_SPAN_OVERLAP_V2,
             AlignmentStrategy.LEARNED_SPAN_ALIGNMENT,
+            AlignmentStrategy.EXACT_IDENTITY,
         }:
             return self._getitem_soft(messages, idx=idx)
 
@@ -1476,6 +1484,15 @@ class AlignedChatDataset(Dataset):
             return_details=True,
             apply_confidence_control=False,
         )
+
+        effective_target_length = min(len(details["slm_ids"]), self.max_length)
+        effective_source_length = min(len(details["llm_ids"]), self.max_length)
+        if self.fpct_alignment_sanitizer == "certified_slot0_v1":
+            details = self.aligner.sanitize_fpct_soft_alignment(
+                details,
+                target_length=effective_target_length,
+                source_length=effective_source_length,
+            )
 
         slm_ids: List[int] = details["slm_ids"]
         llm_ids: List[int] = details["llm_ids"]

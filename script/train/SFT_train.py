@@ -1916,6 +1916,9 @@ def main():
                 candidate_replay_cache_path=training_config.get(
                     "candidate_replay_cache_path"
                 ),
+                fpct_alignment_sanitizer=model_config.get(
+                    "fpct_alignment_sanitizer", "none"
+                ),
             )
         else:
             full_dataset = ChatDataset(instruct_ds, main_tokenizer)

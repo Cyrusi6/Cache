@@ -1,0 +1,133 @@
+{
+  "schema_version": 1,
+  "stage": "FPCT-3.5",
+  "status": "IDENTITY_FORENSIC_GO_TO_CONDITIONAL_CORRECTION",
+  "pre_data_execution_sha": "0398d26b63e96263b813730368275ee66e313f66",
+  "pre_data_lock": {
+    "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/pre_data_lock.json",
+    "sha256": "ebf184ad578ae4e864a63c315a95fc07060b0ca4aebd58015f1b938d8f1287e2"
+  },
+  "forensic_summary": {
+    "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/forensic_summary.json",
+    "sha256": "1dc030adcc2e6d45a822c7f01899f442fc49cde654868df600d6e5fb28848584"
+  },
+  "runtime_identity": {
+    "samples_checked": 7265,
+    "samples_equal": 7265,
+    "receiver_qwen3_fingerprint": "ccf72f82e8b6bdc2f0b2e198d7bab79d9c1579b5c194e757b4a1159bba603207",
+    "sender_qwen3_fingerprint": "ccf72f82e8b6bdc2f0b2e198d7bab79d9c1579b5c194e757b4a1159bba603207",
+    "qwen25_fingerprint": "8fe3f6d6363e6935676082b7c4e9ce1b749e74566c9b98f5dfcd96ded57ce887",
+    "tokenizer_or_pair_path_mixup": false
+  },
+  "qwen3_raw": {
+    "all_split_parents_m2": 802,
+    "all_split_positive_groups": 104,
+    "fit_calibration_parents_m2": 410,
+    "fit_calibration_positive_groups": 56,
+    "taxonomy": {
+      "duplicate_or_overlap_receiver_offsets": 802
+    },
+    "unexplained_rows": 0,
+    "certified_one_to_many_rows": 0,
+    "paired_overlap_events": 401
+  },
+  "qwen3_qwen25_comparison": {
+    "sender_provenance": {
+      "qwen3_1p7b": {
+        "directory": "/netdisk/lijunsi/c2c-route1-identifiability/models/Qwen3-1.7B",
+        "name_or_path": "/netdisk/lijunsi/c2c-route1-identifiability/models/Qwen3-1.7B",
+        "runtime_fingerprint": "ccf72f82e8b6bdc2f0b2e198d7bab79d9c1579b5c194e757b4a1159bba603207"
+      },
+      "qwen25_0p5b": {
+        "directory": "/netdisk/lijunsi/c2c-route1-identifiability/models/Qwen2.5-0.5B-Instruct",
+        "name_or_path": "/netdisk/lijunsi/c2c-route1-identifiability/models/Qwen2.5-0.5B-Instruct",
+        "runtime_fingerprint": "8fe3f6d6363e6935676082b7c4e9ce1b749e74566c9b98f5dfcd96ded57ce887"
+      }
+    },
+    "positive_groups": {
+      "count": 104,
+      "equal": true,
+      "jaccard": 1.0,
+      "sha256": "46d4e98b5ff76e4a73aff5788db8755bbfe71875ce892803b0e953e5edf1cf46"
+    },
+    "positive_parents": {
+      "count": 802,
+      "equal": true,
+      "jaccard": 1.0,
+      "sha256": "0f7445a3265ee707d0008ecfab71128f4a42c6aacb911f33a975ce591c809932"
+    },
+    "offset_signatures": {
+      "count": 802,
+      "equal": true,
+      "jaccard": 1.0,
+      "sha256": "9a34d8c6475147b4b023e163ecb5e5bdfae8dd306f3e3907669dcb6aa0359f92"
+    },
+    "candidate_id_signatures": {
+      "count": 802,
+      "equal": true,
+      "jaccard": 1.0,
+      "sha256": "d0cf2b79c0d0bb04ec7c240dc618bd2f7ebb0ae442a2f5ea24c686c379a62adb"
+    }
+  },
+  "local_artifacts": {
+    "ai2_arc_summary": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/forensic/ai2-arc/summary.json",
+      "bytes": 55707505,
+      "sha256": "c41efb514c67e4ca614434d505cf33625c00c55b7907622fa8717f8d4d4f2712"
+    },
+    "ai2_arc_ledger": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/forensic/ai2-arc/qwen3_forensic_ledger.csv",
+      "rows": 0,
+      "bytes": 483,
+      "sha256": "756114bc1b1fe5021812babc4deda6141058d5b27c2c009ba58841c2cc4195a9"
+    },
+    "ai2_arc_comparison": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/forensic/ai2-arc/qwen3_qwen25_comparison_rows.csv",
+      "rows": 0,
+      "bytes": 197,
+      "sha256": "f9fdbe407c8809f4d835aabcc355d353fa0b007c5b061dab3a631d62229faeb0"
+    },
+    "openbookqa_summary": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/forensic/openbookqa/summary.json",
+      "bytes": 55707512,
+      "sha256": "10efccbb9907d9d063ad22521e220e0d4c7f5007c103784c2509a0e5dfb27d74"
+    },
+    "openbookqa_ledger": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/forensic/openbookqa/qwen3_forensic_ledger.csv",
+      "rows": 0,
+      "bytes": 483,
+      "sha256": "756114bc1b1fe5021812babc4deda6141058d5b27c2c009ba58841c2cc4195a9"
+    },
+    "openbookqa_comparison": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/forensic/openbookqa/qwen3_qwen25_comparison_rows.csv",
+      "rows": 0,
+      "bytes": 197,
+      "sha256": "f9fdbe407c8809f4d835aabcc355d353fa0b007c5b061dab3a631d62229faeb0"
+    },
+    "mmlu_summary": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/forensic/mmlu-redux/summary.json",
+      "bytes": 55708142,
+      "sha256": "56bcef073d5924eb069aa9e4e9c72bf46ad298986e6a97bfdf2359ed695b88c6"
+    },
+    "mmlu_ledger": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/forensic/mmlu-redux/qwen3_forensic_ledger.csv",
+      "rows": 802,
+      "bytes": 673675,
+      "sha256": "9dc0fe6e5120aae2cd3b39bfe5154b327cd4647565430f48c3bdd3dcd2d024bf"
+    },
+    "mmlu_comparison": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66/forensic/mmlu-redux/qwen3_qwen25_comparison_rows.csv",
+      "rows": 802,
+      "bytes": 215649,
+      "sha256": "aab208a8f1ec98b669ebf3c0ce3776e5a4ddfd85d192652ad91cda8ab8410767"
+    }
+  },
+  "infrastructure_note": "first MMLU computation completed but sandbox denied final local directory creation; no partial artifact existed; exact frozen command was rerun with write permission",
+  "next_authorized": [
+    "production_exact_identity",
+    "common_certified_slot0_sanitizer",
+    "certified_support_reaudit"
+  ],
+  "gpu_authorized": false,
+  "claim_boundary": "runtime tokenizer identity and offset-alias root cause only; no heterogeneous certified support, model activation or accuracy claim"
+}
