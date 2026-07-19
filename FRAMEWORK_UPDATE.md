@@ -552,3 +552,38 @@ x8 节点失联后，把 shards 2–5 的未完成工作安全迁移到已释放
 ### 结论
 
 Phase 1.5 没有识别到 inference-time 多 candidate、position-matched entropy 或 learned token/head modulation 是 v2.2 开发集收益的稳定平均因果来源。剩余差异更符合 checkpoint/training-regime 与模型对兼容性的 pair-dependent 变化，Qwen2.5 seed44 还受到 legacy scalar K/V hard masks 的部分影响，但本实验不单独识别训练期 k4、tokenizer 身份或随机优化轨迹。预注册 query-time release gate 失败；删除 entropy-aware 与 adaptive-gate 的已验证机制主张，不进入 query-time transport prototype，后续优先考虑 calibrated null/no-transfer 与 sender–receiver compatibility 诊断。
+
+## 2026-07-19：Phase 2A-0 calibrated null/no-transfer opportunity audit
+
+### 研究目标
+
+在不启动 GPU、不训练 selector、不修改 B6 checkpoint 的前提下，严格确认 receiver-only 与 B6-native 之间的逐例互补空间是否相对真实 best fixed policy 仍然充足，并冻结后续 selector 的数据划分、比较对象、统计协议和 GO 条件。
+
+### 核心改动
+
+- 新增 CPU-only `phase2a_0_opportunity_audit.py`，从冻结 Phase 1 analysis manifest 解析唯一 receiver/B6 artifacts，校验 SHA、schema、row count、sample key、输入内容与标签。
+- 将逐例结果统一编码为 both-correct、beneficial、harmful、both-wrong 四事件，输出 pair×seed×task、pair、seed、task、all-pair 与 hetero-pair 的 task-macro/sample-weighted 指标。
+- bootstrap 改为 canonical sample 跨 pair/seed 同步重采样，并在 aggregate 中按 pair→seed 分层；每个 draw 内重新计算 `max(receiver,fused)`，得到真正 best-fixed-aware headroom CI。
+- 正式复现同时校验 Phase 1 suite、Phase 1.5 execution 与旧 oracle CSV 的 SHA/关键行，避免 `+8.24 pp` 解释只依赖手工交叉检查。
+- 完成 45 列 selector 字段的 A/B/C/D 审计，记录 entropy/confidence/one-to-many 的确定性冗余、fallback 恒零、pair-specific alignment coverage 与当前缺失的 uncertainty instrumentation。
+- 新增 Phase 2A preregistration，冻结 content-group split、calibration-selected global best fixed comparator、primary pair-balanced task-macro、leave-one-out 和六项 conjunctive GO 条件。
+
+### 实验配置
+
+- 数据：MMLU-Redux 5,615、ARC 1,150、OpenBookQA 500；4 pairs、seeds 42/43/44。
+- 复用：receiver-only 3 CSV 与 B6-native 36 CSV；artifact commit `9b06d173eada148343ddfb71a31721c7ae5f7ad5`。
+- 统计：10,000 draws、95% percentile CI、seed `20260719`；pair/seed cluster resampling 与 task-stratified synchronous paired-sample resampling。
+- Primary future estimand：selector vs calibration-selected best fixed，pair-balanced task-macro；sample-weighted mandatory secondary。
+
+### 验证结果
+
+- 定向测试 `3 passed`；39 个正式输入文件、7,265 unique rows、87,180 repeated observations 的合同全部通过。
+- Sample-weighted：receiver 36.1597%、fused 46.9316%、oracle 55.1755%、oracle-over-best-fixed `+8.2439 pp`，95% CI `[+6.2318,+10.2019] pp`。
+- Task-macro：receiver 38.2684%、fused 50.1531%、oracle 58.6883%、oracle-over-best-fixed `+8.5352 pp`，95% CI `[+6.3438,+10.7561] pp`。
+- Fused 在 36/36 pair×seed×task 单元中优于 receiver；因此 Phase 1.5 的 `+8.24 pp` 点估计也是真实 retrospective best-fixed headroom。
+- 发现 7,233 content groups 与 32 个 MMLU 重复内容组，后续按 content hash 绑定 split；禁止 row-order 或 question-id-only split。
+- 正式统计完成 81 个 aggregate rows；定向测试 `3 passed`，项目全量 `239 passed, 2 warnings`；正式 CSV 确定性重跑 byte-identical，JSON 除输出路径外 scientific content identical；`py_compile` 与 `git diff --check` 通过。
+
+### 结论
+
+Calibrated no-transfer 具有足够大的 oracle opportunity，但当前 A 类特征高度冗余且缺少 receiver/fused uncertainty，不能从 headroom 直接推断 selector 可实现性。Phase 2A-0 只完成机会审计与预注册，明确停止在 selector 训练和 instrumentation rerun 之前，等待审查。

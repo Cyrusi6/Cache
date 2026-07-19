@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "phase": "2A-0",
+  "source_commit": "29a96947fc5d5e0a8f457f75edf7f2e745932bce",
+  "constraints": {
+    "gpu": false,
+    "training": false,
+    "checkpoint_mutation": false,
+    "selector_training": false
+  },
+  "source": {
+    "artifact_root": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache",
+    "artifact_commit": "9b06d173eada148343ddfb71a31721c7ae5f7ad5",
+    "phase1_suite_manifest": "local/tmp/route1_identifiability_suite/manifest.json",
+    "phase1_suite_manifest_sha256": "6038ac67c04ae17466f3948164a039d53eec1eb6415edf560a05f841fcfe4c36",
+    "phase1_analysis_manifest": "local/tmp/route1_identifiability_suite/analysis_manifest.json",
+    "phase1_analysis_manifest_sha256": "3d2fe098d1db27442cdb6f99690912634bc2f983115ea34dddfbe20313130bab",
+    "dataset_content_sha256": "0366be7e5b129710024543bc065774bef165b6b6bca92541a3d641aea2918114",
+    "receiver_run_id": "receiver__b0__seed_42",
+    "receiver_pair": "receiver",
+    "receiver_variant": "b0",
+    "receiver_seed": 42,
+    "fused_variant": "b6",
+    "phase1_5_execution_manifest": "local/tmp/phase1_5_causal_diagnostics/manifest.json",
+    "phase1_5_execution_manifest_sha256": "424d0468a624fee6cd31932bf3795fa42b98bf20f9563ebf84a0afaca5605dd1",
+    "phase1_5_oracle_csv": "local/final_results/phase1_5_causal_diagnostics/rev_0d30852/analysis/oracle_abstention.csv",
+    "phase1_5_oracle_csv_sha256": "3b38c5a1eb86eb16bb4610ca1f313750c7e3070a2f49c234b0d000e9857c5453"
+  },
+  "pairs": [
+    {
+      "id": "tinyllama",
+      "label": "TinyLlama-1.1B -> Qwen3-0.6B",
+      "pair_type": "cross_tokenizer_heterogeneous",
+      "heterogeneous": true
+    },
+    {
+      "id": "qwen3_1p7b",
+      "label": "Qwen3-1.7B -> Qwen3-0.6B",
+      "pair_type": "same_tokenizer_control",
+      "heterogeneous": false
+    },
+    {
+      "id": "qwen25_0p5b",
+      "label": "Qwen2.5-0.5B -> Qwen3-0.6B",
+      "pair_type": "lcf_cross_tokenizer_control",
+      "heterogeneous": true
+    },
+    {
+      "id": "llama32_1b",
+      "label": "Llama3.2-1B -> Qwen3-0.6B",
+      "pair_type": "cross_family_heterogeneous",
+      "heterogeneous": true
+    }
+  ],
+  "seeds": [42, 43, 44],
+  "tasks": [
+    {
+      "id": "ai2-arc",
+      "expected_rows": 1150
+    },
+    {
+      "id": "openbookqa",
+      "expected_rows": 500
+    },
+    {
+      "id": "mmlu-redux",
+      "expected_rows": 5615
+    }
+  ],
+  "bootstrap": {
+    "samples": 10000,
+    "confidence": 0.95,
+    "seed": 20260719,
+    "batch_size": 250,
+    "sample_resampling": "task-stratified canonical samples, synchronous across all pair/seed cells",
+    "cluster_resampling": "pairs, then seeds within selected pair",
+    "best_fixed_rule": "recompute max(receiver_accuracy, fused_accuracy) inside every draw"
+  },
+  "future_selector_preregistration": {
+    "split_version": "cache-phase2a-v1-29a96947",
+    "split_group": "normalized question+choices content SHA256",
+    "split_hash": "SHA256(split_version + dataset_content_sha256 + content_hash)",
+    "split_intervals": {
+      "fit": [0.0, 0.3],
+      "calibration": [0.3, 0.45],
+      "model_selection": [0.45, 0.6],
+      "test": [0.6, 1.0]
+    },
+    "primary_aggregation": "pair-balanced task-macro",
+    "primary_comparator": "global best of always-receiver and always-fused selected on calibration; ties choose receiver",
+    "test_use": "single final evaluation; never feature, threshold, model, or comparator selection"
+  }
+}

@@ -336,3 +336,19 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - B6 native oracle abstention headroom 为 `+8.24 pp`、CI `[+6.28,+10.19]`，4/4 pairs 为正。该值是 label-aware 上界，统计文件不含 selector AUROC、校准或 selective-risk 结果，不能推断现有 gate 能实现该收益；只支持后续优先审计 calibrated null/no-transfer。
 - Ambiguity interaction 只作探索性敏感性分析：pooled q75 在多个 pair 上混入 MMLU 与 ARC/OBQA task 差异，absolute 定义又存在 TinyLlama 全 high、其他 pair 稀疏的问题。因此只用“没有可靠正向集中”判定放行失败，不把负 interaction 包装成普适反机制。
 - Query-time prototype 放行失败：B2 正向异构 pair 数不足；B3 虽 3/3 为正，但跨 pair CI 下界 `−0.06 pp`，且无可靠高 ambiguity concentration。本阶段停止，不进入 query-time transport；根目录报告为 `PHASE1_5_CAUSAL_DIAGNOSTICS_REPORT.md` 与 `PHASE1_5_CAUSAL_DIAGNOSTICS_SUMMARY_ZH.md`。
+
+### 2026-07-19 Phase 2A-0 calibrated null/no-transfer 零 GPU opportunity audit
+
+- 基线：Cache `main` commit `29a96947fc5d5e0a8f457f75edf7f2e745932bce`；只读取 Phase 1 artifact commit `9b06d173eada148343ddfb71a31721c7ae5f7ad5` 的 receiver-only 与 B6-native 逐例 CSV。
+- 约束：未启动 GPU/Kubernetes，未训练 adapter/router，未修改 B6 checkpoint，未进入 instrumentation rerun 或 selector 训练。
+- 输入合同：receiver-only 3 文件/7,265 行；B6-native 36 文件/87,180 重复观测；39 文件 schema、sample keys、输入内容与标签完全匹配。7,265 rows 对应 7,233 normalized-content groups，MMLU 内 32 个重复内容组后续必须绑定 split。
+- 四事件 sample-weighted：both-correct 27.9158%，beneficial 19.0158%，harmful 8.2439%，both-wrong 44.8245%。Receiver 36.1597%，fused 46.9316%，oracle 55.1755%。
+- Pair-balanced sample-weighted oracle-over-best-fixed `+8.2439 pp`，10,000-draw best-fixed-aware hierarchical paired bootstrap 95% CI `[+6.2318,+10.2019] pp`；task-macro 为 `+8.5352 pp`、CI `[+6.3438,+10.7561] pp`。
+- B6-native 在全部 36/36 pair×seed×task 单元中优于 receiver，故 Phase 1.5 的 `+8.24 pp` 点估计确实也是相对 retrospective best fixed 的真实空间，而非仅相对 fused；旧正式 CI 技术上仍是 fused-only，新统计在每个 draw 内重算 `max(receiver,fused)`。
+- 统计脚本自动校验 Phase 1 suite manifest、Phase 1.5 execution manifest 与旧 oracle CSV 的 SHA，并解析旧 `b6_native` across-pair 行；旧点估计与新 best-fixed point 必须一致。
+- 字段审计：真正 A 类现有特征为 input length 与 alignment summaries；gate/fused output 为 B 类，receiver full-forward output 为 C 类，label/correctness/event/identity 为 D 类。`entropy == one_to_many_rate`、`confidence == 1-0.5×entropy`，`fallback_rate` 恒为 0，说明可部署特征有效维度有限且强烈 pair-coded。
+- 预注册：后续 primary comparator 固定为 calibration-selected global best fixed policy；primary aggregation 为 pair-balanced task-macro；fit/calibration/model-selection/test 采用 30/15/15/40 的 content-group hash split，并冻结 leave-one-seed/task/pair-out 与六项 conjunctive GO 条件。
+- 可复现命令：`python script/analysis/phase2a_0_opportunity_audit.py --manifest recipe/eval_recipe/phase2a_0/opportunity_audit_manifest.json --output-csv PHASE2A_0_OPPORTUNITY_AGGREGATES.csv --output-json PHASE2A_0_OPPORTUNITY_AGGREGATES.json`。
+- 交付：`PHASE2A_0_OPPORTUNITY_AUDIT.md`、`PHASE2A_PREREGISTRATION.md`、小型 aggregate CSV/JSON、manifest、统计脚本与定向测试。大体积逐例文件继续只保留在 `/netdisk/.../local/`。
+- 验证：定向测试 `3 passed`；项目全量 `239 passed, 2 warnings`；正式 10,000-draw CSV 确定性重跑 byte-identical，JSON 除输出路径外 scientific content identical；`py_compile` 与 `git diff --check` 通过。
+- 结论：opportunity 存在且跨 pair/seed/task 稳定，但仍是 label-aware oracle 上界，不证明当前已有可实现 selector。Phase 2A-0 到此停止，等待审查。
