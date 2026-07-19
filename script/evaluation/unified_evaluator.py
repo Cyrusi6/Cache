@@ -20,7 +20,7 @@ from collections import defaultdict
 import numpy as np
 from pathlib import Path
 from tqdm import tqdm
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple, Optional, Mapping, Sequence
 from datetime import datetime
 import hashlib
 import random
@@ -57,6 +57,12 @@ from rosetta.utils.gate_diagnostics import (
     configure_projector_gate_diagnostics,
     merge_gate_diagnostic_states,
 )
+from rosetta.utils.cache_geometry import (
+    cache_geometry_runtime,
+    clear_projector_cache_geometry_records,
+    configure_projector_cache_geometry,
+    consume_cache_geometry_records,
+)
 from rosetta.utils.eval_interventions import (
     apply_eval_intervention_to_config,
     apply_projector_eval_intervention,
@@ -66,6 +72,202 @@ from rosetta.baseline.multi_stage import TwoStageInference, TwoStageRosetta
 
 
 _TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
+_CONTENT_GROUP_CHOICE_FIELDS = tuple(chr(code) for code in range(ord("A"), ord("J") + 1))
+_CACHE_GEOMETRY_OUTPUT_FIELDS = (
+    "pred",
+    "cot_pred",
+    "cot_output",
+    "cot_gen_length",
+    "extraction_method_used",
+    "extracted_normalized",
+)
+
+
+def _normalized_content_text(value: Any) -> str:
+    return " ".join(str(value or "").strip().split())
+
+
+def _ordered_choice_texts(raw_choices: Any) -> List[str]:
+    if isinstance(raw_choices, Mapping):
+        texts = list(raw_choices.get("text", []) or [])
+        labels = list(raw_choices.get("label", []) or [])
+        if labels and len(labels) == len(texts):
+            labelled = sorted(
+                zip(labels, texts),
+                key=lambda item: str(item[0]),
+            )
+            return [str(text) for _label, text in labelled]
+        return [str(text) for text in texts]
+    if isinstance(raw_choices, Sequence) and not isinstance(raw_choices, (str, bytes)):
+        choices: List[str] = []
+        for item in raw_choices:
+            if isinstance(item, Mapping):
+                choices.append(str(item.get("text", "")))
+            else:
+                choices.append(str(item))
+        return choices
+    return []
+
+
+def content_group_hash_for_example(dataset: str, example: Mapping[str, Any]) -> str:
+    """Hash outcome-free benchmark inputs using the frozen Phase 2A convention."""
+    dataset = str(dataset)
+    if dataset == "mmlu-redux":
+        question = example.get("question", "")
+        choices = _ordered_choice_texts(example.get("choices"))
+        choice_limit = 4
+    elif dataset == "openbookqa":
+        question = example.get("question_stem", "")
+        choices = _ordered_choice_texts(example.get("choices"))
+        choice_limit = 4
+    elif dataset == "ai2-arc":
+        question = example.get("question", "")
+        choices = _ordered_choice_texts(example.get("choices"))
+        choice_limit = 4
+    elif dataset == "mmlu-pro":
+        question = example.get("question", "")
+        choices = _ordered_choice_texts(example.get("options"))
+        choice_limit = 10
+    elif dataset in {"mmmlu", "ceval"}:
+        question = example.get("Question", example.get("question", ""))
+        choices = [example.get(name, "") for name in _CONTENT_GROUP_CHOICE_FIELDS]
+        choice_limit = 4
+    else:
+        raise ValueError(
+            "content-group filtering/cache-geometry identity is not implemented for "
+            f"dataset {dataset!r}"
+        )
+
+    padded_choices = list(choices[:choice_limit])
+    padded_choices.extend(
+        [""] * (len(_CONTENT_GROUP_CHOICE_FIELDS) - len(padded_choices))
+    )
+    payload = {
+        "question": _normalized_content_text(question),
+        "choices": [_normalized_content_text(choice) for choice in padded_choices],
+    }
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
+
+
+class ContentGroupFilter:
+    """Outcome-free allow-list backed by a frozen content-group split manifest."""
+
+    def __init__(
+        self,
+        manifest: Path,
+        *,
+        split: str,
+        dataset: str,
+        expected_manifest_sha256: Optional[str] = None,
+        expected_rows: Optional[int] = None,
+    ):
+        manifest = Path(manifest).expanduser()
+        if not manifest.is_absolute():
+            manifest = (REPO_ROOT / manifest).resolve()
+        manifest_bytes = manifest.read_bytes()
+        if expected_manifest_sha256 is not None:
+            actual_sha256 = hashlib.sha256(manifest_bytes).hexdigest()
+            if actual_sha256 != str(expected_manifest_sha256):
+                raise ValueError(
+                    "content_group_filter manifest SHA256 mismatch: "
+                    f"{actual_sha256} != {expected_manifest_sha256}"
+                )
+        payload = json.loads(manifest_bytes.decode("utf-8"))
+        if payload.get("created_without_outcome_fields") is not True:
+            raise ValueError(
+                "content_group_filter manifest must declare "
+                "created_without_outcome_fields=true"
+            )
+        if payload.get("role") not in {None, "content_group_split_manifest"}:
+            raise ValueError("content_group_filter manifest has an unexpected role")
+
+        self.manifest = manifest
+        self.split = str(split)
+        self.dataset = str(dataset)
+        allowed_hashes = set()
+        seen_hashes = set()
+        dataset_groups = 0
+        allowed_member_count = 0
+        for entry in payload.get("groups", []):
+            content_hash = str(entry.get("content_hash", ""))
+            if len(content_hash) != 64 or content_hash in seen_hashes:
+                raise ValueError(
+                    f"Invalid or duplicate content hash in {manifest}: {content_hash!r}"
+                )
+            seen_hashes.add(content_hash)
+            members = entry.get("members", [])
+            belongs_to_dataset = any(
+                str(member.get("task", "")) == self.dataset
+                for member in members
+                if isinstance(member, Mapping)
+            )
+            if belongs_to_dataset:
+                dataset_groups += 1
+                if str(entry.get("split", "")) == self.split:
+                    allowed_hashes.add(content_hash)
+                    allowed_member_count += sum(
+                        str(member.get("task", "")) == self.dataset
+                        for member in members
+                        if isinstance(member, Mapping)
+                    )
+        if dataset_groups == 0:
+            raise ValueError(
+                f"No content groups for dataset {self.dataset!r} in {manifest}"
+            )
+        if not allowed_hashes:
+            raise ValueError(
+                f"No {self.split!r} content groups for dataset {self.dataset!r} "
+                f"in {manifest}"
+            )
+        self.allowed_hashes = frozenset(allowed_hashes)
+        self.allowed_member_count = allowed_member_count
+        self.expected_rows = (
+            None if expected_rows is None else int(expected_rows)
+        )
+        if expected_rows is not None and allowed_member_count != int(expected_rows):
+            raise ValueError(
+                "content_group_filter expected row count differs from manifest: "
+                f"{allowed_member_count} != {expected_rows}"
+            )
+
+    def match(self, example: Mapping[str, Any]) -> Optional[str]:
+        content_hash = content_group_hash_for_example(self.dataset, example)
+        return content_hash if content_hash in self.allowed_hashes else None
+
+
+def cache_geometry_output_record(
+    *,
+    identity: Mapping[str, Any],
+    prediction: Mapping[str, Any],
+) -> Dict[str, Any]:
+    """Build the outcome-free geometry on/off parity record for one sample."""
+    canonical_output = {
+        field: prediction.get(field) for field in _CACHE_GEOMETRY_OUTPUT_FIELDS
+    }
+    encoded = json.dumps(
+        canonical_output,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return {
+        "schema_version": 1,
+        "role": str(identity["role"]),
+        "pair": str(identity["pair"]),
+        "seed": int(identity["seed"]),
+        "task": str(identity["task"]),
+        "subject": str(identity["subject"]),
+        "question_id": str(identity["question_id"]),
+        "content_hash": str(identity["content_hash"]),
+        "output_sha256": hashlib.sha256(encoded).hexdigest(),
+    }
 
 
 def configure_cuda_visibility(environ=None) -> bool:
@@ -589,6 +791,101 @@ class UnifiedEvaluator:
             GateDiagnosticsAccumulator
         ] = None
 
+        content_filter_config = config.get(
+            "content_group_filter",
+            self.eval_config.get("content_group_filter"),
+        )
+        self.content_group_filter: Optional[ContentGroupFilter] = None
+        if content_filter_config is not None:
+            if not isinstance(content_filter_config, Mapping):
+                raise TypeError("content_group_filter must be a mapping")
+            manifest = content_filter_config.get("manifest")
+            if not manifest:
+                raise ValueError("content_group_filter.manifest is required")
+            filter_dataset = str(
+                content_filter_config.get("dataset", self.dataset_name)
+            )
+            if filter_dataset != self.dataset_name:
+                raise ValueError(
+                    "content_group_filter.dataset must match eval.dataset: "
+                    f"{filter_dataset!r} != {self.dataset_name!r}"
+                )
+            self.content_group_filter = ContentGroupFilter(
+                Path(str(manifest)),
+                split=str(
+                    content_filter_config.get(
+                        "split", content_filter_config.get("allowed_split", "fit")
+                    )
+                ),
+                dataset=filter_dataset,
+                expected_manifest_sha256=content_filter_config.get(
+                    "manifest_sha256"
+                ),
+                expected_rows=content_filter_config.get("expected_rows"),
+            )
+
+        geometry_config = config.get(
+            "cache_geometry_instrumentation",
+            self.eval_config.get("cache_geometry_instrumentation"),
+        )
+        self.cache_geometry_configured = geometry_config is not None
+        if geometry_config is None:
+            geometry_config = {}
+        if not isinstance(geometry_config, Mapping):
+            raise TypeError("cache_geometry_instrumentation must be a mapping")
+        geometry_metadata = geometry_config.get("metadata", {})
+        if not isinstance(geometry_metadata, Mapping):
+            raise TypeError("cache_geometry_instrumentation.metadata must be a mapping")
+        self.cache_geometry_enabled = bool(geometry_config.get("enabled", False))
+        expected_role = (
+            "geometry_on" if self.cache_geometry_enabled else "geometry_off"
+        )
+        configured_role = geometry_config.get("role", geometry_metadata.get("role"))
+        if configured_role is not None and str(configured_role) != expected_role:
+            raise ValueError(
+                "cache_geometry_instrumentation.role must agree with enabled: "
+                f"expected {expected_role!r}, got {configured_role!r}"
+            )
+        pair = geometry_config.get(
+            "pair",
+            geometry_metadata.get(
+                "pair", self.model_config.get("pair", self.model_config["model_name"])
+            ),
+        )
+        seed = geometry_config.get(
+            "seed",
+            geometry_metadata.get(
+                "seed", self.eval_config.get("seed", self.model_config.get("seed", 0))
+            ),
+        )
+        self.cache_geometry_identity = {
+            "role": expected_role,
+            "pair": str(pair),
+            "seed": int(seed),
+            "task": (
+                self.content_group_filter.dataset
+                if self.content_group_filter is not None
+                else self.dataset_name
+            ),
+        }
+        geometry_output_dir = geometry_config.get("output_dir", self.output_dir)
+        self.cache_geometry_output_dir = Path(str(geometry_output_dir)).expanduser()
+        if not self.cache_geometry_output_dir.is_absolute():
+            self.cache_geometry_output_dir = (
+                REPO_ROOT / self.cache_geometry_output_dir
+            ).resolve()
+        if self.cache_geometry_configured:
+            self.cache_geometry_output_dir.mkdir(parents=True, exist_ok=True)
+        self._cache_geometry_records: List[Dict[str, Any]] = []
+        self._cache_geometry_output_records: List[Dict[str, Any]] = []
+        self._cache_geometry_runtime_by_worker: List[Dict[str, Any]] = []
+        self._cache_geometry_layer_stream = None
+        self._cache_geometry_layer_record_count = 0
+        self._content_group_matched_count = 0
+        self._cache_geometry_run_token = (
+            f"{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}_{os.getpid()}"
+        )
+
         # Check if using two-stage based on model_name
         self.use_two_stage = self.model_config["model_name"].lower() in [
             "two_stage",
@@ -626,6 +923,17 @@ class UnifiedEvaluator:
             "Gate diagnostics: "
             f"{self.gate_diagnostics_enabled} ({self.gate_diagnostics_mode})"
         )
+        print(
+            "Cache geometry instrumentation: "
+            f"{self.cache_geometry_enabled} ({self.cache_geometry_identity['role']})"
+        )
+        if self.content_group_filter is not None:
+            print(
+                "Content-group filter: "
+                f"{self.content_group_filter.dataset}/"
+                f"{self.content_group_filter.split} from "
+                f"{self.content_group_filter.manifest}"
+            )
 
     def _make_subject_splits(self, num_gpus: int) -> List[str]:
         """Create virtual subject splits for datasets without native subjects.
@@ -1166,6 +1474,35 @@ class UnifiedEvaluator:
             else:
                 gate_summary = accumulator.consume_compact_projectors(projectors)
         return result, latency_ms, gate_summary
+
+    def _measure_with_diagnostics(
+        self,
+        run_fn,
+        device: torch.device,
+        model: Any,
+        sample_context: Mapping[str, Any],
+    ) -> Tuple[Any, float, Dict[str, Any], List[Dict[str, Any]]]:
+        """Measure one call while keeping cache geometry out of prediction rows."""
+        if not self.cache_geometry_enabled:
+            result, latency_ms, gate_summary = self._measure_with_gate_diagnostics(
+                run_fn, device, model
+            )
+            return result, latency_ms, gate_summary, []
+
+        clear_projector_cache_geometry_records(model)
+        completed = False
+        try:
+            with cache_geometry_runtime(sample_contexts=[sample_context]):
+                result, latency_ms, gate_summary = (
+                    self._measure_with_gate_diagnostics(run_fn, device, model)
+                )
+            completed = True
+            return result, latency_ms, gate_summary, consume_cache_geometry_records(
+                model
+            )
+        finally:
+            if not completed:
+                consume_cache_geometry_records(model)
 
     def create_segmented_kv_cache_index(
         self,
@@ -1766,6 +2103,30 @@ class UnifiedEvaluator:
             prepared = None
             try:
                 example = test_data[i]
+                math_eval = None
+                sample_geometry_records: List[Dict[str, Any]] = []
+
+                # This outcome-free split check intentionally precedes answer parsing,
+                # prompt construction, and every model forward/generate call.
+                if self.content_group_filter is not None:
+                    content_hash = self.content_group_filter.match(example)
+                    if content_hash is None:
+                        skip_count += 1
+                        continue
+                    self._content_group_matched_count += 1
+                elif self.cache_geometry_configured:
+                    content_hash = content_group_hash_for_example(
+                        self.cache_geometry_identity["task"], example
+                    )
+                else:
+                    content_hash = None
+
+                geometry_sample_context = {
+                    **self.cache_geometry_identity,
+                    "subject": str(subject),
+                    "question_id": str(i),
+                    "content_hash": content_hash,
+                }
 
                 if self.dataset_name != "longbench":
                     true_answer = self.parse_answer(example)
@@ -1979,11 +2340,17 @@ class UnifiedEvaluator:
                         def _forward_call():
                             return model.forward(**prepared["inputs"])
 
-                        outputs, latency_ms, gate_diagnostic_summary = (
-                            self._measure_with_gate_diagnostics(
-                                _forward_call, device, model
+                        (
+                            outputs,
+                            latency_ms,
+                            gate_diagnostic_summary,
+                            sample_geometry_records,
+                        ) = self._measure_with_diagnostics(
+                                _forward_call,
+                                device,
+                                model,
+                                geometry_sample_context,
                             )
-                        )
 
                         logits = outputs.logits[0, -1]
                         option_logits = torch.tensor(
@@ -2011,11 +2378,17 @@ class UnifiedEvaluator:
                         def _generate_call():
                             return model.generate(**inputs, **self.generation_config)
 
-                        outputs, latency_ms, gate_diagnostic_summary = (
-                            self._measure_with_gate_diagnostics(
-                                _generate_call, device, model
+                        (
+                            outputs,
+                            latency_ms,
+                            gate_diagnostic_summary,
+                            sample_geometry_records,
+                        ) = self._measure_with_diagnostics(
+                                _generate_call,
+                                device,
+                                model,
+                                geometry_sample_context,
                             )
-                        )
 
                         if isinstance(model, RosettaModel):
                             generated_ids = outputs[0]
@@ -2350,6 +2723,45 @@ class UnifiedEvaluator:
                     )
 
                 cot_logs.append(cot_log_entry)
+                if self.cache_geometry_configured:
+                    self._cache_geometry_output_records.append(
+                        cache_geometry_output_record(
+                            identity=geometry_sample_context,
+                            prediction={
+                                "pred": pred,
+                                "cot_pred": cot_pred,
+                                "cot_output": cot_text,
+                                "cot_gen_length": cot_gen_len,
+                                "extraction_method_used": (
+                                    math_eval.get("extraction_method_used")
+                                    if math_eval is not None
+                                    else None
+                                ),
+                                "extracted_normalized": (
+                                    math_eval.get("extracted_normalized")
+                                    if math_eval is not None
+                                    else None
+                                ),
+                            },
+                        )
+                    )
+                    if self._cache_geometry_layer_stream is not None:
+                        for record in sample_geometry_records:
+                            self._cache_geometry_layer_stream.write(
+                                json.dumps(
+                                    record,
+                                    ensure_ascii=False,
+                                    sort_keys=True,
+                                    separators=(",", ":"),
+                                    allow_nan=False,
+                                )
+                                + "\n"
+                            )
+                        self._cache_geometry_layer_record_count += len(
+                            sample_geometry_records
+                        )
+                    else:
+                        self._cache_geometry_records.extend(sample_geometry_records)
                 total_count += 1
 
             except Exception as e:
@@ -2482,6 +2894,29 @@ class UnifiedEvaluator:
                 model_type = "hf"
             llm_tokenizer = None
 
+        self._cache_geometry_records = []
+        self._cache_geometry_output_records = []
+        self._cache_geometry_layer_stream = None
+        self._cache_geometry_layer_record_count = 0
+        self._content_group_matched_count = 0
+        geometry_projector_info = configure_projector_cache_geometry(
+            model, enabled=self.cache_geometry_enabled
+        )
+        if self.cache_geometry_enabled:
+            print(
+                "Enabled cache geometry capture for "
+                f"{geometry_projector_info['projector_count']} projectors"
+            )
+        geometry_layer_shard = None
+        if self.cache_geometry_enabled:
+            geometry_layer_shard = (
+                self.cache_geometry_output_dir
+                / f".{self._cache_geometry_run_token}_rank{rank}_layers.jsonl"
+            )
+            self._cache_geometry_layer_stream = geometry_layer_shard.open(
+                "w", encoding="utf-8", newline="\n"
+            )
+
         if self.gate_diagnostics_enabled:
             self._gate_diagnostics_accumulator = GateDiagnosticsAccumulator(
                 low_threshold=self.gate_saturation_low_threshold,
@@ -2506,6 +2941,12 @@ class UnifiedEvaluator:
         all_length_stats = []
         cot_logs_all = []
 
+        geometry_runtime_started = time.perf_counter()
+        try:
+            torch.cuda.reset_peak_memory_stats(device)
+        except Exception:
+            pass
+
         for subject in subjects:
             cors, acc, _, length_stats, cot_logs = self.evaluate_subject(
                 subject, model, tokenizer, device, model_type, llm_tokenizer
@@ -2526,12 +2967,34 @@ class UnifiedEvaluator:
                         if subcat in subcat_list:
                             cat_cors[cat].append(cors)
 
+        if self._cache_geometry_layer_stream is not None:
+            self._cache_geometry_layer_stream.flush()
+            self._cache_geometry_layer_stream.close()
+            self._cache_geometry_layer_stream = None
+
         gate_diagnostics_state = (
             self._gate_diagnostics_accumulator.state_dict()
             if self._gate_diagnostics_accumulator is not None
             else None
         )
+        geometry_runtime = {
+            "rank": int(rank),
+            "gpu_id": int(gpu_id),
+            "wall_seconds": float(time.perf_counter() - geometry_runtime_started),
+            "max_memory_allocated_bytes": None,
+            "max_memory_reserved_bytes": None,
+        }
+        try:
+            geometry_runtime["max_memory_allocated_bytes"] = int(
+                torch.cuda.max_memory_allocated(device)
+            )
+            geometry_runtime["max_memory_reserved_bytes"] = int(
+                torch.cuda.max_memory_reserved(device)
+            )
+        except Exception:
+            pass
         configure_projector_gate_diagnostics(model, enabled=False)
+        configure_projector_cache_geometry(model, enabled=False)
         return_dict[rank] = {
             "all_cors": all_cors,
             "subject_cors": subject_cors,
@@ -2540,6 +3003,20 @@ class UnifiedEvaluator:
             "length_stats": all_length_stats,
             "cot_logs": cot_logs_all,
             "gate_diagnostics_state": gate_diagnostics_state,
+            "cache_geometry_records": list(self._cache_geometry_records),
+            "cache_geometry_output_records": list(
+                self._cache_geometry_output_records
+            ),
+            "cache_geometry_layer_shard": (
+                str(geometry_layer_shard.resolve())
+                if geometry_layer_shard is not None
+                else None
+            ),
+            "cache_geometry_layer_record_count": int(
+                self._cache_geometry_layer_record_count
+            ),
+            "content_group_matched_count": int(self._content_group_matched_count),
+            "cache_geometry_runtime": geometry_runtime,
         }
 
     def merge_results(self, results_by_rank: Dict) -> Tuple:
@@ -2559,6 +3036,11 @@ class UnifiedEvaluator:
         all_length_stats = []
         all_cot_logs = []
         gate_diagnostic_states = []
+        cache_geometry_records = []
+        cache_geometry_output_records = []
+        cache_geometry_runtime_by_worker = []
+        cache_geometry_layer_shards = []
+        content_group_matched_count = 0
 
         for result in results_by_rank.values():
             all_cors.extend(result["all_cors"])
@@ -2568,11 +3050,48 @@ class UnifiedEvaluator:
             gate_state = result.get("gate_diagnostics_state")
             if isinstance(gate_state, dict):
                 gate_diagnostic_states.append(gate_state)
+            cache_geometry_records.extend(result.get("cache_geometry_records", []))
+            cache_geometry_output_records.extend(
+                result.get("cache_geometry_output_records", [])
+            )
+            geometry_runtime = result.get("cache_geometry_runtime")
+            if isinstance(geometry_runtime, dict):
+                cache_geometry_runtime_by_worker.append(geometry_runtime)
+            layer_shard = result.get("cache_geometry_layer_shard")
+            if layer_shard:
+                cache_geometry_layer_shards.append(
+                    {
+                        "path": str(layer_shard),
+                        "record_count": int(
+                            result.get("cache_geometry_layer_record_count", 0)
+                        ),
+                        "rank": int(
+                            geometry_runtime.get("rank", -1)
+                            if isinstance(geometry_runtime, dict)
+                            else -1
+                        ),
+                    }
+                )
+            content_group_matched_count += int(
+                result.get("content_group_matched_count", 0)
+            )
 
             for k, v in result.get("subcat_cors", {}).items():
                 subcat_cors[k].extend(v)
             for k, v in result.get("cat_cors", {}).items():
                 cat_cors[k].extend(v)
+
+        if (
+            self.content_group_filter is not None
+            and self.content_group_filter.expected_rows is not None
+            and content_group_matched_count
+            != self.content_group_filter.expected_rows
+        ):
+            raise ValueError(
+                "Merged content-group filter row count mismatch: "
+                f"{content_group_matched_count} != "
+                f"{self.content_group_filter.expected_rows}"
+            )
 
         gate_diagnostics = None
         if self.gate_diagnostics_enabled:
@@ -2603,6 +3122,10 @@ class UnifiedEvaluator:
             all_length_stats,
             all_cot_logs,
             gate_diagnostics,
+            cache_geometry_records,
+            cache_geometry_output_records,
+            cache_geometry_runtime_by_worker,
+            cache_geometry_layer_shards,
         )
 
     def save_results(
@@ -2614,6 +3137,10 @@ class UnifiedEvaluator:
         all_length_stats,
         all_cot_logs,
         gate_diagnostics,
+        cache_geometry_records,
+        cache_geometry_output_records,
+        cache_geometry_runtime_by_worker,
+        cache_geometry_layer_shards,
     ):
         """
         Save evaluation results.
@@ -2660,6 +3187,10 @@ class UnifiedEvaluator:
         # Generate filename
         model_name_for_file = self.model_config["model_name"].split("/")[-1]
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        prediction_stem = (
+            f"{model_name_for_file}_{self.dataset_name}_"
+            f"{self.eval_config['answer_method']}_{timestamp}"
+        )
 
         if gate_diagnostics is not None:
             gate_diagnostics_file = (
@@ -2681,10 +3212,154 @@ class UnifiedEvaluator:
         else:
             summary["gate_diagnostics"] = {"enabled": False}
 
+        runtime_workers = sorted(
+            cache_geometry_runtime_by_worker,
+            key=lambda row: int(row.get("rank", -1)),
+        )
+
+        def _max_runtime_value(name: str) -> Optional[float]:
+            values = [
+                row.get(name)
+                for row in runtime_workers
+                if row.get(name) is not None
+            ]
+            return max(values) if values else None
+
+        geometry_runtime_summary = {
+            "wall_seconds": _max_runtime_value("wall_seconds"),
+            "max_memory_allocated_bytes": _max_runtime_value(
+                "max_memory_allocated_bytes"
+            ),
+            "max_memory_reserved_bytes": _max_runtime_value(
+                "max_memory_reserved_bytes"
+            ),
+            "workers": runtime_workers,
+        }
+        summary["cache_geometry_instrumentation"] = {
+            "configured": self.cache_geometry_configured,
+            "enabled": self.cache_geometry_enabled,
+            "role": (
+                self.cache_geometry_identity["role"]
+                if self.cache_geometry_configured
+                else None
+            ),
+            "runtime": geometry_runtime_summary,
+        }
+        summary["cache_geometry_artifacts"] = {
+            "role": (
+                self.cache_geometry_identity["role"]
+                if self.cache_geometry_configured
+                else None
+            ),
+            "samples_jsonl": None,
+        }
+        if self.cache_geometry_configured:
+            if len(cache_geometry_output_records) != len(all_cot_logs):
+                raise ValueError(
+                    "Cache geometry sample sidecar count differs from prediction rows: "
+                    f"{len(cache_geometry_output_records)} != {len(all_cot_logs)}"
+                )
+            identity_fields = (
+                "pair",
+                "seed",
+                "task",
+                "subject",
+                "question_id",
+                "content_hash",
+            )
+            sample_keys = [
+                tuple(record[field] for field in identity_fields)
+                for record in cache_geometry_output_records
+            ]
+            if len(sample_keys) != len(set(sample_keys)):
+                raise ValueError("Duplicate sample identity in cache geometry sidecar")
+
+            samples_file = (
+                self.cache_geometry_output_dir
+                / f"{prediction_stem}_cache_geometry_samples.jsonl"
+            )
+            with samples_file.open("w", encoding="utf-8", newline="\n") as handle:
+                for record in sorted(
+                    cache_geometry_output_records,
+                    key=lambda row: tuple(row[field] for field in identity_fields),
+                ):
+                    handle.write(
+                        json.dumps(
+                            record,
+                            ensure_ascii=False,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                        )
+                        + "\n"
+                    )
+            summary["cache_geometry_artifacts"]["samples_jsonl"] = str(
+                samples_file.resolve()
+            )
+            summary["cache_geometry_artifacts"]["sample_record_count"] = len(
+                cache_geometry_output_records
+            )
+            print(f"Cache geometry sample fingerprints saved to {samples_file}")
+
+            if self.cache_geometry_enabled:
+                layers_file = (
+                    self.cache_geometry_output_dir
+                    / f"{prediction_stem}_cache_geometry_layers.jsonl"
+                )
+                layer_sort_fields = (
+                    *identity_fields,
+                    "projector_index",
+                    "target_layer",
+                    "batch_index",
+                )
+                written_layer_records = 0
+                with layers_file.open("w", encoding="utf-8", newline="\n") as handle:
+                    for record in sorted(
+                        cache_geometry_records,
+                        key=lambda row: tuple(row.get(field) for field in layer_sort_fields),
+                    ):
+                        handle.write(
+                            json.dumps(
+                                record,
+                                ensure_ascii=False,
+                                sort_keys=True,
+                                separators=(",", ":"),
+                                allow_nan=False,
+                            )
+                            + "\n"
+                        )
+                        written_layer_records += 1
+                    for shard in sorted(
+                        cache_geometry_layer_shards,
+                        key=lambda row: int(row.get("rank", -1)),
+                    ):
+                        shard_path = Path(str(shard["path"]))
+                        shard_record_count = 0
+                        with shard_path.open("r", encoding="utf-8") as shard_handle:
+                            for line in shard_handle:
+                                if not line.strip():
+                                    continue
+                                handle.write(line.rstrip("\n") + "\n")
+                                shard_record_count += 1
+                        if shard_record_count != int(shard["record_count"]):
+                            raise ValueError(
+                                "Cache geometry layer shard count mismatch for "
+                                f"{shard_path}: {shard_record_count} != "
+                                f"{shard['record_count']}"
+                            )
+                        written_layer_records += shard_record_count
+                        shard_path.unlink()
+                summary["cache_geometry_artifacts"]["layers_jsonl"] = str(
+                    layers_file.resolve()
+                )
+                summary["cache_geometry_artifacts"]["layer_record_count"] = (
+                    written_layer_records
+                )
+                print(f"Cache geometry layer records saved to {layers_file}")
+
         # Save summary JSON
         summary_file = (
             self.output_dir
-            / f"{model_name_for_file}_{self.dataset_name}_{self.eval_config['answer_method']}_{timestamp}_summary.json"
+            / f"{prediction_stem}_summary.json"
         )
         with open(summary_file, "w") as f:
             json.dump(summary, f, indent=2)
@@ -2694,7 +3369,7 @@ class UnifiedEvaluator:
         if all_length_stats:
             detailed_length_file = (
                 self.output_dir
-                / f"{model_name_for_file}_{self.dataset_name}_{self.eval_config['answer_method']}_{timestamp}_length.json"
+                / f"{prediction_stem}_length.json"
             )
             with open(detailed_length_file, "w") as f:
                 json.dump(all_length_stats, f, indent=2)
@@ -2705,7 +3380,7 @@ class UnifiedEvaluator:
             if self.dataset_name != "longbench":
                 cot_csv_file = (
                     self.output_dir
-                    / f"{model_name_for_file}_{self.dataset_name}_{self.eval_config['answer_method']}_{timestamp}_cot.csv"
+                    / f"{prediction_stem}_cot.csv"
                 )
                 fieldnames = [
                     "subject",

@@ -1520,6 +1520,8 @@ class C2CProjector(Projector):
         )
         self.learned_alignment_aux_eps = float(learned_alignment_aux_eps)
         self.capture_alignment_diagnostics = bool(capture_alignment_diagnostics)
+        self.capture_cache_geometry = False
+        self.cache_geometry_records = []
         if self.alignment_confidence_delta_l2_weight < 0:
             raise ValueError(
                 "alignment_confidence_delta_l2_weight must be non-negative, got "
@@ -4610,6 +4612,44 @@ class C2CProjector(Projector):
             * norm_value_scalar
             * projected_value
         )
+
+        if self.capture_cache_geometry:
+            from rosetta.utils.cache_geometry import capture_projector_cache_geometry
+
+            with torch.no_grad():
+                key_effective_gate = (
+                    key_residual_scale.view(1, 1, 1, 1)
+                    * key_alignment_confidence
+                    * key_learned_injection_gate
+                    * key_transfer_gate
+                    * key_gate
+                    * norm_key_scalar
+                )
+                value_effective_gate = (
+                    value_residual_scale.view(1, 1, 1, 1)
+                    * value_alignment_confidence
+                    * value_learned_injection_gate
+                    * value_transfer_gate
+                    * value_gate
+                    * norm_value_scalar
+                )
+                capture_projector_cache_geometry(
+                    self,
+                    native_key=target_key,
+                    native_value=target_value,
+                    raw_projected_key=projected_key,
+                    raw_projected_value=projected_value,
+                    fused_key=output_key,
+                    fused_value=output_value,
+                    key_weight=norm_key_scalar,
+                    value_weight=norm_value_scalar,
+                    key_confidence=key_alignment_confidence,
+                    value_confidence=value_alignment_confidence,
+                    key_effective_gate=key_effective_gate,
+                    value_effective_gate=value_effective_gate,
+                    source_weights=source_weights,
+                    source_confidence=source_confidence,
+                )
 
         # Expose capture attributes for downstream analysis scripts
         try:

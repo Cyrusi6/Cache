@@ -1,0 +1,577 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cache.local/schemas/phase2a_2a_cache_geometry.json",
+  "title": "Phase 2A-2A cache-geometry artifact contracts",
+  "description": "JSONL records are validated one object at a time; outcome CSV uses the outcome_record field contract.",
+  "$defs": {
+    "identity": {
+      "type": "object",
+      "required": [
+        "pair",
+        "seed",
+        "task",
+        "subject",
+        "question_id",
+        "content_hash"
+      ],
+      "properties": {
+        "pair": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "task": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "string"
+        },
+        "question_id": {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "layer_record": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/$defs/identity"
+        },
+        {
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "true_answer"
+                ]
+              },
+              {
+                "required": [
+                  "is_correct"
+                ]
+              },
+              {
+                "required": [
+                  "receiver_correct"
+                ]
+              },
+              {
+                "required": [
+                  "fused_correct"
+                ]
+              },
+              {
+                "required": [
+                  "utility"
+                ]
+              },
+              {
+                "required": [
+                  "event"
+                ]
+              },
+              {
+                "required": [
+                  "label"
+                ]
+              },
+              {
+                "required": [
+                  "oracle_choice"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "required": [
+        "cache_geometry_schema_version",
+        "role",
+        "projector_index",
+        "target_layer",
+        "batch_index",
+        "pair",
+        "seed",
+        "task",
+        "subject",
+        "question_id",
+        "content_hash",
+        "key_native_norm",
+        "key_raw_projected_norm",
+        "key_residual_to_native_norm_ratio",
+        "key_raw_projected_to_native_norm_ratio",
+        "key_native_raw_projected_cosine",
+        "key_native_fused_cosine",
+        "key_residual_head_norm_mean",
+        "key_residual_head_norm_std",
+        "key_residual_head_norm_max",
+        "key_head_residual_cv",
+        "key_residual_head_energy_hhi",
+        "value_native_norm",
+        "value_raw_projected_norm",
+        "value_residual_to_native_norm_ratio",
+        "value_raw_projected_to_native_norm_ratio",
+        "value_native_raw_projected_cosine",
+        "value_native_fused_cosine",
+        "value_residual_head_norm_mean",
+        "value_residual_head_norm_std",
+        "value_residual_head_norm_max",
+        "value_head_residual_cv",
+        "value_residual_head_energy_hhi",
+        "learned_weight_mean",
+        "learned_weight_std",
+        "alignment_confidence_mean",
+        "alignment_confidence_std",
+        "effective_gate_mean",
+        "effective_gate_std",
+        "source_receiver_length_ratio",
+        "valid_alignment_mass",
+        "valid_alignment_coverage"
+      ],
+      "properties": {
+        "cache_geometry_schema_version": {
+          "const": 1
+        },
+        "role": {
+          "const": "geometry_on"
+        },
+        "projector_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "target_layer": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "batch_index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "pair": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "task": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "string"
+        },
+        "question_id": {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "key_native_norm": {
+          "type": "number"
+        },
+        "key_raw_projected_norm": {
+          "type": "number"
+        },
+        "key_residual_to_native_norm_ratio": {
+          "type": "number"
+        },
+        "key_raw_projected_to_native_norm_ratio": {
+          "type": "number"
+        },
+        "key_native_raw_projected_cosine": {
+          "type": "number"
+        },
+        "key_native_fused_cosine": {
+          "type": "number"
+        },
+        "key_residual_head_norm_mean": {
+          "type": "number"
+        },
+        "key_residual_head_norm_std": {
+          "type": "number"
+        },
+        "key_residual_head_norm_max": {
+          "type": "number"
+        },
+        "key_head_residual_cv": {
+          "type": "number"
+        },
+        "key_residual_head_energy_hhi": {
+          "type": "number"
+        },
+        "value_native_norm": {
+          "type": "number"
+        },
+        "value_raw_projected_norm": {
+          "type": "number"
+        },
+        "value_residual_to_native_norm_ratio": {
+          "type": "number"
+        },
+        "value_raw_projected_to_native_norm_ratio": {
+          "type": "number"
+        },
+        "value_native_raw_projected_cosine": {
+          "type": "number"
+        },
+        "value_native_fused_cosine": {
+          "type": "number"
+        },
+        "value_residual_head_norm_mean": {
+          "type": "number"
+        },
+        "value_residual_head_norm_std": {
+          "type": "number"
+        },
+        "value_residual_head_norm_max": {
+          "type": "number"
+        },
+        "value_head_residual_cv": {
+          "type": "number"
+        },
+        "value_residual_head_energy_hhi": {
+          "type": "number"
+        },
+        "learned_weight_mean": {
+          "type": "number"
+        },
+        "learned_weight_std": {
+          "type": "number"
+        },
+        "alignment_confidence_mean": {
+          "type": "number"
+        },
+        "alignment_confidence_std": {
+          "type": "number"
+        },
+        "effective_gate_mean": {
+          "type": "number"
+        },
+        "effective_gate_std": {
+          "type": "number"
+        },
+        "source_receiver_length_ratio": {
+          "type": "number"
+        },
+        "valid_alignment_mass": {
+          "type": "number"
+        },
+        "valid_alignment_coverage": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": true
+    },
+    "output_fingerprint_record": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "#/$defs/identity"
+        },
+        {
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "true_answer"
+                ]
+              },
+              {
+                "required": [
+                  "is_correct"
+                ]
+              },
+              {
+                "required": [
+                  "receiver_correct"
+                ]
+              },
+              {
+                "required": [
+                  "fused_correct"
+                ]
+              },
+              {
+                "required": [
+                  "utility"
+                ]
+              },
+              {
+                "required": [
+                  "event"
+                ]
+              },
+              {
+                "required": [
+                  "label"
+                ]
+              },
+              {
+                "required": [
+                  "oracle_choice"
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "required": [
+        "schema_version",
+        "role",
+        "pair",
+        "seed",
+        "task",
+        "subject",
+        "question_id",
+        "content_hash",
+        "output_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "role": {
+          "enum": [
+            "geometry_on",
+            "geometry_off"
+          ]
+        },
+        "pair": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "task": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "string"
+        },
+        "question_id": {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "output_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "evaluator_summary_pointer": {
+      "type": "object",
+      "required": [
+        "cache_geometry_artifacts"
+      ],
+      "properties": {
+        "cache_geometry_artifacts": {
+          "type": "object",
+          "required": [
+            "role",
+            "samples_jsonl"
+          ],
+          "properties": {
+            "role": {
+              "enum": [
+                "geometry_on",
+                "geometry_off"
+              ]
+            },
+            "samples_jsonl": {
+              "type": "string",
+              "minLength": 1
+            },
+            "layers_jsonl": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "minLength": 1
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "role": {
+                    "const": "geometry_on"
+                  }
+                }
+              },
+              "then": {
+                "required": [
+                  "layers_jsonl"
+                ],
+                "properties": {
+                  "layers_jsonl": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "role": {
+                    "const": "geometry_off"
+                  }
+                }
+              },
+              "then": {
+                "not": {
+                  "required": [
+                    "layers_jsonl"
+                  ]
+                }
+              }
+            }
+          ],
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "outcome_record": {
+      "type": "object",
+      "required": [
+        "pair",
+        "seed",
+        "task",
+        "subject",
+        "question_id",
+        "content_hash",
+        "receiver_correct",
+        "fused_correct"
+      ],
+      "properties": {
+        "pair": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seed": {
+          "type": "integer"
+        },
+        "task": {
+          "type": "string",
+          "minLength": 1
+        },
+        "subject": {
+          "type": "string"
+        },
+        "question_id": {
+          "type": [
+            "string",
+            "integer"
+          ]
+        },
+        "content_hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "receiver_correct": {
+          "enum": [
+            true,
+            false,
+            0,
+            1,
+            "true",
+            "false",
+            "0",
+            "1"
+          ]
+        },
+        "fused_correct": {
+          "enum": [
+            true,
+            false,
+            0,
+            1,
+            "true",
+            "false",
+            "0",
+            "1"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "frozen_join_manifest": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "phase",
+        "role",
+        "created_without_outcome_parse",
+        "join_key",
+        "key_count",
+        "key_digest_sha256",
+        "inputs",
+        "design"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "phase": {
+          "const": "2A-2A"
+        },
+        "role": {
+          "const": "frozen_geometry_outcome_join"
+        },
+        "created_without_outcome_parse": {
+          "const": true
+        },
+        "join_key": {
+          "const": [
+            "pair",
+            "seed",
+            "task",
+            "subject",
+            "question_id",
+            "content_hash"
+          ]
+        },
+        "key_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "key_digest_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "inputs": {
+          "type": "object"
+        },
+        "design": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}

@@ -12,6 +12,7 @@ import json
 
 from rosetta.model.projector import Projector
 from rosetta.model.sampling import sample_token
+from rosetta.utils.cache_geometry import cache_geometry_runtime
 from transformers.utils import ModelOutput
 
 try:
@@ -174,6 +175,38 @@ class RosettaModel(nn.Module):
                 return self.projector_list[projector_id]
         # Fallback: return the first projector
         return self.projector_list[pair_list[0][1]]
+
+    @staticmethod
+    def _forward_projector_with_cache_geometry(
+        projector: Projector,
+        source_kv: tuple,
+        target_kv: tuple,
+        projector_kwargs: Optional[Dict[str, Any]] = None,
+        *,
+        source_model_index: int,
+        target_model_index: int,
+        source_layer: int,
+        target_layer: int,
+        source_length: int,
+        receiver_length: int,
+        alignment_mode: str,
+    ) -> tuple:
+        """Attach JSON-scalar cache context without changing projector arithmetic."""
+        context = {
+            "source_model_index": int(source_model_index),
+            "target_model_index": int(target_model_index),
+            "source_layer": int(source_layer),
+            "target_layer": int(target_layer),
+            "source_length": int(source_length),
+            "receiver_length": int(receiver_length),
+            "alignment_mode": str(alignment_mode),
+        }
+        with cache_geometry_runtime(context=context):
+            return projector.forward(
+                source_kv,
+                target_kv,
+                **(projector_kwargs or {}),
+            )
 
     @staticmethod
     def load_json(file_name):
@@ -381,11 +414,19 @@ class RosettaModel(nn.Module):
                 new_source_key_cache = source_key_cache[:, :, -new_length:, :]
                 new_source_value_cache = source_value_cache[:, :, -new_length:, :]
                 new_source_kv_cache = (new_source_key_cache, new_source_value_cache)
-                projected_key, projected_value = self.projector_list[
-                    projector_idx
-                ].forward(
-                    new_source_kv_cache,  # tuple of (key, value), each of shape (B, N, H, D)
-                    new_base_kv_cache,
+                projected_key, projected_value = (
+                    self._forward_projector_with_cache_geometry(
+                        self.projector_list[projector_idx],
+                        new_source_kv_cache,
+                        new_base_kv_cache,
+                        source_model_index=source_model_idx,
+                        target_model_index=self.base_model_idx,
+                        source_layer=source_model_layer_idx,
+                        target_layer=target_layer_idx,
+                        source_length=source_key_cache.shape[-2],
+                        receiver_length=new_base_key_cache.shape[-2],
+                        alignment_mode="position_slice",
+                    )
                 )
                 projected_kv_list.append((projected_key, projected_value))
                 source_kv_list.append(new_source_kv_cache)
@@ -927,7 +968,23 @@ class RosettaModel(nn.Module):
                                         and projector.uses_internal_source_confidence()
                                     )
                                     projector_kwargs = {}
-                                    if projector_uses_confidence:
+                                    projector_captures_alignment_metadata = (
+                                        use_soft_alignment
+                                        and bool(
+                                            getattr(
+                                                projector,
+                                                "capture_cache_geometry",
+                                                False,
+                                            )
+                                        )
+                                        and hasattr(
+                                            projector, "_compute_alignment_confidence"
+                                        )
+                                    )
+                                    if (
+                                        projector_uses_confidence
+                                        or projector_captures_alignment_metadata
+                                    ):
                                         projector_kwargs = {
                                             "source_confidence": soft_section.get(
                                                 "source_confidence"
@@ -940,10 +997,27 @@ class RosettaModel(nn.Module):
                                                 "source_entropy_override"
                                             ),
                                         }
-                                    projected_key, projected_value = projector.forward(
-                                        new_source_kv_cache,
-                                        new_base_kv_cache,
-                                        **projector_kwargs,
+                                    alignment_mode = "position_slice"
+                                    if use_soft_alignment:
+                                        alignment_mode = (
+                                            "soft_topk_learned"
+                                            if projector_uses_learned_alignment
+                                            else "soft_topk_weighted"
+                                        )
+                                    projected_key, projected_value = (
+                                        self._forward_projector_with_cache_geometry(
+                                            projector,
+                                            new_source_kv_cache,
+                                            new_base_kv_cache,
+                                            projector_kwargs,
+                                            source_model_index=source_model_idx,
+                                            target_model_index=self.base_model_idx,
+                                            source_layer=source_model_layer_idx,
+                                            target_layer=target_layer_idx,
+                                            source_length=source_key_cache.shape[-2],
+                                            receiver_length=new_base_key_cache.shape[-2],
+                                            alignment_mode=alignment_mode,
+                                        )
                                     )
                                     if (
                                         use_soft_alignment

@@ -1,5 +1,38 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-07-19：Phase 2A-2a pre-transfer cache geometry instrumentation
+
+### 研究目标
+
+在不训练、不修改 B6 checkpoint、不改变 fusion/gate/alignment/generation 的前提下，验证 receiver-native cache 与 raw projected/final fused cache 的几何关系是否包含可跨异构 sender pair 泛化的 harmful-transfer 信号。
+
+### 核心改动
+
+- 在 `C2CProjector` 完成 raw projection 与 final residual、但尚未返回并覆盖 receiver-native K/V 前加入默认关闭的 detached scalar observer。
+- K/V 分别记录 norm、residual ratio、projected/native ratio 与 cosine、fused/native cosine、per-head residual 与 energy concentration；另记录 K/V imbalance、weight、alignment confidence、effective gate、长度比和 alignment mass/coverage。
+- evaluator 在 `parse_answer` 与任何 model forward 前按 Phase 2A-1 frozen fit content hashes 过滤，并硬校验 split manifest SHA 与预期行数；geometry 写入独立 outcome-free JSONL，不修改 prediction CSV schema。
+- 冻结 177 个 compact primary features、184 个允许候选、content-hash grouped five-fold leave-one-pair-out、geometry/outcome write-once join 和九项 conjunctive GO gate。
+- 新增只评测 pilot runner 与跨节点 Kubernetes renderer；所有 checkpoint 通过目录 byte SHA hard-fail，任何路径都不调用训练入口。
+
+### 实验配置
+
+- 起点：`main@a320777ee3d8e2c5fbf988ad6cd840b560aab28b`；独立分支 `research/phase2a2-cache-geometry`。
+- Receiver：Qwen3-0.6B；Sharers：TinyLlama-1.1B、Qwen2.5-0.5B、Llama3.2-1B。
+- 仅 seed 42、三任务、Phase 2A-1 frozen `fit`：2,167 rows / 2,161 content groups；不读取 sealed test。
+- 运行计划：`4090-24gx8` 并行 TinyLlama/Qwen2.5，`4090-24gx4` 运行 Llama3.2；每 pair 的 ARC 与 OpenBookQA 并发，随后双卡 MMLU-Redux。
+- TinyLlama/ARC 追加相同 checkpoint 的 instrumentation-off 匹配对照，只用于 debug 时间/显存开销。
+
+### 验证结果
+
+- instrumentation 默认关闭时 projector 输出与 RNG 逐比特一致；开启时输出张量逐比特一致。
+- Phase 2A-1 canonical content hash 对离线三任务共 7,265 个 frozen keys 全量复算，mismatch 为 0。
+- Phase 2A-2a 聚焦及相关回归测试：105 passed；仓库全量测试：276 passed，保留 2 个既有 Pydantic warning。
+- `git diff --check` 与 Python compilation 通过。
+
+### 结论与下一步
+
+instrumentation、数据隔离、统计预注册与跨节点执行链路已通过本地门控；本条记录不包含 predictability 结论。下一步仅运行冻结的 seed-42 fit pilot，严格执行输出等价与九项 GO gate，完成后停止并等待授权。
+
 ## 2026-07-16：建立 ICLR 2027 研究协作规范
 
 ### 研究目标

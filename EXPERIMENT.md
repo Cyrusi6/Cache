@@ -1,5 +1,49 @@
 # EXPERIMENT.md
 
+## 2026-07-19：Phase 2A-2a Pre-transfer Cache-Geometry Pilot（预注册与实现完成）
+
+### 研究目标
+
+只检验 pre-transfer cache geometry 是否能预测 harmful transfer；不训练 adapter/router，不修改 B6 checkpoint，不使用 logits、生成输出、正确性、标签、raw text 或 pair/task/seed/id 作为 primary feature。
+
+### 冻结范围
+
+- Phase 2A-1 split manifest SHA256：`285b5b00cf3598bba075a97b1439b85031ef1cfffdc03b0e7e1775c6338701e0`。
+- 仅 `fit`：ARC 351、OpenBookQA 158、MMLU-Redux 1,658，共 2,167 rows / 2,161 content groups。
+- Pairs：TinyLlama、Qwen2.5、Llama3.2 → Qwen3-0.6B；仅 seed 42。
+- B6 checkpoint directory SHA256：TinyLlama `a66bd9c0...`、Qwen2.5 `cb71b942...`、Llama3.2 `ca789cc7...`；运行前均按完整值 hard-fail 校验。
+- 原 B6-native 九份逐例 CSV 与 receiver-only 三份 CSV 按 frozen SHA 使用；Phase 2A-1 sealed test 不读取。
+
+### Instrumentation 与统计
+
+- 记录点位于 raw projected/final fused K/V 已生成、receiver-native K/V 尚未被覆盖之前。
+- 原始 per-layer records 只用于诊断和固定聚合；primary selector 只接收显式冻结的 177 个 sample-level compact features。
+- 候选仅 177 个单特征 stump、5 个 L2 multinomial logistic regression、2 个 depth-2 tree，共 184 个。
+- 5-fold content-group cross-fit + leave-one-pair-out；dev 由独立 input-only hash 固定划分为 60% fit、20% calibration、20% model selection。
+- Primary pooling 为 pair-task balanced；score 为 `P(benefit)-P(harm)`；九项 GO gate 全部同时满足才可判 pilot GO。
+
+### 运行与复现命令
+
+实现 commit 后先生成只评测 manifest，再以 exact detached commit staging 到 `/netdisk/lijunsi/c2c-phase2a2-cache-geometry/workspace/Cache`。Kubernetes renderer 固定产生两个 node-level Jobs：
+
+```bash
+python script/analysis/phase2a_2a_cache_geometry_pilot.py prepare \
+  --code-commit <implementation-commit> \
+  --workspace-root /netdisk/lijunsi/c2c-phase2a2-cache-geometry/workspace/Cache
+
+python script/k8s/phase2a_2a_cache_geometry_jobs.py render \
+  --git-commit <implementation-commit> \
+  --manifest local/tmp/phase2a_2a_cache_geometry/execution_manifest.json \
+  --output local/tmp/phase2a_2a_cache_geometry/jobs.yaml \
+  --server-dry-run
+```
+
+### 当前验证状态
+
+- 7,265 个 frozen content keys 的 canonical hash 全量一致。
+- 相关测试 105 passed；仓库全量测试 276 passed；2 个 warning 均为既有 Pydantic warning。
+- GPU pilot 尚未在本记录时启动，尚无 GO/NO-GO 结论；最终数值、artifact hashes、作业名和停止判定将在同一分支追加。
+
 ## 2026-07-16：Kubernetes C2C Route-1 v2.2 Smoke
 
 ### 研究目标

@@ -1,0 +1,253 @@
+{
+  "schema_version": 1,
+  "phase": "2A-2A",
+  "role": "frozen_cache_geometry_protocol",
+  "source_commit": "a320777ee3d8e2c5fbf988ad6cd840b560aab28b",
+  "constraints": {
+    "phase2a1_fit_groups_only": true,
+    "open_phase2a1_calibration_groups": false,
+    "open_phase2a1_model_selection_groups": false,
+    "open_phase2a1_test_groups": false,
+    "checkpoint_mutation": false,
+    "transport_training": false,
+    "neural_selector": false,
+    "raw_text_features": false,
+    "metadata_features": false,
+    "post_outcome_feature_discovery": false
+  },
+  "source": {
+    "dataset_content_sha256": "0366be7e5b129710024543bc065774bef165b6b6bca92541a3d641aea2918114",
+    "phase2a1_content_group_split_manifest": "recipe/eval_recipe/phase2a_1/content_group_split_manifest.json",
+    "phase2a1_content_group_split_manifest_sha256": "285b5b00cf3598bba075a97b1439b85031ef1cfffdc03b0e7e1775c6338701e0",
+    "permitted_split": "fit",
+    "expected_fit_rows_by_task": {
+      "ai2-arc": 351,
+      "openbookqa": 158,
+      "mmlu-redux": 1658
+    },
+    "expected_fit_content_groups_by_task": {
+      "ai2-arc": 351,
+      "openbookqa": 158,
+      "mmlu-redux": 1652
+    },
+    "expected_fit_rows_total": 2167,
+    "expected_fit_content_groups_total": 2161
+  },
+  "scope": {
+    "primary_pairs": [
+      "tinyllama",
+      "qwen25_0p5b",
+      "llama32_1b"
+    ],
+    "seeds": [
+      42
+    ],
+    "tasks": [
+      "ai2-arc",
+      "openbookqa",
+      "mmlu-redux"
+    ],
+    "same_tokenizer_control_in_primary_gate": false
+  },
+  "design_inputs": {
+    "preregistration": {
+      "path": "PHASE2A_2A_CACHE_GEOMETRY_PREREGISTRATION.md",
+      "sha256": "2b73653905441b736c7b5b2c2032cc4575860e3447525992d36f3cdd6997d871"
+    },
+    "feature_manifest": {
+      "path": "recipe/eval_recipe/phase2a_2a/feature_manifest.json",
+      "sha256": "4be324127541430f7ca1fcc1a841ad827dff631d72b6367b46691c993050b2b5"
+    },
+    "candidate_manifest": {
+      "path": "recipe/eval_recipe/phase2a_2a/candidate_manifest.json",
+      "sha256": "6f6bd0e937026bc01505326c375ecbb2644413f2de646727908b142cff7db2b6"
+    },
+    "artifact_schema": {
+      "path": "recipe/eval_recipe/phase2a_2a/cache_geometry_artifact_schema.json",
+      "sha256": "96f131d38544c011fb2fd0a2b9cfe0c40af9044c15c75aa5ee0ae089aa5222a7"
+    }
+  },
+  "evaluator_summary_contract": {
+    "pointer": "cache_geometry_artifacts",
+    "required_fields": [
+      "role",
+      "samples_jsonl"
+    ],
+    "geometry_on_additional_required_fields": [
+      "layers_jsonl"
+    ],
+    "roles": [
+      "geometry_on",
+      "geometry_off"
+    ],
+    "path_resolution": "relative paths resolve against the evaluator summary parent"
+  },
+  "canonical_output_fingerprint": {
+    "fields": [
+      "pred",
+      "cot_pred",
+      "cot_output",
+      "cot_gen_length",
+      "extraction_method_used",
+      "extracted_normalized"
+    ],
+    "missing": "JSON null",
+    "encoding": "UTF-8 canonical JSON with sort_keys=true and separators=(',',':')",
+    "digest": "SHA256",
+    "forbidden_fields": [
+      "true_answer",
+      "is_correct",
+      "receiver_correct",
+      "fused_correct",
+      "utility",
+      "event"
+    ],
+    "matched_runtime_control_scope": {
+      "pair": "tinyllama",
+      "seed": 42,
+      "task": "ai2-arc",
+      "expected_rows": 351
+    },
+    "other_geometry_off_reruns": "forbidden"
+  },
+  "reference_equivalence": {
+    "execution_manifest_role": "pre_transfer_cache_geometry_pilot_execution_manifest",
+    "verify_report_phase": "Phase 2A-2a",
+    "instrumented_cell_count": 9,
+    "matched_off_control_count": 1,
+    "exact_columns": [
+      "pred",
+      "is_correct",
+      "cot_pred",
+      "cot_output",
+      "cot_gen_length"
+    ],
+    "instrumented_scope": "3 primary pairs x 3 tasks x seed 42",
+    "report_policy": "all ten comparisons exact; stats verifies report/manifest SHA and every referenced prediction/reference SHA without reparsing outcome columns"
+  },
+  "frozen_join": {
+    "key": [
+      "pair",
+      "seed",
+      "task",
+      "subject",
+      "question_id",
+      "content_hash"
+    ],
+    "geometry_outcomes_separate_until_manifest": true,
+    "outcome_format": "CSV",
+    "outcome_fields": [
+      "pair",
+      "seed",
+      "task",
+      "subject",
+      "question_id",
+      "content_hash",
+      "receiver_correct",
+      "fused_correct"
+    ],
+    "freeze_reads_outcome_values": false,
+    "exact_key_set_required": true,
+    "write_once": true,
+    "hash_algorithm": "SHA256"
+  },
+  "fold": {
+    "count": 5,
+    "outer_prefix": "phase2a2a-outer-v1",
+    "outer_formula": "SHA256(outer_prefix + '|' + dataset_content_sha256 + '|' + content_hash); first 64 big-endian bits modulo 5",
+    "content_group_bound": true,
+    "development": {
+      "prefix": "phase2a2a-dev-v1",
+      "formula": "SHA256(prefix + '|' + dataset_content_sha256 + '|' + content_hash); first 64 big-endian bits divided by 2^64",
+      "fit_interval": [
+        0.0,
+        0.6
+      ],
+      "calibration_interval": [
+        0.6,
+        0.8
+      ],
+      "model_selection_interval": [
+        0.8,
+        1.0
+      ]
+    },
+    "outer_generalization": "leave-one-pair-out; held pair absent from every development role",
+    "cross_pair_same_content_exclusion": "all non-held-pair observations in outer evaluation fold f are excluded before the 60/20/20 development split"
+  },
+  "weighting": {
+    "primary": "pair_task_balanced",
+    "cell": "pair x task",
+    "formula": "w_i = N / (number_of_active_pair_task_cells * n_pair_task_cell)",
+    "seed_handling": "pooled inside pair x task",
+    "duplicate_content_members": "retained with original equal row weight"
+  },
+  "calibration_and_selection": {
+    "class_order": [
+      -1,
+      0,
+      1
+    ],
+    "score": "P(beneficial)-P(harmful)",
+    "action": "transfer iff score > threshold",
+    "threshold_tie": "receiver",
+    "threshold_objective": "pair-task-balanced selector accuracy on calibration",
+    "threshold_tolerance": 1e-12,
+    "threshold_tie_break": "larger threshold",
+    "candidate_selection_objective": "pair-task-balanced selector accuracy on model selection",
+    "candidate_selection_tolerance": 1e-12,
+    "candidate_selection_tie_break": "lowest ordinal",
+    "refit": false
+  },
+  "probability_metrics": {
+    "harm_auprc": "sklearn.metrics.average_precision_score with pair-task-balanced sample_weight and P(harm) score",
+    "multiclass_brier": "pair-task-balanced mean sum_c (p_c - onehot_c)^2",
+    "crossfit_constant_prior": "per outer fold class prevalence estimated on fit role only with pair-task-balanced weights; applied unchanged to held pair evaluation fold",
+    "binary_harm_brier_secondary": "pair-task-balanced mean (P(harm)-1[utility=-1])^2 versus the harm component of the same fit-only cross-fitted prior; diagnostic only"
+  },
+  "geometry_sanity": {
+    "origin": "real benchmark/model execution only",
+    "tolerance": "1e-8 * max(1, max_abs(values))",
+    "on_off_exact": true,
+    "per_pair_minimum_variable_key_core_features": 1,
+    "per_pair_minimum_variable_value_core_features": 1,
+    "require_within_sample_layer_variation": true,
+    "require_across_sample_aggregate_nonconstant": true
+  },
+  "go_gate": {
+    "all_conjunctive": true,
+    "gates_in_order": [
+      "on_off_output_exact",
+      "real_geometry_variation_nonconstant",
+      "pooled_harm_auprc_margin",
+      "held_out_pair_harm_auprc",
+      "selector_accuracy_gain",
+      "harmful_reduction",
+      "beneficial_retention",
+      "every_pair_noninferiority",
+      "brier_beats_crossfit_prior"
+    ],
+    "pooled_harm_auprc_minimum_margin_over_prevalence": 0.03,
+    "minimum_pairs_harm_auprc_above_own_prevalence": 2,
+    "held_out_pair_count": 3,
+    "minimum_selector_minus_always_fused": 0.005,
+    "minimum_harmful_reduction": 0.15,
+    "minimum_beneficial_retention": 0.9,
+    "minimum_each_pair_selector_minus_fused": -0.002,
+    "brier_rule": "selector multiclass Brier strictly less than cross-fitted constant-prior Brier",
+    "undefined_metric_policy": "gate fails"
+  },
+  "runtime": {
+    "python": "3.10.20",
+    "numpy": "2.2.6",
+    "scipy": "1.15.3",
+    "scikit_learn": "1.7.1",
+    "blas_threads": 1,
+    "cpu_only_statistics": true
+  },
+  "outputs": {
+    "frozen_join_manifest": "local/final_results/phase2a_2a_cache_geometry/frozen_join_manifest.json",
+    "statistics_json": "local/final_results/phase2a_2a_cache_geometry/statistics.json",
+    "tracked_final_report": false
+  }
+}
