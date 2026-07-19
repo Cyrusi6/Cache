@@ -751,3 +751,35 @@ FPCT-1B 判定 `SINGLE_PAIR_PILOT_READY`。这只说明 TinyLlama pair 在现有
 ### 结论与下一步
 
 FPCT-1C、FPCT-2 和 FPCT-3 判定 `GO`，只建立 mathematical/reference 与 CPU implementation correctness，不代表真实模型中机制已激活或 task accuracy 改善。FPCT-4 draft 标记 `REVIEW REQUIRED / GPU NOT AUTHORIZED`。下一次人工批准必须在任何 GPU 结果前冻结 seed、matched training budget、checkpoint rule、formal effect/power gate、fp16/bfloat16 tolerance、resource ceiling 与 stopping rules；`F-C_post` 仍是唯一 headline。
+
+## 2026-07-20：FPCT-3.5 pre-data alignment-correctness protocol
+
+### 研究目标
+
+在任何新的逐 parent 自然异常、pretrained-model forward、GPU、训练或 accuracy 输出出现前，核查 FPCT-1B raw soft-span one-to-many 是否真正来自 tokenizer partition，而不是 same-tokenizer duplicate offsets、top-k 截断、错误路径或 content-span/offset alias。
+
+### 核心改动
+
+- 新增 `FPCT_3_5_ALIGNMENT_CORRECTNESS_PROTOCOL.md` 与 machine-readable manifest，冻结 exact runtime identity、互斥 offset taxonomy、message-relative certified one-to-many oracle、Qwen3/Qwen2.5 row-level set comparison和 local-only forensic schema。
+- 明确现有实现中的 `slm=receiver`、`llm=sender`；exact identity 同时要求 runtime backend、vocab/added/special、chat template、tokenizer-relevant files，以及逐样本 rendered text/IDs/offsets/content spans/message ranges 全部一致。
+- Tokenizer behavior fingerprint 不纳入模型 `config.json`、generation config 或 `name_or_path`；这些只保留为独立 provenance，避免把模型架构差异误判为 tokenizer 不同。
+- Certified support 增加 top-k exhaustiveness：retained candidates 必须等于全部 positive-overlap source tokens；source truncation 后必须重新认证或降级。
+- 预注册 common sanitizer：uncertified raw `m>=2` 在 `C_pre/C_post/F` 中共同变成 raw slot-0 one-hot；slot 0 非法则 hard error；legacy/default path 不变。
+- 新增 resumable task-sharded diagnostic skeleton；每个自然 shard 使用 atomic artifact/manifest，完成 shard 可安全 resume-skip，不覆盖历史 FPCT-1B artifacts。
+
+### 实验配置
+
+- 当前只运行 CPU synthetic tests，显式 `CUDA_VISIBLE_DEVICES=""`。
+- Starting HEAD：`d296a18be9cc3b0dce3c07f4c2d7244145f2e3ac`。
+- 历史 consistency facts：fit+calibration Qwen3 raw 56 positive groups、410 m2 parents；只作固定一致性检查。
+- Natural forensic 必须等待本次 protocol/code/tests commit 和 push 后才能运行。
+
+### 验证结果
+
+- Synthetic exact-identity/certification/sanitizer suite：`13 passed`。
+- Diagnostic `py_compile` 与 `git diff --check` 通过。
+- 未运行自然 tokenizer/alignment forensic、HF/LLM forward、GPU、Kubernetes、训练或 accuracy evaluation。
+
+### 结论与下一步
+
+FPCT-3.5 当前为 `PRE-DATA LOCK PENDING COMMIT`。下一步只允许提交并推送 pre-data protocol commit，再从 clean execution SHA 生成 local lock。若 Qwen3 runtime identity、410-parent taxonomy或路径 provenance 任一失败，整个 overnight run 立即停止且不进入 GPU。

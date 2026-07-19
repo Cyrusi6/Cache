@@ -1,9 +1,9 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-CPU-GATE 完成；FPCT-4 non-operative draft
-> 当前判定：FPCT-1B `SINGLE_PAIR_PILOT_READY`；FPCT-1C/2/3 `GO`；FPCT-4 `REVIEW REQUIRED / GPU NOT AUTHORIZED`
-> 下一阶段：人工前瞻锁定 GPU 数值、seed、预算、effect/power 与停止规则
-> 更新时间：2026-07-19（Asia/Shanghai）
+> 当前阶段：FPCT-3.5 pre-data alignment-correctness protocol locking
+> 当前判定：`PRE-DATA LOCK PENDING COMMIT`；自然 forensic、GPU、Kubernetes、训练和 accuracy 尚未开始
+> 下一阶段：推送 clean pre-data commit，生成 local lock 后执行 Qwen3 identity forensic
+> 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
 
@@ -46,6 +46,8 @@
 - 在 FPCT-2/3 GO 后生成 FPCT-4 non-operative GPU pilot draft；
 - 只在当前 `research/fpct-factorized-transport` commit 并 push。
 
+本次 `FPCT-OVERNIGHT` 进一步提供条件式 R1–R4 授权，但严格受 correctness gate 约束。当前 pre-data commit 之前只允许编写 protocol、manifest、diagnostic 和 synthetic tests；不得执行新的逐 parent 自然 forensic。只有 FPCT-3.5 identity/certified-support、FPCT-3.8 production hardening 和 FPCT-3.9 真实 Qwen CPU integration 全部通过后，才允许冻结 GPU/K8s formal manifest。
+
 仍明确未授权：
 
 - 运行任何 Hugging Face/LLM model forward；
@@ -69,7 +71,12 @@
 | FPCT-1C | `GO` | FPCT-1B complete，无 integrity failure | R1 CPU | 已完成 | reference equations/oracle；19 tests pass |
 | FPCT-2 | `GO` | FPCT-1B READY + FPCT-1C GO | R1 CPU | 已完成 | shared candidate fuser + sidecar/packed global attention |
 | FPCT-3 | `GO` | FPCT-2 GO | R1 CPU | 已完成 | targeted 52 pass；CPU-safe full suite 288 pass |
-| FPCT-4 | `REVIEW REQUIRED / GPU NOT AUTHORIZED` | FPCT-3 GO | R0/R1 draft | 仅 non-operative draft | seed/budget/effect/power/tolerance 尚未锁；未启动 GPU |
+| FPCT-3.5 | `PRE-DATA LOCK PENDING COMMIT` | FPCT-3 GO + expected start SHA | R0/R1 | 仅 protocol/code/tests | exact identity、taxonomy、certification、forensic schema 已前瞻定义；未扫自然异常 |
+| FPCT-3.6 | `NOT STARTED / CONDITIONAL` | FPCT-3.5 identity forensic GO | R1 | 条件式 | exact_identity production mode + common sanitizer |
+| FPCT-3.7 | `NOT STARTED / CONDITIONAL` | FPCT-3.6 tests pass | R1 | 条件式 | 全 pair/task/split certified support re-audit |
+| FPCT-3.8 | `NOT STARTED / CONDITIONAL` | certified TinyLlama readiness | R1/R2 | 条件式 | vectorized layout、instrumentation、dropout/RNG hardening |
+| FPCT-3.9 | `NOT STARTED / CONDITIONAL` | FPCT-3.8 GO | R1 CPU | 条件式 | real Qwen random-config integration gate |
+| FPCT-4 | `BLOCKED ON FPCT-3.5–3.9` | FPCT-3.9 GO | R2+ | 条件式 | pre-output GPU/K8s manifest only after all correctness gates |
 | FPCT-5 | `NOT AUTHORIZED` | FPCT-4 GO | R2 | 否 | fixed-checkpoint diagnostic |
 | FPCT-6 | `NOT AUTHORIZED` | FPCT-5 GO | R3 | 否 | matched-training pipeline smoke |
 | FPCT-7 | `NOT AUTHORIZED` | FPCT-6 GO | R3 | 否 | confirmatory-disjoint development-only pilot |
@@ -160,6 +167,9 @@
 | FPCT-D029 | 2026-07-19 | Parent nuisance 在 `C_post/F` 中只计算/采样一次并广播 | entropy/confidence/legacy gate/Gumbel 保持 parent-level；candidate-specific nonlinear core 共享 |
 | FPCT-D030 | 2026-07-19 | FPCT-2/3=`GO` | targeted 52 pass；CPU-safe full suite 288 pass；default/c_pre state_dict 与 legacy gather regression 通过 |
 | FPCT-D031 | 2026-07-19 | FPCT-4 只形成 non-operative draft | seed、budget、effect/power、fp16/bfloat16 tolerance 与 GPU resource ceiling 必须另行人工前瞻批准 |
+| FPCT-D032 | 2026-07-20 | FPCT-3.5 在任何新自然 anomaly ledger 前冻结 exact runtime identity、offset taxonomy 与 certified-support oracle | same-tokenizer raw soft-span 只作 historical diagnostic；exact identity 必须 hard K=1，失败即阻断 GPU |
+| FPCT-D033 | 2026-07-20 | Tokenizer behavior fingerprint 排除 model config/generation config，但保留其独立 provenance | exact identity 比较 backend/vocab/added/special/chat template/tokenizer files；`name_or_path` 只用于路径审计 |
+| FPCT-D034 | 2026-07-20 | Certified one-to-many 必须穷尽全部 positive-overlap source tokens | `positive_overlap_counts` 与 retained legal candidates 不相等时不得 certify；source truncation 后必须重验 |
 
 ## 6. 已锁定决定与 deferred items
 
@@ -208,6 +218,10 @@ Production seam、shared candidate fuser、parent nuisance broadcast、ambiguous
 ### FPCT-4：REVIEW REQUIRED / GPU NOT AUTHORIZED
 
 已生成 non-operative draft，包含 fixed-checkpoint smoke、三个 matched arms、`Y_CC/Y_CF/Y_FC/Y_FF` 2×2 intervention、replicated-collapse、`m<=1` exact control 和 mechanism/resource diagnostics。Seed、训练预算、effect/power、fp16/bfloat16 tolerance 与 resource/stopping rule 未锁；不得提交 Kubernetes Job 或启动 GPU。
+
+### FPCT-3.5：PRE-DATA LOCK PENDING COMMIT
+
+已完成前瞻性 protocol、machine-readable manifest、diagnostic state-machine skeleton 和 13 个 synthetic tests。尚未调用本地自然 tokenizer、未生成逐 parent ledger。必须先 commit/push，并由 clean commit 生成 local `pre_data_lock.json` 后才能开始 Qwen3/Qwen2.5 forensic。
 
 ## 9. FPCT-CPU-GATE 最终隔离复查
 

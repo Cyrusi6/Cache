@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_3_5_alignment_correctness_predata_v1",
+  "stage": "FPCT-3.5",
+  "status": "PRE_DATA_PROTOCOL_FROZEN_BY_CONTAINING_COMMIT",
+  "starting_head": "d296a18be9cc3b0dce3c07f4c2d7244145f2e3ac",
+  "natural_parent_forensic_observed": false,
+  "gpu_authorized": false,
+  "pair_scope": {
+    "headline_pair": "tinyllama_to_qwen3_0p6b",
+    "same_tokenizer_control": "qwen3_1p7b_to_qwen3_0p6b",
+    "cross_pair_confirmatory_claim": false,
+    "receiver_internal_name": "slm",
+    "sender_internal_name": "llm"
+  },
+  "historical_inputs": {
+    "fpct_1b_execution_sha": "7f8af71968a39bc6cba2e4e34de762b291cda834",
+    "canonical_sample_count": 7265,
+    "distinct_content_group_count": 7233,
+    "canonical_input_sha256": "0366be7e5b129710024543bc065774bef165b6b6bca92541a3d641aea2918114",
+    "split_manifest": {
+      "path": "recipe/eval_recipe/fpct_1b/content_group_split_manifest.csv",
+      "sha256": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050"
+    },
+    "pre_audit_lock": {
+      "path": "recipe/eval_recipe/fpct_1b/pre_audit_lock.json",
+      "sha256": "7e882a9b0253f0ae8bc613a54c3ad088540bd229eed45be8a746c78eac3ff80c"
+    },
+    "result_manifest": {
+      "path": "recipe/eval_recipe/fpct_1b/fpct_1b_result_manifest.json",
+      "sha256": "e2069130ee5db4be8a2082b53c133409ff517cb951eebd6a45de9865c980351b"
+    },
+    "raw_qwen3_fit_calibration_prior": {
+      "positive_content_groups": 56,
+      "m2_parents": 410,
+      "use": "prospective consistency check only"
+    },
+    "overwrite_forbidden": true
+  },
+  "predata_artifacts": {
+    "protocol": {
+      "path": "FPCT_3_5_ALIGNMENT_CORRECTNESS_PROTOCOL.md",
+      "sha256": "a7c4aba59d48657103fb45417edda0c61e8e587f909637c2cf750dbc92f90f1b"
+    },
+    "diagnostic": {
+      "path": "script/analysis/fpct_3_5_alignment_correctness.py",
+      "sha256": "da6fe984b28e654fe8578cf91a3f229e4c913c812ae15e3ecefe1d23a9ccc86a"
+    },
+    "synthetic_tests": {
+      "path": "test/test_fpct_3_5_alignment_correctness.py",
+      "sha256": "014f3c2ba19816718d60e6863867e447864d59d52bf980e5a35b2307adc4a0c7",
+      "result": "13 passed"
+    },
+    "production_aligner_dependency": {
+      "path": "rosetta/model/aligner.py",
+      "sha256": "56adeb3014bd100fe3139e8876acf98c140eb9361c89bdc007d8b32ac559ab31"
+    },
+    "prompt_builder_dependency": {
+      "path": "rosetta/utils/evaluate.py",
+      "sha256": "c36b3b2f0490d8a895bd24449b065013bedd11517ac34781b08f9513ce4934c9"
+    }
+  },
+  "tokenizer_identity": {
+    "artifact_provenance": "record absolute directory, resolved path, source revision and all historical bundle hashes",
+    "behavior_fingerprint_fields": [
+      "fast_tokenizer_class",
+      "backend_tokenizer_canonical_json",
+      "complete_vocab",
+      "added_vocab",
+      "special_tokens_and_ids",
+      "normalizer",
+      "pre_tokenizer",
+      "decoder",
+      "post_processor",
+      "chat_template",
+      "tokenizer_relevant_file_names_and_sha256"
+    ],
+    "tokenizer_relevant_files": [
+      "tokenizer.json",
+      "tokenizer_config.json",
+      "tokenizer.model",
+      "special_tokens_map.json",
+      "added_tokens.json",
+      "vocab.json",
+      "merges.txt"
+    ],
+    "excluded_from_behavior_fingerprint": [
+      "model_config.json",
+      "generation_config.json",
+      "name_or_path"
+    ],
+    "per_sample_exact_fields": [
+      "rendered_chat_text",
+      "input_ids",
+      "offset_mapping",
+      "content_spans",
+      "message_token_ranges",
+      "rendered_content_span_recovers_original_message"
+    ],
+    "mismatch_action": "hard_error_no_fallback",
+    "exact_row": {
+      "source_indices": [
+        "parent_index",
+        -1,
+        -1,
+        -1
+      ],
+      "source_weights": [
+        1.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      "fallback": false,
+      "extra_slots": 0
+    }
+  },
+  "anomaly_taxonomy_precedence": [
+    "tokenizer_or_pair_path_mixup",
+    "rendered_text_difference",
+    "token_id_difference",
+    "offset_difference",
+    "zero_length_offset",
+    "duplicate_or_overlap_receiver_offsets",
+    "exact_duplicate_source_offsets",
+    "partial_overlap_source_offsets",
+    "candidate_missing_identity_index",
+    "unexplained_other"
+  ],
+  "certified_one_to_many": {
+    "coordinate_system": "message_content_relative_clipped_character_intervals",
+    "requirements": [
+      "positive_length_receiver_interval",
+      "no_positive_overlap_with_other_eligible_receiver_interval",
+      "unique_legal_source_indices",
+      "positive_length_source_intervals",
+      "every_source_interval_intersects_receiver",
+      "pairwise_disjoint_intersections",
+      "intersection_union_exactly_covers_receiver",
+      "source_indices_monotonic_by_source_span",
+      "selected_candidates_exhaust_all_positive_overlap_tokens",
+      "no_zero_length_duplicate_or_overlap_alias"
+    ],
+    "top_k": 4,
+    "top_k_truncation_rule": "positive_overlap_counts must equal retained legal candidate count",
+    "uncertified_action": "exclude_from_headline_support"
+  },
+  "conditional_sanitizer": {
+    "activation_dependency": "Qwen3 runtime identity and taxonomy gate passes",
+    "raw_m_le_1": "preserve",
+    "certified_m_ge_2": "preserve candidates and normalized prior",
+    "uncertified_m_ge_2": "raw slot-0 one-hot for c_pre/c_post/f",
+    "slot0_must_be_legal_positive": true,
+    "post_truncation_revalidation": true,
+    "entropy_recomputed_once_per_parent": true,
+    "legacy_default_unchanged": true,
+    "f_only_behavior": false
+  },
+  "qwen3_qwen25_comparison": {
+    "sets": [
+      "positive_content_groups",
+      "positive_sample_parent_pairs",
+      "message_relative_offset_signatures",
+      "candidate_token_id_signatures"
+    ],
+    "statistics": [
+      "equality",
+      "intersection_count",
+      "left_difference_count",
+      "right_difference_count",
+      "union_count",
+      "jaccard",
+      "set_sha256"
+    ],
+    "aggregate_count_equality_is_explanation": false
+  },
+  "local_only_outputs": {
+    "root": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_<execution_sha>",
+    "labels_answers_predictions_correctness_forbidden": true,
+    "task_shards": true,
+    "resume_completed_shards_only": true,
+    "overwrite_completed_artifact": false
+  },
+  "readiness": {
+    "primary": "certified_m_ge_2",
+    "minimum_positive_groups_each_task": 30,
+    "minimum_pooled_positive_groups": 100,
+    "same_tokenizer_control_ranked": false
+  },
+  "stopping_rules": [
+    "runtime_identity_failure",
+    "unexplained_qwen3_raw_m_ge_2_parent",
+    "tokenizer_or_pair_path_mixup",
+    "historical_56_group_or_410_parent_consistency_failure",
+    "tracked_dependency_hash_change",
+    "canonical_input_or_split_hash_change",
+    "certified_readiness_failure_blocks_gpu"
+  ],
+  "claim_boundary": "alignment identity and certified structural opportunity only; no query-time separability, model activation, accuracy or cross-pair claim"
+}
