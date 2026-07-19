@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-1A-R——Human Decision Lock and Prospective Amendment
-> 当前判定：`GO`
-> 下一阶段：FPCT-1B `NOT AUTHORIZED`
+> 当前阶段：FPCT-1B——Structural Support Audit complete
+> 当前判定：`SINGLE_PAIR_PILOT_READY`
+> 下一阶段：FPCT-1C reference oracle（本次 prompt 已条件授权）
 > 更新时间：2026-07-19（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -37,25 +37,20 @@
 
 ## 2. 当前范围与授权资源
 
-当前唯一授权资源等级仍为 `R0`：
+本次 `FPCT-CPU-GATE` 已将当前授权提升到 CPU-only `R1`：
 
-- repo/branch/worktree/path 的只读环境检查；
-- 读取代码、配置和已有 FPCT 文档；
-- 编写/修改 FPCT protocol 文档与 manifest；
-- Markdown、git diff、路径与禁止项一致性检查。
-- 验证通过后，只在 `research/fpct-factorized-transport` commit 并 push 到同名远端 branch。
+- 执行 FPCT-1B 本地 tokenizer、canonical prompt 和 production alignment audit；
+- 执行纯 tiny-tensor FPCT-1C reference forward/autograd；
+- 在 FPCT-1B READY 且 FPCT-1C GO 时，条件式执行 FPCT-2/3 CPU production path 与 tests；
+- 只在当前 `research/fpct-factorized-transport` commit 并 push。
 
-当前明确未授权：
+仍明确未授权：
 
-- 修改任何模型运行代码；
-- 实现 attention、sidecar、operator 或 manifest plumbing；
-- 运行 model forward；
+- 运行任何 Hugging Face/LLM model forward；
 - 使用 GPU 或提交/查询 Kubernetes FPCT job；
 - 训练、评测模型或修改 checkpoint；
 - 查看/使用 Phase 2A-1 未公开结果；
-- 运行自然 ambiguity audit 或完整数据 tokenizer/alignment；
-- 打开新的逐样本 alignment CSV/JSON；
-- 自动进入 FPCT-1B；
+- 加载模型权重或 checkpoint；
 - 创建 PR、合并 `main` 或 rebase；
 - 修改 `/home/lijunsi/projects/Cache`、其他 worktree 或 `math.md`。
 
@@ -68,11 +63,11 @@
 | FPCT-0 | `GO` | 固定 base SHA | R0 | 已完成 | GO only to protocol locking |
 | FPCT-1A | `SUPERSEDED BEFORE NATURAL DATA` | FPCT-0 GO | R0 | 历史完成 | never-executed v1 保留 |
 | FPCT-1A-R | `GO` | FPCT-1A v1 + source commit `7207aaff...` | R0 | 是，仅 prospective amendment | human decisions locked；v2 operative |
-| FPCT-1B | `NOT AUTHORIZED` | FPCT-1A-R GO + 显式授权 | R1 CPU | 否 | label-free structural-support audit |
-| FPCT-1C | `NOT AUTHORIZED` | FPCT-1B decision + 人工授权 | R1 | 否 | reference equations/oracle/numerical rule |
-| FPCT-2 | `NOT AUTHORIZED` | FPCT-1B `SINGLE_PAIR_PILOT_READY`/`CROSS_PAIR_PILOT_READY` + FPCT-1C GO + 人工授权 | R1 | 否 | 实现 `C_post`/`F` 与 manifest plumbing |
-| FPCT-3 | `NOT AUTHORIZED` | FPCT-2 GO | R1 | 否 | CPU 数值、mask、gradient、退化测试 |
-| FPCT-4 | `NOT AUTHORIZED` | FPCT-3 GO | R0/R1 | 否 | 冻结 task/control/seed/budget/statistical manifest |
+| FPCT-1B | `SINGLE_PAIR_PILOT_READY` | FPCT-1A-R GO + 本次显式授权 | R1 CPU | 已完成 | TinyLlama 唯一 ready/rank-1；无 integrity failure |
+| FPCT-1C | `AUTHORIZED / PENDING EXECUTION` | FPCT-1B complete，无 integrity failure | R1 | 是 | reference equations/oracle/numerical rule |
+| FPCT-2 | `CONDITIONALLY AUTHORIZED` | FPCT-1B READY + FPCT-1C GO | R1 | 条件满足后 | 实现 `C_post`/`F` 与 manifest plumbing |
+| FPCT-3 | `CONDITIONALLY AUTHORIZED` | FPCT-2 GO | R1 | 条件满足后 | CPU 数值、mask、gradient、退化测试 |
+| FPCT-4 | `DRAFT ONLY IF FPCT-2/3 GO` | FPCT-3 GO | R0/R1 | 非 operative draft | 不锁 seed/budget/effect threshold，不启动 GPU |
 | FPCT-5 | `NOT AUTHORIZED` | FPCT-4 GO | R2 | 否 | fixed-checkpoint diagnostic |
 | FPCT-6 | `NOT AUTHORIZED` | FPCT-5 GO | R3 | 否 | matched-training pipeline smoke |
 | FPCT-7 | `NOT AUTHORIZED` | FPCT-6 GO | R3 | 否 | confirmatory-disjoint development-only pilot |
@@ -81,7 +76,7 @@
 | FPCT-10 | `NOT AUTHORIZED` | FPCT-9 decision | R5 | 否 | mechanism/event re-audit/replication |
 | FPCT-11 | `NOT AUTHORIZED` | FPCT-10 decision | R0/R5 | 否 | claim freeze 与归档 |
 
-FPCT-1A-R `GO` 只表示 human decisions 与 v2 protocol 已锁定，不构成 FPCT-1B 授权；所有后续阶段仍需显式人工授权。
+本次 prompt 已提供上述条件授权；任何条件不满足时立即停止，不自动扩大范围。
 
 ## 4. FPCT-0 完成检查表
 
@@ -103,7 +98,9 @@ FPCT-1A-R `GO` 只表示 human decisions 与 v2 protocol 已锁定，不构成 F
 - [x] 定义 artifact、manifest、commit 和 checkpoint 隔离规则。
 - [x] 用户确认 `math.md` provenance；文件作为 non-normative reference 保留且未修改，并显式授权原样纳入独立 research branch commit。
 - [x] 人工审查并批准 FPCT-1A-R structural-support/readiness decisions。
-- [ ] 人工显式授权 FPCT-1B；当前不授权。
+- [x] 人工显式授权并完整执行 FPCT-1B。
+- [x] Commit A `7f8af719...` 在自然 audit 前推送并作为 execution SHA。
+- [x] Fit+calibration selection、pilot lock、reporting 与独立 verify 完成。
 
 ### 4.1 FPCT-1A protocol checklist
 
@@ -147,6 +144,9 @@ FPCT-1A-R `GO` 只表示 human decisions 与 v2 protocol 已锁定，不构成 F
 | FPCT-D021 | 2026-07-19 | 工程 readiness 门槛为每 task 30、pooled 100 positive groups | 只形成 `NO_SUPPORT`/`DIAGNOSTIC_ONLY`/`SINGLE_PAIR_PILOT_READY`/`CROSS_PAIR_PILOT_READY`，不是 power guarantee |
 | FPCT-D022 | 2026-07-19 | v1 never executed，addendum + v2 前瞻 supersede | source commit `7207aaff...`；v1 文件原样保留 |
 | FPCT-D023 | 2026-07-19 | v1 的 commit/push 禁令仅描述当时边界；用户随后单独授权并推送 `7207aaff...` | 不视为历史错误；不追溯授权 audit、forward、GPU、训练或 FPCT-1B |
+| FPCT-D024 | 2026-07-19 | Commit A `7f8af71968a39bc6cba2e4e34de762b291cda834` 定义为 FPCT-1B execution SHA | prepare 只生成 hash-only split/provenance；Commit A 推送并确认 local/upstream 相同后才 freeze |
+| FPCT-D025 | 2026-07-19 | FPCT-1B=`SINGLE_PAIR_PILOT_READY`，唯一 ready/rank-1/selected pair 为 `tinyllama` | selection 只用 fit+calibration distinct groups；TinyLlama 三任务 positive groups 511/228/2495；其他 heterogeneous pairs 不过门槛 |
+| FPCT-D026 | 2026-07-19 | Reporting split 不改变 pilot lock，same-tokenizer control 不参与 ranking | verifier 对 60 rows、Wilson、provenance、deterministic reduction 全部通过 |
 
 ## 6. 已锁定决定与 deferred items
 
@@ -167,7 +167,7 @@ Deferred：`delta_pos`、`delta_direct_all`、`n_req`、paired-discordance power
 - Operator ID：`c_pre|c_post|f`。
 - 每个 formal run 必须带 `matched_group_id`、execution commit、preregistration hash、config/data-order/init hashes、seed/budget 和 evidence class。
 - 禁止写入 `PHASE2A_*`、`phase2a_*` 或既有 checkpoint/result 目录。
-- FPCT-0 不创建任何 `local/` artifact、recipe、代码、checkpoint 或结果目录；FPCT-1A v1 manifest 保留，FPCT-1A-R 新增 `FPCT_1A_APPROVAL_ADDENDUM.md` 与 `ambiguity_protocol_manifest_v2.json`，不创建 audit/result artifact。
+- FPCT-1B 详细 artifact 位于 `local/final_results/fpct_factorized_transport/fpct_1b_ambiguity_support/rev_7f8af71968a39bc6cba2e4e34de762b291cda834/`，不提交；tracked result manifest 只记录 SHA、row count 与 byte size。
 
 ## 8. 当前判定
 
@@ -179,14 +179,18 @@ FPCT-0 只授权了当前 FPCT-1A 的 protocol/manifest 工作，不授权 audit
 
 Human decisions、approval addendum、v2 manifest、operative provenance 与 schema 已锁定。该 GO 只完成 protocol revision。
 
-### FPCT-1B：NOT AUTHORIZED
+### FPCT-1B：SINGLE_PAIR_PILOT_READY
 
-不得运行 tokenizer/alignment audit，不得 materialize 新逐样本 support，不得自动进入。
+完整 CPU structural-support audit 与独立 verify 通过。TinyLlama 是唯一 ready pair，因此只允许 single-pair pilot，不允许 cross-pair confirmatory claim。
 
-### FPCT-1C：NOT AUTHORIZED
+### FPCT-1C：AUTHORIZED / PENDING EXECUTION
 
-不得运行 reference oracle、tiny-tensor numerical work 或实现前 correctness work。
+因 FPCT-1B 完整且无 integrity failure，本次 prompt 已授权 reference oracle。
 
-### FPCT-2 及以后：NOT AUTHORIZED
+### FPCT-2/3：CONDITIONALLY AUTHORIZED
 
-没有模型代码、forward、GPU、训练或 checkpoint 权限。
+只有 FPCT-1C GO 后才执行。任何 invariant/test failure 都会阻止 GPU draft。
+
+### FPCT-4：GPU NOT AUTHORIZED
+
+即使 FPCT-2/3 GO，也只允许 non-operative draft；不得提交 Kubernetes Job 或启动 GPU。

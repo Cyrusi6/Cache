@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "stage": "FPCT-1B",
+  "status": "complete_verified",
+  "execution_sha": "7f8af71968a39bc6cba2e4e34de762b291cda834",
+  "global_readiness_status": "SINGLE_PAIR_PILOT_READY",
+  "ready_pair_ranking": [
+    "tinyllama"
+  ],
+  "selected_pilot": "tinyllama",
+  "locks": {
+    "pre_audit_lock": {
+      "path": "recipe/eval_recipe/fpct_1b/pre_audit_lock.json",
+      "sha256": "7e882a9b0253f0ae8bc613a54c3ad088540bd229eed45be8a746c78eac3ff80c"
+    },
+    "pilot_selection_lock": {
+      "path": "recipe/eval_recipe/fpct_1b/pilot_selection_lock.json",
+      "sha256": "153b6544376bd9f6c43fb098358db9cfd85eb746cb05cb27d81db12b0f088e7c"
+    }
+  },
+  "local_root": "local/final_results/fpct_factorized_transport/fpct_1b_ambiguity_support/rev_7f8af71968a39bc6cba2e4e34de762b291cda834",
+  "formal_local_artifacts": {
+    "parent_support.csv": {
+      "sha256": "bfacda50295a63c186369a3168c60cf72939cdfc940e16d32d7644154daad76b",
+      "row_count": 4345744,
+      "byte_size": 979102594,
+      "tracked": false
+    },
+    "sample_support.csv": {
+      "sha256": "60d18dadf52c0489cc490bdac95a4037c7dc0fb89f692c40eca95690c58bde62",
+      "row_count": 29060,
+      "byte_size": 5905380,
+      "tracked": false
+    },
+    "content_group_support.csv": {
+      "sha256": "07406baea2ab3cd34783f0b31b98f3e6fc46d146c68fc223f54f9856c13cec34",
+      "row_count": 28932,
+      "byte_size": 5530401,
+      "tracked": false
+    },
+    "pair_task_support.csv": {
+      "sha256": "578a7a89d95ab21fc35489ebef8ae4c1f02b9f7d2aec946068e00a35c30eeb00",
+      "row_count": 60,
+      "byte_size": 9380,
+      "tracked": false
+    },
+    "pair_readiness.csv": {
+      "sha256": "e99a4269e3a9ec79d727688a3bd9dce91465045505632823b99880e386b8191b",
+      "row_count": 4,
+      "byte_size": 880,
+      "tracked": false
+    },
+    "audit_summary.json": {
+      "sha256": "1094a9910c092ab4ef2ec09e59d096dfa796905b161b01d0bd505ec750c30b31",
+      "byte_size": 61279,
+      "tracked": false
+    },
+    "provenance.json": {
+      "sha256": "edbedb7983e3c79eb3e27f8ab23f87fd1fd182defa9ec1bc905ce5737632910f",
+      "byte_size": 2926,
+      "tracked": false
+    }
+  },
+  "verification": {
+    "path": "local/final_results/fpct_factorized_transport/fpct_1b_ambiguity_support/rev_7f8af71968a39bc6cba2e4e34de762b291cda834/verification.json",
+    "sha256": "d8137fb6ba3ac769e3807d60a0e3471f604490a9b67c861fb433c99b4d5defa0",
+    "byte_size": 596,
+    "result": "VERIFIED",
+    "pair_task_rows": 60,
+    "deterministic_reread": true,
+    "integrity_failure": false
+  },
+  "tracked_compact_artifacts": {
+    "FPCT_1B_STRUCTURAL_SUPPORT_AUDIT.md": {
+      "sha256": "366d51004b40db2c237b09ba4b305faaa9cd945ad18af4b99aebfad90f568f5a"
+    },
+    "FPCT_1B_STRUCTURAL_SUPPORT_AGGREGATES.csv": {
+      "sha256": "91cb48dbe1cab64616dc30f661054092d4ec1f9105c51a2730733bec3a77a63e",
+      "row_count": 12
+    },
+    "FPCT_1B_STRUCTURAL_SUPPORT_AGGREGATES.json": {
+      "sha256": "6841e4a585f32d991a79bbd51d54bd0b18a8da43864552b48b98c535dfc3924f",
+      "row_count": 12
+    }
+  },
+  "claim_boundary": "label-free structural opportunity and engineering readiness only; not accuracy, query separability, mathematical validity, or power evidence"
+}

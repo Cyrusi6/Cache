@@ -1,0 +1,84 @@
+{
+  "schema_version": 2,
+  "protocol_id": "fpct_1a_structural_support_v2",
+  "execution_sha": "7f8af71968a39bc6cba2e4e34de762b291cda834",
+  "selection_population": "fit+calibration distinct content groups",
+  "primary_threshold": "primary_structural_m2",
+  "global_readiness_status": "SINGLE_PAIR_PILOT_READY",
+  "ready_pair_ranking": [
+    "tinyllama"
+  ],
+  "selected_pilot": "tinyllama",
+  "pair_readiness": [
+    {
+      "pair": "tinyllama",
+      "task_positive_groups": {
+        "ai2-arc": 511,
+        "openbookqa": 228,
+        "mmlu-redux": 2495
+      },
+      "minimum_task_positive_groups": 228,
+      "pooled_positive_groups": 3234,
+      "task_macro_support_rate": 1.0,
+      "pair_pilot_ready": true,
+      "pilot_rank": 1,
+      "pilot_selected": true
+    },
+    {
+      "pair": "qwen25_0p5b",
+      "task_positive_groups": {
+        "ai2-arc": 0,
+        "openbookqa": 0,
+        "mmlu-redux": 56
+      },
+      "minimum_task_positive_groups": 0,
+      "pooled_positive_groups": 56,
+      "task_macro_support_rate": 0.007481629926519706,
+      "pair_pilot_ready": false,
+      "failure_reason": "one_or_more_tasks_below_30_positive_groups;pooled_positive_groups_below_100"
+    },
+    {
+      "pair": "llama32_1b",
+      "task_positive_groups": {
+        "ai2-arc": 0,
+        "openbookqa": 0,
+        "mmlu-redux": 50
+      },
+      "minimum_task_positive_groups": 0,
+      "pooled_positive_groups": 50,
+      "task_macro_support_rate": 0.00668002672010688,
+      "pair_pilot_ready": false,
+      "failure_reason": "one_or_more_tasks_below_30_positive_groups;pooled_positive_groups_below_100"
+    },
+    {
+      "pair": "qwen3_1p7b",
+      "pair_type": "same_tokenizer_control",
+      "task_positive_groups": {
+        "ai2-arc": 0,
+        "openbookqa": 0,
+        "mmlu-redux": 56
+      },
+      "minimum_task_positive_groups": 0,
+      "pooled_positive_groups": 56,
+      "task_macro_support_rate": 0.007481629926519706,
+      "pair_pilot_ready": false,
+      "ranking_eligible": false
+    }
+  ],
+  "pair_task_selection_rows": [
+    {"pair":"tinyllama","task":"ai2-arc","positive_groups":511,"total_groups":511,"support_rate":1.0,"wilson95":[0.9925385596771997,1.0],"eligible_parents":65907,"m0":0,"m1":52839,"m2":9640,"m3":3187,"m4":241},
+    {"pair":"tinyllama","task":"openbookqa","positive_groups":228,"total_groups":228,"support_rate":1.0,"wilson95":[0.9834306649024968,1.0],"eligible_parents":24173,"m0":0,"m1":19108,"m2":3705,"m3":1353,"m4":7},
+    {"pair":"tinyllama","task":"mmlu-redux","positive_groups":2495,"total_groups":2495,"support_rate":1.0,"wilson95":[0.9984627040634635,1.0],"eligible_parents":393813,"m0":0,"m1":320152,"m2":55677,"m3":16788,"m4":1196},
+    {"pair":"qwen25_0p5b","task":"ai2-arc","positive_groups":0,"total_groups":511,"support_rate":0.0,"wilson95":[4.336808689942018e-19,0.0074614403228004285],"eligible_parents":65907,"m0":0,"m1":65907,"m2":0,"m3":0,"m4":0},
+    {"pair":"qwen25_0p5b","task":"openbookqa","positive_groups":0,"total_groups":228,"support_rate":0.0,"wilson95":[0.0,0.016569335097503433],"eligible_parents":24173,"m0":0,"m1":24173,"m2":0,"m3":0,"m4":0},
+    {"pair":"qwen25_0p5b","task":"mmlu-redux","positive_groups":56,"total_groups":2495,"support_rate":0.022444889779559118,"wilson95":[0.017325064034957004,0.02903300258498953],"eligible_parents":393813,"m0":0,"m1":393403,"m2":410,"m3":0,"m4":0},
+    {"pair":"llama32_1b","task":"ai2-arc","positive_groups":0,"total_groups":511,"support_rate":0.0,"wilson95":[4.336808689942018e-19,0.0074614403228004285],"eligible_parents":65907,"m0":0,"m1":65907,"m2":0,"m3":0,"m4":0},
+    {"pair":"llama32_1b","task":"openbookqa","positive_groups":0,"total_groups":228,"support_rate":0.0,"wilson95":[0.0,0.016569335097503433],"eligible_parents":24173,"m0":0,"m1":24173,"m2":0,"m3":0,"m4":0},
+    {"pair":"llama32_1b","task":"mmlu-redux","positive_groups":50,"total_groups":2495,"support_rate":0.02004008016032064,"wilson95":[0.015234044977660798,0.026321796211920382],"eligible_parents":393813,"m0":0,"m1":393507,"m2":306,"m3":0,"m4":0},
+    {"pair":"qwen3_1p7b","task":"ai2-arc","positive_groups":0,"total_groups":511,"support_rate":0.0,"wilson95":[4.336808689942018e-19,0.0074614403228004285],"eligible_parents":65907,"m0":0,"m1":65907,"m2":0,"m3":0,"m4":0},
+    {"pair":"qwen3_1p7b","task":"openbookqa","positive_groups":0,"total_groups":228,"support_rate":0.0,"wilson95":[0.0,0.016569335097503433],"eligible_parents":24173,"m0":0,"m1":24173,"m2":0,"m3":0,"m4":0},
+    {"pair":"qwen3_1p7b","task":"mmlu-redux","positive_groups":56,"total_groups":2495,"support_rate":0.022444889779559118,"wilson95":[0.017325064034957004,0.02903300258498953],"eligible_parents":393813,"m0":0,"m1":393403,"m2":410,"m3":0,"m4":0}
+  ],
+  "integrity_failure": false,
+  "claim_boundary": "structural opportunity and engineering readiness only; no accuracy, query separability, or mathematical-validity claim"
+}

@@ -681,3 +681,36 @@ FPCT-1A 当前为 `REVIEW REQUIRED`：协议结构已完整，但 gate-primary t
 ### 结论与下一步
 
 FPCT-1A-R 判定 `GO`，只表示 human decision lock 和 prospective amendment 完成。FPCT-1B、FPCT-1C、FPCT-2 及以后继续 `NOT AUTHORIZED`。验证通过后只允许 commit/push 当前 research branch；不创建 PR、不合并 `main`、不 rebase。
+
+## 2026-07-19：FPCT-1B CPU structural-support audit
+
+### 研究目标
+
+在任何 FPCT operator 实现或 accuracy 评测前，按 v1 + approval addendum + v2 manifest 完整执行 label-free structural-support audit，确定现有三任务/四 pair 数据是否为 `F-C_post` 提供可识别的一对多 candidate support。
+
+### 核心改动
+
+- 新增六模式 CPU audit：`prepare`、`freeze`、`selection`、`lock-selection`、`reporting`、`verify`；只读复用 production prompt/chat-template/offset mapping、`TokenAligner.align_chat_messages_soft` 与 `soft_span_overlap_v2`。
+- Commit A `7f8af71968a39bc6cba2e4e34de762b291cda834` 在自然 audit 前推送并作为 execution SHA；随后冻结 pre-audit lock，任何 code/config/test/input/split 改动均会使本轮失效。
+- Prepare 独立复现 7,265 canonical rows、7,233 distinct content groups、三个 task content SHA 与 aggregate dataset SHA；生成 hash-only split manifest，不保存 label/answer。
+- 自然 audit 生成逐 parent/sample/group local artifacts，selection 仅使用 fit+calibration；pilot lock 后才补 model-selection/test reporting。
+- 新增 compact report、aggregate CSV/JSON、result manifest，并保留详细 local artifacts 不提交。
+
+### 实验配置
+
+- CPU-only：所有命令显式 `CUDA_VISIBLE_DEVICES=""`、HF offline、Transformers offline；未实例化或运行 HF/LLM model。
+- Alignment：`soft_span_overlap_v2`、top-k 4、uniform、boundary bonus 0.5、tolerance 1、min-weight 0、candidate-window 0、reweight none、confidence control off。
+- Primary：`m>=2`；m3/m4 sensitivity-only。Readiness：每任务 positive groups 至少 30 且 pooled 至少 100。
+- Selection unit：fit+calibration distinct content group；reporting split 不能改变 selection。
+
+### 验证结果
+
+- 12 个 selection shard 与 12 个 reporting shard 全部完成，无 invalid/negative/nonfinite mass、duplicate legal source index、normalization/uniform failure、`m>4` 或 content-group inconsistency。
+- TinyLlama 三任务 fit+cal positive groups 为 511/511、228/228、2495/2495，唯一通过工程门槛并成为 rank-1 selected pilot。
+- Qwen2.5 与 Llama3.2 只在 MMLU-Redux 分别有 56/2495 与 50/2495 positive groups，均未通过每任务与 pooled 门槛。
+- Same-tokenizer Qwen3 control 永不参与 readiness/ranking；reporting split 未改变 pilot lock。
+- 独立 verifier 通过：4,345,744 parent rows、29,060 sample rows、28,932 group rows、60 aggregate rows；schema、Wilson、provenance、deterministic reread/reduction 全部一致。
+
+### 结论
+
+FPCT-1B 判定 `SINGLE_PAIR_PILOT_READY`。这只说明 TinyLlama pair 在现有数据上具有充分 structural opportunity，允许 single-pair operator pilot；不支持 cross-pair confirmatory claim，也不证明 query-time separability、accuracy benefit 或 FPCT 数学有效性。因 audit 完整且无 integrity failure，本次条件授权允许进入 FPCT-1C reference oracle；仍未授权任何 GPU、训练、checkpoint 或正式 accuracy evaluation。
