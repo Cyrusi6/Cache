@@ -1,0 +1,108 @@
+{
+  "armed_at_utc": "2026-07-19T09:47:50Z",
+  "design_freeze": {
+    "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/code_and_design_freeze.json",
+    "sha256": "fc59e2f7d99d31ba6a5ff121bc63e522bc690f16be6b79d7e64ae833a1798f76"
+  },
+  "development_replay_checksums": {
+    "global": "afeb47f0ce2cb8d472eeb1562c08ab90035055afb87d866285a2d1e59bc0cc81",
+    "leave_one_pair_llama32_1b": "f4510d4d8873a81a5614566bde9629878eea9a4d0951258130d79fda42e2bf00",
+    "leave_one_pair_qwen25_0p5b": "3700d9412193c2f4ecf0c3ead918246d3b7b98e146ffb70615a216cb090eeb4f",
+    "leave_one_pair_qwen3_1p7b": "f941f61ffdfff99e0e85966cd8f1367efa1b4738a41c04785667a5d4158f4c52",
+    "leave_one_pair_tinyllama": "99516ff944732068ab00bbd7975beaa30848999fa3c3642e57627b67088d2f9f",
+    "leave_one_seed_42": "26f1c93f63f80d7c11eea227b35f18486d74f2407f3c37ef6a5f5abcc2e11456",
+    "leave_one_seed_43": "033b7b34fdef6692a59786339a6b11219723a584e3c8a11755b6bb26fba7082a",
+    "leave_one_seed_44": "7eae9f482d7f0257175d71ae6fd6deef4d67d6938910aade83f855d0ca2361fd",
+    "leave_one_task_ai2-arc": "cf633d5919de1c7881779f2987cec9ec08444126e33126cc976a9d2115e69644",
+    "leave_one_task_mmlu-redux": "8329bc3c253a1f5a1334e09014cb1f4d597fbb9895bd505a64fe015a5774257e",
+    "leave_one_task_openbookqa": "5d68dd9619d02047c2438ec6bed6c927562f40b80ad32cc2de9da701de9a6937"
+  },
+  "implementation_commit": "3deca6ae7372dca5b2964b3aa647d4d8199bc3cd",
+  "input_only_preflight": {
+    "b6_rows": 87180,
+    "correctness_fields_interpreted_or_indexed": 0,
+    "cross_seed_feature_mismatches": 0,
+    "csv_row_materialization_note": "DictReader materializes rows containing outcome columns, but preflight never indexes, parses, branches on, or retains those fields",
+    "receiver_rows": 7265,
+    "rows_by_split": {
+      "calibration": 12912,
+      "fit": 26004,
+      "model_selection": 12936,
+      "test": 35328
+    }
+  },
+  "models": {
+    "global": {
+      "candidate_id": "stump_cot_input_length",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/global.joblib",
+      "sha256": "199c1e388a43ec7d231157f72edf21fa1540cc161ceed031af41ff4eab1d30b9"
+    },
+    "leave_one_pair_llama32_1b": {
+      "candidate_id": "stump_cot_input_length",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/leave_one_pair_llama32_1b.joblib",
+      "sha256": "d07edc0da4b967d547c9cc98178b3cef5540d20244b2f37f7f01c7d8141dd98f"
+    },
+    "leave_one_pair_qwen25_0p5b": {
+      "candidate_id": "stump_cot_input_length",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/leave_one_pair_qwen25_0p5b.joblib",
+      "sha256": "d7712f009979ea7d3dae475bc3069fa56f150bec77c62f1b56f05cd4d7c6d29b"
+    },
+    "leave_one_pair_qwen3_1p7b": {
+      "candidate_id": "logreg_l2_c10",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/leave_one_pair_qwen3_1p7b.joblib",
+      "sha256": "92c84b66478057ed64ffb9923a1f1e89cada0841af4359b18bd6122eca0852e3"
+    },
+    "leave_one_pair_tinyllama": {
+      "candidate_id": "stump_cot_input_length",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/leave_one_pair_tinyllama.joblib",
+      "sha256": "3454a14af2d9a00a530f01896e4caa695c2ef5549026fecb54642b49a1c48864"
+    },
+    "leave_one_seed_42": {
+      "candidate_id": "stump_cot_input_length",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/leave_one_seed_42.joblib",
+      "sha256": "5b34ef3353a091ab75624c994778b6e807a6d31f085bbf5d2a86fbb13a02f11b"
+    },
+    "leave_one_seed_43": {
+      "candidate_id": "stump_cot_input_length",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/leave_one_seed_43.joblib",
+      "sha256": "c841ad7b8548ed17e99bfbdce60628928ea39c960f172e0b8a0284327b35d5ad"
+    },
+    "leave_one_seed_44": {
+      "candidate_id": "stump_cot_input_length",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/leave_one_seed_44.joblib",
+      "sha256": "76c63346ae090746d6f32ae0c42cdae06a73ccae917d76cd205f8c290736cec7"
+    },
+    "leave_one_task_ai2-arc": {
+      "candidate_id": "stump_cot_input_length",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/leave_one_task_ai2-arc.joblib",
+      "sha256": "3bddfc64437c83d2c8620e797f6889fcae34afdd8e0b740003fba3366319a2e9"
+    },
+    "leave_one_task_mmlu-redux": {
+      "candidate_id": "stump_cot_input_length",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/leave_one_task_mmlu-redux.joblib",
+      "sha256": "82145c39c24dbac7a4aebbfee68f5f251181dcbf038bb5bd96d018b403f609af"
+    },
+    "leave_one_task_openbookqa": {
+      "candidate_id": "logreg_l2_c001",
+      "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/locked_models/leave_one_task_openbookqa.joblib",
+      "sha256": "664f07e958160d8d0d4acc8d9288dc53caed0fba34c731aa14cb56e20dfe746c"
+    }
+  },
+  "next_step": "commit and push this receipt as the only child of the selection-artifact commit, then run evaluate-test once",
+  "phase": "2A-1",
+  "protocol": {
+    "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/protocol_manifest.json",
+    "sha256": "c3b21f0737380df2b5d60d4ce3390a4db5ebf70c524491091d164c6b5c16a490"
+  },
+  "remote_consumption_tag": "phase2a1-selector-killtest-consumed-9fa1f0a",
+  "role": "durable_single_test_attempt_receipt",
+  "schema_version": 1,
+  "selection_artifact_commit": "7bce53ddcc91a47799ca4488b4ea5d696a744ef9",
+  "selection_lock": {
+    "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/selection_lock.json",
+    "sha256": "f030a77cbba502b0c85ae8d8ecefbcc9816315b8f36b74e1e1dfb6c7a0e2676d"
+  },
+  "source_artifact_digest": "1f13ea8d80937ff74d6db10cfc1314284f3b6c3f49b239a9ceb7645090514290",
+  "status": "ARMED_NOT_EVALUATED",
+  "test_outcomes_parsed": 0
+}
