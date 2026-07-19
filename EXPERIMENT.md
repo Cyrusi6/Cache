@@ -352,3 +352,15 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 交付：`PHASE2A_0_OPPORTUNITY_AUDIT.md`、`PHASE2A_PREREGISTRATION.md`、小型 aggregate CSV/JSON、manifest、统计脚本与定向测试。大体积逐例文件继续只保留在 `/netdisk/.../local/`。
 - 验证：定向测试 `3 passed`；项目全量 `239 passed, 2 warnings`；正式 10,000-draw CSV 确定性重跑 byte-identical，JSON 除输出路径外 scientific content identical；`py_compile` 与 `git diff --check` 通过。
 - 结论：opportunity 存在且跨 pair/seed/task 稳定，但仍是 label-aware oracle 上界，不证明当前已有可实现 selector。Phase 2A-0 到此停止，等待审查。
+
+### 2026-07-19 Phase 2A-1 existing A-tier selector kill-test（test 前冻结）
+
+- 基线：Cache `main` commit `9fa1f0ac3bedefd282961a853278ab88fb376fa2`；只复用 Phase 2A-0 已冻结的 receiver-only 与 B6-native 39 个逐例文件。
+- 约束：CPU-only；未启动 GPU/Kubernetes，未做 instrumentation rerun，未修改 B6 checkpoint，未训练神经 router。
+- Primary features 固定为 `cot_input_length`、`candidate_count`、`candidate_count_max`、`one_to_many_rate`、`boundary_mismatch`；禁止文本、选项、subject/task/pair/seed/question_id、标签/正确性、entropy/confidence 冗余和恒零 fallback。
+- 候选固定为 5 个 single-feature stump、5 个 L2 multinomial logistic（C=0.01/0.1/1/10/100）和 2 个 max-depth-2 tree；reference 仅 always-receiver、always-fused、same-rate random。
+- 数据流固定为 fit→calibration→model-selection→single sealed test；所有拟合权重为 pair×seed×task 等质量，标准化只用 fit，sigmoid calibration/threshold/comparator 只用 calibration，test 不允许 refit/reselect。
+- outcome-free content split 已生成：fit 2,167、calibration 1,076、model-selection 1,078、test 2,944 rows；7,233 content groups、32 duplicate groups。manifest SHA256 `285b5b00cf3598bba075a97b1439b85031ef1cfffdc03b0e7e1775c6338701e0`。
+- 统计固定为 10,000-draw pair→seed→content-group hierarchical paired bootstrap；primary 为 pair-balanced task-macro selector−calibration-selected best fixed，sample-weighted 为 secondary，并报告 harm/benefit、oracle recovery、AUPRC/Brier/ECE、same-rate random、strict cross-family 与 LOO。
+- sealed workflow：implementation commit → 单独 design-freeze commit → 单独 selection-lock/models commit → 单独 committed attempt receipt；evaluate 前必须成功创建不可复用的远端 Git consumption tag。任一历史 tag、attempt、结果或 completion 存在即拒绝重跑。
+- 当前状态：仅完成 manifest/代码/合成测试与 outcome-free split；未运行 candidate fitting，未读取 test correctness，未产生 test result。代码 commit SHA 将由下一步 `code_and_design_freeze.json` 固定。

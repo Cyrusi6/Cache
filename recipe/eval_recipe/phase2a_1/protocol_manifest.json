@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "phase": "2A-1",
+  "source_commit": "9fa1f0ac3bedefd282961a853278ab88fb376fa2",
+  "constraints": {
+    "gpu": false,
+    "kubernetes": false,
+    "instrumentation_rerun": false,
+    "checkpoint_mutation": false,
+    "neural_router": false,
+    "raw_text_primary_features": false,
+    "metadata_primary_features": false,
+    "test_rerun": false
+  },
+  "source": {
+    "phase2a_0_manifest": "recipe/eval_recipe/phase2a_0/opportunity_audit_manifest.json",
+    "phase2a_0_manifest_sha256": "632984853cb28f80c0484bbb692f1e452e4369c1b11bfd6d6041568635299acb",
+    "phase2a_0_aggregate_json": "PHASE2A_0_OPPORTUNITY_AGGREGATES.json",
+    "phase2a_0_aggregate_json_sha256": "5a23f91808eb5e09a349f7909b7428c338bf1479993c924a093d9faecef1bfe9",
+    "dataset_content_sha256": "0366be7e5b129710024543bc065774bef165b6b6bca92541a3d641aea2918114",
+    "artifact_commit": "9b06d173eada148343ddfb71a31721c7ae5f7ad5"
+  },
+  "split": {
+    "version": "cache-phase2a-v1-29a96947",
+    "group_key": "normalized question+choices SHA256",
+    "hash": "SHA256(split_version + dataset_content_sha256 + content_hash)",
+    "hash_fraction": "first 64 big-endian bits divided by 2^64",
+    "intervals": {
+      "fit": [0.0, 0.3],
+      "calibration": [0.3, 0.45],
+      "model_selection": [0.45, 0.6],
+      "test": [0.6, 1.0]
+    },
+    "duplicate_policy": "identical content hashes share one split and one bootstrap cluster"
+  },
+  "preprocessing": {
+    "dtype": "float64",
+    "missing": "fail",
+    "nonfinite": "fail",
+    "imputation": "none",
+    "interactions": "none",
+    "logistic_standardization": "sklearn StandardScaler fitted with fit-only balanced sample weights",
+    "tree_standardization": "none",
+    "zero_scale": "StandardScaler native scale=1 behavior; assert and record"
+  },
+  "sample_weighting": {
+    "fit_and_calibration": "mean-one weights with equal total mass per active pair x seed x task cell and equal row weight inside each cell",
+    "formula": "w_i = N_split / (P * S * T * n_cell)",
+    "class_weight": null,
+    "duplicate_rows": "retain original row weights; content groups affect split/bootstrap only"
+  },
+  "calibration": {
+    "method": "sklearn CalibratedClassifierCV sigmoid",
+    "base_wrapper": "sklearn.frozen.FrozenEstimator",
+    "ensemble": false,
+    "n_jobs": 1,
+    "split": "calibration only",
+    "classes": [-1, 0, 1],
+    "probability_validation": "finite, nonnegative, row sum within 1e-10 of one",
+    "known_warning_policy": "allow only the exact FrozenEstimator/sample_weight API warning; fail on every other warning"
+  },
+  "threshold": {
+    "action": "transfer iff score > threshold; equality chooses receiver",
+    "search": "negative infinity, every unique finite calibration score, positive infinity",
+    "objective": "pair-balanced task-macro selector accuracy on calibration",
+    "tie_tolerance": 1e-12,
+    "tie_break": "larger threshold, therefore lower transfer rate",
+    "serialization": "kind plus float.hex for finite thresholds; JSON never stores bare infinity"
+  },
+  "fixed_comparator": {
+    "scope": "one global action",
+    "selection_split": "calibration",
+    "objective": "pair-balanced task-macro accuracy",
+    "actions": ["always_receiver", "always_fused"],
+    "tie_break": "always_receiver"
+  },
+  "model_selection": {
+    "split": "model_selection only",
+    "objective": "pair-balanced task-macro selector accuracy using calibration-frozen threshold",
+    "tie_tolerance": 1e-12,
+    "tie_break": "lowest candidate ordinal",
+    "refit_after_selection": false,
+    "test_candidates": 1
+  },
+  "random_baseline": {
+    "id": "same_rate_random",
+    "seed": 20260721,
+    "hash": "SHA256('phase2a1-random-v1|20260721|' + pair + '|' + task + '|' + content_hash)",
+    "stratification": "pair x task content groups, same action across seeds",
+    "rate_match": "choose hash-ranked group prefix whose row transfer count is closest to the frozen selector count in the same pair x task stratum",
+    "rate_match_tie_break": "lower transferred-row count, then shorter prefix",
+    "outcome_blind": true,
+    "bootstrap": "actions frozen; never rerandomize inside bootstrap"
+  },
+  "metrics": {
+    "primary": "selector accuracy minus calibration-selected global best fixed accuracy, pair-balanced task-macro",
+    "secondary": "pair-balanced sample-weighted accuracy delta",
+    "harm_auprc": "target utility=-1, score calibrated P(-1)",
+    "benefit_auprc": "target utility=+1, score calibrated P(+1)",
+    "auprc_reporting": "balanced-weight pooled AP plus arithmetic macro of pair x seed x task cell AP and prevalence",
+    "multiclass_brier": "balanced weighted mean of sum_c (p_c - 1[y=c])^2; range [0,2]",
+    "ece": "15 fixed equal-width bins; balanced weighted classwise one-vs-rest ECE averaged across classes, plus harm and benefit ECE",
+    "harmful_reduction": "aggregate numerator and denominator first, then 1 - accepted_harm/all_harm",
+    "beneficial_retention": "aggregate numerator and denominator first, then accepted_benefit/all_benefit",
+    "headroom_recovery": "(selector - retrospective test best fixed)/(oracle - retrospective test best fixed), untruncated",
+    "transfer_rate": "pair-balanced task-macro mean action",
+    "abstention_rate": "1 - transfer_rate"
+  },
+  "bootstrap": {
+    "samples": 10000,
+    "confidence": 0.95,
+    "seed": 20260719,
+    "batch_size": 250,
+    "quantile": "linear percentile",
+    "hierarchy": "pairs, seeds within selected pair, synchronous task-stratified content groups retaining all member rows",
+    "tasks": "fixed and equal-weighted for primary",
+    "selection_uncertainty": "conditional on frozen candidate, calibration, threshold, and comparator; never refit in bootstrap"
+  },
+  "sensitivity": {
+    "heterogeneous_pairs": ["tinyllama", "qwen25_0p5b", "llama32_1b"],
+    "strict_cross_family_pairs": ["tinyllama", "llama32_1b"],
+    "same_tokenizer_control": ["qwen3_1p7b"],
+    "leave_one_seed_out": "held seed test groups only; fit/calibration/model-selection use other seeds",
+    "leave_one_task_out": "entire held task is outer test; no held-task outcomes during development",
+    "leave_one_pair_out": "held pair test groups only; fit/calibration/model-selection use other pairs"
+  },
+  "go_gate": {
+    "all_conjunctive": true,
+    "minimum_primary_delta": 0.005,
+    "primary_ci_low_strictly_greater_than": 0.0,
+    "minimum_positive_heterogeneous_pairs": 2,
+    "remaining_heterogeneous_pair_minimum_delta": -0.002,
+    "minimum_true_headroom_recovery": 0.15,
+    "minimum_harmful_reduction": 0.25,
+    "minimum_beneficial_retention": 0.8,
+    "pair_sign_rule": "full-precision pair-level point estimate"
+  },
+  "runtime": {
+    "python": "3.10.20",
+    "numpy": "2.2.6",
+    "scipy": "1.15.3",
+    "scikit_learn": "1.7.1",
+    "joblib": "1.5.3",
+    "sklearn_metadata_routing": false,
+    "blas_threads": 1,
+    "environment_file_drift_note": "runtime Python/joblib differ from older environment-file text; formal execution freezes actual imported versions"
+  },
+  "sealed_test": {
+    "attempt_marker": "local/tmp/phase2a_1_selector_killtest/TEST_ATTEMPTED.json",
+    "completion_marker": "local/tmp/phase2a_1_selector_killtest/TEST_COMPLETE.json",
+    "tracked_attempt_receipt": "PHASE2A_1_TEST_ATTEMPT.json",
+    "tracked_completion_receipt": "PHASE2A_1_TEST_COMPLETE.json",
+    "remote_consumption_tag": "phase2a1-selector-killtest-consumed-9fa1f0a",
+    "remote_consumption_policy": "evaluate-test atomically creates and pushes this never-reused tag before reading outcomes; an existing tag is terminal",
+    "per_example_output": "local/final_results/phase2a_1_selector_killtest/test_predictions.csv",
+    "existing_attempt_policy": "terminal failure; no overwrite, resume, force, or silent rerun",
+    "preconditions": "clean main, HEAD equals origin/main and expected selection-lock commit, source/manifests/models/code/runtime hashes verified"
+  }
+}

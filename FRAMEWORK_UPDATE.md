@@ -587,3 +587,33 @@ Phase 1.5 没有识别到 inference-time 多 candidate、position-matched entrop
 ### 结论
 
 Calibrated no-transfer 具有足够大的 oracle opportunity，但当前 A 类特征高度冗余且缺少 receiver/fused uncertainty，不能从 headroom 直接推断 selector 可实现性。Phase 2A-0 只完成机会审计与预注册，明确停止在 selector 训练和 instrumentation rerun 之前，等待审查。
+
+## 2026-07-19：Phase 2A-1 CPU-only selector kill-test 冻结实现
+
+### 研究目标
+
+只使用现有五项 A-tier pre-transfer 特征，检验一个严格受限的 selector 是否能在 held-out test 上稳定优于 calibration-selected global best fixed policy；本轮不启动 GPU/Kubernetes、不做 instrumentation rerun、不修改 B6 checkpoint，也不训练神经 router。
+
+### 核心改动
+
+- 新增 `phase2a_1_selector_killtest.py`，实现 outcome-free content-group split、12 个冻结候选、fit-only 标准化、calibration-only sigmoid/threshold/comparator、model-selection-only 单候选选择，以及一次性 sealed test 统计。
+- 特征白名单在代码和 manifest 中双重硬编码为 `cot_input_length`、`candidate_count`、`candidate_count_max`、`one_to_many_rate`、`boundary_mismatch`；标签、正确性、文本、ID、pair/seed/task metadata、entropy/confidence 冗余与恒零 fallback 均 fail-closed。
+- 冻结链分为 implementation、design freeze、selection artifacts、committed attempt receipt 四个单父提交；每级限制精确 diff，test loader 还要求远端不可复用 Git consumption tag 已原子创建，避免删除本地 marker 后静默重跑。
+- source CSV 必须逐文件匹配 Phase 2A-0 已提交的 39 项 path/SHA 清单；split、protocol、candidate、feature、model、selection lock、代码和 runtime 均记录并复核 SHA。
+- 统计实现 pair→seed→content-group synchronous hierarchical paired bootstrap、task-macro primary、sample-weighted secondary、harm/benefit、oracle recovery、AUPRC/Brier/ECE、same-rate random、跨 family 与 leave-one-seed/task/pair-out。
+
+### 实验配置
+
+- 五项 primary features；候选仅含 5 个单特征 stump、5 个 L2 multinomial logistic、2 个 depth-2 tree。
+- content-group split 为 30/15/15/40；7,265 rows 对应 7,233 groups，32 个重复 MMLU groups 跨所有 pair/seed/method 绑定。
+- bootstrap 10,000 draws、95% CI、seed `20260719`；selector/random seed `20260721`。
+- 当前只完成 outcome-free split 和合成测试，尚未拟合候选、读取 test outcome 或生成任何 test 结果。
+
+### 验证结果
+
+- outcome-free split manifest SHA256 为 `285b5b00cf3598bba075a97b1439b85031ef1cfffdc03b0e7e1775c6338701e0`；fit/calibration/model-selection/test 行数分别为 2,167/1,076/1,078/2,944。
+- 合成测试覆盖全部 12 个候选、balanced weights、calibration、threshold tie、probability contract、same-rate random、bootstrap 与核心指标公式；真实 test outcome 尚未访问。
+
+### 结论
+
+Phase 2A-1 的方法、特征、候选、划分、权重、校准、阈值、统计和一次性 test 合同已实现；下一步只能在代码/设计提交并生成 SHA freeze 后运行 development selection，随后再单独提交 selection artifacts 与 test-attempt receipt。

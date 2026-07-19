@@ -1,0 +1,217 @@
+{
+  "schema_version": 1,
+  "phase": "2A-1",
+  "target_classes": [-1, 0, 1],
+  "target_definition": "utility = fused_correct - receiver_correct",
+  "score_definition": "P(utility=+1|x) - P(utility=-1|x)",
+  "selection_eligible_candidate_count": 12,
+  "invalid_candidate_policy": "fail_entire_development_run",
+  "candidates": [
+    {
+      "id": "stump_cot_input_length",
+      "ordinal": 0,
+      "family": "single_feature_stump",
+      "features": ["cot_input_length"],
+      "estimator": "sklearn.tree.DecisionTreeClassifier",
+      "params": {
+        "criterion": "gini",
+        "splitter": "best",
+        "max_depth": 1,
+        "min_weight_fraction_leaf": 0.01,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "stump_candidate_count",
+      "ordinal": 1,
+      "family": "single_feature_stump",
+      "features": ["candidate_count"],
+      "estimator": "sklearn.tree.DecisionTreeClassifier",
+      "params": {
+        "criterion": "gini",
+        "splitter": "best",
+        "max_depth": 1,
+        "min_weight_fraction_leaf": 0.01,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "stump_candidate_count_max",
+      "ordinal": 2,
+      "family": "single_feature_stump",
+      "features": ["candidate_count_max"],
+      "estimator": "sklearn.tree.DecisionTreeClassifier",
+      "params": {
+        "criterion": "gini",
+        "splitter": "best",
+        "max_depth": 1,
+        "min_weight_fraction_leaf": 0.01,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "stump_one_to_many_rate",
+      "ordinal": 3,
+      "family": "single_feature_stump",
+      "features": ["one_to_many_rate"],
+      "estimator": "sklearn.tree.DecisionTreeClassifier",
+      "params": {
+        "criterion": "gini",
+        "splitter": "best",
+        "max_depth": 1,
+        "min_weight_fraction_leaf": 0.01,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "stump_boundary_mismatch",
+      "ordinal": 4,
+      "family": "single_feature_stump",
+      "features": ["boundary_mismatch"],
+      "estimator": "sklearn.tree.DecisionTreeClassifier",
+      "params": {
+        "criterion": "gini",
+        "splitter": "best",
+        "max_depth": 1,
+        "min_weight_fraction_leaf": 0.01,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "logreg_l2_c001",
+      "ordinal": 5,
+      "family": "l2_multinomial_logistic",
+      "features": ["cot_input_length", "candidate_count", "candidate_count_max", "one_to_many_rate", "boundary_mismatch"],
+      "estimator": "sklearn.pipeline.Pipeline(StandardScaler,LogisticRegression)",
+      "params": {
+        "C": 0.01,
+        "penalty": "l2",
+        "solver": "lbfgs",
+        "tol": 1e-10,
+        "max_iter": 5000,
+        "fit_intercept": true,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "logreg_l2_c01",
+      "ordinal": 6,
+      "family": "l2_multinomial_logistic",
+      "features": ["cot_input_length", "candidate_count", "candidate_count_max", "one_to_many_rate", "boundary_mismatch"],
+      "estimator": "sklearn.pipeline.Pipeline(StandardScaler,LogisticRegression)",
+      "params": {
+        "C": 0.1,
+        "penalty": "l2",
+        "solver": "lbfgs",
+        "tol": 1e-10,
+        "max_iter": 5000,
+        "fit_intercept": true,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "logreg_l2_c1",
+      "ordinal": 7,
+      "family": "l2_multinomial_logistic",
+      "features": ["cot_input_length", "candidate_count", "candidate_count_max", "one_to_many_rate", "boundary_mismatch"],
+      "estimator": "sklearn.pipeline.Pipeline(StandardScaler,LogisticRegression)",
+      "params": {
+        "C": 1.0,
+        "penalty": "l2",
+        "solver": "lbfgs",
+        "tol": 1e-10,
+        "max_iter": 5000,
+        "fit_intercept": true,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "logreg_l2_c10",
+      "ordinal": 8,
+      "family": "l2_multinomial_logistic",
+      "features": ["cot_input_length", "candidate_count", "candidate_count_max", "one_to_many_rate", "boundary_mismatch"],
+      "estimator": "sklearn.pipeline.Pipeline(StandardScaler,LogisticRegression)",
+      "params": {
+        "C": 10.0,
+        "penalty": "l2",
+        "solver": "lbfgs",
+        "tol": 1e-10,
+        "max_iter": 5000,
+        "fit_intercept": true,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "logreg_l2_c100",
+      "ordinal": 9,
+      "family": "l2_multinomial_logistic",
+      "features": ["cot_input_length", "candidate_count", "candidate_count_max", "one_to_many_rate", "boundary_mismatch"],
+      "estimator": "sklearn.pipeline.Pipeline(StandardScaler,LogisticRegression)",
+      "params": {
+        "C": 100.0,
+        "penalty": "l2",
+        "solver": "lbfgs",
+        "tol": 1e-10,
+        "max_iter": 5000,
+        "fit_intercept": true,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "tree_depth2_leaf005",
+      "ordinal": 10,
+      "family": "shallow_decision_tree",
+      "features": ["cot_input_length", "candidate_count", "candidate_count_max", "one_to_many_rate", "boundary_mismatch"],
+      "estimator": "sklearn.tree.DecisionTreeClassifier",
+      "params": {
+        "criterion": "gini",
+        "splitter": "best",
+        "max_depth": 2,
+        "min_weight_fraction_leaf": 0.05,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    },
+    {
+      "id": "tree_depth2_leaf001",
+      "ordinal": 11,
+      "family": "shallow_decision_tree",
+      "features": ["cot_input_length", "candidate_count", "candidate_count_max", "one_to_many_rate", "boundary_mismatch"],
+      "estimator": "sklearn.tree.DecisionTreeClassifier",
+      "params": {
+        "criterion": "gini",
+        "splitter": "best",
+        "max_depth": 2,
+        "min_weight_fraction_leaf": 0.01,
+        "class_weight": null,
+        "random_state": 20260721
+      }
+    }
+  ],
+  "reference_baselines": [
+    {
+      "id": "always_receiver",
+      "selection_eligible": false
+    },
+    {
+      "id": "always_fused",
+      "selection_eligible": false
+    },
+    {
+      "id": "same_rate_random",
+      "selection_eligible": false
+    }
+  ],
+  "model_selection_tie_break": "highest pair-balanced task-macro selector accuracy, then lowest ordinal; thresholds are already frozen on calibration",
+  "test_policy": "only the single globally selected candidate is evaluated on the primary test; other candidate test outcomes remain unopened"
+}
