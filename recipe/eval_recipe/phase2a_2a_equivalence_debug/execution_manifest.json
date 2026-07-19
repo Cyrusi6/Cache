@@ -1,0 +1,256 @@
+{
+  "assets": {
+    "checkpoint": {
+      "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/final",
+      "sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5"
+    },
+    "fit_split": {
+      "fit_content_hash_digest": "7a12cd3edba29c76bfa0b6ddbd1c0e52b63879ff77f5266efbe4b1194f18bb54",
+      "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/recipe/eval_recipe/phase2a_1/content_group_split_manifest.json",
+      "row_counts": {
+        "ai2-arc": 351,
+        "openbookqa": 158
+      },
+      "sha256": "285b5b00cf3598bba075a97b1439b85031ef1cfffdc03b0e7e1775c6338701e0"
+    },
+    "models": {
+      "receiver": "/netdisk/lijunsi/c2c-route1-identifiability/models/Qwen3-0.6B",
+      "sender": "/netdisk/lijunsi/c2c-route1-identifiability/models/Llama-3.2-1B-Instruct"
+    },
+    "references": {
+      "ai2-arc": {
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/ai2-arc/Rosetta_ai2-arc_generate_20260717_162247_cot.csv",
+        "sha256": "662ac29719856797a1ebd759564d7734680649325579a7bafe1705b8e402e9de"
+      },
+      "openbookqa": {
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/openbookqa/Rosetta_openbookqa_generate_20260717_161658_cot.csv",
+        "sha256": "28b2ae3626aa2480c4bed8ee8a241debb0707d314e28798900472527bf7b6823"
+      }
+    },
+    "source_configs": {
+      "ai2-arc": {
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/tmp/route1_identifiability_suite/eval/llama32_1b__b6__seed_42/ai2-arc.yaml",
+        "sha256": "accd669ccd72632e8dd19c878689ab66c7d11e6cc8126a66d327b526c299f430"
+      },
+      "openbookqa": {
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/tmp/route1_identifiability_suite/eval/llama32_1b__b6__seed_42/openbookqa.yaml",
+        "sha256": "151c348c36daac32237f8fef5a3ad338e0b4620c7b37a2954f95090d2ae4dc28"
+      }
+    }
+  },
+  "base_commit": "00db4c7eeffc57a852c67fd1aedad9fd823ca528",
+  "branch": "research/phase2a2-equivalence-debug",
+  "code_commit": "7e6c62c4ba46f5825dda59667b449838eafa251b",
+  "comparison_columns": [
+    "pred",
+    "cot_pred",
+    "cot_output",
+    "cot_gen_length"
+  ],
+  "conditional_noop": true,
+  "constraints": {
+    "allowed_pair": "llama32_1b",
+    "allowed_seed": 42,
+    "allowed_split": "fit",
+    "allowed_tasks": [
+      "ai2-arc",
+      "openbookqa"
+    ],
+    "evaluation_only": true,
+    "geometry_predictability_forbidden": true,
+    "mmlu_forbidden": true,
+    "one_visible_physical_gpu": true,
+    "sealed_test_forbidden": true,
+    "selector_forbidden": true,
+    "serial_execution": true,
+    "training_forbidden": true
+  },
+  "core_config_sha256": {
+    "ai2-arc": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+    "openbookqa": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560"
+  },
+  "created_at": "2026-07-19T16:21:07.890662+00:00",
+  "phase": "Phase 2A-2a equivalence debug",
+  "results_root": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results",
+  "role": "llama32_gate1_equivalence_diagnostic",
+  "run_order": [
+    "off_a",
+    "off_b",
+    "on_a",
+    "on_b",
+    "noop_a",
+    "noop_b"
+  ],
+  "runs": [
+    {
+      "capture_mode": "off",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "off_a",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_a/ai2-arc.yaml",
+      "config_sha256": "ead953aad2a9307c65c3f5c499bb2f1b12e79506ad4a7be83001fca193893945",
+      "core_config_sha256": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+      "dataset": "ai2-arc",
+      "geometry_output_dir": null,
+      "id": "llama32_1b__seed42__ai2-arc__off_a",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_a/ai2-arc/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "off",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "off_a",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_a/openbookqa.yaml",
+      "config_sha256": "570f3b5abd6673bb540c6c975065ce8527661d918354b439762d72f3b6f9325b",
+      "core_config_sha256": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560",
+      "dataset": "openbookqa",
+      "geometry_output_dir": null,
+      "id": "llama32_1b__seed42__openbookqa__off_a",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_a/openbookqa/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "off",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "off_b",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_b/ai2-arc.yaml",
+      "config_sha256": "f52484d088e21e79f6e543f5f25145859c9788c4cb0ece532ec594cc3b166796",
+      "core_config_sha256": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+      "dataset": "ai2-arc",
+      "geometry_output_dir": null,
+      "id": "llama32_1b__seed42__ai2-arc__off_b",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_b/ai2-arc/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "off",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "off_b",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_b/openbookqa.yaml",
+      "config_sha256": "fdaa51b12519a604b3c41a4be042293c8827d00caa34db80e0e9d094dbd0b96d",
+      "core_config_sha256": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560",
+      "dataset": "openbookqa",
+      "geometry_output_dir": null,
+      "id": "llama32_1b__seed42__openbookqa__off_b",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_b/openbookqa/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "capture",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "on_a",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_a/ai2-arc.yaml",
+      "config_sha256": "369c216dc13f5e30b6beb886b3a5a651dcdbd121cac666b039bb0bf619cf4d04",
+      "core_config_sha256": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+      "dataset": "ai2-arc",
+      "geometry_output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_a/ai2-arc/geometry",
+      "id": "llama32_1b__seed42__ai2-arc__on_a",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_a/ai2-arc/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "capture",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "on_a",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_a/openbookqa.yaml",
+      "config_sha256": "4034ef83fc3387092839fc9c65c61dd16494a5b4c02e9150c4f77ff9c188844b",
+      "core_config_sha256": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560",
+      "dataset": "openbookqa",
+      "geometry_output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_a/openbookqa/geometry",
+      "id": "llama32_1b__seed42__openbookqa__on_a",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_a/openbookqa/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "capture",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "on_b",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_b/ai2-arc.yaml",
+      "config_sha256": "66c47a5f49eea37212e5e613b0ad2de0454434c46a4f877a373833c13189d5d3",
+      "core_config_sha256": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+      "dataset": "ai2-arc",
+      "geometry_output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/ai2-arc/geometry",
+      "id": "llama32_1b__seed42__ai2-arc__on_b",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/ai2-arc/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "capture",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "on_b",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_b/openbookqa.yaml",
+      "config_sha256": "9f60af314f1853681357fb7f06e690c7c2a5a37a0977801da78fe71546606f64",
+      "core_config_sha256": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560",
+      "dataset": "openbookqa",
+      "geometry_output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/openbookqa/geometry",
+      "id": "llama32_1b__seed42__openbookqa__on_b",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/openbookqa/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "noop",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "noop_a",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/noop_a/ai2-arc.yaml",
+      "config_sha256": "84f248a3a220241801ad99c20aee8bc18ee3c9141b1dacb485aa2a45a316a053",
+      "core_config_sha256": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+      "dataset": "ai2-arc",
+      "geometry_output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/noop_a/ai2-arc/geometry",
+      "id": "llama32_1b__seed42__ai2-arc__noop_a",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/noop_a/ai2-arc/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "noop",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "noop_a",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/noop_a/openbookqa.yaml",
+      "config_sha256": "2f3cc653c247a7e21abde47ae2454e868a5731fd39b7e70647b9c61e990d6e03",
+      "core_config_sha256": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560",
+      "dataset": "openbookqa",
+      "geometry_output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/noop_a/openbookqa/geometry",
+      "id": "llama32_1b__seed42__openbookqa__noop_a",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/noop_a/openbookqa/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "noop",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "noop_b",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/noop_b/ai2-arc.yaml",
+      "config_sha256": "1b39506b42fb1bc21e0783e1f9f26586e2df846ab6d8d1da79de9742a195862d",
+      "core_config_sha256": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+      "dataset": "ai2-arc",
+      "geometry_output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/noop_b/ai2-arc/geometry",
+      "id": "llama32_1b__seed42__ai2-arc__noop_b",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/noop_b/ai2-arc/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    },
+    {
+      "capture_mode": "noop",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "condition": "noop_b",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/noop_b/openbookqa.yaml",
+      "config_sha256": "55593cfcd7903cb2efaf9fb01d4ae985644be9b81573238a68b5e152dd908c7f",
+      "core_config_sha256": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560",
+      "dataset": "openbookqa",
+      "geometry_output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/noop_b/openbookqa/geometry",
+      "id": "llama32_1b__seed42__openbookqa__noop_b",
+      "output_dir": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/noop_b/openbookqa/predictions",
+      "seed": 42,
+      "training_forbidden": true
+    }
+  ],
+  "schema_version": 1,
+  "workspace_root": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache"
+}

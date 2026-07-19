@@ -1,0 +1,36 @@
+{
+  "dates": {
+    "17 Jul 2026": {
+      "date_token_ids": [
+        1114,
+        10263,
+        220,
+        2366,
+        21
+      ],
+      "rendered_sha256": "6a97f3c9ff2b20cffda6d2a14ce51c0afc0e5dae3b9d0248142da9ef3b889f90",
+      "system_prefix": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nCutting Knowledge Date: December 2023\nToday Date: 17 Jul 2026\n\n<|eot_id|>",
+      "token_count": 39,
+      "token_ids_sha256": "86d056fb0f83eb2898b54653e55768ac0fa1f17f8329d25f99572780a919356f"
+    },
+    "19 Jul 2026": {
+      "date_token_ids": [
+        777,
+        10263,
+        220,
+        2366,
+        21
+      ],
+      "rendered_sha256": "8810bedfea689907b2376f11c26f18e474e637c1eeefad25abe4ddbb11b1a4b2",
+      "system_prefix": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nCutting Knowledge Date: December 2023\nToday Date: 19 Jul 2026\n\n<|eot_id|>",
+      "token_count": 39,
+      "token_ids_sha256": "e70f6d7434788e5240c707db41d94adac53b99b25b4fc436c1c7c5521194cc9e"
+    }
+  },
+  "model": "/netdisk/lijunsi/c2c-route1-identifiability/models/Llama-3.2-1B-Instruct",
+  "probe_message": "Determinism probe.",
+  "rendered_equal": false,
+  "schema_version": 1,
+  "token_ids_equal": false,
+  "tokenizer_chat_template_sha256": "5816fce10444e03c2e9ee1ef8a4a1ea61ae7e69e438613f3b17b69d0426223a4"
+}

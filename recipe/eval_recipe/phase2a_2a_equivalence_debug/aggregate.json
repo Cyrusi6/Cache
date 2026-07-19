@@ -1,0 +1,1175 @@
+{
+  "base_commit": "00db4c7eeffc57a852c67fd1aedad9fd823ca528",
+  "classification": "historical_environment_or_reference_drift",
+  "code_commit": "7e6c62c4ba46f5825dda59667b449838eafa251b",
+  "comparisons": [
+    {
+      "any_mismatch_count": 15,
+      "exact": false,
+      "left": "reference",
+      "primary_mismatch_count": 15,
+      "right": "off_a",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 11,
+          "column_mismatch_count": {
+            "cot_gen_length": 7,
+            "cot_output": 11,
+            "cot_pred": 5,
+            "pred": 5
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": false,
+          "first_mismatch_samples": [
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1031"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1138"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1153"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:478"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:500"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:606"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:83"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:899"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:91"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:916"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:992"
+            }
+          ],
+          "keys_exact": true,
+          "left": "reference/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 11,
+          "right": "off_a/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 4,
+          "column_mismatch_count": {
+            "cot_gen_length": 2,
+            "cot_output": 4,
+            "cot_pred": 3,
+            "pred": 3
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": false,
+          "first_mismatch_samples": [
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:295"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:363"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:460"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:496"
+            }
+          ],
+          "keys_exact": true,
+          "left": "reference/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 4,
+          "right": "off_a/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    },
+    {
+      "any_mismatch_count": 15,
+      "exact": false,
+      "left": "reference",
+      "primary_mismatch_count": 15,
+      "right": "off_b",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 11,
+          "column_mismatch_count": {
+            "cot_gen_length": 7,
+            "cot_output": 11,
+            "cot_pred": 5,
+            "pred": 5
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": false,
+          "first_mismatch_samples": [
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1031"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1138"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1153"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:478"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:500"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:606"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:83"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:899"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:91"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:916"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:992"
+            }
+          ],
+          "keys_exact": true,
+          "left": "reference/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 11,
+          "right": "off_b/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 4,
+          "column_mismatch_count": {
+            "cot_gen_length": 2,
+            "cot_output": 4,
+            "cot_pred": 3,
+            "pred": 3
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": false,
+          "first_mismatch_samples": [
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:295"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:363"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:460"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:496"
+            }
+          ],
+          "keys_exact": true,
+          "left": "reference/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 4,
+          "right": "off_b/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    },
+    {
+      "any_mismatch_count": 0,
+      "exact": true,
+      "left": "off_a",
+      "primary_mismatch_count": 0,
+      "right": "off_b",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "off_b/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "off_b/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    },
+    {
+      "any_mismatch_count": 0,
+      "exact": true,
+      "left": "on_a",
+      "primary_mismatch_count": 0,
+      "right": "on_b",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "on_a/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_b/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "on_a/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_b/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    },
+    {
+      "any_mismatch_count": 0,
+      "exact": true,
+      "left": "off_a",
+      "primary_mismatch_count": 0,
+      "right": "on_a",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_a/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_a/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    },
+    {
+      "any_mismatch_count": 0,
+      "exact": true,
+      "left": "off_a",
+      "primary_mismatch_count": 0,
+      "right": "on_b",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_b/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_b/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    }
+  ],
+  "completed_at": "2026-07-19T16:47:57.750909+00:00",
+  "decision": "STOP_FOR_REVIEW",
+  "determinism_checks": {
+    "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/diagnostic/determinism_rerun_checks.json",
+    "sha256": "ae4da01e2d00fd620958b4bec07cd85cf6bed282ad1224c62c5183727dd896a5"
+  },
+  "manifest": {
+    "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/execution_manifest.json",
+    "sha256": "e02aaf6bfb10708e39ba07b44ceff7aef556d20ae7c4101886d8c6ac305546a4"
+  },
+  "per_example_outputs": {
+    "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/diagnostic/per_example_outputs.jsonl",
+    "rows": 509,
+    "sha256": "119f3e158da304b5a030bf6493de4bdbde5a604c3bd704ce13eeba4f418462e6"
+  },
+  "phase": "Phase 2A-2a equivalence debug",
+  "prediction_files": {
+    "off_a": {
+      "ai2-arc": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_a/ai2-arc/predictions/Rosetta_ai2-arc_generate_20260719_162604_cot.csv",
+        "sha256": "5eb19826c2a3eb469c0007c0edbbd4f1585c5fc7b786b2a76af7e4797b402503"
+      },
+      "openbookqa": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_a/openbookqa/predictions/Rosetta_openbookqa_generate_20260719_162805_cot.csv",
+        "sha256": "509594225fa9cf6f31ea1da3cb943f35f166c6f11a422d7b2c5e22fbe4353e5d"
+      }
+    },
+    "off_b": {
+      "ai2-arc": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_b/ai2-arc/predictions/Rosetta_ai2-arc_generate_20260719_163133_cot.csv",
+        "sha256": "3604cd7048bf342bd02d12e0c7d2acd46d082119280b69d7b53a8c4fd941dcfb"
+      },
+      "openbookqa": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_b/openbookqa/predictions/Rosetta_openbookqa_generate_20260719_163338_cot.csv",
+        "sha256": "4f2957fb7832fff0ca382305a99a22b2f5d8b5e96f217f7c01d816a858a0891e"
+      }
+    },
+    "on_a": {
+      "ai2-arc": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_a/ai2-arc/predictions/Rosetta_ai2-arc_generate_20260719_163810_cot.csv",
+        "sha256": "d1c6ad3c293124846ce6a733a9b6a990cad6c60602dc47f8132c069a5ccec309"
+      },
+      "openbookqa": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_a/openbookqa/predictions/Rosetta_openbookqa_generate_20260719_164042_cot.csv",
+        "sha256": "e013f702b2e3e619f3121b9380f6fc13ec57333ad73aaa5c5874351c7e7a297d"
+      }
+    },
+    "on_b": {
+      "ai2-arc": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/ai2-arc/predictions/Rosetta_ai2-arc_generate_20260719_164522_cot.csv",
+        "sha256": "19848f69d979116f1ea39e115aa46d2f693e3f458ffd110b09f37914ec86d268"
+      },
+      "openbookqa": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/openbookqa/predictions/Rosetta_openbookqa_generate_20260719_164754_cot.csv",
+        "sha256": "f34d03b3ab76814511a70c5d31da409a1ff2a1b57ae0965a7abc7e5f697ca557"
+      }
+    },
+    "reference": {
+      "ai2-arc": {
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/ai2-arc/Rosetta_ai2-arc_generate_20260717_162247_cot.csv",
+        "sha256": "662ac29719856797a1ebd759564d7734680649325579a7bafe1705b8e402e9de"
+      },
+      "openbookqa": {
+        "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/final_results/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/openbookqa/Rosetta_openbookqa_generate_20260717_161658_cot.csv",
+        "sha256": "28b2ae3626aa2480c4bed8ee8a241debb0707d314e28798900472527bf7b6823"
+      }
+    }
+  },
+  "provenance": {
+    "gpu_uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859",
+    "node": "4090-24gx4",
+    "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/diagnostic/provenance/environment_gpu_provenance.json",
+    "pod": "p2a2-eq-debug-7e6c62c4-e02aaf6b-6wnvh",
+    "sha256": "00b6266507db23b7d4ad0c2a1e770dacd66871f57dcbdc6da30ff2cfc3b1a1d4"
+  },
+  "run_states": [
+    {
+      "capture_mode": "off",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "command": [
+        "/netdisk/lijunsi/c2c-route1-identifiability/runtime/envs/e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c/venv/bin/python",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/script/evaluation/unified_evaluator.py",
+        "--config",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_a/ai2-arc.yaml"
+      ],
+      "condition": "off_a",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_a/ai2-arc.yaml",
+      "config_sha256": "ead953aad2a9307c65c3f5c499bb2f1b12e79506ad4a7be83001fca193893945",
+      "core_config_sha256": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+      "dataset": "ai2-arc",
+      "finished_at": "2026-07-19T16:26:06.511509+00:00",
+      "gpu_after": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "gpu_before": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "log": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_a/ai2-arc/evaluator.log",
+        "sha256": "bb38b65e38922ffc201bf6e62fbaff031616a435ebe10fe03ae441da74260b42"
+      },
+      "prediction": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_a/ai2-arc/predictions/Rosetta_ai2-arc_generate_20260719_162604_cot.csv",
+        "sha256": "5eb19826c2a3eb469c0007c0edbbd4f1585c5fc7b786b2a76af7e4797b402503"
+      },
+      "return_code": 0,
+      "run_id": "llama32_1b__seed42__ai2-arc__off_a",
+      "schema_version": 1,
+      "started_at": "2026-07-19T16:22:28.834586+00:00",
+      "status": "complete",
+      "wall_seconds": 217.67687163688242
+    },
+    {
+      "capture_mode": "off",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "command": [
+        "/netdisk/lijunsi/c2c-route1-identifiability/runtime/envs/e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c/venv/bin/python",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/script/evaluation/unified_evaluator.py",
+        "--config",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_a/openbookqa.yaml"
+      ],
+      "condition": "off_a",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_a/openbookqa.yaml",
+      "config_sha256": "570f3b5abd6673bb540c6c975065ce8527661d918354b439762d72f3b6f9325b",
+      "core_config_sha256": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560",
+      "dataset": "openbookqa",
+      "finished_at": "2026-07-19T16:28:07.776086+00:00",
+      "gpu_after": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "gpu_before": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "log": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_a/openbookqa/evaluator.log",
+        "sha256": "05237db2c364a6a30b375dec3d1dfd52d236ddcd364d921240d25f36de781d62"
+      },
+      "prediction": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_a/openbookqa/predictions/Rosetta_openbookqa_generate_20260719_162805_cot.csv",
+        "sha256": "509594225fa9cf6f31ea1da3cb943f35f166c6f11a422d7b2c5e22fbe4353e5d"
+      },
+      "return_code": 0,
+      "run_id": "llama32_1b__seed42__openbookqa__off_a",
+      "schema_version": 1,
+      "started_at": "2026-07-19T16:26:09.319765+00:00",
+      "status": "complete",
+      "wall_seconds": 118.45629363227636
+    },
+    {
+      "capture_mode": "off",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "command": [
+        "/netdisk/lijunsi/c2c-route1-identifiability/runtime/envs/e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c/venv/bin/python",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/script/evaluation/unified_evaluator.py",
+        "--config",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_b/ai2-arc.yaml"
+      ],
+      "condition": "off_b",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_b/ai2-arc.yaml",
+      "config_sha256": "f52484d088e21e79f6e543f5f25145859c9788c4cb0ece532ec594cc3b166796",
+      "core_config_sha256": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+      "dataset": "ai2-arc",
+      "finished_at": "2026-07-19T16:31:36.224787+00:00",
+      "gpu_after": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "gpu_before": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "log": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_b/ai2-arc/evaluator.log",
+        "sha256": "d91b32db817bb7ae044ae178e0d96971e12a16fb6ad8c24f17920e5913b01c6f"
+      },
+      "prediction": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_b/ai2-arc/predictions/Rosetta_ai2-arc_generate_20260719_163133_cot.csv",
+        "sha256": "3604cd7048bf342bd02d12e0c7d2acd46d082119280b69d7b53a8c4fd941dcfb"
+      },
+      "return_code": 0,
+      "run_id": "llama32_1b__seed42__ai2-arc__off_b",
+      "schema_version": 1,
+      "started_at": "2026-07-19T16:28:10.619264+00:00",
+      "status": "complete",
+      "wall_seconds": 205.60552244493738
+    },
+    {
+      "capture_mode": "off",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "command": [
+        "/netdisk/lijunsi/c2c-route1-identifiability/runtime/envs/e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c/venv/bin/python",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/script/evaluation/unified_evaluator.py",
+        "--config",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_b/openbookqa.yaml"
+      ],
+      "condition": "off_b",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/off_b/openbookqa.yaml",
+      "config_sha256": "fdaa51b12519a604b3c41a4be042293c8827d00caa34db80e0e9d094dbd0b96d",
+      "core_config_sha256": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560",
+      "dataset": "openbookqa",
+      "finished_at": "2026-07-19T16:33:41.377667+00:00",
+      "gpu_after": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "gpu_before": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "log": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_b/openbookqa/evaluator.log",
+        "sha256": "a868d090413f63be71c1ddaf9b25e55562a21c20019a18c9b864cc0e7bedd650"
+      },
+      "prediction": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_b/openbookqa/predictions/Rosetta_openbookqa_generate_20260719_163338_cot.csv",
+        "sha256": "4f2957fb7832fff0ca382305a99a22b2f5d8b5e96f217f7c01d816a858a0891e"
+      },
+      "return_code": 0,
+      "run_id": "llama32_1b__seed42__openbookqa__off_b",
+      "schema_version": 1,
+      "started_at": "2026-07-19T16:31:39.337255+00:00",
+      "status": "complete",
+      "wall_seconds": 122.0404160330072
+    },
+    {
+      "capture_mode": "capture",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "command": [
+        "/netdisk/lijunsi/c2c-route1-identifiability/runtime/envs/e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c/venv/bin/python",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/script/evaluation/unified_evaluator.py",
+        "--config",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_a/ai2-arc.yaml"
+      ],
+      "condition": "on_a",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_a/ai2-arc.yaml",
+      "config_sha256": "369c216dc13f5e30b6beb886b3a5a651dcdbd121cac666b039bb0bf619cf4d04",
+      "core_config_sha256": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+      "dataset": "ai2-arc",
+      "finished_at": "2026-07-19T16:38:14.096066+00:00",
+      "gpu_after": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "gpu_before": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "log": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_a/ai2-arc/evaluator.log",
+        "sha256": "86cc61c4b29d7c7456474c0e47bff03bee97a1c40971690835001b73d093e961"
+      },
+      "prediction": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_a/ai2-arc/predictions/Rosetta_ai2-arc_generate_20260719_163810_cot.csv",
+        "sha256": "d1c6ad3c293124846ce6a733a9b6a990cad6c60602dc47f8132c069a5ccec309"
+      },
+      "return_code": 0,
+      "run_id": "llama32_1b__seed42__ai2-arc__on_a",
+      "schema_version": 1,
+      "started_at": "2026-07-19T16:33:44.683992+00:00",
+      "status": "complete",
+      "wall_seconds": 269.41207573888823
+    },
+    {
+      "capture_mode": "capture",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "command": [
+        "/netdisk/lijunsi/c2c-route1-identifiability/runtime/envs/e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c/venv/bin/python",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/script/evaluation/unified_evaluator.py",
+        "--config",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_a/openbookqa.yaml"
+      ],
+      "condition": "on_a",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_a/openbookqa.yaml",
+      "config_sha256": "4034ef83fc3387092839fc9c65c61dd16494a5b4c02e9150c4f77ff9c188844b",
+      "core_config_sha256": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560",
+      "dataset": "openbookqa",
+      "finished_at": "2026-07-19T16:40:45.240052+00:00",
+      "gpu_after": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "gpu_before": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "log": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_a/openbookqa/evaluator.log",
+        "sha256": "deec880ee07fa06aae3b8074f5306eb743cab71501bbcc1515733a74f1b68a86"
+      },
+      "prediction": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_a/openbookqa/predictions/Rosetta_openbookqa_generate_20260719_164042_cot.csv",
+        "sha256": "e013f702b2e3e619f3121b9380f6fc13ec57333ad73aaa5c5874351c7e7a297d"
+      },
+      "return_code": 0,
+      "run_id": "llama32_1b__seed42__openbookqa__on_a",
+      "schema_version": 1,
+      "started_at": "2026-07-19T16:38:17.258657+00:00",
+      "status": "complete",
+      "wall_seconds": 147.98140803398564
+    },
+    {
+      "capture_mode": "capture",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "command": [
+        "/netdisk/lijunsi/c2c-route1-identifiability/runtime/envs/e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c/venv/bin/python",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/script/evaluation/unified_evaluator.py",
+        "--config",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_b/ai2-arc.yaml"
+      ],
+      "condition": "on_b",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_b/ai2-arc.yaml",
+      "config_sha256": "66c47a5f49eea37212e5e613b0ad2de0454434c46a4f877a373833c13189d5d3",
+      "core_config_sha256": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+      "dataset": "ai2-arc",
+      "finished_at": "2026-07-19T16:45:26.122788+00:00",
+      "gpu_after": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "gpu_before": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "log": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/ai2-arc/evaluator.log",
+        "sha256": "11444a0569549acd3d982062fdf951544db15be848ea9fcefcab236f0ff39b6f"
+      },
+      "prediction": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/ai2-arc/predictions/Rosetta_ai2-arc_generate_20260719_164522_cot.csv",
+        "sha256": "19848f69d979116f1ea39e115aa46d2f693e3f458ffd110b09f37914ec86d268"
+      },
+      "return_code": 0,
+      "run_id": "llama32_1b__seed42__ai2-arc__on_b",
+      "schema_version": 1,
+      "started_at": "2026-07-19T16:40:48.202249+00:00",
+      "status": "complete",
+      "wall_seconds": 277.9205325250514
+    },
+    {
+      "capture_mode": "capture",
+      "checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+      "command": [
+        "/netdisk/lijunsi/c2c-route1-identifiability/runtime/envs/e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c/venv/bin/python",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/script/evaluation/unified_evaluator.py",
+        "--config",
+        "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_b/openbookqa.yaml"
+      ],
+      "condition": "on_b",
+      "config": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/configs/on_b/openbookqa.yaml",
+      "config_sha256": "9f60af314f1853681357fb7f06e690c7c2a5a37a0977801da78fe71546606f64",
+      "core_config_sha256": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560",
+      "dataset": "openbookqa",
+      "finished_at": "2026-07-19T16:47:57.645203+00:00",
+      "gpu_after": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "gpu_before": {
+        "driver_version": "595.71.05",
+        "index": "0",
+        "memory_total_mib": 24564,
+        "memory_used_mib": 4,
+        "name": "NVIDIA GeForce RTX 4090",
+        "pci_bus_id": "00000000:3D:00.0",
+        "serial": "[N/A]",
+        "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+      },
+      "log": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/openbookqa/evaluator.log",
+        "sha256": "93d2fa75de1260e019410f55ad7b2786e5c406e7faddc058c77fb473ee4c4f62"
+      },
+      "prediction": {
+        "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/openbookqa/predictions/Rosetta_openbookqa_generate_20260719_164754_cot.csv",
+        "sha256": "f34d03b3ab76814511a70c5d31da409a1ff2a1b57ae0965a7abc7e5f697ca557"
+      },
+      "return_code": 0,
+      "run_id": "llama32_1b__seed42__openbookqa__on_b",
+      "schema_version": 1,
+      "started_at": "2026-07-19T16:45:29.159841+00:00",
+      "status": "complete",
+      "wall_seconds": 148.4853793848306
+    }
+  ],
+  "schema_version": 1,
+  "scope": {
+    "fit_rows": 509,
+    "mmlu": false,
+    "pair": "llama32_1b",
+    "sealed_test": false,
+    "seed": 42,
+    "tasks": [
+      "ai2-arc",
+      "openbookqa"
+    ]
+  },
+  "stop_reason": "current OFF repeats are stable and current ON is identical, but the frozen historical reference differs"
+}

@@ -1,0 +1,51 @@
+model:
+  model_name: Rosetta
+  rosetta_config:
+    base_model: /netdisk/lijunsi/c2c-route1-identifiability/models/Qwen3-0.6B
+    teacher_model: /netdisk/lijunsi/c2c-route1-identifiability/models/Llama-3.2-1B-Instruct
+    is_do_alignment: true
+    alignment_strategy: soft_span_overlap_v2
+    soft_alignment_top_k: 4
+    soft_alignment_score_mode: uniform
+    soft_alignment_boundary_bonus: 0.5
+    soft_alignment_boundary_tolerance: 1
+    soft_alignment_min_weight: 0.0
+    soft_alignment_confidence_mode: entropy
+    soft_alignment_confidence_alpha: 0.5
+    soft_alignment_confidence_floor: 0.5
+    soft_alignment_fallback_confidence: 0.25
+    soft_alignment_confidence_control_mode: native
+    checkpoints_dir: /netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/final
+  generation_config:
+    do_sample: false
+    max_new_tokens: 64
+output:
+  output_dir: /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/openbookqa/predictions
+eval:
+  dataset: openbookqa
+  gpu_ids:
+  - 0
+  answer_method: generate
+  use_cot: false
+  use_template: true
+  sample_interval: 1
+  math_grading_method: comprehensive
+  gate_diagnostics: false
+  gate_diagnostics_mode: compact
+  gate_saturation_low_threshold: 0.05
+  gate_saturation_high_threshold: 0.95
+  gate_relative_token_bins: 10
+  content_group_filter:
+    manifest: /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/recipe/eval_recipe/phase2a_1/content_group_split_manifest.json
+    manifest_sha256: 285b5b00cf3598bba075a97b1439b85031ef1cfffdc03b0e7e1775c6338701e0
+    split: fit
+    expected_rows: 158
+  cache_geometry_instrumentation:
+    enabled: true
+    capture_mode: capture
+    role: geometry_on
+    pair: llama32_1b
+    seed: 42
+    output_dir: /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/on_b/openbookqa/geometry
+    include_per_layer_diagnostics: true
+    primary_features_from_per_layer: false

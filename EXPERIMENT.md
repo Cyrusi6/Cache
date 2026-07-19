@@ -23,8 +23,13 @@
 
 - 标准全量测试 `284 passed`，2 个 warning 为既有 Pydantic warning；Python compilation 与 `git diff --check` 通过。
 - dry prepare 审计确认 12 个 config 只包含 ARC/OpenBookQA；fit counts 为 351/158，checkpoint directory SHA256 完整匹配 `ca789cc7...`。
-- 每个任务跨 OFF/ON/NOOP 的公共 core-config SHA 唯一且一致；正式 execution manifest 将绑定提交后的 exact code SHA。
-- GPU 结果完成后在本节记录 exact mismatch counts、classification、provenance 与 aggregate SHA。
+- 每个任务跨 OFF/ON/NOOP 的公共 core-config SHA 唯一且一致；正式 execution manifest 已绑定 exact execution code SHA。
+- GPU execution commit `7e6c62c...`；manifest SHA `e02aaf6b...`；Job YAML SHA `009fbba8...`；单 Job 固定 `4090-24gx4` 的物理 GPU `GPU-c1ff...`，总历时约 25 分钟。
+- frozen reference vs OFF-A/OFF-B 均为 15/509 mismatch（ARC 11、OpenBookQA 4）；OFF-A vs OFF-B、ON-A vs ON-B、OFF-A vs ON-A/ON-B 均为 0/509 mismatch。
+- 上一阶段 Llama3.2 ON 与当前 OFF-A 在 509 条上完全相同，尽管物理 GPU UUID 不同。
+- Llama3.2 tokenizer template 未冻结 `date_string`：reference 生成于 7 月 17 日，当前输入日志为 `Today Date: 19 Jul 2026`；无样本 tokenizer probe 证实两日期产生不同 token IDs。
+- 判定：`historical_environment_or_reference_drift`。NOOP 未触发；MMLU、sealed test、selector 与 geometry predictability 未运行。完成后已清理 Job/Pod。
+- 完整报告见 `PHASE2A_2A_EQUIVALENCE_DEBUG_REPORT.md`；小型 aggregate/provenance/config 位于 `recipe/eval_recipe/phase2a_2a_equivalence_debug/`，完整逐例生成仅保留在 `/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results`。
 
 ## 2026-07-19：Phase 2A-2a Pre-transfer Cache-Geometry Pilot（NO_GO）
 

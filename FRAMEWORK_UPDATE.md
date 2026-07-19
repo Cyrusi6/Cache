@@ -25,11 +25,14 @@
 
 - NOOP、比较器和单-GPU manifest 的聚焦测试通过；仓库标准全量测试 `284 passed`，仅保留 2 个既有 Pydantic warning。
 - 执行前资产审计确认 12 个 config 仅覆盖 ARC/OpenBookQA，B6 checkpoint directory SHA 完整匹配；每个任务跨 6 个 condition 的 core-config SHA 唯一且一致。
-- 正式 GPU 复跑结果将在同一节补充。
+- 正式 GPU 复跑完成 8 个 cell：OFF-A/OFF-B/ON-A/ON-B × ARC/OpenBookQA。OFF repeat、ON repeat 与 OFF↔ON 均为 509/509 exact；frozen reference 相对两次 OFF 均稳定出现同一 15/509 mismatch。
+- 上一阶段 Phase 2A-2a ON 与本次 OFF-A 跨不同物理 GPU 仍为 509/509 exact，排除 instrumentation 与特定 GPU 数值差异。
+- Llama3.2 chat template 使用 `strftime_now` 注入 `Today Date`；7 月 17 日与 19 日 probe 的 rendered/token-id SHA 均不同，且当前日志明确为 `19 Jul 2026`。
+- 正式分类为 `historical_environment_or_reference_drift`；NOOP 条件未触发。完成后 Job/Pod 已删除。
 
 ### 结论与下一步
 
-完成 OFF/ON/必要时 NOOP 的确定性复跑后停止等待审查；无论结果如何，都不自动恢复 selector 或 geometry predictability 实验。
+上一阶段 Llama3.2 Gate-1 NO_GO 不能解释为 geometry observer effect；当前证据指向未冻结的动态日期 prompt。后续若获授权重做 Gate 1，应先冻结 `date_string` 与 prompt/token-id hash。本任务停止等待审查，不自动恢复 selector 或 geometry predictability 实验。
 
 ## 2026-07-19：Phase 2A-2a pre-transfer cache geometry instrumentation
 

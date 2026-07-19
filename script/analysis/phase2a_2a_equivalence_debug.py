@@ -450,7 +450,7 @@ def collect_provenance(*, output_dir: Path, manifest: Mapping[str, Any]) -> dict
     pip_freeze = _run_text([sys.executable, "-m", "pip", "freeze", "--all"])
     pip_path = output_dir / "pip_freeze.txt"
     pip_path.write_text(pip_freeze + "\n", encoding="utf-8")
-    runtime_identity_path = Path(sys.prefix).parents[1] / "identity.json"
+    runtime_identity_path = Path(sys.prefix).parent / "identity.json"
     runtime_identity = None
     if runtime_identity_path.is_file():
         runtime_identity = json.loads(runtime_identity_path.read_text(encoding="utf-8"))

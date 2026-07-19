@@ -1,0 +1,83 @@
+{
+  "captured_at": "2026-07-19T16:22:25.528561+00:00",
+  "checkpoint": {
+    "path": "/netdisk/lijunsi/c2c-route1-identifiability/workspace/Cache/local/checkpoints/route1_identifiability/rev_9b06d173eada/llama32_1b/b6/seed_42/final",
+    "sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5"
+  },
+  "code_commit": "7e6c62c4ba46f5825dda59667b449838eafa251b",
+  "container_image": "swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime",
+  "core_config_sha256": {
+    "ai2-arc": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+    "openbookqa": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560"
+  },
+  "cuda_device_count": 1,
+  "cuda_visible_devices": null,
+  "cudnn": 90100,
+  "date_template_probe": {
+    "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/date_template_probe.json",
+    "sha256": "3df33e3e7e91c2c6d57579ccacf5436de74a54ae8a9a90c2c5fe65aa1831d44b"
+  },
+  "determinism_environment": {
+    "CUBLAS_WORKSPACE_CONFIG": null,
+    "DATASETS_OFFLINE": "1",
+    "HF_DATASETS_OFFLINE": "1",
+    "HF_HUB_OFFLINE": "1",
+    "NVIDIA_TF32_OVERRIDE": null,
+    "PYTHONHASHSEED": null,
+    "TOKENIZERS_PARALLELISM": "false",
+    "TRANSFORMERS_OFFLINE": "1"
+  },
+  "enriched_at": "2026-07-19T16:53:31.642555+00:00",
+  "execution_manifest": {
+    "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/execution_manifest.json",
+    "sha256": "e02aaf6bfb10708e39ba07b44ceff7aef556d20ae7c4101886d8c6ac305546a4"
+  },
+  "gpu_inventory": [
+    {
+      "driver_version": "595.71.05",
+      "index": "0",
+      "memory_total_mib": 24564,
+      "memory_used_mib": 4,
+      "name": "NVIDIA GeForce RTX 4090",
+      "pci_bus_id": "00000000:3D:00.0",
+      "serial": "[N/A]",
+      "uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859"
+    }
+  ],
+  "hostname": "p2a2-eq-debug-7e6c62c4-e02aaf6b-6wnvh",
+  "kubernetes_node": "4090-24gx4",
+  "namespace": "c2c-research",
+  "nvidia_smi_q": {
+    "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/diagnostic/provenance/nvidia_smi_q.txt",
+    "sha256": "c70ec9b3c5b82230e47f783afd094dc6baeae567feeb2f2dcb3992826c194256"
+  },
+  "nvidia_visible_devices": "void",
+  "pip_freeze": {
+    "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/diagnostic/provenance/pip_freeze.txt",
+    "sha256": "44b5da7b77e042367a590c4bba0bd46e5a3ab53711fb6d0626ca5607f2a41165"
+  },
+  "platform": "Linux-7.0.0-22-generic-x86_64-with-glibc2.35",
+  "pod_name": "p2a2-eq-debug-7e6c62c4-e02aaf6b-6wnvh",
+  "python": "3.11.11 | packaged by conda-forge | (main, Dec  5 2024, 14:17:24) [GCC 13.3.0]",
+  "python_executable": "/netdisk/lijunsi/c2c-route1-identifiability/runtime/envs/e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c/venv/bin/python",
+  "runtime_identity": {
+    "extras": "dev,training,evaluation",
+    "fingerprint": "e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c",
+    "image": "swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime",
+    "pip_constraint_sha256": "a2258586be96bf21526130a723b56885a5ea93a00c532400ff854288f8358af8",
+    "python": "3.11.11 | packaged by conda-forge | (main, Dec  5 2024, 14:17:24) [GCC 13.3.0]"
+  },
+  "runtime_identity_path": "/netdisk/lijunsi/c2c-route1-identifiability/runtime/envs/e727d731b896b8e6e0ee93320fcb2eb127f0ead4ba23be2af04a025d8d95233c/identity.json",
+  "schema_version": 1,
+  "source_provenance": {
+    "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/diagnostic/provenance/environment_gpu_provenance.json",
+    "sha256": "00b6266507db23b7d4ad0c2a1e770dacd66871f57dcbdc6da30ff2cfc3b1a1d4"
+  },
+  "submitted_job_yaml": {
+    "path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/job.yaml",
+    "sha256": "009fbba850c9e4b00b697b96a870d069938a8f05954d9bf2bb0e2e1816390422"
+  },
+  "torch": "2.6.0+cu124",
+  "torch_cuda": "12.4",
+  "workspace_head": "7e6c62c4ba46f5825dda59667b449838eafa251b"
+}

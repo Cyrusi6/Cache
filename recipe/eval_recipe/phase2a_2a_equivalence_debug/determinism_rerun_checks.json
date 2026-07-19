@@ -1,0 +1,711 @@
+{
+  "classification": "historical_environment_or_reference_drift",
+  "comparison_columns": [
+    "pred",
+    "cot_pred",
+    "cot_output",
+    "cot_gen_length"
+  ],
+  "comparisons": [
+    {
+      "any_mismatch_count": 15,
+      "exact": false,
+      "left": "reference",
+      "primary_mismatch_count": 15,
+      "right": "off_a",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 11,
+          "column_mismatch_count": {
+            "cot_gen_length": 7,
+            "cot_output": 11,
+            "cot_pred": 5,
+            "pred": 5
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": false,
+          "first_mismatch_samples": [
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1031"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1138"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1153"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:478"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:500"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:606"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:83"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:899"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:91"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:916"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:992"
+            }
+          ],
+          "keys_exact": true,
+          "left": "reference/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 11,
+          "right": "off_a/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 4,
+          "column_mismatch_count": {
+            "cot_gen_length": 2,
+            "cot_output": 4,
+            "cot_pred": 3,
+            "pred": 3
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": false,
+          "first_mismatch_samples": [
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:295"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:363"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:460"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:496"
+            }
+          ],
+          "keys_exact": true,
+          "left": "reference/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 4,
+          "right": "off_a/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    },
+    {
+      "any_mismatch_count": 15,
+      "exact": false,
+      "left": "reference",
+      "primary_mismatch_count": 15,
+      "right": "off_b",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 11,
+          "column_mismatch_count": {
+            "cot_gen_length": 7,
+            "cot_output": 11,
+            "cot_pred": 5,
+            "pred": 5
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": false,
+          "first_mismatch_samples": [
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1031"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1138"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:1153"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:478"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:500"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:606"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:83"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:899"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:91"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:916"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "ai2-arc:SPLIT_0_OF_1:992"
+            }
+          ],
+          "keys_exact": true,
+          "left": "reference/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 11,
+          "right": "off_b/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 4,
+          "column_mismatch_count": {
+            "cot_gen_length": 2,
+            "cot_output": 4,
+            "cot_pred": 3,
+            "pred": 3
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": false,
+          "first_mismatch_samples": [
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:295"
+            },
+            {
+              "columns": [
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:363"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output",
+                "cot_gen_length"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:460"
+            },
+            {
+              "columns": [
+                "pred",
+                "cot_pred",
+                "cot_output"
+              ],
+              "sample_id": "openbookqa:SPLIT_0_OF_1:496"
+            }
+          ],
+          "keys_exact": true,
+          "left": "reference/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 4,
+          "right": "off_b/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    },
+    {
+      "any_mismatch_count": 0,
+      "exact": true,
+      "left": "off_a",
+      "primary_mismatch_count": 0,
+      "right": "off_b",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "off_b/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "off_b/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    },
+    {
+      "any_mismatch_count": 0,
+      "exact": true,
+      "left": "on_a",
+      "primary_mismatch_count": 0,
+      "right": "on_b",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "on_a/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_b/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "on_a/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_b/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    },
+    {
+      "any_mismatch_count": 0,
+      "exact": true,
+      "left": "off_a",
+      "primary_mismatch_count": 0,
+      "right": "on_a",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_a/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_a/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    },
+    {
+      "any_mismatch_count": 0,
+      "exact": true,
+      "left": "off_a",
+      "primary_mismatch_count": 0,
+      "right": "on_b",
+      "rows": 509,
+      "tasks": [
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/ai2-arc",
+          "left_rows": 351,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_b/ai2-arc",
+          "right_rows": 351,
+          "task": "ai2-arc"
+        },
+        {
+          "any_mismatch_count": 0,
+          "column_mismatch_count": {
+            "cot_gen_length": 0,
+            "cot_output": 0,
+            "cot_pred": 0,
+            "pred": 0
+          },
+          "diagnostic_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "exact": true,
+          "first_mismatch_samples": [],
+          "keys_exact": true,
+          "left": "off_a/openbookqa",
+          "left_rows": 158,
+          "missing_from_left": 0,
+          "missing_from_right": 0,
+          "primary_columns": [
+            "pred",
+            "cot_pred",
+            "cot_output",
+            "cot_gen_length"
+          ],
+          "primary_mismatch_count": 0,
+          "right": "on_b/openbookqa",
+          "right_rows": 158,
+          "task": "openbookqa"
+        }
+      ]
+    }
+  ],
+  "correctness_read_or_used": false,
+  "created_at": "2026-07-19T16:47:57.737495+00:00",
+  "geometry_predictability_evaluated": false,
+  "gpu_uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859",
+  "mmlu_run": false,
+  "one_pod": true,
+  "one_visible_physical_gpu": true,
+  "run_order_executed": [
+    "off_a",
+    "off_b",
+    "on_a",
+    "on_b"
+  ],
+  "same_checkpoint_sha256": "ca789cc72884de477c5f02349a156c25774f0095f1d3a0f544bfba9929547cc5",
+  "same_core_config_by_task": {
+    "ai2-arc": "6f668ad8f153c2f06599fde04d2f18cf244fc05d63af4cf329f004e35746b920",
+    "openbookqa": "278c9bbcd42dda9841dd3c61b48dd69d9884a82faf19e74a9413eb1b95869560"
+  },
+  "schema_version": 1,
+  "selector_run": false,
+  "serial_execution": true,
+  "stop_reason": "current OFF repeats are stable and current ON is identical, but the frozen historical reference differs"
+}

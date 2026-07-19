@@ -1,0 +1,95 @@
+{
+  "correctness_read_or_used": false,
+  "created_at": "2026-07-19T16:52:31.227610+00:00",
+  "current_gpu_uuid": "GPU-c1ff6c70-6280-a8be-78a6-5575bb320859",
+  "exact": true,
+  "interpretation": "The completed Phase 2A-2a ON outputs are exactly identical to the current OFF-A outputs despite different physical GPU UUIDs.",
+  "primary_mismatch_count": 0,
+  "prior_gpu_assignment": [
+    {
+      "used_mib": 396,
+      "uuid": "GPU-1b779a31-1487-cef0-a64d-05bea2dd9f54"
+    },
+    {
+      "used_mib": 396,
+      "uuid": "GPU-4696db4d-4e08-f434-9f4a-56d2a4338db5"
+    }
+  ],
+  "role": "secondary_nonconfirmatory_phase2a2_on_vs_current_off_equivalence",
+  "rows": 509,
+  "schema_version": 1,
+  "tasks": [
+    {
+      "any_mismatch_count": 0,
+      "column_mismatch_count": {
+        "cot_gen_length": 0,
+        "cot_output": 0,
+        "cot_pred": 0,
+        "pred": 0
+      },
+      "current_path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_a/ai2-arc/predictions/Rosetta_ai2-arc_generate_20260719_162604_cot.csv",
+      "current_sha256": "5eb19826c2a3eb469c0007c0edbbd4f1585c5fc7b786b2a76af7e4797b402503",
+      "diagnostic_columns": [
+        "pred",
+        "cot_pred",
+        "cot_output",
+        "cot_gen_length"
+      ],
+      "exact": true,
+      "first_mismatch_samples": [],
+      "keys_exact": true,
+      "left": "phase2a2_on/ai2-arc",
+      "left_rows": 351,
+      "missing_from_left": 0,
+      "missing_from_right": 0,
+      "primary_columns": [
+        "pred",
+        "cot_pred",
+        "cot_output",
+        "cot_gen_length"
+      ],
+      "primary_mismatch_count": 0,
+      "prior_path": "/netdisk/lijunsi/c2c-phase2a2-cache-geometry/results/llama32_1b/ai2-arc/instrumented/Rosetta_ai2-arc_generate_20260719_125302_cot.csv",
+      "prior_sha256": "d88f3664e6e1859c28ffc9c8c43b29120f3698f0de568f5bff57feacdee14183",
+      "right": "equivalence_debug_off_a/ai2-arc",
+      "right_rows": 351,
+      "task": "ai2-arc"
+    },
+    {
+      "any_mismatch_count": 0,
+      "column_mismatch_count": {
+        "cot_gen_length": 0,
+        "cot_output": 0,
+        "cot_pred": 0,
+        "pred": 0
+      },
+      "current_path": "/netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/runs/off_a/openbookqa/predictions/Rosetta_openbookqa_generate_20260719_162805_cot.csv",
+      "current_sha256": "509594225fa9cf6f31ea1da3cb943f35f166c6f11a422d7b2c5e22fbe4353e5d",
+      "diagnostic_columns": [
+        "pred",
+        "cot_pred",
+        "cot_output",
+        "cot_gen_length"
+      ],
+      "exact": true,
+      "first_mismatch_samples": [],
+      "keys_exact": true,
+      "left": "phase2a2_on/openbookqa",
+      "left_rows": 158,
+      "missing_from_left": 0,
+      "missing_from_right": 0,
+      "primary_columns": [
+        "pred",
+        "cot_pred",
+        "cot_output",
+        "cot_gen_length"
+      ],
+      "primary_mismatch_count": 0,
+      "prior_path": "/netdisk/lijunsi/c2c-phase2a2-cache-geometry/results/llama32_1b/openbookqa/instrumented/Rosetta_openbookqa_generate_20260719_125114_cot.csv",
+      "prior_sha256": "81e828540a69a9956f49c01f53b72ca495005cf2c03bdef8c338f6cba0afb6e7",
+      "right": "equivalence_debug_off_a/openbookqa",
+      "right_rows": 158,
+      "task": "openbookqa"
+    }
+  ]
+}

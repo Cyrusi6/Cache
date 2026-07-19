@@ -1,0 +1,155 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: p2a2-eq-debug-7e6c62c4-e02aaf6b
+  namespace: c2c-research
+  labels: &id001
+    app.kubernetes.io/name: c2c
+    app.kubernetes.io/managed-by: phase2a2-equivalence-debug-job
+    c2c.research/experiment: phase2a2-equivalence-debug
+  annotations:
+    c2c.research/git-commit: 7e6c62c4ba46f5825dda59667b449838eafa251b
+    c2c.research/manifest-sha256: e02aaf6bfb10708e39ba07b44ceff7aef556d20ae7c4101886d8c6ac305546a4
+    c2c.research/run-order: off-a,off-b,on-a,on-b,conditional-noop
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 21600
+  template:
+    metadata:
+      labels: *id001
+    spec:
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 60
+      nodeSelector:
+        kubernetes.io/hostname: 4090-24gx4
+      securityContext:
+        runAsUser: 20007
+        runAsGroup: 20007
+        fsGroup: 20007
+        supplementalGroups:
+        - 31000
+      initContainers:
+      - name: wait-for-exact-workspace
+        image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
+        command:
+        - python
+        - -c
+        - "import hashlib\nimport pathlib\nimport subprocess\nimport sys\nimport time\n\
+          \nworkspace = pathlib.Path(sys.argv[1])\nmanifest = pathlib.Path(sys.argv[2])\n\
+          expected_commit = sys.argv[3]\nexpected_manifest_sha = sys.argv[4]\ndeadline\
+          \ = time.monotonic() + int(sys.argv[5])\nwhile True:\n    try:\n       \
+          \ try:\n            head = subprocess.run(\n                [\"git\", \"\
+          -C\", str(workspace), \"rev-parse\", \"HEAD\"],\n                check=True,\
+          \ capture_output=True, text=True,\n            ).stdout.strip()\n      \
+          \  except (FileNotFoundError, subprocess.SubprocessError):\n           \
+          \ head = (workspace / \".git/HEAD\").read_text().strip()\n        manifest_sha\
+          \ = hashlib.sha256(manifest.read_bytes()).hexdigest()\n        script_ok\
+          \ = (\n            workspace / \"script/analysis/phase2a_2a_equivalence_debug.py\"\
+          \n        ).is_file()\n        if head == expected_commit and manifest_sha\
+          \ == expected_manifest_sha and script_ok:\n            print(\"exact Phase\
+          \ 2A-2a equivalence-debug workspace ready\", flush=True)\n            raise\
+          \ SystemExit(0)\n    except Exception as exc:\n        print(f\"waiting\
+          \ for exact workspace: {exc}\", flush=True)\n    if time.monotonic() >=\
+          \ deadline:\n        raise SystemExit(\"timed out waiting for exact equivalence-debug\
+          \ workspace\")\n    time.sleep(5)"
+        args:
+        - /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache
+        - /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/execution_manifest.json
+        - 7e6c62c4ba46f5825dda59667b449838eafa251b
+        - e02aaf6bfb10708e39ba07b44ceff7aef556d20ae7c4101886d8c6ac305546a4
+        - '3600'
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        volumeMounts:
+        - name: netdisk
+          mountPath: /netdisk
+      containers:
+      - name: equivalence-debug
+        image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
+        imagePullPolicy: IfNotPresent
+        command:
+        - python
+        - /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/script/k8s/container_entrypoint.py
+        args:
+        - --runtime-dir
+        - /netdisk/lijunsi/c2c-route1-identifiability/runtime
+        - --project-root
+        - /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache
+        - --
+        - python
+        - /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/script/analysis/phase2a_2a_equivalence_debug.py
+        - execute
+        - --manifest
+        - /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/status/execution_manifest.json
+        - --output-root
+        - /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/results/diagnostic
+        env:
+        - name: PYTHONUNBUFFERED
+          value: '1'
+        - name: TOKENIZERS_PARALLELISM
+          value: 'false'
+        - name: HOME
+          value: /netdisk/lijunsi/c2c-phase2a2-cache-geometry/runtime/home
+        - name: XDG_CACHE_HOME
+          value: /netdisk/lijunsi/c2c-phase2a2-cache-geometry/runtime/home/.cache
+        - name: TORCH_HOME
+          value: /netdisk/lijunsi/c2c-phase2a2-cache-geometry/runtime/home/.cache/torch
+        - name: HF_HOME
+          value: /cache/huggingface
+        - name: HF_HUB_OFFLINE
+          value: '1'
+        - name: HF_DATASETS_OFFLINE
+          value: '1'
+        - name: DATASETS_OFFLINE
+          value: '1'
+        - name: TRANSFORMERS_OFFLINE
+          value: '1'
+        - name: C2C_DATA_ROOT
+          value: /netdisk/lijunsi/c2c-route1-identifiability/data/c2c
+        - name: C2C_RUNTIME_IMAGE
+          value: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
+        - name: PIP_CONSTRAINT
+          value: /netdisk/lijunsi/c2c-phase2a2-equivalence-debug/workspace/Cache/recipe/train_recipe/identifiability/runtime_constraints.txt
+        - name: C2C_PRESERVE_CUDA_VISIBLE_DEVICES
+          value: '1'
+        - name: C2C_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: C2C_POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: '12'
+            memory: 48Gi
+            nvidia.com/gpu: '1'
+          limits:
+            cpu: '20'
+            memory: 64Gi
+            nvidia.com/gpu: '1'
+        volumeMounts:
+        - name: netdisk
+          mountPath: /netdisk
+        - name: hf-cache
+          mountPath: /cache/huggingface
+        - name: shm
+          mountPath: /dev/shm
+      volumes:
+      - name: netdisk
+        hostPath:
+          path: /netdisk
+          type: Directory
+      - name: hf-cache
+        emptyDir: {}
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 24Gi
