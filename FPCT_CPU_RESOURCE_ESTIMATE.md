@@ -42,7 +42,7 @@ The other heterogeneous pairs have no expansion on ARC/OpenBookQA and only spars
 ## Provenance
 
 - FPCT-1B execution SHA: `7f8af71968a39bc6cba2e4e34de762b291cda834`
-- Frozen parent-support SHA256: `bfacda50b6681744025480b801746509965412018d271f37ee7c4e821b986904`
+- Frozen parent-support SHA256: `bfacda50295a63c186369a3168c60cf72939cdfc940e16d32d7644154daad76b`
 - Receiver config SHA256: `660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd`
 - Local resource JSON: `local/final_results/fpct_factorized_transport/fpct_1b_ambiguity_support/rev_7f8af71968a39bc6cba2e4e34de762b291cda834/resource_estimate.json`
 - Local resource JSON SHA256: `51532857ebc6f3984ad0670ef8adf13ce5cb2f8b36757fd4575985ac088c5edc`
