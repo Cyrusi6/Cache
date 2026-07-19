@@ -1,0 +1,100 @@
+{
+  "attempt_receipt": {
+    "path": "/home/lijunsi/projects/Cache/PHASE2A_1_TEST_ATTEMPT.json",
+    "sha256": "5387ec1d0fb4c11acbf3e7dbaf85646f0020164e318b34e6d7e40d8a73424a4a"
+  },
+  "decision": "NO_GO",
+  "go_gate": {
+    "all_conjunctive": true,
+    "decision": "NO_GO",
+    "gates": {
+      "beneficial_retention_at_least_80pct": true,
+      "harmful_reduction_at_least_25pct": false,
+      "heterogeneous_pair_sign_rule": false,
+      "oracle_headroom_recovery_at_least_15pct": false,
+      "primary_ci_lower_above_zero": false,
+      "primary_delta_at_least_0p5pp": false
+    },
+    "values": {
+      "beneficial_retention": 1.0,
+      "harmful_reduction": 0.0,
+      "heterogeneous_pair_deltas": {
+        "llama32_1b": 0.0,
+        "qwen25_0p5b": 0.0,
+        "tinyllama": 0.0
+      },
+      "oracle_headroom_recovery": 0.0,
+      "positive_heterogeneous_pair_count": 0,
+      "primary_ci_high": 0.0,
+      "primary_ci_low": 0.0,
+      "primary_delta": 0.0
+    }
+  },
+  "outcome_access_audit": {
+    "fused_outcome_rows_parsed_by_split": {
+      "calibration": 12912,
+      "fit": 26004,
+      "model_selection": 12936,
+      "test": 35328
+    },
+    "included_pairs": [
+      "llama32_1b",
+      "qwen25_0p5b",
+      "qwen3_1p7b",
+      "tinyllama"
+    ],
+    "included_seeds": [
+      42,
+      43,
+      44
+    ],
+    "included_tasks": [
+      "ai2-arc",
+      "mmlu-redux",
+      "openbookqa"
+    ],
+    "receiver_outcome_rows_parsed_by_split": {
+      "calibration": 1076,
+      "fit": 2167,
+      "model_selection": 1078,
+      "test": 2944
+    },
+    "rows_skipped_before_outcome_parse_by_split": {
+      "calibration": 0,
+      "fit": 0,
+      "model_selection": 0,
+      "test": 0
+    },
+    "stage": "test"
+  },
+  "outputs": {
+    "aggregate_csv": {
+      "path": "/home/lijunsi/projects/Cache/PHASE2A_1_SELECTOR_AGGREGATES.csv",
+      "sha256": "2f90d6916974e3fb9ea9c675eee94a6cf04a68871ef965b582b53646858db3ee"
+    },
+    "aggregate_json": {
+      "path": "/home/lijunsi/projects/Cache/PHASE2A_1_SELECTOR_AGGREGATES.json",
+      "sha256": "0a42a50a86e6f8dd5418ee94258b1a7c9ad6e4fc3b33fa633acbb32b12b295da"
+    },
+    "per_example_local": {
+      "path": "/home/lijunsi/projects/Cache/local/final_results/phase2a_1_selector_killtest/test_predictions.csv",
+      "sha256": "d166014c2b5dd7a193c34297a620de037d9a65d6b52f74e3109ce568b4108283"
+    },
+    "report": {
+      "path": "/home/lijunsi/projects/Cache/PHASE2A_1_SELECTOR_KILLTEST_REPORT.md",
+      "sha256": "8c84f222634e0a7f32a49b5df1d4ac9fe0224466b94d73a7fdb2991de9bf43bf"
+    },
+    "summary_zh": {
+      "path": "/home/lijunsi/projects/Cache/PHASE2A_1_SELECTOR_KILLTEST_SUMMARY_ZH.md",
+      "sha256": "6b802ba34404bd0a87ace8953f6073e85e1f71030dc54a8717bd93b10faf5b65"
+    }
+  },
+  "phase": "2A-1",
+  "role": "sealed_test_result_manifest",
+  "schema_version": 1,
+  "selection_lock": {
+    "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/selection_lock.json",
+    "sha256": "f030a77cbba502b0c85ae8d8ecefbcc9816315b8f36b74e1e1dfb6c7a0e2676d"
+  },
+  "test_commit": "488adfedb30824fad08b2ae68636fe7eedfa9dc1"
+}

@@ -1,0 +1,14 @@
+{
+  "completed_at_utc": "2026-07-19T09:53:16Z",
+  "decision": "NO_GO",
+  "phase": "2A-1",
+  "result_manifest": {
+    "path": "/home/lijunsi/projects/Cache/recipe/eval_recipe/phase2a_1/phase2a_1_result_manifest.json",
+    "sha256": "93e73f1f07209758566c804afa0be0fb5c954c9bab0ac2d858cbc7c868809b93"
+  },
+  "role": "durable_single_test_completion_receipt",
+  "schema_version": 1,
+  "started_at_utc": "2026-07-19T09:52:23Z",
+  "status": "COMPLETE",
+  "test_commit": "488adfedb30824fad08b2ae68636fe7eedfa9dc1"
+}

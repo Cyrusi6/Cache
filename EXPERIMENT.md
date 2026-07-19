@@ -364,3 +364,17 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 统计固定为 10,000-draw pair→seed→content-group hierarchical paired bootstrap；primary 为 pair-balanced task-macro selector−calibration-selected best fixed，sample-weighted 为 secondary，并报告 harm/benefit、oracle recovery、AUPRC/Brier/ECE、same-rate random、strict cross-family 与 LOO。
 - sealed workflow：implementation commit → 单独 design-freeze commit → 单独 selection-lock/models commit → 单独 committed attempt receipt；evaluate 前必须成功创建不可复用的远端 Git consumption tag。任一历史 tag、attempt、结果或 completion 存在即拒绝重跑。
 - 当前状态：仅完成 manifest/代码/合成测试与 outcome-free split；未运行 candidate fitting，未读取 test correctness，未产生 test result。代码 commit SHA 将由下一步 `code_and_design_freeze.json` 固定。
+
+### 2026-07-19 Phase 2A-1 最终 sealed test 结果
+
+- 冻结提交：implementation `3deca6ae7372dca5b2964b3aa647d4d8199bc3cd`；design freeze `f7e87c3b97577dac3955cdbfaf1b39981ffa546d`；selection lock/models `7bce53ddcc91a47799ca4488b4ea5d696a744ef9`；committed attempt `488adfedb30824fad08b2ae68636fe7eedfa9dc1`。
+- 一次性审计：远端 tag `phase2a1-selector-killtest-consumed-9fa1f0a` 已固定指向 attempt commit；正式 evaluate 仅执行一次，completion/result manifest 已生成，所有 output SHA 复核通过。
+- Development selection：12/12 candidates 的 calibration-optimal threshold 全为 `always_fused`，calibration accuracy 47.0397%、transfer 100%；model-selection accuracy 51.8907%、transfer 100%。Global candidate 名称 `stump_cot_input_length` 只是最低 ordinal tie-break，不是该特征优于其他特征的证据。
+- Global task-macro test：receiver 39.0480%、fused=selector=comparator 49.3167%、oracle 59.0816%；primary delta `0.00 pp`，hierarchical paired-bootstrap 95% CI `[0.00,0.00] pp`；oracle-over-best-fixed `+9.7650 pp`，headroom recovery 0%。
+- Global sample-weighted test：receiver 37.2962%、fused=selector 47.1524%、oracle 56.2840%；delta `0.00 pp`，oracle headroom `+9.1316 pp`。
+- Selective behavior：transfer 100%；harmful event 9.7650%、accepted harmful 9.7650%、harm reduction 0%；beneficial event 20.0336%、accepted beneficial 20.0336%、retention 100%。Same-rate random 同样为 always-fused，因此完全相同。
+- Ranking/calibration diagnostics：benefit AUPRC 0.19185 vs prevalence 0.20034；harm AUPRC 0.10114 vs prevalence 0.09765；multiclass Brier 0.45975，略差于 constant-prior 0.45751；15-bin class-macro ECE 0.02271。现有特征表现为接近 base-rate calibration、低 resolution：没有有用的 benefit ranking，仅有极弱 harm ranking，不能转换为正 utility threshold。
+- Sensitivity：TinyLlama、Qwen2.5、Llama3.2 三 hetero pair delta 均 0；Qwen3 same-tokenizer delta 0；strict cross-family delta 0。LOSO/LOPO/LOTO 共 10 folds，9 个 delta 0，leave-one-task OpenBookQA `−0.15 pp`、CI `[−0.70,+0.08] pp`。
+- GO gate：beneficial retention 通过；primary ≥+0.5pp、CI lower>0、hetero pair sign、recovery≥15%、harm reduction≥25% 全部失败，最终 `NO_GO`。
+- 交付：根目录 `PHASE2A_1_SELECTOR_KILLTEST_REPORT.md`、`PHASE2A_1_SELECTOR_KILLTEST_SUMMARY_ZH.md`、aggregate CSV/JSON、attempt/completion receipts；recipe 下保存 feature/candidate/protocol/split/code/design/selection/result manifests 与 locked models。55MB per-example 文件继续只保留在 `local/`。
+- 结论：A-tier 全部失败，停止复杂 selector，不训练神经网络，不自动进入 instrumentation rerun；等待是否明确授权一次新的 pre-transfer cache-geometry instrumentation。
