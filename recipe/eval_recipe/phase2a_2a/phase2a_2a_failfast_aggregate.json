@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "phase": "Phase 2A-2a",
+  "decision": "NO_GO",
+  "stop_reason": "gate_1_reference_equivalence_failed",
+  "source_commit": "a320777ee3d8e2c5fbf988ad6cd840b560aab28b",
+  "execution_commit": "7f57a37af18842611a3b85865de6daeb98803a5e",
+  "branch": "research/phase2a2-cache-geometry",
+  "execution_manifest_sha256": "5556fbdcc3cf57f9978527256ef7b2154277d4d3b1fdae20711a3b5b88b2e042",
+  "submitted_job_yaml_sha256": "50b2c84afd7e0e5da361137e288b3b3489f6abb5d219294515308d225aeb294b",
+  "frozen_split": {
+    "sha256": "285b5b00cf3598bba075a97b1439b85031ef1cfffdc03b0e7e1775c6338701e0",
+    "split": "fit",
+    "expected_rows": 2167,
+    "expected_content_groups": 2161,
+    "seed": 42
+  },
+  "execution_coverage": {
+    "completed_instrumented_cells": 6,
+    "completed_tasks": [
+      "ai2-arc",
+      "openbookqa"
+    ],
+    "mmlu_status": "interrupted_after_gate_1_failure; temporary layer streams excluded",
+    "matched_instrumentation_off_control": "not_started_due_fail_fast",
+    "selector_crossfit": "not_run_due_fail_fast"
+  },
+  "reference_equivalence": {
+    "completed_rows": 1527,
+    "exact_rows": 1512,
+    "mismatch_rows": 15,
+    "prediction_mismatch_rows": 8,
+    "generation_only_mismatch_rows": 7,
+    "by_pair": {
+      "tinyllama": {
+        "rows": 509,
+        "exact_rows": 509,
+        "mismatch_rows": 0
+      },
+      "qwen25_0p5b": {
+        "rows": 509,
+        "exact_rows": 509,
+        "mismatch_rows": 0
+      },
+      "llama32_1b": {
+        "rows": 509,
+        "exact_rows": 494,
+        "mismatch_rows": 15,
+        "prediction_mismatch_rows": 8,
+        "generation_only_mismatch_rows": 7,
+        "reference_correct": 283,
+        "instrumented_correct": 288
+      }
+    }
+  },
+  "geometry_sanity_on_completed_cells": {
+    "sample_records": 1527,
+    "layer_records": 42756,
+    "layers_per_sample": 28,
+    "primary_feature_count": 177,
+    "nonconstant_key_features_per_cell": 65,
+    "nonconstant_value_features_per_cell": 65,
+    "all_samples_have_within_layer_key_variation": true,
+    "all_samples_have_within_layer_value_variation": true,
+    "formal_gate_2_status": "not_evaluated_due_gate_1_fail_fast"
+  },
+  "formal_gates": {
+    "1_instrumentation_output_exact": "FAIL",
+    "2_geometry_variation": "NOT_EVALUATED",
+    "3_pooled_harm_auprc_margin": "NOT_EVALUATED",
+    "4_held_out_pair_harm_auprc": "NOT_EVALUATED",
+    "5_selector_accuracy_gain": "NOT_EVALUATED",
+    "6_harmful_reduction": "NOT_EVALUATED",
+    "7_beneficial_retention": "NOT_EVALUATED",
+    "8_every_pair_noninferiority": "NOT_EVALUATED",
+    "9_brier_vs_constant_prior": "NOT_EVALUATED"
+  },
+  "overhead": {
+    "matched_off_control_available": false,
+    "deployment_overhead_claimed": false,
+    "instrumented_wall_and_peak_memory_are_diagnostic_only": true
+  },
+  "artifact_root": "/netdisk/lijunsi/c2c-phase2a2-cache-geometry",
+  "artifact_size_at_stop": "295M",
+  "gpu_jobs_remaining": 0,
+  "stopped_at": "2026-07-19T21:03:18+08:00"
+}

@@ -26,13 +26,16 @@
 
 - instrumentation 默认关闭时 projector 输出与 RNG 逐比特一致；开启时输出张量逐比特一致。
 - Phase 2A-1 canonical content hash 对离线三任务共 7,265 个 frozen keys 全量复算，mismatch 为 0。
-- Phase 2A-2a 聚焦及相关回归测试：105 passed；仓库全量测试：276 passed，保留 2 个既有 Pydantic warning。
+- Phase 2A-2a 聚焦及相关回归测试：105 passed；最终仓库全量测试：278 passed，保留 2 个既有 Pydantic warning。
 - 固定 PyTorch runtime 不含 `git`；pilot revision check 与 init/worker 一致，仅在 `.git/HEAD` 为 literal 40 位 detached SHA 时接受 fallback，symbolic HEAD fail closed。
+- 正式 commit `7f57a37...` 在 ARC 与 OpenBookQA 共完成 6 个 cell；TinyLlama/Qwen2.5 共 1,018 行全部 exact，Llama3.2 的 509 行中 15 行相对 frozen B6-native 发生变化（8 个答案变化、7 个 generation-only）。
+- 六个完成 cell 均为 28 layer/sample，K/V 各有 65 个非恒定聚合特征；observer 有真实 variation，但因 Gate 1 已失败不作为正式 Gate 2。
+- 按 conjunctive gate fail-fast 删除剩余 Jobs；MMLU 临时 stream、matched-off control 和 selector 均未进入分析。集群中无残留 Phase 2A-2a Job/Pod。
 - `git diff --check` 与 Python compilation 通过。
 
 ### 结论与下一步
 
-instrumentation、数据隔离、统计预注册与跨节点执行链路已通过本地门控；本条记录不包含 predictability 结论。下一步仅运行冻结的 seed-42 fit pilot，严格执行输出等价与九项 GO gate，完成后停止并等待授权。
+Phase 2A-2a 判定为 **NO_GO**：无法建立无扰动前提，因此不能解释 geometry predictability。停止 instance-selector/adaptive-gate 路线，不扩展 seeds、same-tokenizer control、新 benchmark 或 query-time prototype。若要定位 Llama3.2 mismatch，需要新的 equivalence-only debug 授权。
 
 ## 2026-07-16：建立 ICLR 2027 研究协作规范
 

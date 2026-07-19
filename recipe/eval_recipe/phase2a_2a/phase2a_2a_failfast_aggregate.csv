@@ -1,0 +1,7 @@
+pair,task,rows,exact_rows,mismatch_rows,prediction_mismatch_rows,generation_only_mismatch_rows,reference_correct,instrumented_correct,sample_records,layer_records,key_nonconstant_features,value_nonconstant_features,instrumented_wall_seconds,max_memory_allocated_bytes
+tinyllama,ai2-arc,351,351,0,0,0,196,196,351,9828,65,65,231.6700510860028,4583040512
+tinyllama,openbookqa,158,158,0,0,0,81,81,158,4424,65,65,103.50584546700338,4522986496
+qwen25_0p5b,ai2-arc,351,351,0,0,0,192,192,351,9828,65,65,233.81310163799935,3330774016
+qwen25_0p5b,openbookqa,158,158,0,0,0,88,88,158,4424,65,65,112.6809071960015,3271398912
+llama32_1b,ai2-arc,351,340,11,5,6,198,201,351,9828,65,65,192.2380834366195,4869906432
+llama32_1b,openbookqa,158,154,4,3,1,85,87,158,4424,65,65,83.90308675030246,4808474112

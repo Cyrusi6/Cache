@@ -1,6 +1,6 @@
 # EXPERIMENT.md
 
-## 2026-07-19：Phase 2A-2a Pre-transfer Cache-Geometry Pilot（预注册与实现完成）
+## 2026-07-19：Phase 2A-2a Pre-transfer Cache-Geometry Pilot（NO_GO）
 
 ### 研究目标
 
@@ -41,9 +41,24 @@ python script/k8s/phase2a_2a_cache_geometry_jobs.py render \
 ### 当前验证状态
 
 - 7,265 个 frozen content keys 的 canonical hash 全量一致。
-- 相关测试 105 passed；仓库全量测试 276 passed；2 个 warning 均为既有 Pydantic warning。
-- GPU pilot 尚未在本记录时启动，尚无 GO/NO-GO 结论；最终数值、artifact hashes、作业名和停止判定将在同一分支追加。
+- 相关测试 105 passed；最终仓库全量测试 278 passed；2 个 warning 均为既有 Pydantic warning。
 - 首次 Job 在任何 evaluator/GPU 调用前发现固定 runtime 镜像无 `git`；已补齐 detached `.git/HEAD` revision fallback 并增加 symbolic-HEAD 拒绝测试，未产生 prediction 或 geometry 产物。
+
+### 实际执行结果与停止判定
+
+- 正式 execution commit：`7f57a37af18842611a3b85865de6daeb98803a5e`。
+- Manifest SHA256：`5556fbdcc3cf57f9978527256ef7b2154277d4d3b1fdae20711a3b5b88b2e042`。
+- 实际提交 YAML SHA256：`50b2c84afd7e0e5da361137e288b3b3489f6abb5d219294515308d225aeb294b`；其 runtime-dir 复用 Phase 1.5 已发布的相同 fingerprint immutable venv，identity、镜像、Python、extras 与 constraints SHA 完全一致。
+- Final Jobs：`p2a2-geometry-7f57a37a-5556fbdc-24g8` 与 `p2a2-geometry-7f57a37a-5556fbdc-24g4`。
+- ARC 与 OpenBookQA 的 6 个 cell 完整完成：每个样本 28 条 layer records；sample/layer sidecar 行数均符合冻结 fit count。
+- TinyLlama 与 Qwen2.5 在两任务共 1,018 行上五个 exact 字段全部一致。
+- Llama3.2：ARC 11/351 mismatch（5 prediction、6 generation-only），OpenBookQA 4/158 mismatch（3 prediction、1 generation-only）；合计 15/509 mismatch。
+- Llama3.2 instrumented 比 frozen reference 多答对 5 题，但 exact non-perturbation gate 不考虑方向，Gate 1 仍失败。
+- 六个完整 cell 中每个都有 65 个非恒定 K 与 65 个非恒定 V 聚合特征，所有样本均有层间 K/V variation；仅作 observer sanity，不形成 Gate 2 判定。
+- 发现 Gate 1 失败后立即删除两个 Jobs。MMLU 只留下未完成临时 layer streams，matched-off control 未开始，geometry/outcome join 和 184-candidate selector 未运行。
+- 当前 namespace 无 Phase 2A-2a Job/Pod。最终判定：**NO_GO**，停止 instance-selector/adaptive-gate 路线。
+
+完整报告见 `PHASE2A_2A_CACHE_GEOMETRY_PILOT_REPORT.md` 与 `PHASE2A_2A_CACHE_GEOMETRY_SUMMARY_ZH.md`；小型 aggregate 位于 `recipe/eval_recipe/phase2a_2a/phase2a_2a_failfast_aggregate.{json,csv}`，约 295 MiB 大产物只保留在 `/netdisk/lijunsi/c2c-phase2a2-cache-geometry/results`。
 
 ## 2026-07-16：Kubernetes C2C Route-1 v2.2 Smoke
 
