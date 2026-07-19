@@ -27,6 +27,7 @@
 - instrumentation 默认关闭时 projector 输出与 RNG 逐比特一致；开启时输出张量逐比特一致。
 - Phase 2A-1 canonical content hash 对离线三任务共 7,265 个 frozen keys 全量复算，mismatch 为 0。
 - Phase 2A-2a 聚焦及相关回归测试：105 passed；仓库全量测试：276 passed，保留 2 个既有 Pydantic warning。
+- 固定 PyTorch runtime 不含 `git`；pilot revision check 与 init/worker 一致，仅在 `.git/HEAD` 为 literal 40 位 detached SHA 时接受 fallback，symbolic HEAD fail closed。
 - `git diff --check` 与 Python compilation 通过。
 
 ### 结论与下一步

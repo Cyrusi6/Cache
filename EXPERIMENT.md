@@ -43,6 +43,7 @@ python script/k8s/phase2a_2a_cache_geometry_jobs.py render \
 - 7,265 个 frozen content keys 的 canonical hash 全量一致。
 - 相关测试 105 passed；仓库全量测试 276 passed；2 个 warning 均为既有 Pydantic warning。
 - GPU pilot 尚未在本记录时启动，尚无 GO/NO-GO 结论；最终数值、artifact hashes、作业名和停止判定将在同一分支追加。
+- 首次 Job 在任何 evaluator/GPU 调用前发现固定 runtime 镜像无 `git`；已补齐 detached `.git/HEAD` revision fallback 并增加 symbolic-HEAD 拒绝测试，未产生 prediction 或 geometry 产物。
 
 ## 2026-07-16：Kubernetes C2C Route-1 v2.2 Smoke
 

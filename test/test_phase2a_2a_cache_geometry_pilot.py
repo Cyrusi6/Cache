@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 from pathlib import Path
+import subprocess
 
 import pytest
 
@@ -77,3 +78,33 @@ def test_validate_run_rejects_checkpoint_mutation(
                 "checkpoint_sha256": "0" * 64,
             }
         )
+
+
+def test_workspace_head_falls_back_to_detached_head_without_git(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    commit = "a" * 40
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    (git_dir / "HEAD").write_text(commit + "\n", encoding="utf-8")
+
+    def missing_git(*_args: object, **_kwargs: object) -> object:
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(subprocess, "run", missing_git)
+    assert pilot._workspace_head(tmp_path) == commit
+
+
+def test_workspace_head_rejects_symbolic_fallback(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
+) -> None:
+    git_dir = tmp_path / ".git"
+    git_dir.mkdir()
+    (git_dir / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(FileNotFoundError("git")),
+    )
+    with pytest.raises(pilot.PilotError, match="not detached"):
+        pilot._workspace_head(tmp_path)

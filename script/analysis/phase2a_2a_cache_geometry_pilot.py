@@ -462,6 +462,22 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     return value
 
 
+def _workspace_head(workspace: Path) -> str:
+    """Resolve exact detached revision even in the fixed runtime without git."""
+    try:
+        return subprocess.run(
+            ["git", "-C", str(workspace), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+    except (FileNotFoundError, subprocess.SubprocessError):
+        head = (workspace / ".git/HEAD").read_text(encoding="utf-8").strip()
+        if len(head) != 40 or any(ch not in "0123456789abcdef" for ch in head):
+            raise PilotError("shared workspace is not detached at an exact commit")
+        return head
+
+
 def _validate_run(run: Mapping[str, Any]) -> None:
     config = Path(str(run["config"]))
     if _sha256(config) != run["config_sha256"]:
@@ -518,10 +534,7 @@ def run_pair(*, manifest_path: Path, pair: str) -> dict[str, Any]:
     if pair not in PAIR_ORDER:
         raise PilotError(f"pair is outside frozen pilot: {pair}")
     workspace = Path(str(manifest["workspace_root"]))
-    head = subprocess.run(
-        ["git", "-C", str(workspace), "rev-parse", "HEAD"],
-        capture_output=True, text=True, check=True,
-    ).stdout.strip()
+    head = _workspace_head(workspace)
     if head != manifest["code_commit"]:
         raise PilotError(f"workspace commit mismatch: {head}")
     pair_runs = {
