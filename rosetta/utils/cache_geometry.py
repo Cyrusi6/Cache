@@ -143,7 +143,9 @@ def _target_layer_by_projector(model: Any, projector_count: int) -> list[int]:
     return mapping
 
 
-def configure_projector_cache_geometry(model: Any, enabled: bool) -> dict[str, Any]:
+def configure_projector_cache_geometry(
+    model: Any, enabled: bool, *, noop: bool = False
+) -> dict[str, Any]:
     """Enable or disable compact geometry capture independently of gate diagnostics."""
 
     projectors = _projectors(model)
@@ -152,6 +154,7 @@ def configure_projector_cache_geometry(model: Any, enabled: bool) -> dict[str, A
         zip(projectors, target_layers)
     ):
         projector.capture_cache_geometry = bool(enabled)
+        projector.cache_geometry_noop = bool(enabled and noop)
         projector._cache_geometry_projector_index = projector_index
         projector._cache_geometry_target_layer = target_layer
         records = getattr(projector, "cache_geometry_records", None)
@@ -161,6 +164,7 @@ def configure_projector_cache_geometry(model: Any, enabled: bool) -> dict[str, A
             projector.cache_geometry_records = []
     return {
         "enabled": bool(enabled),
+        "noop": bool(enabled and noop),
         "projector_count": len(projectors),
         "target_layer_by_projector": target_layers,
     }
@@ -434,6 +438,8 @@ def capture_projector_cache_geometry(
     """Reduce one final projector fusion to detached, per-sample scalar records."""
 
     if not getattr(projector, "capture_cache_geometry", False):
+        return
+    if getattr(projector, "cache_geometry_noop", False):
         return
     batch_size = int(fused_key.shape[0])
     if batch_size != int(fused_value.shape[0]):

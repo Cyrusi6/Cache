@@ -1,5 +1,31 @@
 # EXPERIMENT.md
 
+## 2026-07-19：Phase 2A-2a Llama3.2 Gate-1 Equivalence Debug
+
+### 诊断范围
+
+- 基线：`00db4c7eeffc57a852c67fd1aedad9fd823ca528`；独立分支 `research/phase2a2-equivalence-debug`。
+- 只运行 Llama3.2 → Qwen3-0.6B、B6 seed42、Phase 2A frozen fit 的 ARC 351 与 OpenBookQA 158，共 509 行。
+- 不运行 MMLU、不读取 sealed test、不评估 geometry predictability、不训练 selector、不修改 checkpoint。
+- 逐例比较字段固定为 sample ID、`pred`、`cot_pred`、完整 `cot_output` 与 `cot_gen_length`；正确性与标签不进入比较器。
+
+### 串行判定流程
+
+同一 Pod、同一物理 GPU、同一 immutable runtime、checkpoint 与公共配置下，依次运行 OFF-A、OFF-B、ON-A、ON-B；若 OFF 稳定而 ON 不稳定或不同，再运行 NOOP-A、NOOP-B。每个 condition 内固定 ARC 后 OpenBookQA。
+
+- OFF：不配置 cache-geometry instrumentation。
+- ON：执行完整 detached geometry reduction/capture。
+- NOOP：进入 enabled instrumentation 控制流，但 capture 入口立即返回，不做 CUDA reduction、CPU scalar synchronization 或 layer-record stream。
+
+若 OFF-A/OFF-B 不同立即停止并判 baseline/runtime numerical nondeterminism。其余分类与完整约束见 `PHASE2A_2A_EQUIVALENCE_DEBUG_PROTOCOL.md`。
+
+### 当前验证状态
+
+- 标准全量测试 `284 passed`，2 个 warning 为既有 Pydantic warning；Python compilation 与 `git diff --check` 通过。
+- dry prepare 审计确认 12 个 config 只包含 ARC/OpenBookQA；fit counts 为 351/158，checkpoint directory SHA256 完整匹配 `ca789cc7...`。
+- 每个任务跨 OFF/ON/NOOP 的公共 core-config SHA 唯一且一致；正式 execution manifest 将绑定提交后的 exact code SHA。
+- GPU 结果完成后在本节记录 exact mismatch counts、classification、provenance 与 aggregate SHA。
+
 ## 2026-07-19：Phase 2A-2a Pre-transfer Cache-Geometry Pilot（NO_GO）
 
 ### 研究目标

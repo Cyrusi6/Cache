@@ -6,6 +6,7 @@ import pytest
 import torch
 
 from rosetta.model.projector import C2CProjector
+from rosetta.utils import cache_geometry as cache_geometry_module
 from rosetta.utils.cache_geometry import (
     cache_geometry_runtime,
     capture_projector_cache_geometry,
@@ -196,3 +197,28 @@ def test_nested_runtime_requires_matching_sample_context_lengths() -> None:
                 sample_contexts=[{"question_id": "q0"}, {"question_id": "q1"}]
             ):
                 pass
+
+
+def test_cache_geometry_noop_returns_before_tensor_reductions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    projector = _projector()
+    source_kv, target_kv = _projector_inputs()
+    model = SimpleNamespace(projector_list=[projector])
+    baseline = projector(source_kv, target_kv)
+    info = configure_projector_cache_geometry(model, enabled=True, noop=True)
+
+    def forbidden_reduction(*_args: object, **_kwargs: object) -> object:
+        raise AssertionError("NOOP must return before geometry reductions")
+
+    monkeypatch.setattr(
+        cache_geometry_module, "_component_metrics", forbidden_reduction
+    )
+    with cache_geometry_runtime({"question_id": "noop"}):
+        actual = projector(source_kv, target_kv)
+
+    assert info["enabled"] is True
+    assert info["noop"] is True
+    assert torch.equal(baseline[0], actual[0])
+    assert torch.equal(baseline[1], actual[1])
+    assert consume_cache_geometry_records(model) == []

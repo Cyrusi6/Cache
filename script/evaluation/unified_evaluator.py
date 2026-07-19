@@ -837,9 +837,26 @@ class UnifiedEvaluator:
         if not isinstance(geometry_metadata, Mapping):
             raise TypeError("cache_geometry_instrumentation.metadata must be a mapping")
         self.cache_geometry_enabled = bool(geometry_config.get("enabled", False))
-        expected_role = (
-            "geometry_on" if self.cache_geometry_enabled else "geometry_off"
+        default_capture_mode = "capture" if self.cache_geometry_enabled else "off"
+        self.cache_geometry_capture_mode = str(
+            geometry_config.get("capture_mode", default_capture_mode)
         )
+        if self.cache_geometry_capture_mode not in {"off", "capture", "noop"}:
+            raise ValueError(
+                "cache_geometry_instrumentation.capture_mode must be one of "
+                "off/capture/noop"
+            )
+        if self.cache_geometry_enabled != (
+            self.cache_geometry_capture_mode in {"capture", "noop"}
+        ):
+            raise ValueError(
+                "cache_geometry_instrumentation.enabled disagrees with capture_mode"
+            )
+        expected_role = {
+            "off": "geometry_off",
+            "capture": "geometry_on",
+            "noop": "geometry_noop",
+        }[self.cache_geometry_capture_mode]
         configured_role = geometry_config.get("role", geometry_metadata.get("role"))
         if configured_role is not None and str(configured_role) != expected_role:
             raise ValueError(
@@ -925,7 +942,8 @@ class UnifiedEvaluator:
         )
         print(
             "Cache geometry instrumentation: "
-            f"{self.cache_geometry_enabled} ({self.cache_geometry_identity['role']})"
+            f"{self.cache_geometry_enabled} ({self.cache_geometry_identity['role']}; "
+            f"capture_mode={self.cache_geometry_capture_mode})"
         )
         if self.content_group_filter is not None:
             print(
@@ -2900,7 +2918,9 @@ class UnifiedEvaluator:
         self._cache_geometry_layer_record_count = 0
         self._content_group_matched_count = 0
         geometry_projector_info = configure_projector_cache_geometry(
-            model, enabled=self.cache_geometry_enabled
+            model,
+            enabled=self.cache_geometry_enabled,
+            noop=self.cache_geometry_capture_mode == "noop",
         )
         if self.cache_geometry_enabled:
             print(
@@ -2908,7 +2928,7 @@ class UnifiedEvaluator:
                 f"{geometry_projector_info['projector_count']} projectors"
             )
         geometry_layer_shard = None
-        if self.cache_geometry_enabled:
+        if self.cache_geometry_enabled and self.cache_geometry_capture_mode != "noop":
             geometry_layer_shard = (
                 self.cache_geometry_output_dir
                 / f".{self._cache_geometry_run_token}_rank{rank}_layers.jsonl"
@@ -2980,6 +3000,7 @@ class UnifiedEvaluator:
         geometry_runtime = {
             "rank": int(rank),
             "gpu_id": int(gpu_id),
+            "capture_mode": self.cache_geometry_capture_mode,
             "wall_seconds": float(time.perf_counter() - geometry_runtime_started),
             "max_memory_allocated_bytes": None,
             "max_memory_reserved_bytes": None,

@@ -1,5 +1,36 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-07-19：Llama3.2 Gate-1 equivalence-only diagnostic
+
+### 研究目标
+
+只定位 Phase 2A-2a 中 Llama3.2 seed42 的 15/509 Gate-1 mismatch 来源，区分 baseline/runtime nondeterminism、历史 reference drift、instrumentation 控制流扰动与 geometry reduction/synchronization observer effect。
+
+### 核心改动
+
+- 从 `00db4c7...` 创建独立分支 `research/phase2a2-equivalence-debug`，不修改 main、FPCT 或已完成的 cache-geometry 分支。
+- 新增 evaluation-only fail-closed runner：同一单-GPU Pod 内严格串行执行 OFF-A/OFF-B、ON-A/ON-B，并仅在 ON 出现差异时追加 NOOP-A/NOOP-B。
+- 新增 NOOP capture mode：保留 enabled instrumentation 控制流，但 capture 函数在任何 tensor reduction、CPU scalar synchronization 和 layer stream 写入前返回。
+- 比较器只使用样本 ID、`pred`、`cot_pred`、完整生成文本和生成长度；不读取正确性或标签，不执行 MMLU、selector 或 geometry predictability。
+- 新增单 Job Kubernetes renderer，固定一张 `4090-24gx4` GPU，并记录 GPU UUID、runtime/container、PyTorch/CUDA/cuDNN、driver、config/checkpoint SHA 和逐次复跑状态。
+
+### 实验配置
+
+- Pair：Llama3.2-1B-Instruct → Qwen3-0.6B；B6 seed42 checkpoint SHA256 `ca789cc7...`。
+- 数据：Phase 2A frozen fit-only ARC 351 + OpenBookQA 158，共 509 rows；不运行 MMLU，不读取 sealed test。
+- 所有 condition 复用 Phase 2A-2a Gate-1 的公共模型/生成配置，`gate_diagnostics=false`，每个任务固定 `gpu_ids=[0]`。
+- 正式执行前冻结 exact code commit、manifest SHA、12 个候选 run config 与按任务一致的 core-config SHA。
+
+### 验证结果
+
+- NOOP、比较器和单-GPU manifest 的聚焦测试通过；仓库标准全量测试 `284 passed`，仅保留 2 个既有 Pydantic warning。
+- 执行前资产审计确认 12 个 config 仅覆盖 ARC/OpenBookQA，B6 checkpoint directory SHA 完整匹配；每个任务跨 6 个 condition 的 core-config SHA 唯一且一致。
+- 正式 GPU 复跑结果将在同一节补充。
+
+### 结论与下一步
+
+完成 OFF/ON/必要时 NOOP 的确定性复跑后停止等待审查；无论结果如何，都不自动恢复 selector 或 geometry predictability 实验。
+
 ## 2026-07-19：Phase 2A-2a pre-transfer cache geometry instrumentation
 
 ### 研究目标
