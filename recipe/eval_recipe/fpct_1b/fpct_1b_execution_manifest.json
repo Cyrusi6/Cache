@@ -1,0 +1,221 @@
+{
+  "alignment": {
+    "apply_confidence_control": false,
+    "boundary_bonus": 0.5,
+    "boundary_tolerance": 1,
+    "candidate_window": 0,
+    "min_weight": 0.0,
+    "production_api": "TokenAligner.align_chat_messages_soft",
+    "reweight_mode": "none",
+    "score_mode": "uniform",
+    "strategy": "soft_span_overlap_v2",
+    "top_k": 4
+  },
+  "assets": {
+    "datasets": {
+      "ai2_arc": {
+        "directory": "/netdisk/lijunsi/c2c-route1-identifiability/data/c2c/ai2_arc",
+        "directory_sha256": "57aff44115478c094aba1ce9ec3c13ee3556ee47e637eadb3ac728691ad70b51"
+      },
+      "mmlu_redux": {
+        "directory": "/netdisk/lijunsi/c2c-route1-identifiability/data/c2c/mmlu-redux-2.0",
+        "directory_sha256": "3630ceb45031facee39532ba1110760d49c71270be0bd5de96e6235971cdb402"
+      },
+      "openbookqa": {
+        "directory": "/netdisk/lijunsi/c2c-route1-identifiability/data/c2c/openbookqa",
+        "directory_sha256": "5f903c0bd9272642eb983c4e30ec71a16e3922c578dc1f08a6cdfb33e99b4ecf"
+      }
+    },
+    "stager_record": {
+      "path": "/netdisk/lijunsi/c2c-route1-identifiability/status/hf-cache-stager-74abf1db.json",
+      "sha256": "6c79a620c024e180f7b76ec34f495cba6eb28cc39a81e282128ac80426b281b1"
+    },
+    "tokenizers": {
+      "llama32_1b": {
+        "directory": "/netdisk/lijunsi/c2c-route1-identifiability/models/Llama-3.2-1B-Instruct",
+        "files": {
+          "tokenizer.json": "79e3e522635f3171300913bb421464a87de6222182a0570b9b2ccba2a964b2b4",
+          "tokenizer_config.json": "9823dcfdc1121869029da45192238e85cf44f0b232a6d9dc20e4fe6f4242a14e"
+        },
+        "resolved_tokenizer_revision": "9213176726f574b556790deb65791e0c5aa438b6",
+        "revision_resolution": "consistent_local_download_metadata",
+        "source_repo_revision": "9213176726f574b556790deb65791e0c5aa438b6",
+        "tokenizer_bundle_sha256": "303e5dc83a36e4c674443cd10cef965da6fa8cc22fd0410b34b38a9579fafc34"
+      },
+      "qwen25_0p5b": {
+        "directory": "/netdisk/lijunsi/c2c-route1-identifiability/models/Qwen2.5-0.5B-Instruct",
+        "files": {
+          "tokenizer.json": "c0382117ea329cdf097041132f6d735924b697924d6f6fc3945713e96ce87539",
+          "tokenizer_config.json": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583"
+        },
+        "resolved_tokenizer_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+        "revision_resolution": "immutable_hf_snapshot",
+        "source_repo_revision": "7ae557604adf67be50417f59c2c2f167def9a775",
+        "tokenizer_bundle_sha256": "84c27ff971b9ed2881eefc8a528a47f6c409c6738a9503f3c170f77157fa9efa"
+      },
+      "qwen3_1p7b": {
+        "directory": "/netdisk/lijunsi/c2c-route1-identifiability/models/Qwen3-1.7B",
+        "files": {
+          "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+          "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101"
+        },
+        "resolved_tokenizer_revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+        "revision_resolution": "byte_identical_alias_to_Qwen3-0.6B_immutable_snapshot",
+        "source_repo_revision": null,
+        "source_repo_revision_claimed": false,
+        "tokenizer_bundle_sha256": "4c6997f95a7cee59d2762d450d7c4f6ed0844b3bf873d4a71c240f311f213181"
+      },
+      "receiver_qwen3_0p6b": {
+        "directory": "/netdisk/lijunsi/c2c-route1-identifiability/models/Qwen3-0.6B",
+        "files": {
+          "tokenizer.json": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+          "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101"
+        },
+        "resolved_tokenizer_revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+        "revision_resolution": "immutable_hf_snapshot",
+        "source_repo_revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+        "tokenizer_bundle_sha256": "d2a315d4ca46d73b53ef973f5eda2561daf90a848e07779fac19ce9761f714be"
+      },
+      "tinyllama": {
+        "directory": "/netdisk/lijunsi/c2c-route1-identifiability/models/TinyLlama-1.1B-Chat-v1.0",
+        "files": {
+          "tokenizer.json": "bcd04f0eadf90287bd26e1a183ac487d8a141b09b06aecb7725bbdd343640f2e",
+          "tokenizer.model": "9e556afd44213b6bd1be2b850ebbbd98f5481437a8021afaf58ee7fb1818d347",
+          "tokenizer_config.json": "7b41ba7d0eb91e77914ca3dafde559ea3e19878769b7e68409e89bed5222e77a"
+        },
+        "resolved_tokenizer_revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+        "revision_resolution": "immutable_hf_snapshot",
+        "source_repo_revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+        "tokenizer_bundle_sha256": "5a1a4d8005b2377b26f425fc64322ebcb22e898f8d81c603875eec5f8083809b"
+      }
+    }
+  },
+  "canonical_input": {
+    "dataset_content_sha256": "0366be7e5b129710024543bc065774bef165b6b6bca92541a3d641aea2918114",
+    "tasks": {
+      "ai2-arc": {
+        "content_sha256": "365daa1a31374b5fccde3de93d7aa248b1e1080f326491b7f8aefba6274a0142",
+        "distinct_content_groups": 1150,
+        "rows": 1150
+      },
+      "mmlu-redux": {
+        "content_sha256": "d9284f27cf799e5ba225c3441c2e2822e1ad53f35d6ed58792273d6c7f013291",
+        "distinct_content_groups": 5583,
+        "rows": 5615
+      },
+      "openbookqa": {
+        "content_sha256": "803946f36a5cd5ca99b041e6f451b56c80a7b5c4c8f13a32d5c7efdc34a76994",
+        "distinct_content_groups": 500,
+        "rows": 500
+      }
+    },
+    "total_distinct_content_groups": 7233,
+    "total_rows": 7265
+  },
+  "mode": "prepare",
+  "normative": {
+    "approval_addendum": {
+      "normative": true,
+      "path": "FPCT_1A_APPROVAL_ADDENDUM.md",
+      "sha256": "7ead6ce446168b36f9f5d8937e1a9aff8d522317d11b3ce330506069ccd7b44c"
+    },
+    "math_reference": {
+      "normative": false,
+      "path": "math.md",
+      "sha256": "98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad"
+    },
+    "preregistration": {
+      "normative": true,
+      "path": "FPCT_PREREGISTRATION.md",
+      "sha256": "391b68807f5c7241fc0776993c7e3e1a95fdcae29b5500e7574075793f428e8c"
+    },
+    "v1_manifest": {
+      "normative": true,
+      "path": "recipe/eval_recipe/fpct_1a/ambiguity_protocol_manifest.json",
+      "sha256": "8cb562a6dc915c59275b652bc99deb83e3d81c291185c931a9ed8325f1cb27f4"
+    },
+    "v1_protocol": {
+      "normative": true,
+      "path": "FPCT_1A_AMBIGUITY_PROTOCOL.md",
+      "sha256": "6dced3da6b8f82228666eb64250f51dd6db53e78203249904d47c56e26988ea4"
+    },
+    "v2_manifest": {
+      "normative": true,
+      "path": "recipe/eval_recipe/fpct_1a/ambiguity_protocol_manifest_v2.json",
+      "sha256": "f7c8bd7fbc456484d1a40ca88d32dc8da3104c422a5addd89f7d033b12c82511"
+    }
+  },
+  "prepare_guards": {
+    "alignment": false,
+    "chat_template_rendering": false,
+    "cuda_visible_devices": "",
+    "model_forward": false,
+    "natural_tokenizer_execution": false,
+    "tokenization": false
+  },
+  "prepared_at": "2026-07-19T12:57:30.738576+00:00",
+  "protocol_id": "fpct_1a_structural_support_v2",
+  "runtime": {
+    "packages": {
+      "datasets": "4.0.0",
+      "pyarrow": "23.0.1",
+      "torch": "2.6.0",
+      "transformers": "4.52.4"
+    },
+    "platform": "Linux-7.0.0-22-generic-x86_64-with-glibc2.43",
+    "python": "3.10.20"
+  },
+  "schema_version": 1,
+  "split_contract": {
+    "counts": {
+      "ai2-arc/calibration": 160,
+      "ai2-arc/fit": 351,
+      "ai2-arc/model-selection": 186,
+      "ai2-arc/test": 453,
+      "mmlu-redux/calibration": 846,
+      "mmlu-redux/fit": 1658,
+      "mmlu-redux/model-selection": 815,
+      "mmlu-redux/test": 2296,
+      "openbookqa/calibration": 70,
+      "openbookqa/fit": 158,
+      "openbookqa/model-selection": 77,
+      "openbookqa/test": 195
+    },
+    "distinct_content_groups": 7233,
+    "formula": "SHA256(split_version + dataset_content_sha256 + content_hash)",
+    "manifest": "recipe/eval_recipe/fpct_1b/content_group_split_manifest.csv",
+    "manifest_sha256": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050",
+    "rows": 7265,
+    "version": "cache-phase2a-v1-29a96947"
+  },
+  "stage": "FPCT-1B",
+  "thresholds": {
+    "primary": "primary_structural_m2:m>=2",
+    "readiness": {
+      "minimum_pooled_positive_groups": 100,
+      "minimum_positive_groups_each_task": 30
+    },
+    "sensitivities": [
+      "high_cardinality_m3:m>=3",
+      "strict_m4:m==4"
+    ]
+  },
+  "tracked_sources": {
+    "aligner": {
+      "path": "rosetta/model/aligner.py",
+      "sha256": "56adeb3014bd100fe3139e8876acf98c140eb9361c89bdc007d8b32ac559ab31"
+    },
+    "canonical_evaluator": {
+      "path": "script/evaluation/unified_evaluator.py",
+      "sha256": "6d775685657e2022645f9a084cc3ce85a07d66d984d5332a51992aea26946ba0"
+    },
+    "hf_requirements": {
+      "path": "recipe/train_recipe/identifiability/hf_cache_requirements.json",
+      "sha256": "dd403a0867f32fbbc5b31b7b9e3b3d381380500169d7ea5108024d3af966e867"
+    },
+    "prompt_builder": {
+      "path": "rosetta/utils/evaluate.py",
+      "sha256": "a02bf790bfe6b11a434d857de978ff4ca102fb2a9b0389599aea695f6678527d"
+    }
+  }
+}
