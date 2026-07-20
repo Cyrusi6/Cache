@@ -245,7 +245,7 @@ Production seam、shared candidate fuser、parent nuisance broadcast、ambiguous
 
 ### FPCT-4：SCIENTIFIC CODE LOCK IN REVIEW / GPU NOT STARTED
 
-旧 CPU-GATE 生成的 non-operative draft作为历史记录保留。当前已编写 single-pair confirmatory preregistration、GPU numerical protocol、K8s protocol、50,000-replicate hierarchical statistics、4096 sign-flip/paired-t/sign-test code、一次性 split firewall controller、matched triplet runner、immutable-image recipe 和 K8s templates。完整 CPU-safe suite 为 `372 passed, 2 warnings`。它们尚未形成 clean/pushed scientific-code commit，也尚未绑定 image digest/run lock，因此没有运行 pretrained model、GPU、K8s、训练或 accuracy。
+旧 CPU-GATE 生成的 non-operative draft作为历史记录保留。当前已编写 single-pair confirmatory preregistration、GPU numerical protocol、K8s protocol、50,000-replicate hierarchical statistics、4096 sign-flip/paired-t/sign-test code、一次性 split firewall controller、matched triplet runner、immutable-image recipe 和 K8s templates。首次 scientific lock `92724ec...` 后的镜像复核发现每臂重复 alignment 不满足 frozen-sidecar 复用合同；该镜像未运行 GPU，随后新增 128/2048 两份只读 certified alignment cache 路径与完整性检查。修订后完整 CPU-safe suite 为 `373 passed, 2 warnings`。新 scientific SHA 与 image/run lock 尚待提交冻结，因此没有运行 pretrained model、GPU、K8s、训练或 accuracy。
 
 ### FPCT-3.5：GO
 

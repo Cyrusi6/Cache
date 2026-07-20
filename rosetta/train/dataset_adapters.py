@@ -1317,6 +1317,7 @@ class AlignedChatDataset(Dataset):
         soft_alignment_top_k: int = 4,
         candidate_replay_cache_path: Optional[str] = None,
         fpct_alignment_sanitizer: str = "none",
+        fpct_alignment_cache_path: Optional[str] = None,
     ):
         self.dataset = instruct_dataset
         self.aligner = aligner
@@ -1328,6 +1329,9 @@ class AlignedChatDataset(Dataset):
                 "'certified_slot0_v1'"
             )
         self.fpct_alignment_sanitizer = fpct_alignment_sanitizer
+        self.fpct_alignment_cache = self._load_fpct_alignment_cache(
+            fpct_alignment_cache_path
+        )
         self.candidate_replay_cache = self._load_candidate_replay_cache(
             candidate_replay_cache_path
         )
@@ -1336,6 +1340,8 @@ class AlignedChatDataset(Dataset):
         return len(self.dataset)
 
     def __getitem__(self, idx):
+        if self.fpct_alignment_cache is not None:
+            return self._clone_fpct_cached_item(self.fpct_alignment_cache[idx])
         messages = self.dataset[idx]
         if getattr(self.aligner, "strategy", None) in {
             AlignmentStrategy.SOFT_SPAN_OVERLAP,
@@ -1393,6 +1399,33 @@ class AlignedChatDataset(Dataset):
             # Per-model aligned inputs (per-sample, pre-batch)
             "model_padding_mask": [slm_pad_mask, llm_pad_mask],
         }
+
+    def _load_fpct_alignment_cache(
+        self, cache_path: Optional[str]
+    ) -> Optional[List[Dict[str, Any]]]:
+        if not cache_path:
+            return None
+        payload = torch.load(cache_path, map_location="cpu", weights_only=False)
+        if payload.get("schema_version") != 1:
+            raise ValueError("unsupported FPCT alignment cache schema")
+        if payload.get("alignment_sanitizer") != self.fpct_alignment_sanitizer:
+            raise ValueError("FPCT alignment cache sanitizer mismatch")
+        if int(payload.get("top_k", -1)) != self.soft_alignment_top_k:
+            raise ValueError("FPCT alignment cache top-k mismatch")
+        items = payload.get("items")
+        if not isinstance(items, list) or len(items) != len(self.dataset):
+            raise ValueError("FPCT alignment cache dataset length mismatch")
+        return items
+
+    @classmethod
+    def _clone_fpct_cached_item(cls, value: Any) -> Any:
+        if isinstance(value, torch.Tensor):
+            return value.clone()
+        if isinstance(value, dict):
+            return {key: cls._clone_fpct_cached_item(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [cls._clone_fpct_cached_item(item) for item in value]
+        return value
 
     @staticmethod
     def _load_candidate_replay_cache(

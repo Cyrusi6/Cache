@@ -151,6 +151,10 @@ def training_config(
     lock: dict[str, Any], seed: int, arm: str, output: Path,
     *, examples: int = 2048, optimizer_steps: int = 64,
 ) -> dict[str, Any]:
+    sidecar_key = f"training_alignment_sidecar_{examples}"
+    sidecar = lock.get("assets", {}).get(sidecar_key, {}).get("container_path")
+    if not sidecar:
+        raise GateError("run lock does not bind a frozen training alignment sidecar")
     return {
         "model": {
             "base_model": "Qwen/Qwen3-0.6B", "teacher_model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
@@ -163,7 +167,7 @@ def training_config(
             "include_response": False, "mapping": "last_aligned",
             "projector": {"type": "C2CProjector", "params": {"hidden_dim": 1024, "intermediate_dim": 1024, "num_layers": 3, "dropout": .1, "initial_temperature": 1.0, "final_temperature": .001, "anneal_steps": 64, "alignment_confidence_gate_mode": "token_mlp", "alignment_confidence_max_delta": 2.0}}
         },
-        "training": {"learning_rate": 1e-4, "weight_decay": .01, "num_epochs": 1, "max_length": 1024, "device": "cuda", "scheduler_type": "linear", "warmup_ratio": .1, "max_grad_norm": 1.0, "gradient_accumulation_steps": 16, "per_device_train_batch_size": 1, "num_processes": 2, "freeze": ["teacher", "base"], "seed": seed, "fpct_formal_run": True, "expected_optimizer_steps": optimizer_steps, "fpct_expected_training_examples": examples},
+        "training": {"learning_rate": 1e-4, "weight_decay": .01, "num_epochs": 1, "max_length": 1024, "device": "cuda", "scheduler_type": "linear", "warmup_ratio": .1, "max_grad_norm": 1.0, "gradient_accumulation_steps": 16, "per_device_train_batch_size": 1, "num_processes": 2, "freeze": ["teacher", "base"], "seed": seed, "fpct_formal_run": True, "expected_optimizer_steps": optimizer_steps, "fpct_expected_training_examples": examples, "fpct_alignment_cache_path": sidecar},
         "output": {"output_dir": str(output), "save_steps": 32, "eval_steps": 1000000, "wandb_config": {"project": "FPCT", "mode": "offline", "entity": "nics-efc", "run_name": f"fpct-{lock['run_uid']}-{seed}-{arm}"}},
         "data": {"type": "MMLUChatDataset", "kwargs": {"split": "auxiliary_train", "num_samples": examples, "max_word_count": 1024}, "train_ratio": 1.0, "split_mode": "seeded"}
     }

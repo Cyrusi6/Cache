@@ -28,6 +28,7 @@ spec:
         - {name: run-lock, mountPath: /opt/fpct-lock, readOnly: true}
         - {name: models, mountPath: /models/c2c, readOnly: true}
         - {name: fpct-results, mountPath: /fpct-results}
+        - {name: fpct-assets, mountPath: /fpct-assets, readOnly: true}
       volumes:
       - name: run-lock
         configMap: {name: __RUN_LOCK_CONFIGMAP__}
@@ -35,3 +36,5 @@ spec:
         persistentVolumeClaim: {claimName: __MODEL_PVC__}
       - name: fpct-results
         persistentVolumeClaim: {claimName: __RESULTS_PVC__}
+      - name: fpct-assets
+        persistentVolumeClaim: {claimName: __ASSETS_PVC__}

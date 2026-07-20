@@ -11,7 +11,8 @@ def test_arm_order_is_position_balanced():
 
 
 def test_formal_recipe_is_exact_64_step_contract(tmp_path):
-    config = training_config({"run_uid": "test"}, 45, "f", tmp_path)
+    lock = {"run_uid": "test", "assets": {"training_alignment_sidecar_2048": {"container_path": "/fpct-assets/train2048.pt"}}}
+    config = training_config(lock, 45, "f", tmp_path)
     assert config["data"]["kwargs"]["num_samples"] == 2048
     assert config["data"]["train_ratio"] == 1.0
     assert config["training"]["gradient_accumulation_steps"] == 16

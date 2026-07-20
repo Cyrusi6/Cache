@@ -1979,6 +1979,9 @@ def main():
                 fpct_alignment_sanitizer=model_config.get(
                     "fpct_alignment_sanitizer", "none"
                 ),
+                fpct_alignment_cache_path=training_config.get(
+                    "fpct_alignment_cache_path"
+                ),
             )
         else:
             full_dataset = ChatDataset(instruct_ds, main_tokenizer)
