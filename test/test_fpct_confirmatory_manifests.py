@@ -40,3 +40,6 @@ def test_k8s_templates_are_digest_only_and_have_scoped_labels():
         assert labels["study"] == "confirmatory"
         assert labels["run_uid"] == "__RUN_UID__"
         assert payload["spec"]["backoffLimit"] == 0
+        pod = payload["spec"]["template"]["spec"]
+        assert pod["nodeName"] == "4090-48gx2"
+        assert pod["initContainers"][0]["name"] == "sealed-probe"

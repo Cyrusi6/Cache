@@ -11,6 +11,16 @@ spec:
       labels: {project: fpct, study: confirmatory, git_sha: __GIT_SHA_SHORT__, seed: diagnostic, arm: gate, run_uid: __RUN_UID__}
     spec:
       restartPolicy: Never
+      nodeName: 4090-48gx2
+      initContainers:
+      - name: sealed-probe
+        image: __IMAGE_DIGEST__
+        imagePullPolicy: IfNotPresent
+        command: ["/opt/conda/bin/python3.11", "-I", "/opt/fpct/script/runtime/fpct_bootstrap.py"]
+        args: ["--repo-root", "/opt/fpct", "--target", "/opt/fpct/script/experiment/fpct_confirmatory_runner.py", "--include-gpu-closure", "--", "probe", "--run-lock", "/opt/fpct-lock/confirmatory_run_lock.json"]
+        volumeMounts:
+        - {name: run-lock, mountPath: /opt/fpct-lock, readOnly: true}
+        - {name: fpct-run, mountPath: /fpct-run}
       containers:
       - name: gpu-gate
         image: __IMAGE_DIGEST__

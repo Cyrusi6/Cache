@@ -16,7 +16,7 @@ spec:
     metadata: {labels: *labels}
     spec:
       restartPolicy: Never
-      nodeSelector: {kubernetes.io/arch: amd64}
+      nodeName: 4090-48gx2
       initContainers:
       - name: sealed-probe
         image: __IMAGE_DIGEST__
