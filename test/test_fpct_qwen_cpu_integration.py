@@ -225,6 +225,18 @@ def test_actual_qwen3_ambiguous_f_activates_but_has_no_new_parameters() -> None:
     assert cpost.state_dict().keys() == factorized.state_dict().keys()
 
 
+def test_actual_qwen3_cpost_trace_without_sidecar_is_valid() -> None:
+    wrapper = RosettaModel([_model(2)], fpct_operator="c_post", fpct_trace=True)
+    output = _forward(
+        wrapper,
+        torch.tensor([[4, 5, 6, 7]]),
+        torch.ones(1, 4, dtype=torch.long),
+    )
+    assert torch.isfinite(output.logits).all()
+    assert set(wrapper._fpct_attention_trace_tensors) == {0, 1}
+    assert wrapper._fpct_candidate_trace_tensors == {}
+
+
 def test_actual_qwen3_off_by_default_mechanism_instrumentation() -> None:
     model = _model(2)
     wrapper = RosettaModel(

@@ -1083,3 +1083,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Run UID `fpct-r2b-7ceae185-v1`；run-lock SHA `99dcb8114d60f55604f69b4c721e8348fc6f2f14e4eea17976bfe8df49a3f913`。
 - 2048 sidecar保持`48caee80...`；全新results/state/jobs/attestations目录；不复制v1 GPU numerical或condition artifacts。
 - R2b必须从complete GPU numerical gate重启。
+
+### R2b terminal result and R2c repair
+
+- R2b complete numerical gate=`GO`，但首个FP32 C_post natural condition在第一层receiver attention内因`packed`未初始化失败。
+- 该condition开始了model forward但没有完整model output，0 condition artifact、0 accuracy、0 training/checkpoint。R2b controller terminal，不resume。
+- R2c prospective repair在patched attention进入sidecar分支前显式`packed=None`，并新增actual Qwen3 `c_post + fpct_trace + no sidecar` forward regression。operator/prior/panel/threshold/training规则不变。
+- R2c targeted `28 passed`，CPU-safe full suite `403 passed, 2 warnings`。

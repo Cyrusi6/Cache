@@ -368,3 +368,5 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 首个 FP32 C_post condition在第一 model forward前因scalar state hash失败；已加载label-free panel/tokenizer/weights，但0 forward/0 accuracy/0 training/checkpoint。v1 controller terminal，不resume。
 - v2 prospective repair仅修正0-D tensor hashing并新增回归；targeted `25 passed`、full `402 passed, 2 warnings`。新 run必须从image/GPU gate重启。
 - R2b two-lock：SHA `7ceae185...`；image digest `sha256:d035cb31...`；run UID `fpct-r2b-7ceae185-v1`；run-lock SHA `99dcb811...`。不复用v1 numerical/condition artifacts。
+- R2b numerical=`GO`，但首个FP32 C_post trace forward在第一层attention因`packed`未初始化失败；0 complete output/0 condition artifact/0 accuracy。R2b terminal，不resume。
+- R2c修复`packed=None`并新增actual Qwen C_post trace regression；targeted `28 passed`、full `403 passed, 2 warnings`。

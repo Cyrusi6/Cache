@@ -63,3 +63,8 @@ zero training and zero checkpoints.
 R2b changes only scalar tensor hashing and its regression test. It does not
 reuse v1 numerical outputs or condition directories and must restart from the
 GPU numerical sequence.
+
+R2b passed that numerical sequence, then stopped in the first C_post trace
+forward because `packed` was undefined when no sidecar was present. Execution
+entered the first receiver attention call but produced no complete model output
+and no condition artifact or accuracy. R2b is terminal and non-resumable.

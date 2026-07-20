@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v2_failure",
+  "status": "GPU_ENGINEERING_BLOCKED_R2",
+  "run_uid": "fpct-r2b-7ceae185-v1",
+  "scientific_code_commit": "7ceae185512b100b4b7d7f6970710a4637c568b0",
+  "image_digest": "sha256:d035cb31abe71640258aeb9cf48b9c7b7d39ff71346f0ac44bf0a2c5408ff463",
+  "run_lock_sha256": "99dcb8114d60f55604f69b4c721e8348fc6f2f14e4eea17976bfe8df49a3f913",
+  "gpu_numerical": {
+    "status": "GO",
+    "sequence_sha256": "ac5f0fb0dd435a25a8277c806a7b160a587411c023dd78a418bc5ec4b3929c8a",
+    "numerical_sha256": "429a6d344ecb1d82fb60455ff8d24b8ec4a7918d06c8a97532741e50e8ceca4e"
+  },
+  "pretrained_matrix": {
+    "job": "fpct-r2b-pretrained-7ceae185",
+    "pod_exit_code": 1,
+    "failed_condition": "OP01_CPOST_NATIVE",
+    "failed_dtype": "fp32",
+    "failure_point": "first_receiver_attention_forward_before_complete_model_output",
+    "exception": "UnboundLocalError: local variable packed referenced before assignment",
+    "root_cause": "C_post trace path had no sidecar and did not initialize packed=None before trace materialization",
+    "condition_output_file_count": 0,
+    "resume_or_patch": false
+  },
+  "firewall": {
+    "frozen_label_free_panel_loaded": true,
+    "tokenizers_loaded": true,
+    "model_weights_loaded": true,
+    "model_forward_started": true,
+    "complete_model_output_produced": false,
+    "accuracy_or_correctness_accessed": false,
+    "training_started": false,
+    "checkpoint_created": false
+  },
+  "evidence": {
+    "controller_state": {"sha256": "f3089178eeafe9f2de05bc1d536f3d08df2246d681458e0c4d061454a8072cf1", "bytes": 776},
+    "event_ledger": {"sha256": "da96e3e8a93ca4d9b7a6e5507a01fdc48a83f4f70566764cf8b72a45f2e7162c", "bytes": 229},
+    "submitted_job": {"sha256": "af20fa92142ec353959d1c1466d978fb089c03e71ea89f39e7f43f85936c5872", "bytes": 2454},
+    "runtime_attestation": {"sha256": "c036826f42049ff05f19b585db8ca5275aeff48d9024de5827e3cd6de9ff9de9", "bytes": 43041}
+  },
+  "claim_boundary": "R2b passed the complete numerical gate but produced no complete pretrained model output and no accuracy. It identifies only a C_post trace-path initialization defect."
+}

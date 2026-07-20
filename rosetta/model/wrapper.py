@@ -367,6 +367,7 @@ class RosettaModel(nn.Module):
                     key_states, value_states, self.layer_idx, cache_kwargs
                 )
 
+            packed = None
             if fpct_sidecars:
                 if fpct_layout is None:
                     raise ValueError("FPCT sidecars require a prebuilt packed layout")
@@ -375,7 +376,6 @@ class RosettaModel(nn.Module):
                 parent_attention_mask = attention_mask
                 if fpct_collapse_to_parent_bypass:
                     fpct_layout.validate_runtime(base_key_states, fpct_sidecars)
-                    packed = None
                 else:
                     with record_function("fpct.pack"):
                         packed = pack_fpct_memory(
