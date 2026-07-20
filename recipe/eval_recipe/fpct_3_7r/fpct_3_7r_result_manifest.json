@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "stage": "FPCT-3.7-R1",
+  "status": "SINGLE_PAIR_PILOT_READY",
+  "execution_sha": "7aecf2370df8a544b553baa6a7a58b24191e02ef",
+  "selected_pair": "tinyllama",
+  "stable_attestation_sha256": "5be64db77a54fb68ce44e2aabf7968c370bc4eff501fefe4a0fcb03ce571c472",
+  "verified_counts": {
+    "pair_task_rows": 60,
+    "sample_rows": 29060,
+    "group_rows": 28932,
+    "compact_rows": 12
+  },
+  "local_artifacts": {
+    "fpct_3_5p_replay_comparison": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_5p_provenance_replay/rev_7aecf2370df8a544b553baa6a7a58b24191e02ef/replay_comparison.json",
+      "sha256": "d25832c21259bf2becc9951a9f3200108dcbc87e929866ccd336efcad0219534",
+      "bytes": 1505
+    },
+    "certified_support_summary": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_7r_certified_support/rev_7aecf2370df8a544b553baa6a7a58b24191e02ef/certified_support_summary.json",
+      "sha256": "a0409299f639c4f41709e2845fb1ab65e8542f98cee5c014dfd36b21d552e863"
+    },
+    "compact_aggregates": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_7r_certified_support/rev_7aecf2370df8a544b553baa6a7a58b24191e02ef/certified_support_aggregates.csv",
+      "sha256": "ea513690b6ff4ad5ded019a4e79e4b375a798db783ab102e723c9cfb4b43b04b",
+      "bytes": 2371
+    },
+    "pair_task_support": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_7r_certified_support/rev_7aecf2370df8a544b553baa6a7a58b24191e02ef/pair_task_support.csv",
+      "sha256": "a147b54aa80ea5b25d29394958580f38fecbafbee4de1a1eec4e3a39847f1061",
+      "bytes": 11548
+    },
+    "resource_estimates": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_7r_certified_support/rev_7aecf2370df8a544b553baa6a7a58b24191e02ef/resource_estimates.json",
+      "sha256": "6d5f6221be15db5af030f9c1d7702b6d1e814bfe4e423e065353f3167c914284",
+      "bytes": 29162
+    },
+    "r1_result": {
+      "path": "local/final_results/fpct_factorized_transport/fpct_3_7r_certified_support/rev_7aecf2370df8a544b553baa6a7a58b24191e02ef/r1_result.json",
+      "sha256": "0f45c2d2c06c22ed6f4d0c6eda9ed75524e7010dba83f421209dd29f36d28cc8",
+      "bytes": 26517
+    }
+  },
+  "gpu_authorized_by_this_manifest": false,
+  "claim_boundary": "sealed certified structural support and CPU hardening only"
+}

@@ -1340,6 +1340,12 @@ def setup_models(
                     "multi_source_fusion_mode", "sequential"
                 ),
                 fpct_operator=model_config.get("fpct_operator"),
+                fpct_replicated_collapse=model_config.get(
+                    "fpct_replicated_collapse", False
+                ),
+                fpct_instrumentation=model_config.get(
+                    "fpct_instrumentation", False
+                ),
             )
             .to(device)
             .eval()

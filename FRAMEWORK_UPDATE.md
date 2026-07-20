@@ -885,3 +885,32 @@ FPCT-3.7 判定 `INCONCLUSIVE`。补 `PYTHONPATH`、改变 invocation mode 或 p
 首个 pushed prospective SHA `9e501d7...` 的 freeze 成功，但三个自然 shard 都在 target 前被 fingerprint mismatch 拦截，因此仍为 0 natural rows。唯一不稳定字段是 Torch 每进程生成的 `/tmp/tmpXXXX/_remote_module_non_scriptable.py` 路径名。
 
 修订后的 bootstrap 继续记录完整随机路径；stable projection 只在目录精确包含 generated source 与匹配 `__pycache__`、生成源码 SHA 被记录、且不存在 foreign `rosetta` candidate 时，把随机目录名替换为 source-SHA identity。任何其他临时 payload 仍 hard error。双进程 fingerprint 稳定性已加入 hostile suite，结果为 `21 passed`。该修订需要新的 clean/pushed execution SHA；`9e501d7...` lock/artifacts 不复用。
+
+## 2026-07-20：FPCT-3.5P/3.7-R1 completion and CPU/HF hardening
+
+### 研究目标
+
+在 sealed import contract 下精确重放 FPCT-3.5，重新执行 12-cell certified-support audit；仅在 TinyLlama readiness、Qwen identity 与 sanitizer integrity 全通过后，消除 FPCT attention hot-path host sync 并用真实 Qwen3 类完成 CPU integration。
+
+### 核心改动
+
+- `7aecf237...` FPCT-3.5P replay 精确复现历史 ordered/multiset row/candidate/context projection；新增 primary reason × secondary geometry co-occurrence。
+- FPCT-3.7-R1 新 root 完成 12 shards、three-stage transition、exposure、geometry、resource p99/correlation 与 sanitizer-input hash 描述。
+- 新增 reusable `FPCTPackedLayout`；结构 map 在 attention 前建立并跨层复用，per-layer path 只使用 gather/scatter/indexing。
+- `m=1` 保持单 slot，`m=0` native，只有 certified `m>=2` 展开；parent mask/bias 与 log prior 正确广播，generated tail 保持同一 denominator。
+- 新增 parameter-free replicated-collapse 和 off-by-default aggregate mechanism instrumentation；无 F-only trainable parameter。
+- 训练/evaluation loader 透传 replicated-collapse/instrumentation；默认行为和 state dict 不变。
+
+### 实验配置与结果
+
+- FPCT-3.5P stable fingerprint：`609e3f05...`；FPCT-3.7-R1：`5be64db7...`。
+- Replay：7,265 identity、802 parents、104 groups、410/56 fit+cal、401 clusters；全部 equality checks pass。
+- Certified readiness：TinyLlama 511/228/2495 positive groups；唯一 ready pair。
+- TinyLlama all-split certified expansion mean 为 1.2259–1.2391，p95 为 1.2818–1.3000，低于预注册 1.35/1.50 resource support gate。
+- Projector dropout 0.1 下 C_post/F pre-collapse fused candidates 在同 RNG/call order 下 bitwise equal；K=1 training-mode equality pass。
+- Actual random-config `Qwen3ForCausalLM` eager/DynamicCache CPU tests 覆盖 prefill/decode、batch/padding、causal、GQA/MQA、m0/m1/m>=2、replicated collapse、forward/backward 和 config roundtrip。
+- Targeted reference/production/Qwen/sanitizer：`64 passed`；complete CPU-safe suite：`360 passed, 2 warnings`。
+
+### 结论与下一步
+
+FPCT-3.5P、FPCT-3.7-R1、FPCT-3.8 与 FPCT-3.9 均通过对应硬门。结论仍只到 sealed structural support 和 CPU/HF implementation correctness；尚无 pretrained output、GPU、训练或 accuracy。下一步先 commit/push 当前 hardening，再单独冻结 confirmatory/GPU/K8s code、statistics、image 与 execution manifest。

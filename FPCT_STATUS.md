@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-3.5P / FPCT-3.7-R1 prospective sealed-import recovery
-> 当前判定：`PRE-DATA PROTOCOL READY`；hostile subprocess 21/21，尚未读取新的自然 tokenizer/data
-> 下一阶段：只允许先 commit/push clean prospective execution SHA，再生成 pre-data lock 和重放 FPCT-3.5P
+> 当前阶段：FPCT-3.8/3.9 production hardening and real-Qwen CPU integration
+> 当前判定：`CPU/HF HARDENING GO`；FPCT-3.5P provenance-confirmed，FPCT-3.7-R1 single-pair ready
+> 下一阶段：先 commit/push hardening，再冻结 confirmatory/GPU/K8s manifest；GPU 尚未启动
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -86,11 +86,11 @@
 | FPCT-3.5 | `GO` | pre-data SHA `0398d26...` | R1 CPU | 已完成 | 7,265/7,265 identity；802 raw anomalies 全为 receiver-offset overlap alias |
 | FPCT-3.6 | `GO` | FPCT-3.5 identity forensic GO | R1 CPU | 已完成 | commit `b11a046...`；exact_identity + common sanitizer；102 tests pass |
 | FPCT-3.7 | `INCONCLUSIVE` | pushed/frozen `b11a046...` | R1 CPU | 已停止 | wrong editable `rosetta` resolved under script mode；0 shards/0 rows；不原地重跑 |
-| FPCT-3.5P | `PRE-DATA PROTOCOL READY` | 新 prospective clean/pushed SHA | R1 CPU | 条件授权 | sealed deterministic replay；提交前未读取自然数据 |
-| FPCT-3.7-R1 | `NOT STARTED` | FPCT-3.5P exact replay | R1 CPU | 条件授权 | 新 lock/root；不得复用 `b11a046...` shard |
-| FPCT-3.8 | `BLOCKED / NOT ENTERED` | certified TinyLlama readiness | R1/R2 | 否 | FPCT-3.7 未完成 |
-| FPCT-3.9 | `BLOCKED / NOT ENTERED` | FPCT-3.8 GO | R1 CPU | 否 | 未运行 real Qwen CPU integration |
-| FPCT-4 | `BLOCKED / NOT ENTERED` | FPCT-3.9 GO | R2+ | 否 | 未冻结 GPU/K8s formal manifest |
+| FPCT-3.5P | `PROVENANCE_CONFIRMED` | clean/pushed `7aecf23...` | R1 CPU | 已完成 | 7,265/802/104/410/56/401 与 ordered/context projection 精确复现 |
+| FPCT-3.7-R1 | `SINGLE_PAIR_PILOT_READY` | FPCT-3.5P exact replay | R1 CPU | 已完成 | 12 shards verified；TinyLlama 511/228/2495，Qwen exact identity |
+| FPCT-3.8 | `GO` | certified TinyLlama readiness | R1 CPU | 已完成 | reusable vectorized layout；hot path 无 host-sync API/parent loop |
+| FPCT-3.9 | `GO` | FPCT-3.8 GO | R1 CPU | 已完成 | actual Qwen3 eager/DynamicCache random-config integration；360 full-suite pass |
+| FPCT-4 | `MANIFEST LOCK PENDING` | FPCT-3.9 GO | R2+ | 条件授权 | GPU 尚未启动；先冻结 formal code/image/K8s lock |
 | FPCT-5 | `BLOCKED / NOT ENTERED` | FPCT-4 GO | R2 | 否 | 未运行 fixed-checkpoint diagnostic |
 | FPCT-6 | `BLOCKED / NOT ENTERED` | FPCT-5 GO | R3 | 否 | 未运行 matched-training smoke |
 | FPCT-7 | `BLOCKED / NOT ENTERED` | FPCT-6 GO | R3 | 否 | 未冻结 confirmatory execution |
@@ -192,6 +192,9 @@
 | FPCT-D040 | 2026-07-20 | R1 使用 regular `rosetta` package + absolute `python -I` bootstrap，而非临时 `PYTHONPATH` | 不修改全局 editable；同进程冻结完整 module closure、origin/SHA/signature 与 pre/post target fingerprint |
 | FPCT-D041 | 2026-07-20 | FPCT-3.5P/3.7-R1 scientific fields 零变化 | exact identity、certifier、`certified_slot0_v1`、top-k、readiness/ranking/resource formulas 全部继承；新增 geometry/exposure 仅描述性 |
 | FPCT-D042 | 2026-07-20 | `9e501d7...` pre-data lock 后的三个 shard 在 0-row 时因随机 Torch remote-module temp path 停止 | 不放宽 closure；完整路径继续记录，stable identity 改为验证后的 generated-source SHA；旧 execution 不复用 |
+| FPCT-D043 | 2026-07-20 | FPCT-3.5P=`PROVENANCE_CONFIRMED` | historical 与 sealed replay 的 ordered/multiset atoms、context、802 parents、104 groups、401 clusters 全等 |
+| FPCT-D044 | 2026-07-20 | FPCT-3.7-R1=`SINGLE_PAIR_PILOT_READY`，selected=`tinyllama` | fit+cal groups 511/228/2495；Qwen exact identity 全 split hard K=1；12 shards independent verify |
+| FPCT-D045 | 2026-07-20 | FPCT-3.8/3.9 CPU/HF hardening=`GO` | reusable vectorized packed layout、replicated collapse、dropout identity、actual Qwen3 DynamicCache/GQA/MQA；full 360 pass |
 
 ## 6. 已锁定决定与 deferred items
 

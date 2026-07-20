@@ -142,6 +142,12 @@ def setup_models(
         base_model_idx=0,
         projector_list=[projector],
         fpct_operator=model_config.get("fpct_operator"),
+        fpct_replicated_collapse=model_config.get(
+            "fpct_replicated_collapse", False
+        ),
+        fpct_instrumentation=model_config.get(
+            "fpct_instrumentation", False
+        ),
     ).to(device)
 
     # Configure projector mappings

@@ -1,62 +1,70 @@
-# FPCT Certified Support Report
+# FPCT-3.7-R1 Certified Support Report
 
-## Decision
+Execution SHA: `7aecf2370df8a544b553baa6a7a58b24191e02ef`
 
-FPCT-3.7 is `INCONCLUSIVE` because the first natural-audit invocation failed an execution-provenance gate before producing any alignment row or shard artifact.
+Stable closure fingerprint: `5be64db77a54fb68ce44e2aabf7968c370bc4eff501fefe4a0fcb03ce571c472`
 
-No certified-support, readiness, expansion, memory or FLOP result is available from this execution revision. FPCT-3.8, FPCT-3.9, Hugging Face model forward, GPU, Kubernetes, training and accuracy evaluation were not entered.
+Status: `SINGLE_PAIR_PILOT_READY`
 
-## Frozen execution
+Selected pair: `tinyllama`
 
-| Item | Value |
-|---|---|
-| Corrected execution SHA | `b11a046597b2466c1c6ba95c4d3693e76523c3b3` |
-| Branch | `research/fpct-factorized-transport` |
-| Local/upstream before freeze | identical at `b11a046...` |
-| FPCT-3.7 pre-audit lock SHA256 | `311ddf36bc0ab598ec52eae5236ad14f007a4645373200d58a301c9fcfd9cdb5` |
-| Frozen targeted tests | `102 passed, 2 warnings` |
-| Published shards | `0 / 12` |
-| Natural alignment rows | `0` |
+All 12 pair×task shards completed under the sealed import contract. Independent
+verification recomputed 60 pair/task/split rows, 29,060 sample rows and 28,932
+distinct-content-group rows. Qwen3 exact identity held across every split and
+retained padding/truncation condition: every eligible parent was `m=1`, mapped
+`i→i` with weight one, had `fallback=false`, and created zero extra slots.
 
-## Failure
+## Fit+calibration readiness
 
-TinyLlama/ARC and Llama3.2/ARC independently failed on their first call with:
+| Pair | ARC groups | OpenBookQA groups | MMLU groups | Pooled | Ready |
+|---|---:|---:|---:|---:|---|
+| TinyLlama→Qwen3 | 511 | 228 | 2,495 | 3,234 | yes |
+| Qwen2.5→Qwen3 | 0 | 0 | 0 | 0 | no |
+| Llama3.2→Qwen3 | 0 | 0 | 1 | 1 | no |
+| Qwen3 identity control | 0 | 0 | 0 | 0 | control only |
 
-`TypeError: TokenAligner.align_chat_messages_soft() got an unexpected keyword argument 'apply_confidence_control'`
+TinyLlama passes the frozen floor of at least 30 positive distinct groups in
+each task and at least 100 pooled. It is the only ready heterogeneous pair, so
+the authorized claim remains single-pair only.
 
-The frozen research source is:
+Qwen2.5 and the Qwen3 raw diagnostic each contained the historical 56 MMLU
+groups/410 raw m2 parents, all removed by the conservative certifier. Llama3.2
+retained one fit+calibration certified group. These outcomes do not alter the
+frozen TinyLlama selection rule.
 
-- path: `/home/lijunsi/projects/Cache-fpct-factorized-transport/rosetta/model/aligner.py`;
-- SHA256: `fe77d72fb7103ca103fe87fa602bed545e0caf6fc75b1741b8736b41e9daf7d8`;
-- its method signature includes `apply_confidence_control`.
+## Factorization exposure and resources
 
-The Conda environment contains an editable `rosetta` mapping to `/home/lijunsi/projects/KVcache/C2C/rosetta`. Under script-mode `sys.path`, that mapping resolves `rosetta.model.aligner` to:
+Across all splits TinyLlama has certified-positive support in every content
+group. Certified ambiguous-parent density is 0.2003 for ARC, 0.2088 for
+OpenBookQA and 0.1855 for MMLU. The packed expansion distribution is:
 
-- `/home/lijunsi/projects/KVcache/C2C/rosetta/model/aligner.py`;
-- SHA256 `1d68fe69aecd03382fb9bf1385ee110f5f218902c0f5566c3827e0d8afa0922a`;
-- a method signature without `apply_confidence_control`.
+| Task | Mean | p50 | p95 | p99 | Max |
+|---|---:|---:|---:|---:|---:|
+| ARC | 1.2374 | 1.2380 | 1.2973 | 1.3296 | 1.4024 |
+| OpenBookQA | 1.2391 | 1.2389 | 1.2818 | 1.2981 | 1.3143 |
+| MMLU | 1.2259 | 1.2261 | 1.3000 | 1.3333 | 1.4184 |
 
-Thus the natural command did not execute the production source whose SHA was frozen. This is an import-path provenance mismatch, not a scientific support result.
+Thus the prospective resource support gate (`mean<=1.35`, `p95<=1.50`) is met
+on all three tasks before any GPU execution. Detailed raw-pre-truncation →
+retained → sanitized transitions, exposure, geometry, sanitizer removal mass,
+sidecar/cache bytes and correlations remain in the local per-shard descriptive
+artifacts.
 
-Qwen2.5 did not launch because its delegated write request was rejected before execution. Qwen3 was not launched after the hard stop. Neither case produced an artifact.
+Sanitizer checks established identical three-arm alignment-input hashes, exact
+row normalization, exact uncertified slot-0 one-hot behavior, native `m0`,
+unchanged `m1`, no illegal/truncated positive mass and no Qwen identity extra
+slot.
 
-## Stop-rule application
+## Provenance
 
-Adding `PYTHONPATH`, changing the invocation mode, or patching the audit to prepend the repository root would be a post-freeze execution-contract correction. The frozen rule requires this execution revision to remain `INCONCLUSIVE`; no in-place patch or rerun is allowed.
+- Freeze attestation SHA256:
+  `cbe85babd12622b8ae03a5e166e22c96cca8f96d7851770537dd62be48901f67`.
+- Pre-audit lock SHA256:
+  `8127d66743f0656faeb6e3cfb754502489cc97e36f9dce751c90594e5efc121a`.
+- Certified summary SHA256:
+  `a0409299f639c4f41709e2845fb1ab65e8542f98cee5c014dfd36b21d552e863`.
+- R1 result SHA256:
+  `0f45c2d2c06c22ed6f4d0c6eda9ed75524e7010dba83f421209dd29f36d28cc8`.
 
-A future attempt requires a new prospective execution revision that freezes and tests the exact imported module path and SHA before any natural rendering/tokenization/alignment. This report does not authorize that amendment or the next attempt.
-
-## Local evidence
-
-Root:
-
-`/home/lijunsi/projects/Cache-fpct-factorized-transport/local/final_results/fpct_factorized_transport/fpct_3_7_certified_support/rev_b11a046597b2466c1c6ba95c4d3693e76523c3b3/`
-
-- `failure.json`: 2,374 bytes; SHA256 `051a425b83ff38d401323d8708da8032723adbe0a3fcb72c72ecb48f4706af2b`.
-- `controller_state.json`: 267 bytes; SHA256 `aa46ba058f5ad623723cfa5cb866ede74ba2cf923f650a529066991a9aebc617`.
-- `pre_audit_lock.json`: SHA256 `311ddf36bc0ab598ec52eae5236ad14f007a4645373200d58a301c9fcfd9cdb5`.
-- No `shards/` or `.incomplete/` directory exists.
-
-## Claim boundary
-
-This failure says nothing about whether heterogeneous tokenizer factorization support exists, whether `F` differs from `C_post` in a real model, or whether task accuracy would improve. It only establishes that execution provenance was not sufficiently sealed in revision `b11a046...`.
+This report establishes structural opportunity and resource support only. It
+does not establish query-time separability, mechanism activation or accuracy.

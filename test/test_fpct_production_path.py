@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import inspect
 from pathlib import Path
 import sys
 from types import SimpleNamespace
@@ -10,6 +11,7 @@ import torch
 from torch import nn
 
 from rosetta.model.fpct_attention import (
+    build_fpct_packed_layout,
     FPCTSidecarSegment,
     fpct_eager_attention,
     normalize_fpct_operator,
@@ -256,6 +258,50 @@ def test_replicated_collapse_packed_equals_ordinary_cpost() -> None:
     post = reference.c_post(q, nk, nv, fk, fv, prior, valid, identity_fuser, term, None)
     torch.testing.assert_close(expanded, post.output, atol=1e-10, rtol=1e-8)
 
+    layout = build_fpct_packed_layout(ck.shape[2], [_sidecar])
+    packed_control = pack_fpct_memory(
+        ck,
+        cv,
+        term,
+        [_sidecar],
+        query_length=q.shape[2],
+        layout=layout,
+        replicated_collapse=True,
+    )
+    control, _ = fpct_eager_attention(q, packed_control)
+    torch.testing.assert_close(control, post.output, atol=1e-10, rtol=1e-8)
+
+
+def test_layout_is_reused_across_layers_without_autograd_state() -> None:
+    q, _nk, _nv, fk, fv, _prior, _valid, ck, cv, term, sidecar = make_attention_case()
+    layout = build_fpct_packed_layout(ck.shape[2], [sidecar])
+    assert not layout.active.requires_grad
+    assert not layout.log_prior.requires_grad
+    assert layout.row_offsets.tolist() == [[0, 2, 3, 4]]
+    first = pack_fpct_memory(
+        ck, cv, term, [sidecar], query_length=2, layout=layout
+    )
+    second_sidecar = FPCTSidecarSegment(
+        sidecar.parent_start,
+        fk + 0.25,
+        fv - 0.5,
+        sidecar.prior,
+        sidecar.valid,
+    )
+    second = pack_fpct_memory(
+        ck, cv, term, [second_sidecar], query_length=2, layout=layout
+    )
+    assert first.parent_index.data_ptr() == layout.parent_index.data_ptr()
+    assert second.parent_index.data_ptr() == layout.parent_index.data_ptr()
+    assert not torch.equal(first.key, second.key)
+
+
+def test_attention_hot_path_has_no_host_sync_or_parent_loop() -> None:
+    source = inspect.getsource(pack_fpct_memory)
+    for forbidden in (".tolist(", ".item(", ".cpu(", ".numpy("):
+        assert forbidden not in source
+    assert "for parent" not in source
+
 
 def test_pack_refinement_and_permutation_invariance() -> None:
     q, _nk, _nv, fk, fv, prior, valid, ck, cv, term, sidecar = make_attention_case()
@@ -336,6 +382,64 @@ def test_candidate_prior_is_used_once() -> None:
     wrong = FPCTSidecarSegment(0, fk, fv, squared_prior, valid)
     wrong_output, _ = fpct_eager_attention(q, pack_fpct_memory(ck, cv, term, [wrong], query_length=2))
     assert not torch.allclose(output, wrong_output)
+
+
+def test_dropout_matched_stochasticity_cpost_f_and_k1_training() -> None:
+    torch.manual_seed(601)
+    cpost_projector = make_projector(dropout=0.1)
+    factorized_projector = make_projector(dropout=0.1)
+    factorized_projector.load_state_dict(cpost_projector.state_dict())
+    cpost_projector.train()
+    factorized_projector.train()
+    cpost = make_wrapper(cpost_projector, "c_post")
+    factorized = make_wrapper(factorized_projector, "f")
+    inputs = candidate_inputs()
+    torch.manual_seed(104729)
+    cpost_record = cpost._project_fpct_candidates(
+        projector=cpost_projector,
+        source_key_cache=inputs[0],
+        source_value_cache=inputs[1],
+        base_kv=(inputs[2], inputs[3]),
+        source_indices=inputs[4],
+        source_weights=inputs[5],
+        soft_section=inputs[6],
+    )
+    torch.manual_seed(104729)
+    factorized_record = factorized._project_fpct_candidates(
+        projector=factorized_projector,
+        source_key_cache=inputs[0],
+        source_value_cache=inputs[1],
+        base_kv=(inputs[2], inputs[3]),
+        source_indices=inputs[4],
+        source_weights=inputs[5],
+        soft_section=inputs[6],
+    )
+    torch.testing.assert_close(cpost_record[2], factorized_record[2], atol=0, rtol=0)
+    torch.testing.assert_close(cpost_record[3], factorized_record[3], atol=0, rtol=0)
+
+    k1 = candidate_inputs(k=1)
+    torch.manual_seed(104729)
+    cpost_k1 = cpost._project_fpct_candidates(
+        projector=cpost_projector,
+        source_key_cache=k1[0],
+        source_value_cache=k1[1],
+        base_kv=(k1[2], k1[3]),
+        source_indices=k1[4],
+        source_weights=k1[5],
+        soft_section=k1[6],
+    )
+    torch.manual_seed(104729)
+    factorized_k1 = factorized._project_fpct_candidates(
+        projector=factorized_projector,
+        source_key_cache=k1[0],
+        source_value_cache=k1[1],
+        base_kv=(k1[2], k1[3]),
+        source_indices=k1[4],
+        source_weights=k1[5],
+        soft_section=k1[6],
+    )
+    torch.testing.assert_close(cpost_k1[0], factorized_k1[0], atol=0, rtol=0)
+    torch.testing.assert_close(cpost_k1[1], factorized_k1[1], atol=0, rtol=0)
 
 
 def test_overlapping_sidecar_is_rejected() -> None:

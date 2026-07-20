@@ -445,6 +445,12 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
         include_response=include_response,
         multi_source_fusion_mode=multi_source_fusion_mode,
         fpct_operator=rosetta_config.get("fpct_operator"),
+        fpct_replicated_collapse=rosetta_config.get(
+            "fpct_replicated_collapse", False
+        ),
+        fpct_instrumentation=rosetta_config.get(
+            "fpct_instrumentation", False
+        ),
     ).to(device).eval()
 
     # Load projector mapping configs from each LLM's checkpoint directory

@@ -12,7 +12,11 @@ import json
 
 from rosetta.model.projector import Projector
 from rosetta.model.fpct_attention import (
+    FPCTPackedLayout,
     FPCTSidecarSegment,
+    build_fpct_packed_layout,
+    fpct_eager_attention,
+    fpct_mechanism_diagnostics,
     normalize_fpct_operator,
     normalize_prior as normalize_fpct_prior,
     pack_fpct_memory,
@@ -69,6 +73,8 @@ class RosettaModel(nn.Module):
         include_response: bool = False,
         multi_source_fusion_mode: str = "parallel",
         fpct_operator: Optional[str] = None,
+        fpct_replicated_collapse: bool = False,
+        fpct_instrumentation: bool = False,
     ):
         super().__init__()
         # model list: a list of model, model 0 by default is the base model
@@ -91,6 +97,15 @@ class RosettaModel(nn.Module):
         self._generation_hook_handlers = []
         self.fpct_operator = normalize_fpct_operator(fpct_operator)
         self._fpct_sidecars: Dict[int, List[FPCTSidecarSegment]] = {}
+        self._fpct_structure_segments: Dict[
+            tuple[int, int, int], tuple[torch.Tensor, torch.Tensor]
+        ] = {}
+        self._fpct_packed_layout: Optional[FPCTPackedLayout] = None
+        self.fpct_replicated_collapse = bool(fpct_replicated_collapse)
+        self.fpct_instrumentation = bool(fpct_instrumentation)
+        self._fpct_mechanism_metrics: Dict[str, torch.Tensor] = {}
+        if self.fpct_replicated_collapse and self.fpct_operator != "f":
+            raise ValueError("replicated collapse is an F-only inference control")
 
         # Multi-source fusion mode:
         # "sequential" (default): each source updates base cache iteratively
@@ -105,7 +120,12 @@ class RosettaModel(nn.Module):
         self.multi_source_fusion_mode = multi_source_fusion_mode
 
     def fpct_config_dict(self) -> Dict[str, Optional[str]]:
-        return {"operator": self.fpct_operator, "position_mode": "legacy", "a": "1", "g": "1"}
+        config = {"operator": self.fpct_operator, "position_mode": "legacy", "a": "1", "g": "1"}
+        if self.fpct_replicated_collapse:
+            config["replicated_collapse"] = True
+        if self.fpct_instrumentation:
+            config["instrumentation"] = True
+        return config
 
     @property
     def device(self):
@@ -240,6 +260,9 @@ class RosettaModel(nn.Module):
         new_k_cache,
         new_v_cache,
         fpct_sidecars: Optional[List[FPCTSidecarSegment]] = None,
+        fpct_layout: Optional[FPCTPackedLayout] = None,
+        fpct_replicated_collapse: bool = False,
+        fpct_metric_sink: Optional[Dict[str, torch.Tensor]] = None,
     ):
         """
         Monkeypatch Qwen3Attention.forward so that *current step* attention uses the
@@ -310,16 +333,47 @@ class RosettaModel(nn.Module):
                 )
 
             if fpct_sidecars:
+                if fpct_layout is None:
+                    raise ValueError("FPCT sidecars require a prebuilt packed layout")
+                base_key_states = key_states
+                base_value_states = value_states
+                parent_attention_mask = attention_mask
                 packed = pack_fpct_memory(
-                    key_states,
-                    value_states,
-                    attention_mask,
+                    base_key_states,
+                    base_value_states,
+                    parent_attention_mask,
                     fpct_sidecars,
                     query_length=query_states.shape[-2],
+                    layout=fpct_layout,
+                    replicated_collapse=fpct_replicated_collapse,
                 )
                 key_states = packed.key
                 value_states = packed.value
                 attention_mask = packed.attention_mask
+                if fpct_metric_sink is not None:
+                    metrics = fpct_mechanism_diagnostics(query_states, packed)
+                    replicated = pack_fpct_memory(
+                        base_key_states,
+                        base_value_states,
+                        parent_attention_mask,
+                        fpct_sidecars,
+                        query_length=query_states.shape[-2],
+                        layout=fpct_layout,
+                        replicated_collapse=True,
+                    )
+                    factorized_output, _ = fpct_eager_attention(
+                        query_states, packed
+                    )
+                    collapsed_output, _ = fpct_eager_attention(
+                        query_states, replicated
+                    )
+                    metrics["output_delta_l2"] = (
+                        factorized_output.float() - collapsed_output.float()
+                    ).square().mean().sqrt()
+                    fpct_metric_sink.clear()
+                    fpct_metric_sink.update(
+                        {name: value.detach() for name, value in metrics.items()}
+                    )
 
             attention_interface = eager_attention_forward
             if self.config._attn_implementation != "eager":
@@ -352,13 +406,36 @@ class RosettaModel(nn.Module):
         attn_module.forward = types.MethodType(patched_forward, attn_module)
         return orig_forward
 
-    def _install_fpct_attention_hooks(self):
+    def _install_fpct_attention_hooks(self, source_length: int):
         if self.fpct_operator != "f" or not self._fpct_sidecars:
             return []
+        ordered = [
+            (layer_idx, segments)
+            for layer_idx, segments in sorted(self._fpct_sidecars.items())
+            if segments
+        ]
+        if not ordered:
+            return []
+        first_specs = [
+            (segment.parent_start, segment.key.shape[2], segment.key.shape[3])
+            for segment in ordered[0][1]
+        ]
+        for _layer_idx, segments in ordered[1:]:
+            specs = [
+                (segment.parent_start, segment.key.shape[2], segment.key.shape[3])
+                for segment in segments
+            ]
+            if specs != first_specs:
+                raise ValueError("FPCT sidecar structure differs across layers")
+        if (
+            self._fpct_packed_layout is None
+            or self._fpct_packed_layout.source_length != source_length
+        ):
+            self._fpct_packed_layout = build_fpct_packed_layout(
+                source_length, ordered[0][1]
+            )
         handlers = []
-        for layer_idx, segments in sorted(self._fpct_sidecars.items()):
-            if not segments:
-                continue
+        for layer_idx, segments in ordered:
             attn = self.model_list[self.base_model_idx].model.layers[
                 layer_idx
             ].self_attn
@@ -367,12 +444,30 @@ class RosettaModel(nn.Module):
                 None,
                 None,
                 fpct_sidecars=segments,
+                fpct_layout=self._fpct_packed_layout,
+                fpct_replicated_collapse=self.fpct_replicated_collapse,
+                fpct_metric_sink=(
+                    self._fpct_mechanism_metrics
+                    if self.fpct_instrumentation
+                    else None
+                ),
             )
             handlers.append((attn, original))
         return handlers
 
     def _base_model_forward_with_fpct(self, **kwargs):
-        handlers = self._install_fpct_attention_hooks()
+        attention_mask = kwargs.get("attention_mask")
+        if attention_mask is not None:
+            source_length = int(attention_mask.shape[-1])
+        else:
+            input_value = kwargs.get("input_ids")
+            if input_value is None:
+                input_value = kwargs.get("inputs_embeds")
+            current_length = int(input_value.shape[-2] if input_value.ndim == 3 else input_value.shape[-1])
+            past = kwargs.get("past_key_values")
+            past_length = int(past.get_seq_length()) if past is not None else 0
+            source_length = past_length + current_length
+        handlers = self._install_fpct_attention_hooks(source_length)
         try:
             return self.model_list[self.base_model_idx].forward(**kwargs)
         finally:
@@ -760,12 +855,17 @@ class RosettaModel(nn.Module):
         prior: torch.Tensor,
         legal: torch.Tensor,
     ) -> None:
+        structure_key = (parent_start, fused_key.shape[2], fused_key.shape[3])
+        canonical = self._fpct_structure_segments.get(structure_key)
+        if canonical is None:
+            canonical = (prior.detach(), legal.detach())
+            self._fpct_structure_segments[structure_key] = canonical
         segment = FPCTSidecarSegment(
             parent_start=parent_start,
             key=fused_key,
             value=fused_value,
-            prior=prior,
-            valid=legal,
+            prior=canonical[0],
+            valid=canonical[1],
         )
         segment.validate()
         segments = self._fpct_sidecars.setdefault(target_layer_idx, [])
@@ -862,6 +962,8 @@ class RosettaModel(nn.Module):
         if seqlen > 1:
             self.kv_cache_dict = dict()
             self._fpct_sidecars = {}
+            self._fpct_structure_segments = {}
+            self._fpct_packed_layout = None
 
         num_sections = len(kv_cache_index) if kv_cache_index is not None else 1
         use_soft_alignment = soft_alignment is not None
