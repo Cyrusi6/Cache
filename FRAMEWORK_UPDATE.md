@@ -1136,3 +1136,9 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Replicated canary改为expanded global FP32 probability按parent聚合后与parent probability比较，保持原`2e-5/2e-2`阈值；returned output仍analytic parent。
 - Residual-scale constants改为device-native `ones * scalar`，移除剩余`torch.tensor(..., device=cuda)`。
 - Targeted `53 passed`；full `406 passed, 2 warnings`。下一run必须新SHA/image/run-lock/run UID。
+
+### R2e replacement two-lock
+
+- Scientific SHA `26539300de50d89a1be5a7871b6e78d9b715f535`；image digest `sha256:50b89faa7148a73e32caf7be62220fca874d5a5d084de09d33278eed2e1374ba`；run-lock SHA `e4d4392f4b3039541ab940acb16e4091a428af6da0f0eb2f6fa40d18c2b1cc5b`。
+- Run UID/root `fpct-r2e-2653930-v1`；source-tree `63a3e128...`；tar `f47b7f80...`；sidecar `48caee80...`。
+- Lock前无R2e GPU/pretrained/training/checkpoint/accuracy；只允许先跑complete synthetic GPU gate。

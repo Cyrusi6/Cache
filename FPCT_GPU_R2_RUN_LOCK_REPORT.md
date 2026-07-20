@@ -138,3 +138,18 @@ hot-path syncs from 336 to 280, with the remaining events isolated to
 R2d is terminal `GPU_ENGINEERING_BLOCKED_R2` and will not be patched or
 resumed. No matched smoke, training, checkpoint, accuracy or correctness result
 was produced.
+
+## R2e replacement lock
+
+- Scientific SHA: `26539300de50d89a1be5a7871b6e78d9b715f535`.
+- Run UID: `fpct-r2e-2653930-v1`.
+- Image: `docker.io/library/fpct-gpu-r2e:2653930@sha256:50b89faa7148a73e32caf7be62220fca874d5a5d084de09d33278eed2e1374ba`.
+- Image config/source-tree SHA256: `d1fd8700...` / `63a3e128...`.
+- Image tar SHA256: `f47b7f80c0251fa0dfb81cd1594878e390b172eb2ea3bd071a6ac7eb7d7d2fdc` (`3,520,293,376` bytes).
+- R2e run-lock SHA256: `e4d4392f4b3039541ab940acb16e4091a428af6da0f0eb2f6fa40d18c2b1cc5b`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2e-2653930-v1`.
+
+R2e is fully isolated from R2d numerical, condition and profile artifacts. Its
+source, addendum, tests, image provenance, tar and sidecar copy are frozen by
+hash. Before this lock there was no R2e pretrained/GPU output, training,
+checkpoint, accuracy or correctness result.
