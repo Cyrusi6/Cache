@@ -68,3 +68,22 @@ R2b passed that numerical sequence, then stopped in the first C_post trace
 forward because `packed` was undefined when no sidecar was present. Execution
 entered the first receiver attention call but produced no complete model output
 and no condition artifact or accuracy. R2b is terminal and non-resumable.
+
+## R2c replacement lock
+
+- Scientific SHA: `e1133549c8d5efda7c09b06632e55964d94cad4d`.
+- Run UID: `fpct-r2c-e1133549-v1`.
+- Image: `docker.io/library/fpct-gpu-r2c:e1133549@sha256:94437d56d3a496935eb6486b83cebbf556a39c468d06e820514315be2adf0550`.
+- Image config/source-tree SHA256: `195e2225...` / `742b1458...`.
+- Image tar SHA256: `aeda9aab8ea64df4f3b2f927bf403ec13085d0e98f168953763eba7b8e314e58` (`3,520,236,544` bytes).
+- R2c run-lock SHA256: `3ea3c3ea99e4e7d3e7a814082aaa038bc264779b49ce2206cd64b74515ca9c61`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2c-e1133549-v1`.
+
+R2c changes only the C_post trace-path initialization and adds an actual Qwen3
+no-sidecar trace regression. The operator, prior, diagnostic panel, numerical
+floors, training recipe and release gates are unchanged. R2 and R2b remain
+terminal, immutable and non-resumable. R2c has a new image, run UID, run root,
+sidecar copy and image-loader; no numerical or natural condition artifact is
+reused. At this lock boundary R2c has produced no pretrained output, training,
+checkpoint, accuracy or correctness result. It must restart from the complete
+GPU numerical sequence.

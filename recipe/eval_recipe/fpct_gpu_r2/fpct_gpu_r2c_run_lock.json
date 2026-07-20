@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v3",
+  "status": "PRE_OUTPUT_LOCKED_R2",
+  "run_uid": "fpct-r2c-e1133549-v1",
+  "scientific_code_commit": "e1133549c8d5efda7c09b06632e55964d94cad4d",
+  "scientific_code_branch": "research/fpct-factorized-transport",
+  "scientific_code_upstream": "e1133549c8d5efda7c09b06632e55964d94cad4d",
+  "manifest_sha256": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4",
+  "superseded_executions": [
+    {
+      "run_uid": "fpct-r2-9f2ffcd9-v1",
+      "scientific_commit": "9f2ffcd9ff21e4575f8fe870167eb04a7c86edb5",
+      "run_lock_sha256": "c4b0ca20bea54f2dbbb9eaabf5bdbb0dc5b74835a3284e5d846b46f1e6a2a331",
+      "terminal": "GPU_ENGINEERING_BLOCKED_R2",
+      "complete_model_output_produced": false,
+      "accuracy_accessed": false,
+      "patch_or_resume": false
+    },
+    {
+      "run_uid": "fpct-r2b-7ceae185-v1",
+      "scientific_commit": "7ceae185512b100b4b7d7f6970710a4637c568b0",
+      "run_lock_sha256": "99dcb8114d60f55604f69b4c721e8348fc6f2f14e4eea17976bfe8df49a3f913",
+      "terminal": "GPU_ENGINEERING_BLOCKED_R2",
+      "complete_model_output_produced": false,
+      "accuracy_accessed": false,
+      "patch_or_resume": false
+    }
+  ],
+  "normative": {
+    "r2_root_cause_protocol": "5b36318548af7c3a6a0d181ca72479754451fa3031138dd9dff8653eb61abba5",
+    "r2_numerical_protocol": "18621315928ccf2246bb879e602055534329da957fd445764a866d42e0a33b74",
+    "r2_profiling_protocol": "f9d126a82ee6d92f95a820ea67e0c423a81b609cbae9f4bc7b0cd966650adb5b",
+    "r2_root_cause_manifest": "760fc2f4ebbda986b67ab5b7a7ca451d768e455d36d4df0a1695e008cf0b33d2",
+    "metric_null_floor_spec": "3206b7cda8d478575fedc471fd322cd224e72e569d192220f732a8ef7e3204eb",
+    "diagnostic_panel_manifest": "bed52891c5a82c05adf47fc463e684982d94447c31a6d43e2ae5af2ec1df15f7",
+    "confirmatory_manifest": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4",
+    "confirmatory_preregistration": "c97f7322ad6aa1123e09591570ee876d86bd7a4601c82d4b88f342f77ff4783c",
+    "gpu_numerical_protocol": "e8c7129400cff8eb82cbad61e9143af8ee8f68fb101899d38019ab3a10d1d844",
+    "k8s_execution_protocol": "5d66670cfa3d637e635a12a3153633b6d44077dc019645c7bb0d2ac5c356fbf6",
+    "content_group_split_manifest": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050"
+  },
+  "image": {
+    "reference": "docker.io/library/fpct-gpu-r2c:e1133549@sha256:94437d56d3a496935eb6486b83cebbf556a39c468d06e820514315be2adf0550",
+    "manifest_list_sha256": "94437d56d3a496935eb6486b83cebbf556a39c468d06e820514315be2adf0550",
+    "config_sha256": "195e2225b206a98f28c4ed577d661d1b8fd747bc492cd2ca62c20fb0d0098b91",
+    "source_tree_sha256": "742b1458edb369c16540addc97e646f92bab7abacba55ac8497176885e6328eb",
+    "architecture": "amd64",
+    "distribution": "run_uid_scoped_containerd_import",
+    "distribution_tar": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2c-e1133549-v1/assets/fpct-gpu-r2c-e1133549.tar",
+    "distribution_tar_sha256": "aeda9aab8ea64df4f3b2f927bf403ec13085d0e98f168953763eba7b8e314e58",
+    "distribution_tar_bytes": 3520236544,
+    "image_size_bytes": 3520216326
+  },
+  "runtime": {
+    "python": "3.11.11",
+    "torch": "2.6.0+cu124",
+    "cuda": "12.4",
+    "transformers": "4.52.4",
+    "datasets": "4.0.0",
+    "accelerate": "1.9.0",
+    "scipy": "1.15.3",
+    "attention_backend": "eager",
+    "prior_dtype": "float32"
+  },
+  "execution_files": {
+    "r2_runner": "b647783aee8aa164017b766b6776c9c70f0233f61f1d70c558610d0835b8f5cf",
+    "r2_controller": "9debef83c4dbc87991b270aaf1554a59fcabd6f4f8b744f24bef75f401d3e7fd",
+    "r2_k8s_renderer": "2cb2d8008b8c6dbd0df388fcc2b055c4ef78da222deb80bec1538787aceabb94",
+    "confirmatory_runner": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75",
+    "trainer": "544f8471f2200435cbfd509b5e4e7441d5053324e6eaa2f1c5e72bd9af6c41fd",
+    "fpct_attention": "ecc87bdb8fc8f27769c7367266ded1f230ef58c2ff7bd7ef02b34e4c21330548",
+    "wrapper": "3bd735bd938578add40af86aa491b6d296a29ec30f822ab9b65fa6ab1f6dbf2b",
+    "dataset_adapters": "125c22bd09b2eec0f021f75496ff2a74ef1f795d9b8c0336b70342e6eba08dc0",
+    "qwen_cpu_integration_test": "37e2ed86dc5e748f069d6cd0ce6e808fb1719eaa28411b8928d6ec48468370de",
+    "image_loader_job": "0b29ad7c677fe409bbfbc60361bd224a98fa09ad04f394e248ef626448131bf8",
+    "gpu_gate_job": "3c79997b1c1404d0de0e4a386c0dc55bb04eaa59a8db0d8d47361580fc68ae11",
+    "pretrained_matrix_job": "494138342acc4c080a52182ce548809ae664e6f96778a58640df799dac13de2f",
+    "matched_smoke_job": "61e03d677d625a561ee7dbdc7f209ffede648704da7ad3cbc492e24a73f148e4",
+    "seed_triplet_job": "9af0edfc44036a9b6534e2c62df8e3f1992e3c07f6e3161ab4e923e9db025d5a"
+  },
+  "assets": {
+    "training_alignment_sidecar_2048": {
+      "host_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2c-e1133549-v1/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "container_path": "/fpct-run/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990",
+      "bytes": 41023706,
+      "examples": 2048
+    },
+    "training_dataset": {
+      "id": "cais/mmlu:all:auxiliary_train",
+      "host_path": "/netdisk/lijunsi/c2c-route1-identifiability/data/c2c/mmlu/all/auxiliary_train-00000-of-00001.parquet",
+      "sha256": "5126bb35f06c8ab7ac54be3c60ab02cf33adf8b93a79dcfeb071f53cac74efde"
+    },
+    "diagnostic_data_root": {
+      "host_path": "/netdisk/lijunsi/c2c-route1-identifiability/data/c2c",
+      "container_path": "/datasets/c2c",
+      "panel_rows_sha256": "2b28b48d8ba7b02508a72bc9fb1dda3f9f2d2134e014a894e550ec83792459cb"
+    },
+    "receiver": {
+      "id": "Qwen/Qwen3-0.6B",
+      "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "root": "/models/c2c/Qwen3-0.6B",
+      "model_sha256": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b",
+      "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+      "tokenizer_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+    },
+    "sender": {
+      "id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "root": "/models/c2c/TinyLlama-1.1B-Chat-v1.0",
+      "model_sha256": "6e6001da2106d4757498752a021df6c2bdc332c650aae4bae6b0c004dcf14933",
+      "config_sha256": "486bedda3a6988332e60d9638a09ca4b260d34ebcf1b19e22cf3b140b63d8fe9",
+      "tokenizer_sha256": "bcd04f0eadf90287bd26e1a183ac487d8a141b09b06aecb7725bbdd343640f2e"
+    }
+  },
+  "resource_geometry": {
+    "tinyllama_all_splits": {
+      "source_sha256": "6d5f6221be15db5af030f9c1d7702b6d1e814bfe4e423e065353f3167c914284",
+      "tasks": {
+        "ai2-arc": {"mean": 1.2374040678425364, "p95": 1.2973320158102766, "max": 1.4024390243902438},
+        "openbookqa": {"mean": 1.2390702194565386, "p95": 1.2818298368298369, "max": 1.3142857142857143},
+        "mmlu-redux": {"mean": 1.2259415516723047, "p95": 1.3, "max": 1.4183673469387754}
+      }
+    }
+  },
+  "storage": {
+    "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2c-e1133549-v1",
+    "container_run_root": "/fpct-run",
+    "model_host_root": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+    "source_worktree_mount": false,
+    "host_conda_mount": false,
+    "host_site_packages_mount": false
+  },
+  "kubernetes": {
+    "namespace": "c2c-research",
+    "config_map": "fpct-r2c-lock-e1133549",
+    "node_name": "4090-48gx2",
+    "maximum_parallel_seed_pods": 1,
+    "gpu_per_seed_pod": 2,
+    "required_labels": {
+      "project": "fpct",
+      "study": "confirmatory-r2c",
+      "git_sha": "e1133549",
+      "run_uid": "fpct-r2c-e1133549-v1"
+    },
+    "retry": {"whole_triplet_infrastructure_only": 1, "selective_arm_retry": false}
+  },
+  "firewall": {
+    "new_pretrained_output_before_this_lock": false,
+    "accuracy_before_formal_release": false,
+    "model_selection_release_requires_complete_triplets": 12,
+    "held_out_release_max_count": 1,
+    "test_release_requires_frozen_futility_decision": true
+  }
+}

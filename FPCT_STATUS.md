@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2c prospective trace-path repair
-> 当前判定：R2/R2b均terminal且不可resume；R2b numerical=`GO`但首个complete model output前失败
-> 下一阶段：初始化C_post trace `packed=None`、补真实Qwen回归并建立R2c新SHA/image/run-lock
+> 当前阶段：FPCT-GPU-R2c pre-output execution lock
+> 当前判定：R2/R2b均terminal且不可resume；R2c新SHA/image/run UID已独立冻结
+> 下一阶段：R2c仅从complete synthetic GPU numerical gate开始，GO后才允许label-free pretrained matrix
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -223,6 +223,7 @@
 | FPCT-D068 | 2026-07-20 | R2b replacement two-lock | SHA `7ceae185...`；image `sha256:d035cb31...`；run UID `fpct-r2b-7ceae185-v1`；run-lock `99dcb811...`；不复用v1 numerical/condition artifacts |
 | FPCT-D069 | 2026-07-20 | R2b numerical=`GO`但首个完整output前terminal | C_post trace无sidecar时`packed`未初始化；首层attention开始后异常，0 complete output/0 condition artifact/0 accuracy；R2b不resume |
 | FPCT-D070 | 2026-07-20 | R2c trace-path repair通过CPU/HF验证 | 显式`packed=None`；actual Qwen C_post trace/no-sidecar regression；targeted 28 pass，full 403 pass；需新image/run-lock/run UID |
+| FPCT-D071 | 2026-07-20 | R2c replacement two-lock | SHA `e1133549...`；image `sha256:94437d56...`；run-lock `3ea3c3ea...`；run UID `fpct-r2c-e1133549-v1`；全新run root/loader/sidecar copy，不复用R2/R2b numerical或condition artifacts |
 
 ## 6. 已锁定决定与 deferred items
 

@@ -370,3 +370,4 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - R2b two-lock：SHA `7ceae185...`；image digest `sha256:d035cb31...`；run UID `fpct-r2b-7ceae185-v1`；run-lock SHA `99dcb811...`。不复用v1 numerical/condition artifacts。
 - R2b numerical=`GO`，但首个FP32 C_post trace forward在第一层attention因`packed`未初始化失败；0 complete output/0 condition artifact/0 accuracy。R2b terminal，不resume。
 - R2c修复`packed=None`并新增actual Qwen C_post trace regression；targeted `28 passed`、full `403 passed, 2 warnings`。
+- R2c two-lock：scientific SHA `e1133549...`；image digest `sha256:94437d56...`；run-lock `3ea3c3ea...`；run UID `fpct-r2c-e1133549-v1`；image tar SHA `aeda9aab...`。新run从complete GPU numerical gate开始，不复用R2/R2b artifacts，lock前无pretrained output或accuracy。

@@ -1090,3 +1090,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 该condition开始了model forward但没有完整model output，0 condition artifact、0 accuracy、0 training/checkpoint。R2b controller terminal，不resume。
 - R2c prospective repair在patched attention进入sidecar分支前显式`packed=None`，并新增actual Qwen3 `c_post + fpct_trace + no sidecar` forward regression。operator/prior/panel/threshold/training规则不变。
 - R2c targeted `28 passed`，CPU-safe full suite `403 passed, 2 warnings`。
+
+### R2c replacement two-lock
+
+- Scientific SHA `e1133549c8d5efda7c09b06632e55964d94cad4d`；image digest `sha256:94437d56d3a496935eb6486b83cebbf556a39c468d06e820514315be2adf0550`；run-lock SHA `3ea3c3ea99e4e7d3e7a814082aaa038bc264779b49ce2206cd64b74515ca9c61`；run UID `fpct-r2c-e1133549-v1`。
+- Image config/source-tree为`195e2225...`/`742b1458...`，tar SHA `aeda9aab...`；2048 sidecar保持`48caee80...`。
+- 新run root、ConfigMap和image-loader完全隔离；R2/R2b继续terminal且不可resume，不复用其numerical或condition artifacts。
+- Lock边界前R2c无pretrained output、training、checkpoint、accuracy或correctness；必须从complete synthetic GPU numerical gate重启。
