@@ -1,0 +1,7 @@
+.git
+local
+__pycache__
+*.pyc
+.pytest_cache
+.coverage
+wandb

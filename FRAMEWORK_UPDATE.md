@@ -914,3 +914,33 @@ FPCT-3.7 判定 `INCONCLUSIVE`。补 `PYTHONPATH`、改变 invocation mode 或 p
 ### 结论与下一步
 
 FPCT-3.5P、FPCT-3.7-R1、FPCT-3.8 与 FPCT-3.9 均通过对应硬门。结论仍只到 sealed structural support 和 CPU/HF implementation correctness；尚无 pretrained output、GPU、训练或 accuracy。下一步先 commit/push 当前 hardening，再单独冻结 confirmatory/GPU/K8s code、statistics、image 与 execution manifest。
+
+## 2026-07-20：FPCT confirmatory scientific-code pre-output lock
+
+### 研究目标
+
+在任何 pretrained output、GPU training loss 或 benchmark accuracy 前，冻结 TinyLlama→Qwen3 单-pair 12-seed 三臂设计、GPU 数值门、K8s triplet execution、split firewall 与正式统计实现。
+
+### 核心改动
+
+- 新增 confirmatory、GPU numerical、K8s 三份 normative protocol 与机器可读 manifest。
+- 固定 seeds 45–56 的六种平衡三臂顺序、2,048 examples、2 processes、gradient accumulation 16、64 optimizer steps 和唯一 step-64 正式 checkpoint。
+- 新增 recoverable controller：状态和 append-only ledger 原子写入；12 个完整 triplet 前禁止 model-selection；futility 通过前 held-out 最多释放一次。
+- 新增 seed/group/task hierarchical paired bootstrap、exact 4096 sign flips、paired-t 和 exact-sign sensitivities；明确 sign-flip 依赖 sharp/symmetric sign-exchangeability，不冒充 composite mean-null 的无假设精确检验。
+- 正式训练器新增 sealed-bootstrap hard guard、distributed step-0/trainable-key/data-order identity、精确 training-example/optimizer-step gate 和 atomic checkpoint SHA manifest。
+- 新增 digest-addressed immutable image recipe与 init/rank attestation K8s templates；不挂载 host Conda、site-packages 或 source worktree。
+
+### 实验配置
+
+- 当前只运行 CPU-only syntax/targeted tests；`CUDA_VISIBLE_DEVICES=''`。
+- 未运行 pretrained model forward、GPU/CUDA、Kubernetes、训练、checkpoint accuracy 或 held-out evaluation。
+- 后续采用 two-lock flow：先 commit/push scientific code；再从该 clean SHA 构建 image，冻结 model/data/image/runtime hashes 和 run lock 后才能进入 GPU numerical gate。
+
+### 验证结果
+
+- confirmatory statistics/controller/runner、sealed import、dataset split、FPCT production 和真实 random-config Qwen CPU integration targeted tests 通过；完整 CPU-safe suite 为 `372 passed, 2 warnings`。
+- JSON syntax、Python compile 与 `git diff --check` 通过。
+
+### 结论与下一步
+
+状态为 `SCIENTIFIC CODE LOCK IN REVIEW`，不是 GPU GO。下一步运行完整 CPU-safe suite；通过后提交并推送 scientific-code commit，随后构建不可变镜像并提交 pre-output run lock。

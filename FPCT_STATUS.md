@@ -90,7 +90,7 @@
 | FPCT-3.7-R1 | `SINGLE_PAIR_PILOT_READY` | FPCT-3.5P exact replay | R1 CPU | 已完成 | 12 shards verified；TinyLlama 511/228/2495，Qwen exact identity |
 | FPCT-3.8 | `GO` | certified TinyLlama readiness | R1 CPU | 已完成 | reusable vectorized layout；hot path 无 host-sync API/parent loop |
 | FPCT-3.9 | `GO` | FPCT-3.8 GO | R1 CPU | 已完成 | actual Qwen3 eager/DynamicCache random-config integration；360 full-suite pass |
-| FPCT-4 | `MANIFEST LOCK PENDING` | FPCT-3.9 GO | R2+ | 条件授权 | GPU 尚未启动；先冻结 formal code/image/K8s lock |
+| FPCT-4 | `SCIENTIFIC CODE LOCK IN REVIEW` | FPCT-3.9 GO | R2+ | 条件授权 | confirmatory/statistics/controller/K8s source 已写；镜像与 run lock 尚未冻结，GPU 尚未启动 |
 | FPCT-5 | `BLOCKED / NOT ENTERED` | FPCT-4 GO | R2 | 否 | 未运行 fixed-checkpoint diagnostic |
 | FPCT-6 | `BLOCKED / NOT ENTERED` | FPCT-5 GO | R3 | 否 | 未运行 matched-training smoke |
 | FPCT-7 | `BLOCKED / NOT ENTERED` | FPCT-6 GO | R3 | 否 | 未冻结 confirmatory execution |
@@ -195,6 +195,9 @@
 | FPCT-D043 | 2026-07-20 | FPCT-3.5P=`PROVENANCE_CONFIRMED` | historical 与 sealed replay 的 ordered/multiset atoms、context、802 parents、104 groups、401 clusters 全等 |
 | FPCT-D044 | 2026-07-20 | FPCT-3.7-R1=`SINGLE_PAIR_PILOT_READY`，selected=`tinyllama` | fit+cal groups 511/228/2495；Qwen exact identity 全 split hard K=1；12 shards independent verify |
 | FPCT-D045 | 2026-07-20 | FPCT-3.8/3.9 CPU/HF hardening=`GO` | reusable vectorized packed layout、replicated collapse、dropout identity、actual Qwen3 DynamicCache/GQA/MQA；full 360 pass |
+| FPCT-D046 | 2026-07-20 | 正式 performance 设计锁定为 TinyLlama→Qwen3 单 pair、12 seeds、三臂 64-step matched triplets | `F-C_post` 唯一 headline；36 个 step-64 checkpoint 全部完成前不释放 performance |
+| FPCT-D047 | 2026-07-20 | exact sign-flip 的假设边界按 R1 前瞻修正 | 检验 sharp/symmetric sign-exchangeability；mean estimand 与 +1pp practical gate 独立；固定报告 paired-t 与 exact-sign sensitivities |
+| FPCT-D048 | 2026-07-20 | 正式执行采用两层锁 | 先提交 scientific code/protocol，再以该 commit 构建 digest-addressed image 并提交 run lock；任一 scientific-code 变更使 image/run lock 失效 |
 
 ## 6. 已锁定决定与 deferred items
 
@@ -205,7 +208,7 @@
 3. distinct content-group descriptive audit、ordinary 95% Wilson、sensitivity-only Bonferroni LCB；
 4. 工程 readiness 30/task + 100 pooled 与 label-free ranking。
 
-历史 FPCT-1A-R 中 deferred 的 formal effect/power gate 仍不回填到 structural-support audit。本次 `FPCT-OVERNIGHT` 已另行前瞻锁定 confirmatory seeds `45–56`、64-step matched budget、final-step-64 checkpoint rule、BF16/FP16 numerical tolerances、resource ceilings、futility gate、held-out thresholds 和 stopping/retry rules；这些不能根据后续输出修改。尚待执行前解析并冻结的是 container image digest、实际可用硬件/node inventory、model file hashes 和 synthetic activation-null floor，均必须发生在对应输出之前。
+历史 FPCT-1A-R 中 deferred 的 formal effect/power gate 仍不回填到 structural-support audit。本次 `FPCT-OVERNIGHT-R1` 已另行前瞻锁定 confirmatory seeds `45–56`、64-step matched budget、final-step-64 checkpoint rule、BF16/FP16 numerical tolerances、resource ceilings、futility gate、held-out thresholds、sign-flip assumption boundary 和 stopping/retry rules；这些不能根据后续输出修改。尚待 execution run lock 冻结的是 container image digest、实际 node/imageID、model file hashes 和由 synthetic null 机械生成的 activation floor，均必须发生在对应 pretrained 输出之前。
 
 ## 7. Artifact/path contract
 
@@ -240,9 +243,9 @@ Reference equations、flat/hierarchical、退化、refinement/permutation、mask
 
 Production seam、shared candidate fuser、parent nuisance broadcast、ambiguous-only packed global attention、GQA/MQA、gradient、default/state-dict/config regression 均通过 CPU tests。没有运行 HF/LLM forward，因此该 GO 不构成 real-model activation 或 accuracy 证据。
 
-### 历史 FPCT-4 draft：SUPERSEDED / CURRENT GPU GATE CLOSED
+### FPCT-4：SCIENTIFIC CODE LOCK IN REVIEW / GPU NOT STARTED
 
-旧 CPU-GATE 生成的 non-operative draft 作为历史记录保留。本次 `FPCT-OVERNIGHT` 已前瞻锁定三臂、12 seeds、2×2 intervention、统计、numerical/resource 与 retry/stopping contract；但当前仍须完成 FPCT-3.7–3.9 correctness gates，现阶段不得提交 Kubernetes Job 或启动 GPU。
+旧 CPU-GATE 生成的 non-operative draft作为历史记录保留。当前已编写 single-pair confirmatory preregistration、GPU numerical protocol、K8s protocol、50,000-replicate hierarchical statistics、4096 sign-flip/paired-t/sign-test code、一次性 split firewall controller、matched triplet runner、immutable-image recipe 和 K8s templates。完整 CPU-safe suite 为 `372 passed, 2 warnings`。它们尚未形成 clean/pushed scientific-code commit，也尚未绑定 image digest/run lock，因此没有运行 pretrained model、GPU、K8s、训练或 accuracy。
 
 ### FPCT-3.5：GO
 

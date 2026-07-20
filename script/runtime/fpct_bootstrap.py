@@ -117,6 +117,45 @@ def _git(repo: Path, *args: str, allow_failure: bool = False) -> str | None:
     return result.stdout.strip()
 
 
+def _git_runtime_record(repo: Path) -> dict[str, Any]:
+    """Use real Git locally and an immutable build record inside the image."""
+
+    image_record = repo / ".fpct_image_provenance.json"
+    if image_record.is_file() and not (repo / ".git").exists():
+        payload = json.loads(image_record.read_text(encoding="utf-8"))
+        required = {"head", "branch", "upstream", "tree_sha256"}
+        if not required.issubset(payload):
+            raise BootstrapError("incomplete immutable image provenance")
+        actual_tree = _source_tree_sha(repo, exclude={image_record.name})
+        if actual_tree != payload["tree_sha256"]:
+            raise BootstrapError("immutable image source tree hash mismatch")
+        return {
+            "head": payload["head"], "branch": payload["branch"],
+            "upstream": payload["upstream"], "clean": True, "status": "",
+            "source": "immutable_image_provenance", "tree_sha256": actual_tree,
+        }
+    return {
+        "head": _git(repo, "rev-parse", "HEAD"),
+        "branch": _git(repo, "branch", "--show-current"),
+        "upstream": _git(repo, "rev-parse", "@{upstream}", allow_failure=True),
+        "clean": not bool(_git(repo, "status", "--short")),
+        "status": _git(repo, "status", "--short"),
+        "source": "git",
+    }
+
+
+def _source_tree_sha(repo: Path, *, exclude: set[str] | None = None) -> str:
+    exclude = exclude or set()
+    digest = hashlib.sha256()
+    for path in sorted(item for item in repo.rglob("*") if item.is_file()):
+        relative = path.relative_to(repo).as_posix()
+        if relative in exclude or relative.startswith(("local/", ".git/", "__pycache__/")) or "/__pycache__/" in relative:
+            continue
+        digest.update(relative.encode("utf-8") + b"\0")
+        digest.update(sha256_file(path).encode("ascii") + b"\n")
+    return digest.hexdigest()
+
+
 def _audit_hook(event: str, args: tuple[Any, ...]) -> None:
     if event != "open" or not args:
         return
@@ -369,10 +408,10 @@ def _attest(repo: Path, target: Path, include_gpu: bool) -> dict[str, Any]:
     }
     method_contract = _method_contract()
     loaded_rosetta = _loaded_rosetta_modules(repo)
-    git_head = _git(repo, "rev-parse", "HEAD")
-    git_branch = _git(repo, "branch", "--show-current")
-    git_upstream = _git(repo, "rev-parse", "@{upstream}", allow_failure=True)
-    git_status = _git(repo, "status", "--short")
+    git_record = _git_runtime_record(repo)
+    git_head = git_record["head"]
+    git_branch = git_record["branch"]
+    git_upstream = git_record["upstream"]
     full = {
         "schema_version": 1,
         "repo_root": str(repo),
@@ -403,13 +442,7 @@ def _attest(repo: Path, target: Path, include_gpu: bool) -> dict[str, Any]:
                 for item in sys.meta_path
             ],
         },
-        "git": {
-            "head": git_head,
-            "branch": git_branch,
-            "upstream": git_upstream,
-            "clean": not bool(git_status),
-            "status": git_status,
-        },
+        "git": git_record,
         "mandatory_modules": mandatory_records,
         "loaded_rosetta_modules": loaded_rosetta,
         "method_contract": method_contract,
@@ -428,6 +461,8 @@ def _attest(repo: Path, target: Path, include_gpu: bool) -> dict[str, Any]:
             "branch": git_branch,
             "upstream": git_upstream,
             "clean": full["git"]["clean"],
+            "source": full["git"].get("source", "git"),
+            "tree_sha256": full["git"].get("tree_sha256"),
         },
         "mandatory_modules": mandatory_records,
         "method_contract": method_contract,
@@ -596,7 +631,8 @@ def main(argv: Iterable[str] | None = None) -> int:
     post["protected_data_opens_after_target"] = list(_PROTECTED_OPENS)
     post["target_exit_code"] = exit_code
     if args.attestation_out:
-        output_path = _real_absolute_parent(args.attestation_out)
+        rank = os.environ.get("RANK", os.environ.get("LOCAL_RANK", "0"))
+        output_path = _real_absolute_parent(args.attestation_out.replace("{rank}", rank))
         _write_json(output_path, post)
     print(
         json.dumps(

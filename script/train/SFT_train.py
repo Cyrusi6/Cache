@@ -75,6 +75,37 @@ def set_seed(seed: int = 42):
         torch.distributed.barrier()
 
 
+def _fpct_tensor_state_sha(model: nn.Module) -> Tuple[str, str]:
+    """Hash trainable keys and exact tensor bytes for matched-run integrity."""
+    base = model.module if isinstance(model, DistributedDataParallel) else model
+    named = [(name, param.detach()) for name, param in base.named_parameters() if param.requires_grad]
+    key_bytes = json.dumps([name for name, _ in named], separators=(",", ":")).encode("utf-8")
+    state = hashlib.sha256()
+    for name, tensor in named:
+        state.update(name.encode("utf-8") + b"\0")
+        state.update(str(tensor.dtype).encode("ascii") + b"\0")
+        state.update(json.dumps(list(tensor.shape)).encode("ascii") + b"\0")
+        state.update(tensor.contiguous().cpu().view(torch.uint8).numpy().tobytes())
+    return hashlib.sha256(key_bytes).hexdigest(), state.hexdigest()
+
+
+def _fpct_tree_sha(path: Path) -> str:
+    digest = hashlib.sha256()
+    for item in sorted(candidate for candidate in path.rglob("*") if candidate.is_file()):
+        digest.update(item.relative_to(path).as_posix().encode("utf-8") + b"\0")
+        with item.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _fpct_atomic_json(path: Path, payload: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
 def enable_full_determinism():
     """Enable stricter determinism settings for reproducibility."""
     # Must be set before CUDA context creation for cuBLAS determinism
@@ -1697,6 +1728,13 @@ def main():
     training_config = cfg["training"]
     output_config = cfg["output"]
     data_config = cfg["data"]
+    formal_run = bool(training_config.get("fpct_formal_run", False))
+    if formal_run:
+        try:
+            from fpct_bootstrap import require_active
+            require_active(target=Path(__file__))
+        except Exception as exc:
+            raise RuntimeError("formal FPCT training requires the sealed bootstrap") from exc
 
     # Set seed for reproducibility and enable stricter determinism
     set_seed(seed=training_config["seed"])
@@ -1888,6 +1926,22 @@ def main():
             find_unused_parameters=True,
         )
 
+    fpct_integrity: Dict[str, Any] = {}
+    if formal_run:
+        trainable_keys_sha, step0_sha = _fpct_tensor_state_sha(model)
+        gathered_step0 = [None for _ in range(world_size)] if distributed else [step0_sha]
+        gathered_keys = [None for _ in range(world_size)] if distributed else [trainable_keys_sha]
+        if distributed:
+            dist.all_gather_object(gathered_step0, step0_sha)
+            dist.all_gather_object(gathered_keys, trainable_keys_sha)
+        if len(set(gathered_step0)) != 1 or len(set(gathered_keys)) != 1:
+            raise RuntimeError("formal FPCT distributed step-0 tensors differ across ranks")
+        fpct_integrity.update({
+            "step0_trainable_sha256": step0_sha,
+            "trainable_keys_sha256": trainable_keys_sha,
+            "trainable_rank_hashes": gathered_step0,
+        })
+
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Total parameters: {total_params:,}")
@@ -1979,6 +2033,27 @@ def main():
     else:
         train_sampler = None
         eval_sampler = None
+
+    if formal_run:
+        if distributed:
+            local_order = list(iter(train_sampler))
+            rank_orders = [None for _ in range(world_size)]
+            dist.all_gather_object(rank_orders, local_order)
+        else:
+            rank_orders = [list(range(len(train_dataset)))]
+        order_payload = {
+            "seed": int(training_config["seed"]),
+            "world_size": world_size,
+            "train_indices": list(train_dataset.indices),
+            "rank_orders": rank_orders,
+        }
+        fpct_integrity["data_order_sha256"] = hashlib.sha256(
+            json.dumps(order_payload, separators=(",", ":"), sort_keys=True).encode("utf-8")
+        ).hexdigest()
+        fpct_integrity["training_examples"] = len(train_dataset)
+        expected_examples = int(training_config.get("fpct_expected_training_examples", 2048))
+        if len(train_dataset) != expected_examples:
+            raise RuntimeError(f"formal FPCT training requires {expected_examples} examples, got {len(train_dataset)}")
 
     # Create collator based on training mode
     if training_mode == "baseline":
@@ -2076,6 +2151,8 @@ def main():
 
     updates_per_epoch = math.ceil(len(train_loader) / grad_accum_steps)
     total_steps = updates_per_epoch * training_config["num_epochs"]
+    if formal_run and total_steps != int(training_config.get("expected_optimizer_steps", 64)):
+        raise RuntimeError(f"formal FPCT optimizer-step mismatch: {total_steps}")
 
     # ------------------------------------------------------------------
     # Optimiser & scheduler
@@ -2463,6 +2540,24 @@ def main():
             base_model_ref.save_projector_config(
                 os.path.join(final_dir, "projector_config.json")
             )
+
+        if formal_run:
+            expected_steps = int(training_config.get("expected_optimizer_steps", 64))
+            if global_step != expected_steps:
+                raise RuntimeError(f"formal FPCT run ended at step {global_step}, expected {expected_steps}")
+            official = Path(timestamped_output_dir) / f"checkpoint-{expected_steps}"
+            if not official.is_dir():
+                raise RuntimeError(f"formal FPCT official checkpoint missing: {official}")
+            fpct_integrity.update({
+                "schema_version": 1,
+                "operator": model_config.get("fpct_operator"),
+                "seed": int(training_config["seed"]),
+                "optimizer_steps": global_step,
+                "official_checkpoint": str(official.resolve()),
+                "official_checkpoint_sha256": _fpct_tree_sha(official),
+                "final_artifact_sha256": _fpct_tree_sha(Path(final_dir)),
+            })
+            _fpct_atomic_json(Path(timestamped_output_dir) / "fpct_formal_integrity.json", fpct_integrity)
 
     if is_main_process:
         print("Training completed!")
