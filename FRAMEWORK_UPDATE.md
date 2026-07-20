@@ -1051,13 +1051,13 @@ R2 当前只到 CPU/HF engineering readiness。没有运行新 pretrained model 
 - Image：`docker.io/library/fpct-gpu-r2:9f2ffcd9@sha256:d04455bf67177792548c3add74214f23ce097a004131481624886631725817ef`。
 - Image source tree：`b3278fc7e950221177c7d575a4ecc4269cf0473dfa4b3b46147962a2182b65fe`；tar SHA `9167434a...`。
 - Run UID/root：`fpct-r2-9f2ffcd9-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2-9f2ffcd9-v1`。
-- Run-lock SHA256：`b9d371ccc4e1fac18d60b1f674e3dbe3cb930bd0f99179d7ec6beb0ebb2564c2`。
+- Operative run-lock SHA256：`b7a279d7a85f2ce3a1bbec59a87745426fb9b3c2b1d7cfddb74a42a12ffefb12`。首次 `b9d371cc...` lock 在任何 execution 前补入独立 image-loader template SHA 后 superseded。
 - 2048 sidecar复制到新 root 后保持 SHA `48caee80...`；旧 terminal result/job/state均未复制或复用。
 
 ### 验证
 
 - Image内 Python/Torch/CUDA/Transformers/datasets/accelerate/SciPy 版本与锁一致；embedded head/branch/upstream精确匹配scientific SHA。
-- Normative docs、execution files、四个 K8s templates、image tar、sidecar、resource geometry全部独立 re-hash通过。
+- Normative docs、execution files、image-loader与四个执行 K8s templates、image tar、sidecar、resource geometry全部独立 re-hash通过。
 - Certified expansion mean/p95三任务均满足 1.35/1.50硬门。
 - Lock前无新 pretrained output、GPU/K8s、training、checkpoint或accuracy。
 

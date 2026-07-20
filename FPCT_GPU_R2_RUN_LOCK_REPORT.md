@@ -8,7 +8,7 @@ Status: `PRE_OUTPUT_LOCKED_R2`
 - Image: `docker.io/library/fpct-gpu-r2:9f2ffcd9@sha256:d04455bf67177792548c3add74214f23ce097a004131481624886631725817ef`.
 - Image source-tree SHA256: `b3278fc7e950221177c7d575a4ecc4269cf0473dfa4b3b46147962a2182b65fe`.
 - Image tar SHA256: `9167434a3bfa1fb4a078a20cf49ee72945d20b8228da4d3953ecea20c8558e93` (`3,520,229,376` bytes).
-- Run-lock SHA256: `b9d371ccc4e1fac18d60b1f674e3dbe3cb930bd0f99179d7ec6beb0ebb2564c2`.
+- Run-lock SHA256: `b7a279d7a85f2ce3a1bbec59a87745426fb9b3c2b1d7cfddb74a42a12ffefb12`.
 - Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2-9f2ffcd9-v1`.
 - Node pool: `4090-48gx2`; formal seed parallelism is one dual-GPU pod.
 
@@ -22,7 +22,8 @@ byte-identical at SHA256
 No result, Job, checkpoint or mutable execution state is reused from the old
 terminal run root.
 
-All normative documents, execution files, K8s templates, image tar, sidecar
+All normative documents, execution files, the image-loader plus four execution
+K8s templates, image tar, sidecar
 and certified resource geometry were independently re-hashed against the lock.
 The certified expansion gates remain below mean 1.35 and p95 1.50 for all
 three tasks.

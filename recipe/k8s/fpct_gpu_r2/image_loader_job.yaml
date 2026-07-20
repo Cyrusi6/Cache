@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: __JOB_NAME__
+  namespace: c2c-research
+  labels: &labels {project: fpct, study: confirmatory-r2, git_sha: __GIT_SHA_SHORT__, seed: diagnostic, arm: image-loader, run_uid: __RUN_UID__}
+spec:
+  backoffLimit: 0
+  template:
+    metadata: {labels: *labels}
+    spec:
+      nodeName: __NODE_NAME__
+      restartPolicy: Never
+      containers:
+      - name: loader
+        image: busybox:1.36.1
+        securityContext: {privileged: true}
+        command: ["sh", "-c", "/host/k3s ctr --address /run/k3s/containerd/containerd.sock --namespace k8s.io images import /fpct-run/assets/fpct-gpu-r2-9f2ffcd9.tar && /host/k3s ctr --address /run/k3s/containerd/containerd.sock --namespace k8s.io images tag docker.io/library/fpct-gpu-r2:9f2ffcd9 __IMAGE_DIGEST__"]
+        volumeMounts:
+        - {name: k3s, mountPath: /host/k3s, readOnly: true}
+        - {name: containerd, mountPath: /run/k3s/containerd}
+        - {name: fpct-run, mountPath: /fpct-run, readOnly: true}
+      volumes:
+      - name: k3s
+        hostPath: {path: /usr/local/bin/k3s, type: File}
+      - name: containerd
+        hostPath: {path: /run/k3s/containerd, type: Directory}
+      - name: fpct-run
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/__RUN_UID__, type: Directory}

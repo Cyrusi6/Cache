@@ -61,6 +61,7 @@
     "fpct_attention": "ecc87bdb8fc8f27769c7367266ded1f230ef58c2ff7bd7ef02b34e4c21330548",
     "wrapper": "def31aab55012bbade1e654eaebce05ba2f8968ca0e03408f0019f0783e1f7eb",
     "dataset_adapters": "125c22bd09b2eec0f021f75496ff2a74ef1f795d9b8c0336b70342e6eba08dc0",
+    "image_loader_job": "255119aa0de77f9ffcaba86af57d853bbc6b9682026ffb7f83776aa1af6588b0",
     "gpu_gate_job": "3c79997b1c1404d0de0e4a386c0dc55bb04eaa59a8db0d8d47361580fc68ae11",
     "pretrained_matrix_job": "494138342acc4c080a52182ce548809ae664e6f96778a58640df799dac13de2f",
     "matched_smoke_job": "61e03d677d625a561ee7dbdc7f209ffede648704da7ad3cbc492e24a73f148e4",
