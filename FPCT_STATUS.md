@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2 `PRE_OUTPUT_LOCKED_R2`
-> 当前判定：旧 execution 永久 terminal；R2 scientific SHA/image/run-lock 已独立冻结，尚无新 pretrained output
-> 下一阶段：导入新 image，运行 complete synthetic numerical + runtime provenance gate；GO 前不得运行自然 pretrained matrix
+> 当前阶段：FPCT-GPU-R2-v2 prospective code repair
+> 当前判定：R2 v1 complete GPU numerical gate=`GO`，但 pretrained matrix 在首个 model forward 前 terminal `GPU_ENGINEERING_BLOCKED_R2`
+> 下一阶段：修复 0-D state hash，重新测试并建立全新 scientific SHA/image/run-lock/run UID；禁止 resume v1
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -218,6 +218,8 @@
 | FPCT-D063 | 2026-07-20 | 旧 run/image/artifacts 不参与 R2 resume | 新 R2 controller、K8s templates、image digest、run UID 与 artifact root 全部独立；任何 scientific-code 变更使新 lock 失效 |
 | FPCT-D064 | 2026-07-20 | R2 two-lock 完成 | scientific SHA `9f2ffcd9...`；image digest `sha256:d04455bf...`；run UID `fpct-r2-9f2ffcd9-v1`；operative run-lock SHA `c4b0ca20...`；尚无新 pretrained output |
 | FPCT-D065 | 2026-07-20 | 首个 R2 gate Pod 在 container start 前因 digest alias 缺失 pending | 删除本 run UID pending Job；loader前瞻增加 `repository@digest` alias；无 container/pretrained/scientific output，不计 scientific retry |
+| FPCT-D066 | 2026-07-20 | R2 v1 numerical=`GO`，pretrained matrix 在第一个 forward 前 terminal | scalar gate state hash 对 0-D tensor byte-view失败；panel/tokenizer/weights已加载但0 forward/0 accuracy/0 condition artifact；v1不得resume |
+| FPCT-D067 | 2026-07-20 | R2 v2 仅修复 scalar byte hashing | `reshape(-1).view(uint8)` 保留同一 hash contract并支持0-D gate；targeted 25 pass，full 402 pass；需全新 image/run-lock/run UID |
 
 ## 6. 已锁定决定与 deferred items
 

@@ -39,3 +39,14 @@ while the initial loader had created only a `tag@digest` alias. The pending Job
 was deleted before container start. The loader and lock were prospectively
 amended to create both aliases; this is an infrastructure-only pre-output
 amendment, not a scientific retry.
+
+## Terminal v1 execution outcome
+
+The amended image alias allowed the complete GPU numerical sequence to run and
+pass. The first natural label-free condition then failed before its first model
+forward while hashing fresh projector state: a scalar gate tensor was passed to
+`view(torch.uint8)`. The v1 controller is terminal
+`GPU_ENGINEERING_BLOCKED_R2`; its run root will not be patched or resumed.
+Tokenizers, weights and the frozen label-free panel had been loaded, but there
+were zero condition output files, zero model forwards, zero accuracy reads,
+zero training and zero checkpoints.

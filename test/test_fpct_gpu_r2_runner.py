@@ -87,3 +87,8 @@ def test_compact_trace_identity_and_first_divergence() -> None:
     report = runner._layer_delta_report(rows(0.0), rows(0.1), tolerance=0.05)
     assert report["first_above_tolerance"]["residual_last"]["layer"] == 1
     assert report["max_abs"]["post_o_proj_last"] == pytest.approx(0.1)
+
+
+def test_tensor_sha256_accepts_scalar_gate_tensors() -> None:
+    scalar = runner.torch.tensor(0.0)
+    assert runner.tensor_sha256(scalar) == runner.tensor_sha256(scalar.clone())

@@ -364,3 +364,6 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 新 two-lock：scientific SHA `9f2ffcd9ff21e4575f8fe870167eb04a7c86edb5`；image digest `sha256:d04455bf67177792548c3add74214f23ce097a004131481624886631725817ef`；operative run-lock SHA `c4b0ca20bea54f2dbbb9eaabf5bdbb0dc5b74835a3284e5d846b46f1e6a2a331`；run root `fpct-r2-9f2ffcd9-v1`。
 - 第一次 gate Pod 仅在 image resolve 阶段 `ImagePullBackOff`，容器未启动、无 output；pending Job删除后，loader增加 `repository@digest` alias并重新冻结lock。
 - Lock时仍没有新 pretrained output、GPU/K8s、训练、checkpoint 或 accuracy；下一步仅为 image import + complete synthetic gate。
+- R2 v1 complete numerical gate=`GO`；artifact SHA：sequence `9cf75832...`、numerical `588c5c42...`、floors `f0d01226...`、runtime `69101e4d...`。
+- 首个 FP32 C_post condition在第一 model forward前因scalar state hash失败；已加载label-free panel/tokenizer/weights，但0 forward/0 accuracy/0 training/checkpoint。v1 controller terminal，不resume。
+- v2 prospective repair仅修正0-D tensor hashing并新增回归；targeted `25 passed`、full `402 passed, 2 warnings`。新 run必须从image/GPU gate重启。

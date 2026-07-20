@@ -1066,3 +1066,12 @@ R2 当前只到 CPU/HF engineering readiness。没有运行新 pretrained model 
 只允许先导入该 digest image并运行 complete synthetic GPU numerical sequence。只有该 gate GO 后才允许新 label-free pretrained matrix。
 
 运行前基础设施更正：首次 gate Pod 因 loader 只创建 `tag@digest`、kubelet实际解析 `repository@digest` 而 `ImagePullBackOff`；容器从未启动。删除本 run UID pending Job后，loader与lock前瞻增加第二 digest alias。该事件没有 scientific output，不构成 tolerance/threshold/code retry。
+
+### R2 v1 terminal result
+
+- Complete GPU numerical sequence=`GO`：runtime sender/receiver eager；fresh 28层 gates精确0；完整 FP32/FP16/BF16 forward/gradient/invalid/m≤1/replicated通过；actual 28-layer Qwen FP32 replicated max abs `1.192e-7`，BF16/bypass为0；P1 profiler成功捕获item/D2H/sync。
+- Metric-specific floors已在 pretrained output前生成并冻结；旧单一floor未复用。
+- 首个自然 condition在 model forward前、projector state hash阶段因0-D gate tensor byte-view失败。label-free panel、tokenizer和weights已加载，但0 forward、0 condition output、0 accuracy、0 training/checkpoint。
+- Controller终止为 `GPU_ENGINEERING_BLOCKED_R2`；v1 run root不patch/resume。修复必须新 scientific SHA/image/run-lock/run UID。
+
+R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`view(uint8)`改为`reshape(-1).view(uint8)`，不改变operator、prior、threshold、panel、training或evaluation规则。新增0-D gate regression；targeted `25 passed`，CPU-safe full suite `402 passed, 2 warnings`。该修复必须形成全新 image/run-lock/run UID并从GPU gate重启。

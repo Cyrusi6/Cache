@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v1_failure",
+  "status": "GPU_ENGINEERING_BLOCKED_R2",
+  "run_uid": "fpct-r2-9f2ffcd9-v1",
+  "scientific_code_commit": "9f2ffcd9ff21e4575f8fe870167eb04a7c86edb5",
+  "image_digest": "sha256:d04455bf67177792548c3add74214f23ce097a004131481624886631725817ef",
+  "operative_run_lock_sha256": "c4b0ca20bea54f2dbbb9eaabf5bdbb0dc5b74835a3284e5d846b46f1e6a2a331",
+  "gpu_numerical": {
+    "status": "GO",
+    "sequence_sha256": "9cf758325a8722a7453e4831fa7118a50866e4e8a882a46f9d80db888271cc81",
+    "numerical_sha256": "588c5c429b173a42de6d5f84a1a75ea39509a91390ac9d5a85a79ab50bd89a9b",
+    "metric_floors_sha256": "f0d012263516f4f8d76c846b2d169b13cd3f269343ecd45b426ed93c2e8c40b4",
+    "runtime_provenance_sha256": "69101e4d1a9c0e6ea4bd4ba0ef3d550231de8c7d851ad2cad99cfc2973e1e363"
+  },
+  "pretrained_matrix": {
+    "job": "fpct-r2-pretrained-9f2ffcd9",
+    "pod_exit_code": 1,
+    "failed_condition": "OP01_CPOST_NATIVE",
+    "failed_dtype": "fp32",
+    "failure_point": "projector_state_sha256_before_first_model_forward",
+    "exception": "RuntimeError: self.dim() cannot be 0 to view Float as Byte (different element sizes)",
+    "root_cause": "tensor_sha256 used scalar.view(torch.uint8) for 0-D gate logits",
+    "condition_output_file_count": 0,
+    "resume_or_patch": false
+  },
+  "firewall": {
+    "frozen_label_free_panel_loaded": true,
+    "tokenizers_loaded": true,
+    "model_weights_loaded": true,
+    "model_forward_executed": false,
+    "accuracy_or_correctness_accessed": false,
+    "training_started": false,
+    "checkpoint_created": false
+  },
+  "evidence": {
+    "controller_state": {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2-9f2ffcd9-v1/state/operative/controller_state.json",
+      "sha256": "a0ae12a69fc6a5b4e96c75a9f3e9a62404fa37661b64785d0de5b5cf9aa223b4",
+      "bytes": 773
+    },
+    "event_ledger": {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2-9f2ffcd9-v1/state/operative/event_ledger.jsonl",
+      "sha256": "e9942426022e96ff74ea17050396b1b3e526439b8db98113c5eb84f3dac1c74d",
+      "bytes": 229
+    },
+    "submitted_job": {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2-9f2ffcd9-v1/jobs/pretrained_matrix_job.yaml",
+      "sha256": "d442c40298866b32956ff162fc500a502a5dcafb8f97e922c2030574e172ee35",
+      "bytes": 2449
+    },
+    "runtime_attestation": {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2-9f2ffcd9-v1/attestations/pretrained_matrix.json",
+      "sha256": "183410bed2e642a5e20d82cf80fe99f0acc0850f565fe2103f75e030912e0685",
+      "bytes": 43041
+    }
+  },
+  "claim_boundary": "The v1 R2 GPU numerical gate passed, but the natural label-free operator matrix never reached model forward. No pretrained activation, performance, or mechanism claim is identified."
+}
