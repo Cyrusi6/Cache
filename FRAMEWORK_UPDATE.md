@@ -1192,3 +1192,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Scientific SHA `509a68af59e0565fc8869fc9e4a0b273b4938596`；image digest `sha256:e7061bb8ec96f9f9a8b37d8da5bc7f682ce967dd35fadeb036e9d61c32c546a0`；run-lock SHA `4ba3cb77eb012dd435804ca87f9326b642bef41ac50e514fb1d2aaaf99b94492`。
 - Run UID/root为`fpct-r2g-509a68a-v1`；source-tree `c1ae3c49...`；tar SHA `0df3fd5a...`；certified sidecar保持`48caee80...`。
 - 新run不patch/resume R2f，阈值、panel、model/data和downstream recipe不变。Lock前无R2g GPU/pretrained/training/checkpoint/accuracy output。
+
+### R2g-v1 attestation infrastructure failure and v2 lock
+
+- V1 target已完成synthetic计算并写出非operative `GO` JSON，但sealed bootstrap因新root缺少`attestations/`父目录而退出1；Job failed且没有GPU attestation。
+- V1 controller terminal，不补目录、不resume、不复用其numerical/runtime/floor artifacts；failure manifest SHA `e14a6c5f...`。未进入pretrained/training/checkpoint/accuracy。
+- V2保持scientific SHA `509a68a...`、image `sha256:e7061bb8...`与全部threshold不变；run UID `fpct-r2g-509a68a-v2`，run-lock SHA `8f59e0b124b0d008083e358ed482650c8cfe4b1c0a8b874a91e1e7f3b0619e46`。
+- V2全新root在提交前预建attestations/jobs及各results父目录，必须从complete GPU gate重跑。

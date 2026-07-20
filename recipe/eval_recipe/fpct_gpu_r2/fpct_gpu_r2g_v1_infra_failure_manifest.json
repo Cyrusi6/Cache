@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v7_infrastructure_failure",
+  "status": "INFRASTRUCTURE_INCOMPLETE",
+  "run_uid": "fpct-r2g-509a68a-v1",
+  "scientific_code_commit": "509a68af59e0565fc8869fc9e4a0b273b4938596",
+  "image_digest": "sha256:e7061bb8ec96f9f9a8b37d8da5bc7f682ce967dd35fadeb036e9d61c32c546a0",
+  "run_lock_sha256": "4ba3cb77eb012dd435804ca87f9326b642bef41ac50e514fb1d2aaaf99b94492",
+  "job": {
+    "name": "fpct-r2g-gpu-509a68a",
+    "kubernetes_status": "FAILED",
+    "reason": "sealed attestation parent directory did not exist",
+    "target_exit_code": 0,
+    "bootstrap_exit_code": 1
+  },
+  "scientific_artifacts": {
+    "gpu_gate_sequence_status": "GO_BUT_NON_OPERATIVE",
+    "gpu_gate_sequence_sha256": "5e960c0d5771f88cbc59e70604ba14698bf9c3aed8f32966e9304d102e87c7fe",
+    "gpu_numerical_sha256": "6d72be19dfff443bdfddf16d61ef4610d22544994f8b85243183515ec8a24cad",
+    "metric_null_floors_sha256": "45f285b6dba41c599e141f3ce5a62e0890804bf702f779a05758d56d0d5fd440",
+    "runtime_provenance_sha256": "308f7bda2d7688201c2e0a001519d8dae13073eff6a566f998dd8935a23b098e",
+    "sealed_attestation_present": false,
+    "reuse_in_replacement": false
+  },
+  "controller": {
+    "terminal_classification": "GPU_ENGINEERING_BLOCKED_R2",
+    "controller_state_sha256": "a6edc25dc7b104e6b1c972069901a9992695e23df45d418fa0bb5177feea51eb",
+    "controller_state_bytes": 780,
+    "event_ledger_sha256": "81afb8820c68a57366b47ce7c1406a779f7d360263b3c205a5a919c5169f0215",
+    "event_ledger_bytes": 144,
+    "resume_or_patch": false
+  },
+  "firewall": {
+    "pretrained_matrix_started": false,
+    "matched_smoke_started": false,
+    "formal_training_started": false,
+    "checkpoint_created": false,
+    "accuracy_or_correctness_accessed": false
+  },
+  "replacement_rule": "Use the same frozen scientific SHA, image and thresholds only in a new run UID/root/run-lock with all attestation and result parent directories created before Job submission; repeat the complete GPU gate and do not copy any v1 result artifact."
+}

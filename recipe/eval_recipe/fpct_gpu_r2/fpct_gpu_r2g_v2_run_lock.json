@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v7_infra2",
+  "status": "PRE_OUTPUT_LOCKED_R2",
+  "run_uid": "fpct-r2g-509a68a-v2",
+  "scientific_code_commit": "509a68af59e0565fc8869fc9e4a0b273b4938596",
+  "scientific_code_branch": "research/fpct-factorized-transport",
+  "scientific_code_upstream": "509a68af59e0565fc8869fc9e4a0b273b4938596",
+  "manifest_sha256": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4",
+  "superseded_infrastructure_attempt": {
+    "run_uid": "fpct-r2g-509a68a-v1",
+    "run_lock_sha256": "4ba3cb77eb012dd435804ca87f9326b642bef41ac50e514fb1d2aaaf99b94492",
+    "infrastructure_failure_manifest_sha256": "e14a6c5f879d513637868a7366328736a20b36b88f7a87ce748afbfa07e1011b",
+    "failure": "sealed attestation parent directory missing after target completed",
+    "scientific_artifacts_reused": false,
+    "pretrained_started": false,
+    "accuracy_accessed": false,
+    "patch_or_resume": false
+  },
+  "normative": {
+    "r2g_parent_first_addendum": "e527f82d5734e79818c2b67a276c52dc3b223b884fc72665ad20f6dc21446b21",
+    "r2g_parent_first_manifest": "48dcf1b3dadbb89d2dd7be0f8b81d85d4860ff69d18fd3558cca3db830689638",
+    "r2g_v1_infrastructure_failure_manifest": "e14a6c5f879d513637868a7366328736a20b36b88f7a87ce748afbfa07e1011b",
+    "r2_root_cause_protocol": "5b36318548af7c3a6a0d181ca72479754451fa3031138dd9dff8653eb61abba5",
+    "r2_numerical_protocol": "18621315928ccf2246bb879e602055534329da957fd445764a866d42e0a33b74",
+    "r2_profiling_protocol": "f9d126a82ee6d92f95a820ea67e0c423a81b609cbae9f4bc7b0cd966650adb5b",
+    "metric_null_floor_spec": "3206b7cda8d478575fedc471fd322cd224e72e569d192220f732a8ef7e3204eb",
+    "diagnostic_panel_manifest": "bed52891c5a82c05adf47fc463e684982d94447c31a6d43e2ae5af2ec1df15f7",
+    "confirmatory_manifest": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4",
+    "content_group_split_manifest": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050"
+  },
+  "image": {
+    "reference": "docker.io/library/fpct-gpu-r2g:509a68a@sha256:e7061bb8ec96f9f9a8b37d8da5bc7f682ce967dd35fadeb036e9d61c32c546a0",
+    "manifest_list_sha256": "e7061bb8ec96f9f9a8b37d8da5bc7f682ce967dd35fadeb036e9d61c32c546a0",
+    "config_sha256": "3c1bd8e66718d7cfc7f1f59076893d99b7816b446edbff4214122686ae427868",
+    "source_tree_sha256": "c1ae3c490e64d33d50c410ba3e901a05a6d9bf453f9b15c4e01f0452db920a48",
+    "architecture": "amd64",
+    "distribution": "run_uid_scoped_containerd_import",
+    "distribution_tar": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2g-509a68a-v2/assets/fpct-gpu-r2g-509a68a.tar",
+    "distribution_tar_sha256": "0df3fd5a1554ed21068af70844d1ad3198681c8bf96fb6f15fc96a2e8791296a",
+    "distribution_tar_bytes": 3520309760,
+    "image_size_bytes": 3520289503
+  },
+  "runtime": {
+    "python": "3.11.11",
+    "torch": "2.6.0+cu124",
+    "cuda": "12.4",
+    "transformers": "4.52.4",
+    "datasets": "4.0.0",
+    "accelerate": "1.9.0",
+    "scipy": "1.15.3",
+    "attention_backend": "eager",
+    "prior_dtype": "float32"
+  },
+  "execution_files": {
+    "r2_runner": "501bd64648227337e9167af5b4fa343cd19671f92714090992c500b7d8d9c495",
+    "r2_controller": "9debef83c4dbc87991b270aaf1554a59fcabd6f4f8b744f24bef75f401d3e7fd",
+    "r2_k8s_renderer": "2cb2d8008b8c6dbd0df388fcc2b055c4ef78da222deb80bec1538787aceabb94",
+    "confirmatory_runner": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75",
+    "trainer": "544f8471f2200435cbfd509b5e4e7441d5053324e6eaa2f1c5e72bd9af6c41fd",
+    "fpct_attention": "3813c0cec4520ec69401518d48648a045d132678fbecad7c995318f79307a45e",
+    "projector": "c5e0cb7836d0a30659cec240169a1e2a58df58a65b71534ad9b83ec33480b7be",
+    "wrapper": "739f014d7746848951d9ea5d495f2372dd05817cf240bf5a4b126e1cc405347a",
+    "dataset_adapters": "125c22bd09b2eec0f021f75496ff2a74ef1f795d9b8c0336b70342e6eba08dc0",
+    "production_test": "47d9072b5b9c0c5d5db70681a78479a06f9e839153d5f75fb78601ee1a73db66",
+    "qwen_cpu_integration_test": "9ad635854cc00d5079a2c5f724508be4d50c7a6d71e093ab12b2cea21a31ff21",
+    "r2_runner_test": "d6ba85413246ed48d7e3a157fb6e268e23c55ce6f8a0c994fd5cf8ee040608b9",
+    "image_loader_job": "cc216e898a04ce16f88423d759d52a786f0bd45c5ef7d2d7ef9ae00ca3ec1d69",
+    "gpu_gate_job": "a71f7c44c871a1bbd37d127ccd72640cd499a3444f173178a5c5050bb255be08",
+    "pretrained_matrix_job": "b80f8e999d73ca7293792f7c25bb948cb6841402b22ba5cc31a64cd4131dc4b0",
+    "matched_smoke_job": "f8fbf5c415b2cc0477cc66ca403c646db3000b8c5615f7fbdd19d9548f2e9172",
+    "seed_triplet_job": "351b24bfb55fa5fdcbfde17540ae44a9e0b6424027aa243006d6ed0e0dbe8e59"
+  },
+  "assets": {
+    "training_alignment_sidecar_2048": {
+      "host_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2g-509a68a-v2/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "container_path": "/fpct-run/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990",
+      "bytes": 41023706,
+      "examples": 2048
+    },
+    "receiver": {
+      "id": "Qwen/Qwen3-0.6B",
+      "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "root": "/models/c2c/Qwen3-0.6B",
+      "model_sha256": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b",
+      "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+      "tokenizer_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+    },
+    "sender": {
+      "id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "root": "/models/c2c/TinyLlama-1.1B-Chat-v1.0",
+      "model_sha256": "6e6001da2106d4757498752a021df6c2bdc332c650aae4bae6b0c004dcf14933",
+      "config_sha256": "486bedda3a6988332e60d9638a09ca4b260d34ebcf1b19e22cf3b140b63d8fe9",
+      "tokenizer_sha256": "bcd04f0eadf90287bd26e1a183ac487d8a141b09b06aecb7725bbdd343640f2e"
+    }
+  },
+  "resource_geometry": {
+    "tinyllama_all_splits": {
+      "source_sha256": "6d5f6221be15db5af030f9c1d7702b6d1e814bfe4e423e065353f3167c914284",
+      "tasks": {
+        "ai2-arc": {"mean": 1.2374040678425364, "p95": 1.2973320158102766, "max": 1.4024390243902438},
+        "openbookqa": {"mean": 1.2390702194565386, "p95": 1.2818298368298369, "max": 1.3142857142857143},
+        "mmlu-redux": {"mean": 1.2259415516723047, "p95": 1.3, "max": 1.4183673469387754}
+      }
+    }
+  },
+  "storage": {
+    "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2g-509a68a-v2",
+    "container_run_root": "/fpct-run",
+    "model_host_root": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+    "source_worktree_mount": false,
+    "host_conda_mount": false,
+    "host_site_packages_mount": false,
+    "precreated_directories": [
+      "attestations",
+      "jobs",
+      "results/gpu_gate",
+      "results/pretrained_matrix",
+      "results/matched_smoke",
+      "results/formal_training"
+    ]
+  },
+  "kubernetes": {
+    "namespace": "c2c-research",
+    "config_map": "fpct-r2g-v2-lock-509a68a",
+    "node_name": "4090-48gx2",
+    "maximum_parallel_seed_pods": 1,
+    "gpu_per_seed_pod": 2,
+    "retry": {"whole_triplet_infrastructure_only": 1, "selective_arm_retry": false}
+  },
+  "firewall": {
+    "new_pretrained_output_before_this_lock": false,
+    "v1_gpu_artifacts_reused": false,
+    "accuracy_before_formal_release": false,
+    "model_selection_release_requires_complete_triplets": 12,
+    "held_out_release_max_count": 1
+  }
+}

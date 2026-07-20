@@ -246,3 +246,22 @@ kernels; beta/gamma equations, tensor-only mixed-batch selection, thresholds,
 panels and all downstream recipes are unchanged. Before this lock there was no
 R2g GPU numerical, pretrained, training, checkpoint, accuracy or correctness
 output. The complete synthetic GPU gate is again the first authorized step.
+
+The R2g-v1 target completed the synthetic calculation and wrote a non-operative
+`GO` JSON, but the sealed bootstrap then failed because the new host root did
+not contain the `attestations/` parent directory. Consequently no sealed GPU
+attestation exists and the Job is failed. This occurred before pretrained
+execution, training, checkpoint or accuracy access. V1 is terminal and none of
+its GPU artifacts may be reused.
+
+The infrastructure-only replacement keeps the same scientific SHA, image and
+all thresholds, but uses a new root with every required parent directory
+created before submission:
+
+- Run UID: `fpct-r2g-509a68a-v2`.
+- Run-lock SHA256: `8f59e0b124b0d008083e358ed482650c8cfe4b1c0a8b874a91e1e7f3b0619e46`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2g-509a68a-v2`.
+- ConfigMap: `fpct-r2g-v2-lock-509a68a`.
+
+R2g-v2 must repeat the complete GPU numerical gate; the v1 `GO` JSON is not
+operative evidence.
