@@ -29,8 +29,11 @@ def test_k8s_templates_are_digest_only_and_have_scoped_labels():
         payload = yaml.safe_load(path.read_text())
         text = path.read_text()
         assert "__IMAGE_DIGEST__" in text
-        assert "hostPath:" not in text
         assert "/home/lijunsi/miniconda" not in text
+        assert "/home/lijunsi/projects/Cache" not in text
+        assert "persistentVolumeClaim" not in text
+        if "hostPath:" in text:
+            assert "/netdisk/lijunsi/" in text
         labels = payload["metadata"]["labels"]
         assert labels["project"] == "fpct"
         assert labels["study"] == "confirmatory"

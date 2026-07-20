@@ -15,7 +15,7 @@ spec:
         image: __IMAGE_DIGEST__
         imagePullPolicy: IfNotPresent
         command: ["/opt/conda/bin/python", "-I", "/opt/fpct/script/runtime/fpct_bootstrap.py"]
-        args: ["--repo-root", "/opt/fpct", "--target", "/opt/fpct/script/experiment/fpct_confirmatory_runner.py", "--include-gpu-closure", "--", "pretrained-smoke", "--run-lock", "/opt/fpct-lock/confirmatory_run_lock.json", "--gpu-gate", "/fpct-results/__RUN_UID__/gpu_numerical.json", "--output", "/fpct-results/__RUN_UID__/pretrained_smoke.json"]
+        args: ["--repo-root", "/opt/fpct", "--target", "/opt/fpct/script/experiment/fpct_confirmatory_runner.py", "--include-gpu-closure", "--", "pretrained-smoke", "--run-lock", "/opt/fpct-lock/confirmatory_run_lock.json", "--gpu-gate", "/fpct-run/results/gpu_numerical.json", "--output", "/fpct-run/results/pretrained_smoke.json"]
         env:
         - {name: C2C_MODEL_ROOT, value: /models/c2c}
         - {name: HF_HUB_OFFLINE, value: "1"}
@@ -26,11 +26,11 @@ spec:
         volumeMounts: &mounts
         - {name: run-lock, mountPath: /opt/fpct-lock, readOnly: true}
         - {name: models, mountPath: /models/c2c, readOnly: true}
-        - {name: fpct-results, mountPath: /fpct-results}
+        - {name: fpct-run, mountPath: /fpct-run}
       volumes:
       - name: run-lock
         configMap: {name: __RUN_LOCK_CONFIGMAP__}
       - name: models
-        persistentVolumeClaim: {claimName: __MODEL_PVC__}
-      - name: fpct-results
-        persistentVolumeClaim: {claimName: __RESULTS_PVC__}
+        hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/models, type: Directory}
+      - name: fpct-run
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/__RUN_UID__, type: Directory}
