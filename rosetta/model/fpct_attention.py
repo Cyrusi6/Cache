@@ -66,6 +66,8 @@ class FPCTPackedMemory:
     row_offsets: Tensor
     expanded_slots: Tensor
     extra_slots: Tensor
+    parent_equivalent: Tensor
+    all_parent_equivalent: Tensor
 
 
 @dataclass(frozen=True)
@@ -419,27 +421,28 @@ def pack_fpct_memory(
         )
     active = layout.active
     log_prior = layout.log_prior
+    candidate_slots = layout.use_candidate & active
+    key_equal = (packed_key == parent_key).all(dim=(1, 3))
+    value_equal = (packed_value == parent_value).all(dim=(1, 3))
+    slot_equal = (~candidate_slots) | (key_equal & value_equal)
+    safe_parent = layout.parent_index.clamp_min(0)
+    group_equal = torch.ones(
+        b,
+        source_length,
+        device=key.device,
+        dtype=torch.long,
+    )
+    group_equal.scatter_reduce_(
+        1,
+        safe_parent,
+        slot_equal.to(torch.long),
+        reduce="amin",
+        include_self=True,
+    )
+    parent_equivalent = group_equal.to(torch.bool)
     if collapse_replicated_groups:
-        candidate_slots = layout.use_candidate & active
-        key_equal = (packed_key == parent_key).all(dim=(1, 3))
-        value_equal = (packed_value == parent_value).all(dim=(1, 3))
-        slot_equal = (~candidate_slots) | (key_equal & value_equal)
-        safe_parent = layout.parent_index.clamp_min(0)
-        group_equal = torch.ones(
-            b,
-            source_length,
-            device=key.device,
-            dtype=torch.long,
-        )
-        group_equal.scatter_reduce_(
-            1,
-            safe_parent,
-            slot_equal.to(torch.long),
-            reduce="amin",
-            include_self=True,
-        )
         replicated_group = candidate_slots & torch.gather(
-            group_equal.to(torch.bool), 1, safe_parent
+            parent_equivalent, 1, safe_parent
         )
         slot_index = torch.arange(
             layout.max_slots, device=key.device, dtype=torch.long
@@ -454,6 +457,11 @@ def pack_fpct_memory(
             torch.zeros_like(log_prior),
             log_prior,
         )
+    log_prior = torch.where(
+        active,
+        log_prior,
+        torch.full_like(log_prior, -torch.inf),
+    )
     mask_gather = safe_parent[:, None, None, :].expand(
         b, mask.shape[1], query_length, layout.max_slots
     )
@@ -477,6 +485,8 @@ def pack_fpct_memory(
         row_offsets=layout.row_offsets,
         expanded_slots=layout.expanded_slots,
         extra_slots=layout.extra_slots,
+        parent_equivalent=parent_equivalent,
+        all_parent_equivalent=parent_equivalent.all(dim=-1),
     )
 
 
@@ -609,6 +619,152 @@ def fpct_qwen_eager_attention_forward(
     return output.transpose(1, 2).contiguous(), probability.to(dtype=query.dtype)
 
 
+def fpct_qwen_hierarchical_attention_forward(
+    module: nn.Module,
+    query: Tensor,
+    packed: FPCTPackedMemory,
+    parent_key: Tensor,
+    parent_value: Tensor,
+    parent_attention_mask: Optional[Tensor],
+    scaling: float,
+    dropout: float = 0.0,
+    **_kwargs,
+) -> tuple[Tensor, Tensor]:
+    """Global-equivalent beta/gamma attention over parent-grouped atoms."""
+
+    groups = int(module.num_key_value_groups)
+
+    def repeat_kv(value: Tensor) -> Tensor:
+        if groups == 1:
+            return value
+        return value[:, :, None, :, :].expand(
+            value.shape[0], value.shape[1], groups, value.shape[2], value.shape[3]
+        ).reshape(
+            value.shape[0],
+            value.shape[1] * groups,
+            value.shape[2],
+            value.shape[3],
+        )
+
+    atom_key = repeat_kv(packed.key)
+    atom_value = repeat_kv(packed.value).float()
+    repeated_parent_key = repeat_kv(parent_key)
+    repeated_parent_value = repeat_kv(parent_value).float()
+    atom_logits = (
+        torch.matmul(query.float(), atom_key.float().transpose(2, 3))
+        * float(scaling)
+    )
+    atom_logits = atom_logits + packed.attention_mask.float()
+    parent_logits = (
+        torch.matmul(query.float(), repeated_parent_key.float().transpose(2, 3))
+        * float(scaling)
+    )
+    if parent_attention_mask is not None:
+        parent_logits = parent_logits + parent_attention_mask[
+            :, :, :, : parent_key.shape[-2]
+        ].float()
+
+    b, hq, q_length, _ = atom_logits.shape
+    source_length = parent_key.shape[-2]
+    parent_index = packed.parent_index.clamp_min(0)[:, None, None, :].expand(
+        b, hq, q_length, -1
+    )
+    atom_active = (
+        packed.active[:, None, None, :]
+        & torch.isfinite(packed.attention_mask[:, :, :, : packed.key.shape[-2]])
+    )
+    negative_inf = torch.full(
+        (b, hq, q_length, source_length),
+        -torch.inf,
+        device=query.device,
+        dtype=torch.float32,
+    )
+    group_max = negative_inf.scatter_reduce(
+        3,
+        parent_index,
+        torch.where(
+            atom_active, atom_logits, torch.full_like(atom_logits, -torch.inf)
+        ),
+        reduce="amax",
+        include_self=True,
+    )
+    gathered_max = torch.gather(group_max, 3, parent_index)
+    exp_shifted = torch.where(
+        atom_active,
+        torch.exp(atom_logits - gathered_max),
+        torch.zeros_like(atom_logits),
+    )
+    group_sum = torch.zeros_like(group_max)
+    group_sum.scatter_add_(3, parent_index, exp_shifted)
+    group_logits = torch.where(
+        group_sum > 0,
+        group_max + torch.log(
+            group_sum.clamp_min(torch.finfo(torch.float32).tiny)
+        ),
+        torch.full_like(group_sum, -torch.inf),
+    )
+    group_logits = torch.where(
+        packed.parent_equivalent[:, None, None, :],
+        parent_logits,
+        group_logits,
+    )
+    beta = nn.functional.softmax(group_logits, dim=-1, dtype=torch.float32)
+    gathered_group_sum = torch.gather(group_sum, 3, parent_index).clamp_min(
+        torch.finfo(torch.float32).tiny
+    )
+    gamma = torch.where(
+        atom_active,
+        exp_shifted / gathered_group_sum,
+        torch.zeros_like(atom_logits),
+    )
+    atom_probability = torch.gather(beta, 3, parent_index) * gamma
+    group_value = torch.zeros(
+        b,
+        hq,
+        q_length,
+        source_length,
+        atom_value.shape[-1],
+        device=query.device,
+        dtype=torch.float32,
+    )
+    group_value.scatter_add_(
+        3,
+        parent_index[..., None].expand(-1, -1, -1, -1, atom_value.shape[-1]),
+        gamma[..., None] * atom_value[:, :, None, :, :],
+    )
+    group_value = torch.where(
+        packed.parent_equivalent[:, None, None, :, None],
+        repeated_parent_value[:, :, None, :, :],
+        group_value,
+    )
+    hierarchical_output = (beta[..., None] * group_value).sum(dim=3)
+    if module.training and dropout > 0:
+        atom_probability = nn.functional.dropout(
+            atom_probability, p=dropout, training=True
+        )
+        hierarchical_output = (
+            atom_probability[..., None] * atom_value[:, :, None, :, :]
+        ).sum(dim=3)
+    parent_output, _parent_probability = fpct_qwen_eager_attention_forward(
+        module,
+        query,
+        parent_key,
+        parent_value,
+        parent_attention_mask,
+        scaling=scaling,
+        dropout=dropout,
+    )
+    hierarchical_output = hierarchical_output.to(query.dtype).transpose(
+        1, 2
+    ).contiguous()
+    output = torch.where(
+        packed.all_parent_equivalent[:, None, None, None],
+        parent_output,
+        hierarchical_output,
+    )
+    return output, atom_probability.to(query.dtype)
+
+
 def fpct_mechanism_diagnostics(
     query: Tensor,
     packed: FPCTPackedMemory,
@@ -628,7 +784,9 @@ def fpct_mechanism_diagnostics(
     logits = logits + broadcast_mask
     parent = packed.parent_index.clamp_min(0)
     parent_index = parent[:, None, None, :].expand(b, hq, q_length, -1)
-    candidate = packed.candidate_index[:, None, None, :] >= 0
+    candidate = (
+        (packed.candidate_index >= 0) & packed.active
+    )[:, None, None, :]
     candidate = (
         candidate.expand(b, hq, q_length, -1)
         & torch.isfinite(logits)
@@ -711,9 +869,13 @@ def fpct_mechanism_diagnostics(
     )
     jensen_gap = (group_logsumexp - prior_raw_mean).clamp_min(0)
     gamma_query_variance = gamma.var(dim=2, unbiased=False)
-    gamma_query_mask = packed.candidate_index[:, None, :] >= 0
+    gamma_query_mask = (
+        (packed.candidate_index >= 0) & packed.active
+    )[:, None, :]
 
-    candidate_mask_kv = packed.candidate_index[:, None, :, None] >= 0
+    candidate_mask_kv = (
+        (packed.candidate_index >= 0) & packed.active
+    )[:, None, :, None]
     atom_prior = torch.exp(packed.log_prior.float())[:, None, :, None]
     parent_kv = parent[:, None, :, None].expand(
         b, hkv, packed.key.shape[2], packed.key.shape[3]
@@ -751,7 +913,11 @@ def fpct_mechanism_diagnostics(
     value_dispersion.scatter_add_(2, parent_kv, value_dispersion_atom)
     parent_has_candidates = (
         torch.zeros(b, source_length, device=query.device, dtype=torch.float32)
-        .scatter_add_(2 - 1, parent, (packed.candidate_index >= 0).float())
+        .scatter_add_(
+            2 - 1,
+            parent,
+            ((packed.candidate_index >= 0) & packed.active).float(),
+        )
         >= 2
     )
 

@@ -20,6 +20,7 @@ from rosetta.model.fpct_attention import (
     fpct_eager_attention,
     fpct_mechanism_diagnostics,
     fpct_qwen_eager_attention_forward,
+    fpct_qwen_hierarchical_attention_forward,
     fpct_replicated_probability_mass_delta,
     normalize_fpct_operator,
     normalize_prior as normalize_fpct_prior,
@@ -369,6 +370,10 @@ class RosettaModel(nn.Module):
                 )
 
             packed = None
+            hierarchical_packed = None
+            hierarchical_parent_key = None
+            hierarchical_parent_value = None
+            hierarchical_parent_mask = None
             replicated_delta = None
             replicated_weights = None
             if fpct_sidecars:
@@ -410,9 +415,10 @@ class RosettaModel(nn.Module):
                                 )
                             )
                     else:
-                        key_states = packed.key
-                        value_states = packed.value
-                        attention_mask = packed.attention_mask
+                        hierarchical_packed = packed
+                        hierarchical_parent_key = base_key_states
+                        hierarchical_parent_value = base_value_states
+                        hierarchical_parent_mask = parent_attention_mask
                 if fpct_metric_sink is not None and packed is not None:
                     with record_function("fpct.diagnostics"):
                         metrics = fpct_mechanism_diagnostics(query_states, packed)
@@ -481,17 +487,41 @@ class RosettaModel(nn.Module):
 
             with record_function("receiver_attention"):
                 with record_function("fpct.attention"):
-                    attn_output, attn_weights = attention_interface(
-                        self,
-                        query_states,
-                        key_states,
-                        value_states,
-                        attention_mask,
-                        dropout=0.0 if not self.training else self.attention_dropout,
-                        scaling=self.scaling,
-                        sliding_window=self.sliding_window,
-                        **kwargs,
-                    )
+                    if hierarchical_packed is not None:
+                        attn_output, attn_weights = (
+                            fpct_qwen_hierarchical_attention_forward(
+                                self,
+                                query_states,
+                                hierarchical_packed,
+                                hierarchical_parent_key,
+                                hierarchical_parent_value,
+                                hierarchical_parent_mask,
+                                dropout=(
+                                    0.0
+                                    if not self.training
+                                    else self.attention_dropout
+                                ),
+                                scaling=self.scaling,
+                                sliding_window=self.sliding_window,
+                                **kwargs,
+                            )
+                        )
+                    else:
+                        attn_output, attn_weights = attention_interface(
+                            self,
+                            query_states,
+                            key_states,
+                            value_states,
+                            attention_mask,
+                            dropout=(
+                                0.0
+                                if not self.training
+                                else self.attention_dropout
+                            ),
+                            scaling=self.scaling,
+                            sliding_window=self.sliding_window,
+                            **kwargs,
+                        )
 
             if replicated_delta is not None:
                 replicated_delta = replicated_delta.detach()

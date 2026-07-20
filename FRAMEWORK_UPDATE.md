@@ -1156,3 +1156,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Flat packed attention即使每parent只剩一个active atom仍保留`max_slots` kernel width，native-null delta为FP32 `4.1246e-5`、BF16 `0.625`。
 - Dynamic inactive atoms仍带finite diagnostic log-prior，使synthetic D_K/D_V floor约2.0，forced-on D_K/D_V失去识别性。
 - R2e-v2 terminal且不resume；0 matched smoke/training/checkpoint/accuracy。下一revision只能使用预注册允许的global-equivalent hierarchical beta/gamma并修正active diagnostics。
+
+### R2f prospective hierarchical beta/gamma adapter
+
+- 新增`FPCT_GPU_R2F_HIERARCHICAL_ADDENDUM.md`，在任何R2f pretrained output前冻结。
+- Candidate内用FP32 grouped logsumexp/γ，parent间用一次FP32 β softmax；atom probability=`β_iγ_ij`，与flat global denominator等价。
+- Exact-equivalent parents直接使用parent logit/value；整样本equivalent时返回与C_post同一parent eager adapter output。Distinct parents保持candidate factorization。
+- Inactive atoms设`log_prior=-inf`，D_K/D_V/gamma/count只统计active atoms，恢复null floor识别性。
+- Targeted `55 passed`；full `408 passed, 2 warnings`。下一run必须新SHA/image/run-lock/run UID。

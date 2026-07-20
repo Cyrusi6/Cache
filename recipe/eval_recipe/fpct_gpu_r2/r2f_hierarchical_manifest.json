@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2f_hierarchical_v1",
+  "status": "PROSPECTIVE_PRE_OUTPUT",
+  "source_commit": "98680ae76717df36735b0f5cf3a2de4d042b73da",
+  "terminal_source_execution": {
+    "run_uid": "fpct-r2e-2653930-v2",
+    "result_sha256": "7727fe8d8c0017fe225b31b905481c7fdadd4dac559a618a1653aba043c8d962",
+    "failure_manifest": "recipe/eval_recipe/fpct_gpu_r2/fpct_gpu_r2e_failure_manifest.json",
+    "resume": false
+  },
+  "operator_contract": {
+    "form": "hierarchical_beta_gamma_global_equivalent",
+    "atom_probability": "beta_i_times_gamma_ij",
+    "exact_parent_equivalent_branch": true,
+    "distinct_candidates_expanded": true,
+    "inactive_log_prior": "negative_infinity",
+    "diagnostics_active_only": true,
+    "new_trainable_parameters": false
+  },
+  "tracked_source_sha256": {
+    "fpct_attention": "9e2f07063bfed9bbc98a28dade1627b1a1ed9af4d4f8362b287887c8678f66ef",
+    "wrapper": "739f014d7746848951d9ea5d495f2372dd05817cf240bf5a4b126e1cc405347a",
+    "projector": "c5e0cb7836d0a30659cec240169a1e2a58df58a65b71534ad9b83ec33480b7be",
+    "r2_runner": "501bd64648227337e9167af5b4fa343cd19671f92714090992c500b7d8d9c495",
+    "production_tests": "91eb52680c4029db13542ebe913a2ea1a8669dde075794b88dfc2d313ba8b1d9",
+    "qwen_integration_tests": "9ad635854cc00d5079a2c5f724508be4d50c7a6d71e093ab12b2cea21a31ff21",
+    "r2_runner_tests": "d6ba85413246ed48d7e3a157fb6e268e23c55ce6f8a0c994fd5cf8ee040608b9"
+  },
+  "validation": {
+    "targeted": "55 passed",
+    "cpu_safe_full_suite": "408 passed, 2 warnings",
+    "r2f_pretrained_output_before_freeze": false,
+    "accuracy_or_correctness_accessed": false
+  }
+}

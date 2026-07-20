@@ -14,6 +14,8 @@ from rosetta.model.fpct_attention import (
     build_fpct_packed_layout,
     FPCTSidecarSegment,
     fpct_eager_attention,
+    fpct_qwen_hierarchical_attention_forward,
+    fpct_qwen_eager_attention_forward,
     fpct_replicated_probability_mass_delta,
     normalize_fpct_operator,
     pack_fpct_memory,
@@ -312,6 +314,75 @@ def test_replicated_collapse_packed_equals_ordinary_cpost() -> None:
     assert float(delta) <= 2e-7
     assert probability.dtype == torch.float32
     assert int(expanded_canary.active.sum()) > int(packed.active.sum())
+
+
+def test_hierarchical_production_matches_flat_global() -> None:
+    dtype, atol, rtol = torch.float32, 2e-5, 2e-5
+    q, nk, nv, fk, fv, prior, valid, ck, cv, term, sidecar = make_attention_case(dtype)
+    packed = pack_fpct_memory(
+        ck, cv, term, [sidecar], query_length=q.shape[2]
+    )
+    module = SimpleNamespace(
+        num_key_value_groups=q.shape[1] // ck.shape[1],
+        training=False,
+    )
+    actual, probability = fpct_qwen_hierarchical_attention_forward(
+        module,
+        q,
+        packed,
+        ck,
+        cv,
+        term,
+        scaling=1.0 / (q.shape[-1] ** 0.5),
+    )
+    dense = reference.f_flat(
+        q, nk, nv, fk, fv, prior, valid, identity_fuser, term, None
+    )
+    torch.testing.assert_close(
+        actual.transpose(1, 2), dense.output, atol=atol, rtol=rtol
+    )
+    torch.testing.assert_close(
+        probability.sum(dim=-1),
+        torch.ones_like(probability.sum(dim=-1)),
+        atol=atol,
+        rtol=rtol,
+    )
+
+
+def test_hierarchical_exact_replicated_sample_uses_parent_output() -> None:
+    q, _nk, _nv, fk, fv, prior, valid, ck, cv, term, _sidecar = make_attention_case()
+    sidecar = FPCTSidecarSegment(
+        0,
+        ck.unsqueeze(3).expand_as(fk),
+        cv.unsqueeze(3).expand_as(fv),
+        prior,
+        valid,
+    )
+    packed = pack_fpct_memory(
+        ck, cv, term, [sidecar], query_length=q.shape[2]
+    )
+    module = SimpleNamespace(
+        num_key_value_groups=q.shape[1] // ck.shape[1],
+        training=False,
+    )
+    actual, _ = fpct_qwen_hierarchical_attention_forward(
+        module,
+        q,
+        packed,
+        ck,
+        cv,
+        term,
+        scaling=1.0 / (q.shape[-1] ** 0.5),
+    )
+    parent, _ = fpct_qwen_eager_attention_forward(
+        module,
+        q,
+        ck,
+        cv,
+        term,
+        scaling=1.0 / (q.shape[-1] ** 0.5),
+    )
+    torch.testing.assert_close(actual, parent, atol=0, rtol=0)
 
 
 def test_layout_is_reused_across_layers_without_autograd_state() -> None:
