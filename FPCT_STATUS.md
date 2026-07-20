@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT frozen GPU execution terminal gate
-> 当前判定：synthetic GPU numerical `GO`；pretrained smoke `GPU_ENGINEERING_BLOCKED`
-> 下一阶段：当前 frozen execution 无后续阶段；任何恢复必须新建 prospective revision 和新 run lock
+> 当前阶段：FPCT-GPU-R2 prospective root-cause protocol locking
+> 当前判定：旧 execution 保持 terminal `GPU_ENGINEERING_BLOCKED`；R2 为 `PRE-OUTPUT PROTOCOL READY`
+> 下一阶段：先 commit/push R2 protocol SHA，再执行零输出 provenance 和 scientific recovery；尚无新 pretrained output
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -204,6 +204,10 @@
 | FPCT-D052 | 2026-07-20 | Pretrained smoke resource gate 改为 7-repeat median/p95 + CUDA profiler | 单次 latency 占位在任何 pretrained forward 前删除；硬门保持 median≤1.50、p95≤1.75、无 profiled host sync |
 | FPCT-D053 | 2026-07-20 | Final synthetic GPU numerical gate=`GO` | actual image digest 匹配；FP32 max abs `2.38e-7`，FP16/BF16、gradient、invalid、m≤1 与 replicated-collapse controls 全通过；activation-null floor 前瞻冻结为 `0.0390625` |
 | FPCT-D054 | 2026-07-20 | Pretrained smoke=`GPU_ENGINEERING_BLOCKED`，当前 execution 终止 | activation 为 numerical null、replicated-collapse delta `0.71875`、profiler 检出 device/stream synchronize；非 infrastructure failure，不重试、不进入 matched/formal training |
+| FPCT-D055 | 2026-07-20 | R2 冻结 H1–H4 根因树，旧 execution 永久不可 patch/resume | 新发现但未注册的根因不能用于原地恢复正式实验；修复必须新 scientific SHA/image/run-lock |
+| FPCT-D056 | 2026-07-20 | R2 activation 改为同 packed path 的 `Delta_fact=F_real-F_replicated` | `Delta_rep` 与 `Delta_bypass` 独立识别 refinement 和 wiring；fresh native gate=0 记为 `EXPECTED_NATIVE_NULL` |
+| FPCT-D057 | 2026-07-20 | R2 prior、mask、C_post reduction、diagnostics 和 attention accumulation 采用 canonical FP32 contract | 每行 logsumexp/exp-sum tolerance `2e-7`；C_post/F 必须共享同一 prior tensor/hash |
+| FPCT-D058 | 2026-07-20 | 18-row label-free diagnostic panel 和 metric-specific null/profiler panels 在新 pretrained output 前冻结 | 3 tasks × m2/m3/m4 × 2 groups；不访问 labels/correctness；废止单一 `0.0390625` floor |
 
 ## 6. 已锁定决定与 deferred items
 

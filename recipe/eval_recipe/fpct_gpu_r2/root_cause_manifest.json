@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_root_cause_v1",
+  "status": "PROSPECTIVE_PRE_OUTPUT",
+  "source_parent_commit": "6550b2a832107d25fc2e62a0cc8b260c2e160773",
+  "execution_commit_rule": "clean pushed commit containing this manifest",
+  "immutable_old_execution": {
+    "scientific_commit": "371e72f14da41f5509eafa21553c7a7418c9a53e",
+    "image_digest": "sha256:c851056733f3b7affc85ae5dabd870043f3ae7d3010d245705f5b9ded8dc36ab",
+    "run_lock_sha256": "2a4db8f26def997c95b590a34718916b772f686f5c00eabb2f2b69f0dfe5e5ec",
+    "terminal": "GPU_ENGINEERING_BLOCKED",
+    "resume_or_patch": false
+  },
+  "hypotheses": [
+    "H1_GATE_NATIVE_NULL",
+    "H2_BF16_PRIOR_DRIFT",
+    "H3_BACKEND_AUTODISPATCH",
+    "H4_PROFILER_SCOPE_CONFOUND"
+  ],
+  "attention_backend": {
+    "r2_required": "eager",
+    "assert_after_load_each_rank": true,
+    "assert_after_reload": true,
+    "old_claim_boundary": "old execution had no runtime eager proof and may have used SDPA under automatic dispatch"
+  },
+  "prior_contract": {
+    "dtype": "float32",
+    "logsumexp_abs_max": 2e-7,
+    "exp_sum_abs_max": 2e-7,
+    "invalid_log_prior": "-inf",
+    "shared_prior_hash_between_c_post_and_f": true
+  },
+  "operator_panel_ids": [
+    "OP01_CPOST_NATIVE",
+    "OP02_F_NATIVE",
+    "OP03_F_REP_NATIVE",
+    "OP04_F_FORCED",
+    "OP05_F_REP_FORCED",
+    "OP06_F_BYPASS",
+    "OP07_M1_CPOST",
+    "OP08_M1_F"
+  ],
+  "deltas": {
+    "delta_fact": "F_real_candidates-F_replicated_atoms",
+    "delta_rep": "F_replicated_atoms-C_post",
+    "delta_bypass": "F_collapse_to_parent-C_post"
+  },
+  "diagnostic_panel": {
+    "manifest": "recipe/eval_recipe/fpct_gpu_r2/diagnostic_panel_manifest.json",
+    "manifest_sha256": "bed52891c5a82c05adf47fc463e684982d94447c31a6d43e2ae5af2ec1df15f7",
+    "panel_rows_sha256": "2b28b48d8ba7b02508a72bc9fb1dda3f9f2d2134e014a894e550ec83792459cb",
+    "pair": "tinyllama",
+    "splits": ["fit", "calibration"],
+    "tasks": ["ai2-arc", "openbookqa", "mmlu-redux"],
+    "cardinalities": [2, 3, 4],
+    "groups_per_cell": 2,
+    "selection": "content_group_sha256_ascending"
+  },
+  "null_floor_spec": {
+    "path": "recipe/eval_recipe/fpct_gpu_r2/metric_null_floor_spec.json",
+    "sha256": "3206b7cda8d478575fedc471fd322cd224e72e569d192220f732a8ef7e3204eb"
+  },
+  "profile_ids": [
+    "P0_GPU_NEGATIVE",
+    "P1_ITEM_POSITIVE",
+    "P2_CPOST_OFF",
+    "P3_F_OFF",
+    "P4_F_REPLICATED",
+    "P5_F_ON",
+    "P6_DECODE4"
+  ],
+  "pretrained_go_requires": [
+    "eager_runtime_attestation",
+    "canonical_fp32_prior",
+    "expected_native_null_consistency",
+    "forced_on_canary_activation",
+    "precollapse_candidate_identity",
+    "collapse_bypass_control",
+    "replicated_atoms_depth_control",
+    "m_le_1_control",
+    "finite_and_mask_integrity",
+    "scoped_no_host_sync",
+    "resource_gates"
+  ],
+  "failure_terminal": "GPU_ENGINEERING_BLOCKED_R2",
+  "accuracy_before_formal_release": false,
+  "normative_documents": [
+    {
+      "path": "FPCT_GPU_R2_ROOT_CAUSE_PROTOCOL.md",
+      "sha256": "5b36318548af7c3a6a0d181ca72479754451fa3031138dd9dff8653eb61abba5"
+    },
+    {
+      "path": "FPCT_GPU_R2_NUMERICAL_PROTOCOL.md",
+      "sha256": "18621315928ccf2246bb879e602055534329da957fd445764a866d42e0a33b74"
+    },
+    {
+      "path": "FPCT_GPU_R2_PROFILING_PROTOCOL.md",
+      "sha256": "f9d126a82ee6d92f95a820ea67e0c423a81b609cbae9f4bc7b0cd966650adb5b"
+    }
+  ]
+}

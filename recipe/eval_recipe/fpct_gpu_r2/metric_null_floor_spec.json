@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_metric_null_floor_v1",
+  "status": "FROZEN_BEFORE_PRETRAINED_OUTPUT",
+  "synthetic_seeds": [1729, 7919, 104729, 20260719],
+  "depths": [1, 2, 4, 8, 14, 28],
+  "cardinalities": [1, 2, 3, 4],
+  "prior_cases": ["uniform", "extreme_positive", "padding", "causal"],
+  "percentile": 99.9,
+  "safety_multiplier": 2.0,
+  "formula": "max(q99.9_depth_matched_null,absolute_floor)*2",
+  "metrics": {
+    "delta_fact_max_abs": {"unit": "value", "absolute_floor": 2e-5},
+    "delta_rep_max_abs": {"unit": "value", "absolute_floor": 2e-5},
+    "delta_bypass_max_abs": {"unit": "value", "absolute_floor": 2e-5},
+    "gamma_kl_prior": {"unit": "nats", "absolute_floor": 1e-7},
+    "jensen_gap": {"unit": "logit", "absolute_floor": 1e-7},
+    "gamma_query_variance": {"unit": "probability_squared", "absolute_floor": 1e-8},
+    "candidate_logit_range": {"unit": "logit", "absolute_floor": 1e-6},
+    "d_k": {"unit": "kv_rms", "absolute_floor": 1e-7},
+    "d_v": {"unit": "kv_rms", "absolute_floor": 1e-7}
+  }
+}

@@ -1,0 +1,204 @@
+{
+  "panel_rows_sha256": "2b28b48d8ba7b02508a72bc9fb1dda3f9f2d2134e014a894e550ec83792459cb",
+  "protocol_id": "fpct_gpu_r2_label_free_panel_v1",
+  "rows": [
+    {
+      "cardinality": 2,
+      "content_group_sha256": "00b252bc779e7b0bc39ef946a9f195cf50774b6a9c5e65b10a4e438307f06b55",
+      "panel_id": "ai2-arc__m2__00",
+      "parent_index": 11,
+      "sample_key_sha256": "1fcdca84fc8821e90d610d56a670f5727add87de32b4038c5e7af6928dad99d9",
+      "split": "fit",
+      "task": "ai2-arc"
+    },
+    {
+      "cardinality": 2,
+      "content_group_sha256": "00ec09b061319d9680bc1b3643efed258a5f23b9a882c90ba1fa22db5228212c",
+      "panel_id": "ai2-arc__m2__01",
+      "parent_index": 15,
+      "sample_key_sha256": "0e6b6b2e6e9992ae529e33ef502b87673841686f3d24b853df917fe4c4dc2ceb",
+      "split": "fit",
+      "task": "ai2-arc"
+    },
+    {
+      "cardinality": 3,
+      "content_group_sha256": "00b252bc779e7b0bc39ef946a9f195cf50774b6a9c5e65b10a4e438307f06b55",
+      "panel_id": "ai2-arc__m3__00",
+      "parent_index": 10,
+      "sample_key_sha256": "1fcdca84fc8821e90d610d56a670f5727add87de32b4038c5e7af6928dad99d9",
+      "split": "fit",
+      "task": "ai2-arc"
+    },
+    {
+      "cardinality": 3,
+      "content_group_sha256": "00ec09b061319d9680bc1b3643efed258a5f23b9a882c90ba1fa22db5228212c",
+      "panel_id": "ai2-arc__m3__01",
+      "parent_index": 10,
+      "sample_key_sha256": "0e6b6b2e6e9992ae529e33ef502b87673841686f3d24b853df917fe4c4dc2ceb",
+      "split": "fit",
+      "task": "ai2-arc"
+    },
+    {
+      "cardinality": 4,
+      "content_group_sha256": "00ec09b061319d9680bc1b3643efed258a5f23b9a882c90ba1fa22db5228212c",
+      "panel_id": "ai2-arc__m4__00",
+      "parent_index": 88,
+      "sample_key_sha256": "0e6b6b2e6e9992ae529e33ef502b87673841686f3d24b853df917fe4c4dc2ceb",
+      "split": "fit",
+      "task": "ai2-arc"
+    },
+    {
+      "cardinality": 4,
+      "content_group_sha256": "00f7d800b9d7f837545d30b6e756f9561a9c2f0f1818524b4c111f2d2f32d2db",
+      "panel_id": "ai2-arc__m4__01",
+      "parent_index": 95,
+      "sample_key_sha256": "ee4834b5f6e0c1417569d5cb05cef8fb0da4df836e1f69946842e4e83451e916",
+      "split": "fit",
+      "task": "ai2-arc"
+    },
+    {
+      "cardinality": 2,
+      "content_group_sha256": "0015410d2e4cdd09f77f765712ec32da74a362022c725c320a55441d5759f0f6",
+      "panel_id": "openbookqa__m2__00",
+      "parent_index": 11,
+      "sample_key_sha256": "c2230eccfff97466ac2c8b049b20484813219de9ca9eb78a67f1eae834bb995e",
+      "split": "fit",
+      "task": "openbookqa"
+    },
+    {
+      "cardinality": 2,
+      "content_group_sha256": "008d813753afac19c89fb2004c5d6fb3a2f1d19ab02626ec9bcf3b417d03155e",
+      "panel_id": "openbookqa__m2__01",
+      "parent_index": 11,
+      "sample_key_sha256": "e2fad8aa5330561a49afc4926208f0569ff798829c6db5ea86a8e3516cd35161",
+      "split": "fit",
+      "task": "openbookqa"
+    },
+    {
+      "cardinality": 3,
+      "content_group_sha256": "0015410d2e4cdd09f77f765712ec32da74a362022c725c320a55441d5759f0f6",
+      "panel_id": "openbookqa__m3__00",
+      "parent_index": 10,
+      "sample_key_sha256": "c2230eccfff97466ac2c8b049b20484813219de9ca9eb78a67f1eae834bb995e",
+      "split": "fit",
+      "task": "openbookqa"
+    },
+    {
+      "cardinality": 3,
+      "content_group_sha256": "008d813753afac19c89fb2004c5d6fb3a2f1d19ab02626ec9bcf3b417d03155e",
+      "panel_id": "openbookqa__m3__01",
+      "parent_index": 10,
+      "sample_key_sha256": "e2fad8aa5330561a49afc4926208f0569ff798829c6db5ea86a8e3516cd35161",
+      "split": "fit",
+      "task": "openbookqa"
+    },
+    {
+      "cardinality": 4,
+      "content_group_sha256": "13ce78cf948fa1d86fec79702a6eb204d7b81468acbd57330cc08c8a6e838600",
+      "panel_id": "openbookqa__m4__00",
+      "parent_index": 46,
+      "sample_key_sha256": "f5b22a3d7469891556ea251f3fd13d9cddfdf24af4a0bf55384325f99852676a",
+      "split": "fit",
+      "task": "openbookqa"
+    },
+    {
+      "cardinality": 4,
+      "content_group_sha256": "5f48534ee9ba36a5d5abb23fa27d4a78f480e05e3a93e35a119136570d0a2453",
+      "panel_id": "openbookqa__m4__01",
+      "parent_index": 12,
+      "sample_key_sha256": "1b8defe8896a5a21299a8fdc6d047d6e5fd336a42d81474d0a5ef727e9a6276e",
+      "split": "fit",
+      "task": "openbookqa"
+    },
+    {
+      "cardinality": 2,
+      "content_group_sha256": "000692f1ab083cc57c80efd488c37134ebdf2dbd5df85d220b3ff789f4df6e53",
+      "panel_id": "mmlu-redux__m2__00",
+      "parent_index": 25,
+      "sample_key_sha256": "15be5f624844cf1419950eee9673c8892197e30acf254b29b4b639f4b87d1a9b",
+      "split": "calibration",
+      "task": "mmlu-redux"
+    },
+    {
+      "cardinality": 2,
+      "content_group_sha256": "0021e067b54407aec46145c15b31549cdf4804d5509481cb0e694553e005f430",
+      "panel_id": "mmlu-redux__m2__01",
+      "parent_index": 46,
+      "sample_key_sha256": "e52c14c6ea7bd568d22c1206281653c2a964b0b1751e616267f0ee58ba24d639",
+      "split": "calibration",
+      "task": "mmlu-redux"
+    },
+    {
+      "cardinality": 3,
+      "content_group_sha256": "000692f1ab083cc57c80efd488c37134ebdf2dbd5df85d220b3ff789f4df6e53",
+      "panel_id": "mmlu-redux__m3__00",
+      "parent_index": 10,
+      "sample_key_sha256": "15be5f624844cf1419950eee9673c8892197e30acf254b29b4b639f4b87d1a9b",
+      "split": "calibration",
+      "task": "mmlu-redux"
+    },
+    {
+      "cardinality": 3,
+      "content_group_sha256": "0021e067b54407aec46145c15b31549cdf4804d5509481cb0e694553e005f430",
+      "panel_id": "mmlu-redux__m3__01",
+      "parent_index": 10,
+      "sample_key_sha256": "e52c14c6ea7bd568d22c1206281653c2a964b0b1751e616267f0ee58ba24d639",
+      "split": "calibration",
+      "task": "mmlu-redux"
+    },
+    {
+      "cardinality": 4,
+      "content_group_sha256": "000692f1ab083cc57c80efd488c37134ebdf2dbd5df85d220b3ff789f4df6e53",
+      "panel_id": "mmlu-redux__m4__00",
+      "parent_index": 63,
+      "sample_key_sha256": "15be5f624844cf1419950eee9673c8892197e30acf254b29b4b639f4b87d1a9b",
+      "split": "calibration",
+      "task": "mmlu-redux"
+    },
+    {
+      "cardinality": 4,
+      "content_group_sha256": "0021e067b54407aec46145c15b31549cdf4804d5509481cb0e694553e005f430",
+      "panel_id": "mmlu-redux__m4__01",
+      "parent_index": 145,
+      "sample_key_sha256": "e52c14c6ea7bd568d22c1206281653c2a964b0b1751e616267f0ee58ba24d639",
+      "split": "calibration",
+      "task": "mmlu-redux"
+    }
+  ],
+  "schema_version": 1,
+  "selection": {
+    "cardinalities": [
+      2,
+      3,
+      4
+    ],
+    "groups_per_cell": 2,
+    "labels_or_correctness_accessed": false,
+    "pair": "tinyllama",
+    "sort": "content_group_sha256_then_sample_sha_then_parent_index",
+    "splits": [
+      "calibration",
+      "fit"
+    ],
+    "tasks": [
+      "ai2-arc",
+      "openbookqa",
+      "mmlu-redux"
+    ]
+  },
+  "sources": {
+    "ai2-arc": {
+      "path": "/home/lijunsi/projects/Cache-fpct-factorized-transport/local/final_results/fpct_factorized_transport/fpct_3_7r_certified_support/rev_7aecf2370df8a544b553baa6a7a58b24191e02ef/shards/tinyllama__ai2-arc/r1_parent_geometry.csv",
+      "sha256": "05d5e477f9b824cbd32c8298570f1c948ccf3fc151f5f76c55498b45d5d2cb87"
+    },
+    "mmlu-redux": {
+      "path": "/home/lijunsi/projects/Cache-fpct-factorized-transport/local/final_results/fpct_factorized_transport/fpct_3_7r_certified_support/rev_7aecf2370df8a544b553baa6a7a58b24191e02ef/shards/tinyllama__mmlu-redux/r1_parent_geometry.csv",
+      "sha256": "ba20e5b881eef975a38d7d31cdb503eaeb010c58637d66341bacd45c42cb5c7c"
+    },
+    "openbookqa": {
+      "path": "/home/lijunsi/projects/Cache-fpct-factorized-transport/local/final_results/fpct_factorized_transport/fpct_3_7r_certified_support/rev_7aecf2370df8a544b553baa6a7a58b24191e02ef/shards/tinyllama__openbookqa/r1_parent_geometry.csv",
+      "sha256": "a2df0cf11ff77bdef202542a1f8938dbf41a0ebe17f544984e76b62e6b383418"
+    }
+  },
+  "status": "FROZEN_BEFORE_PRETRAINED_OUTPUT"
+}
