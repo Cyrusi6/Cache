@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_single_pair_confirmatory_v1_run_20260720",
+  "status": "PRE_OUTPUT_LOCKED",
+  "run_uid": "fpct-cfm-7e1aafbe-20260720",
+  "scientific_code_commit": "7e1aafbecf7561ea5dc416ebcdf8ea0fac76996b",
+  "scientific_code_branch": "research/fpct-factorized-transport",
+  "scientific_code_upstream": "7e1aafbecf7561ea5dc416ebcdf8ea0fac76996b",
+  "manifest_sha256": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4",
+  "normative": {
+    "confirmatory_preregistration": "c97f7322ad6aa1123e09591570ee876d86bd7a4601c82d4b88f342f77ff4783c",
+    "gpu_numerical_protocol": "e8c7129400cff8eb82cbad61e9143af8ee8f68fb101899d38019ab3a10d1d844",
+    "k8s_execution_protocol": "5d66670cfa3d637e635a12a3153633b6d44077dc019645c7bb0d2ac5c356fbf6",
+    "content_group_split_manifest": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050"
+  },
+  "image": {
+    "reference": "fpct-confirmatory@sha256:37b40279bd48cff05abe323002837712f27abc1184914d2ab296f4e55c597dba",
+    "manifest_list_sha256": "37b40279bd48cff05abe323002837712f27abc1184914d2ab296f4e55c597dba",
+    "config_sha256": "d6898d0fd2e57b5eabf317bd7f0a44128f03b87c37fb628c9f10ec2fd8bdaab8",
+    "architecture": "amd64",
+    "distribution": "preloaded by run_uid-scoped loader; runtime imageID must match",
+    "base": "pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime@sha256:77f17f843507062875ce8be2a6f76aa6aa3df7f9ef1e31d9d7432f4b0f563dee"
+  },
+  "runtime": {
+    "python": "3.11.11",
+    "torch": "2.6.0+cu124",
+    "cuda": "12.4",
+    "transformers": "4.52.4",
+    "datasets": "4.0.0",
+    "accelerate": "1.9.0",
+    "scipy": "1.15.3",
+    "sealed_container_probe_fingerprint": "302264e57a7c9e77444fe1928fb14279e964059232aeede8536ec5d23dd4142e"
+  },
+  "assets": {
+    "training_alignment_sidecar_2048": {
+      "host_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-7e1aafbe-20260720/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "container_path": "/fpct-run/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990",
+      "bytes": 41023706,
+      "examples": 2048,
+      "generated_by_commit": "4703ca024f758928cc97263d2c6672828be682ef",
+      "operative_diff_after_generation": "K8s templates, status documents/tests, and container dependency closure only; no alignment/model/training/evaluation implementation change"
+    },
+    "training_dataset": {
+      "id": "cais/mmlu:all:auxiliary_train",
+      "parquet_path": "/netdisk/lijunsi/c2c-route1-identifiability/data/c2c/mmlu/all/auxiliary_train-00000-of-00001.parquet",
+      "sha256": "5126bb35f06c8ab7ac54be3c60ab02cf33adf8b93a79dcfeb071f53cac74efde",
+      "membership": "first 2048 after frozen max-token filter; materialized in sidecar"
+    },
+    "receiver": {
+      "id": "Qwen/Qwen3-0.6B",
+      "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "root": "/models/c2c/Qwen3-0.6B",
+      "model_sha256": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b",
+      "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+      "tokenizer_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+      "tokenizer_config_sha256": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101"
+    },
+    "sender": {
+      "id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "root": "/models/c2c/TinyLlama-1.1B-Chat-v1.0",
+      "model_sha256": "6e6001da2106d4757498752a021df6c2bdc332c650aae4bae6b0c004dcf14933",
+      "config_sha256": "486bedda3a6988332e60d9638a09ca4b260d34ebcf1b19e22cf3b140b63d8fe9",
+      "tokenizer_sha256": "bcd04f0eadf90287bd26e1a183ac487d8a141b09b06aecb7725bbdd343640f2e",
+      "tokenizer_model_sha256": "9e556afd44213b6bd1be2b850ebbbd98f5481437a8021afaf58ee7fb1818d347",
+      "tokenizer_config_sha256": "7b41ba7d0eb91e77914ca3dafde559ea3e19878769b7e68409e89bed5222e77a"
+    }
+  },
+  "storage": {
+    "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-7e1aafbe-20260720",
+    "container_run_root": "/fpct-run",
+    "model_host_root": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+    "source_worktree_mount": false,
+    "host_conda_mount": false,
+    "host_site_packages_mount": false
+  },
+  "kubernetes": {
+    "namespace": "c2c-research",
+    "config_map": "fpct-lock-7e1aafbe",
+    "eligible_nodes": {"4090-24gx4": 4, "4090-24gx8": 8, "4090-48gx2": 2},
+    "maximum_parallel_seed_pods": 7,
+    "gpu_per_seed_pod": 2,
+    "required_labels": {"project": "fpct", "study": "confirmatory", "run_uid": "fpct-cfm-7e1aafbe-20260720"},
+    "retry": {"whole_triplet_infrastructure_only": 1, "selective_arm_retry": false}
+  },
+  "firewall": {
+    "pretrained_output_before_this_lock": false,
+    "model_selection_release_requires_complete_triplets": 12,
+    "held_out_release_max_count": 1,
+    "test_release_requires_frozen_futility_decision": true
+  }
+}
