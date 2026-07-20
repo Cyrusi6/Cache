@@ -78,8 +78,9 @@
   "kubernetes": {
     "namespace": "c2c-research",
     "config_map": "fpct-lock-7e1aafbe",
-    "eligible_nodes": {"4090-24gx4": 4, "4090-24gx8": 8, "4090-48gx2": 2},
-    "maximum_parallel_seed_pods": 7,
+    "eligible_nodes": {"4090-48gx2": 2},
+    "node_binding_reason": "pre-output storage probes showed frozen /netdisk assets are visible only on 4090-48gx2; no model/sidecar replication is permitted after lock",
+    "maximum_parallel_seed_pods": 1,
     "gpu_per_seed_pod": 2,
     "required_labels": {"project": "fpct", "study": "confirmatory", "run_uid": "fpct-cfm-7e1aafbe-20260720"},
     "retry": {"whole_triplet_infrastructure_only": 1, "selective_arm_retry": false}

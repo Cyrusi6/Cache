@@ -199,6 +199,7 @@
 | FPCT-D047 | 2026-07-20 | exact sign-flip 的假设边界按 R1 前瞻修正 | 检验 sharp/symmetric sign-exchangeability；mean estimand 与 +1pp practical gate 独立；固定报告 paired-t 与 exact-sign sensitivities |
 | FPCT-D048 | 2026-07-20 | 正式执行采用两层锁 | 先提交 scientific code/protocol，再以该 commit 构建 digest-addressed image 并提交 run lock；任一 scientific-code 变更使 image/run lock 失效 |
 | FPCT-D049 | 2026-07-20 | Operative scientific SHA=`7e1aafbe...`，image digest=`sha256:37b40279...` | sealed no-model container closure fingerprint `302264e5...`；冻结 sidecar SHA `48caee80...`，GPU numerical gate 成为下一步 |
+| FPCT-D050 | 2026-07-20 | 正式 K8s hardware pool 收窄到 `4090-48gx2`，seed parallelism=1 | pre-output probes 证明 `/netdisk` 仅该节点可见，`/home/lijunsi` 不含冻结资产；不在 lock 后复制模型/sidecar 到其他节点 |
 
 ## 6. 已锁定决定与 deferred items
 
