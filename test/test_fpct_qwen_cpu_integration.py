@@ -154,6 +154,13 @@ def test_actual_qwen3_m1_and_replicated_collapse_equal_cpost() -> None:
     attention_mask = torch.ones(2, 4, dtype=torch.long)
 
     cpost = RosettaModel([_model(2, state)], fpct_operator="c_post")
+    _sidecar(
+        cpost,
+        batch_size=2,
+        source_length=4,
+        num_key_value_heads=2,
+        ambiguous=True,
+    )
     cpost_output = _forward(cpost, input_ids, attention_mask).logits
 
     m1 = RosettaModel([_model(2, state)], fpct_operator="f")
@@ -176,6 +183,7 @@ def test_actual_qwen3_m1_and_replicated_collapse_equal_cpost() -> None:
         [_model(2, state)],
         fpct_operator="f",
         fpct_replicated_collapse=True,
+        fpct_instrumentation=True,
     )
     _sidecar(
         replicated,
@@ -185,8 +193,13 @@ def test_actual_qwen3_m1_and_replicated_collapse_equal_cpost() -> None:
         ambiguous=True,
     )
     replicated_output = _forward(replicated, input_ids, attention_mask).logits
-    torch.testing.assert_close(replicated_output, cpost_output, atol=2e-6, rtol=2e-6)
+    torch.testing.assert_close(replicated_output, cpost_output, atol=0, rtol=0)
     assert replicated.fpct_config_dict()["replicated_collapse"] is True
+    assert replicated._fpct_layer_metrics
+    assert all(
+        "replicated_expanded_delta/max" in metrics
+        for metrics in replicated._fpct_layer_metrics.values()
+    )
 
     bypass = RosettaModel(
         [_model(2, state)],

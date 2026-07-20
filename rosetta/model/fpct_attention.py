@@ -85,6 +85,7 @@ class FPCTPackedLayout:
     row_offsets: Tensor
     expanded_slots: Tensor
     extra_slots: Tensor
+    has_extra_slots: bool
     segment_specs: tuple[tuple[int, int, int, int], ...]
 
     def validate_runtime(
@@ -312,6 +313,7 @@ def build_fpct_packed_layout(
         row_offsets=row_offsets,
         expanded_slots=expanded_slots,
         extra_slots=extra_slots,
+        has_extra_slots=max_slots > source_length,
         segment_specs=tuple(segment_specs),
     )
 

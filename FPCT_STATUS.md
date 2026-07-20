@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2d prospective shared-adapter/numerical repair
-> 当前判定：R2/R2b/R2c均terminal且不可resume；R2c pretrained=`GPU_ENGINEERING_BLOCKED_R2`
-> 下一阶段：修复C_post/F shared sidecar adapter、replicated numerical path与projector scalar H2D sync；任何重跑必须新SHA/image/run-lock
+> 当前阶段：FPCT-GPU-R2d prospective execution preparation
+> 当前判定：R2/R2b/R2c均terminal且不可resume；R2d修复与CPU/HF验证已完成
+> 下一阶段：提交R2d scientific SHA，构建新image/run-lock/run UID并从complete GPU numerical gate重启
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -225,6 +225,7 @@
 | FPCT-D070 | 2026-07-20 | R2c trace-path repair通过CPU/HF验证 | 显式`packed=None`；actual Qwen C_post trace/no-sidecar regression；targeted 28 pass，full 403 pass；需新image/run-lock/run UID |
 | FPCT-D071 | 2026-07-20 | R2c replacement two-lock | SHA `e1133549...`；image `sha256:94437d56...`；run-lock `3ea3c3ea...`；run UID `fpct-r2c-e1133549-v1`；全新run root/loader/sidecar copy，不复用R2/R2b numerical或condition artifacts |
 | FPCT-D072 | 2026-07-20 | R2c pretrained matrix terminal | Complete numerical=`GO`；16 conditions+5 profiles完成；forced-on/resource通过，但precollapse/bypass/replicated/m1/hot-sync失败；0 accuracy/0 training/0 checkpoint；R2c不resume |
+| FPCT-D073 | 2026-07-20 | R2d prospective repair冻结 | C_post/F共享sidecar/layout；m≤1同parent path；replicated expanded local canary+analytic parent return；static scale non-persistent buffer；targeted 53 pass/full 406 pass；待新image/run-lock |
 
 ## 6. 已锁定决定与 deferred items
 

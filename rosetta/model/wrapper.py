@@ -368,13 +368,19 @@ class RosettaModel(nn.Module):
                 )
 
             packed = None
+            replicated_output = None
+            replicated_weights = None
             if fpct_sidecars:
                 if fpct_layout is None:
                     raise ValueError("FPCT sidecars require a prebuilt packed layout")
                 base_key_states = key_states
                 base_value_states = value_states
                 parent_attention_mask = attention_mask
-                if fpct_collapse_to_parent_bypass:
+                collapse_to_parent = (
+                    fpct_collapse_to_parent_bypass
+                    or not fpct_layout.has_extra_slots
+                )
+                if collapse_to_parent:
                     fpct_layout.validate_runtime(base_key_states, fpct_sidecars)
                 else:
                     with record_function("fpct.pack"):
@@ -387,9 +393,29 @@ class RosettaModel(nn.Module):
                             layout=fpct_layout,
                             replicated_collapse=fpct_replicated_collapse,
                         )
-                    key_states = packed.key
-                    value_states = packed.value
-                    attention_mask = packed.attention_mask
+                    if fpct_replicated_collapse:
+                        with record_function("fpct.replicated_check"):
+                            replicated_output, replicated_weights = (
+                                fpct_qwen_eager_attention_forward(
+                                    self,
+                                    query_states,
+                                    packed.key,
+                                    packed.value,
+                                    packed.attention_mask,
+                                    dropout=(
+                                        0.0
+                                        if not self.training
+                                        else self.attention_dropout
+                                    ),
+                                    scaling=self.scaling,
+                                    sliding_window=self.sliding_window,
+                                    **kwargs,
+                                )
+                            )
+                    else:
+                        key_states = packed.key
+                        value_states = packed.value
+                        attention_mask = packed.attention_mask
                 if fpct_metric_sink is not None and packed is not None:
                     with record_function("fpct.diagnostics"):
                         metrics = fpct_mechanism_diagnostics(query_states, packed)
@@ -470,14 +496,49 @@ class RosettaModel(nn.Module):
                         **kwargs,
                     )
 
+            if replicated_output is not None:
+                replicated_delta = (
+                    replicated_output.float() - attn_output.float()
+                ).abs().amax().detach()
+                if fpct_layer_metric_sink is not None:
+                    layer_bucket = fpct_layer_metric_sink.setdefault(
+                        self.layer_idx, {}
+                    )
+                    sum_key = "replicated_expanded_delta/sum"
+                    max_key = "replicated_expanded_delta/max"
+                    count_key = "replicated_expanded_delta/count"
+                    layer_bucket[sum_key] = (
+                        layer_bucket.get(
+                            sum_key, torch.zeros_like(replicated_delta)
+                        )
+                        + replicated_delta
+                    )
+                    layer_bucket[max_key] = torch.maximum(
+                        layer_bucket.get(max_key, replicated_delta),
+                        replicated_delta,
+                    )
+                    layer_bucket[count_key] = (
+                        layer_bucket.get(
+                            count_key, torch.zeros_like(replicated_delta)
+                        )
+                        + torch.ones_like(replicated_delta)
+                    )
+
             if fpct_attention_trace_sink is not None:
                 trace_row = {"pre_o_proj": attn_output.detach()}
                 if packed is not None:
                     invalid = ~packed.active[:, None, None, :]
+                    probability_for_trace = (
+                        replicated_weights
+                        if replicated_weights is not None
+                        else attn_weights
+                    )
                     invalid_probability = torch.where(
                         invalid,
-                        attn_weights.float(),
-                        torch.zeros_like(attn_weights, dtype=torch.float32),
+                        probability_for_trace.float(),
+                        torch.zeros_like(
+                            probability_for_trace, dtype=torch.float32
+                        ),
                     )
                     trace_row["invalid_probability_max"] = (
                         invalid_probability.abs().amax().detach()
@@ -501,7 +562,7 @@ class RosettaModel(nn.Module):
             return []
         if self.model_list[self.base_model_idx].config._attn_implementation != "eager":
             raise RuntimeError("FPCT R2 requires receiver eager attention")
-        if self.fpct_operator == "c_post":
+        if self.fpct_operator == "c_post" and not self._fpct_sidecars:
             handlers = []
             for layer_idx, layer in enumerate(
                 self.model_list[self.base_model_idx].model.layers
@@ -564,7 +625,8 @@ class RosettaModel(nn.Module):
                     self._fpct_layer_metrics if self.fpct_instrumentation else None
                 ),
                 fpct_collapse_to_parent_bypass=(
-                    self.fpct_collapse_to_parent_bypass
+                    self.fpct_operator == "c_post"
+                    or self.fpct_collapse_to_parent_bypass
                 ),
                 fpct_profile_scopes=self.fpct_profile_scopes,
                 fpct_attention_trace_sink=(
@@ -1560,7 +1622,7 @@ class RosettaModel(nn.Module):
 
                                 # Use first projector result
                                 agg_key, agg_value = projected_kv_list[0]
-                                if self.fpct_operator == "f":
+                                if self.fpct_operator in {"c_post", "f"}:
                                     if not fpct_candidate_records:
                                         raise ValueError(
                                             "FPCT F requires soft-alignment candidate records"

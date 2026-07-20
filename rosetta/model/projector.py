@@ -1724,6 +1724,22 @@ class C2CProjector(Projector):
             self.alignment_confidence_key_token_delta_scale,
             self.alignment_confidence_value_token_delta_scale,
         ) = self._resolve_alignment_layer_scales()
+        self.register_buffer(
+            "_alignment_confidence_key_token_delta_scale_buffer",
+            torch.tensor(
+                self.alignment_confidence_key_token_delta_scale,
+                dtype=torch.float32,
+            ),
+            persistent=False,
+        )
+        self.register_buffer(
+            "_alignment_confidence_value_token_delta_scale_buffer",
+            torch.tensor(
+                self.alignment_confidence_value_token_delta_scale,
+                dtype=torch.float32,
+            ),
+            persistent=False,
+        )
         if self.alignment_confidence_layer_scale_mode == "learned":
             self.alignment_confidence_key_token_delta_scale_param = nn.Parameter(
                 torch.tensor(
@@ -3401,15 +3417,11 @@ class C2CProjector(Projector):
             )
 
         return (
-            torch.tensor(
-                self.alignment_confidence_key_token_delta_scale,
-                device=device,
-                dtype=dtype,
+            self._alignment_confidence_key_token_delta_scale_buffer.to(
+                device=device, dtype=dtype
             ),
-            torch.tensor(
-                self.alignment_confidence_value_token_delta_scale,
-                device=device,
-                dtype=dtype,
+            self._alignment_confidence_value_token_delta_scale_buffer.to(
+                device=device, dtype=dtype
             ),
         )
 

@@ -1105,3 +1105,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 失败：BF16 pre-collapse identity、collapse bypass、replicated-atoms、m<=1 exact control，以及hot-path no-sync。FP32 replicated final delta `3.433e-5`，per-layer首次在depth 18/24越过`2e-5`；BF16 controls累积到`0.9375`。
 - P2--P6各有336个同步，Chrome trace定位到`Projector._current_alignment_layer_scales`在`fpct.project_candidates`内创建GPU scalar tensor。
 - R2c controller已terminal `GPU_ENGINEERING_BLOCKED_R2`，不patch/resume；未运行matched smoke/training/checkpoint/accuracy。后续修复必须新SHA/image/run-lock/run UID并从GPU gate重启。
+
+### R2d prospective shared-adapter and sync repair
+
+- 新增`FPCT_GPU_R2D_RECOVERY_ADDENDUM.md`，在任何R2d pretrained forward前冻结；R2/R2b/R2c artifacts保持immutable。
+- C_post与F现在都保留candidate sidecar并构建同一layout；C_post、显式bypass和无extra-slot的m≤1 batch使用同一analytic parent attention path。
+- Replicated diagnostic仍执行expanded identical-atoms+logA并记录每层local numerical delta，但返回analytic parent output，避免把数值null扰动反馈并放大到后续层；它仍不是训练arm。
+- Projector static alignment layer scales改为non-persistent device buffers，消除`fpct.project_candidates`内每次CPU scalar→GPU copy，不增加state_dict key或parameter。
+- Validation：targeted `53 passed`；CPU-safe full suite `406 passed, 2 warnings`；`git diff --check`通过。下一次执行必须新scientific SHA/image/run-lock/run UID。

@@ -69,6 +69,20 @@ def make_wrapper(projector: nn.Module, operator=None, dtype=torch.float64) -> Ro
     )
 
 
+def test_alignment_layer_scales_use_nonpersistent_device_buffers() -> None:
+    projector = make_projector(torch.float32)
+    state_keys = set(projector.state_dict())
+    assert "_alignment_confidence_key_token_delta_scale_buffer" not in state_keys
+    assert "_alignment_confidence_value_token_delta_scale_buffer" not in state_keys
+    key, value = projector._current_alignment_layer_scales(
+        torch.float32, projector._alignment_confidence_key_token_delta_scale_buffer.device
+    )
+    assert key.data_ptr() == projector._alignment_confidence_key_token_delta_scale_buffer.data_ptr()
+    assert value.data_ptr() == projector._alignment_confidence_value_token_delta_scale_buffer.data_ptr()
+    source = inspect.getsource(projector._current_alignment_layer_scales)
+    assert "torch.tensor(" not in source
+
+
 def candidate_inputs(dtype=torch.float64, *, k=4):
     generator = torch.Generator().manual_seed(17)
     source_k = torch.randn(1, 1, 5, 2, generator=generator, dtype=dtype)
@@ -277,6 +291,7 @@ def test_layout_is_reused_across_layers_without_autograd_state() -> None:
     layout = build_fpct_packed_layout(ck.shape[2], [sidecar])
     assert not layout.active.requires_grad
     assert not layout.log_prior.requires_grad
+    assert layout.has_extra_slots is True
     assert layout.row_offsets.tolist() == [[0, 2, 3, 4]]
     first = pack_fpct_memory(
         ck, cv, term, [sidecar], query_length=2, layout=layout
@@ -294,6 +309,17 @@ def test_layout_is_reused_across_layers_without_autograd_state() -> None:
     assert first.parent_index.data_ptr() == layout.parent_index.data_ptr()
     assert second.parent_index.data_ptr() == layout.parent_index.data_ptr()
     assert not torch.equal(first.key, second.key)
+
+
+def test_m1_layout_records_no_extra_slots() -> None:
+    q, _nk, _nv, fk, fv, prior, valid, ck, _cv, _term, _sidecar = make_attention_case()
+    valid = torch.zeros_like(valid)
+    valid[..., 0] = True
+    prior = valid.to(dtype=prior.dtype)
+    sidecar = FPCTSidecarSegment(0, fk, fv, prior, valid)
+    layout = build_fpct_packed_layout(ck.shape[2], [sidecar])
+    assert layout.has_extra_slots is False
+    assert torch.equal(layout.extra_slots, torch.zeros_like(layout.extra_slots))
 
 
 def test_attention_hot_path_has_no_host_sync_or_parent_loop() -> None:

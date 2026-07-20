@@ -1296,6 +1296,7 @@ def aggregate_pretrained(
     forced_metrics = {}
     layer_deltas = {}
     precollapse = {}
+    replicated_local_numeric = {}
     for dtype_name in TRACE_DTYPES:
         dtype_logits = logits[dtype_name]
         dtype_traces = traces[dtype_name]
@@ -1357,6 +1358,10 @@ def aggregate_pretrained(
         ) and _precollapse_identity(
             compact[dtype_name]["OP04_F_FORCED"],
             compact[dtype_name]["OP05_F_REP_FORCED"],
+        )
+        replicated_local_numeric[dtype_name] = _metric_from_trace(
+            dtype_traces["OP03_F_REP_NATIVE"],
+            "replicated_expanded_delta",
         )
     nonfinal = lambda rows, threshold: any(
         layer < 27 and value > threshold for layer, value in rows
@@ -1433,6 +1438,12 @@ def aggregate_pretrained(
                 for value in layer_deltas[name]["replicated_vs_cpost"]["first_above_tolerance"].values()
             ) for name in TRACE_DTYPES
         ),
+        "replicated_local_numeric": all(
+            bool(replicated_local_numeric[name])
+            and max(value for _layer, value in replicated_local_numeric[name])
+            <= (2e-5 if name == "fp32" else 2e-2)
+            for name in TRACE_DTYPES
+        ),
         "m1_control": all(
             deltas[name]["m1_max_abs"] <= tau["delta_rep_max_abs"]
             and all(
@@ -1466,6 +1477,16 @@ def aggregate_pretrained(
         "deltas": deltas,
         "layer_first_divergence": layer_deltas,
         "precollapse_candidate_identity_by_dtype": precollapse,
+        "replicated_local_numeric_by_dtype": {
+            name: {
+                "tolerance": 2e-5 if name == "fp32" else 2e-2,
+                "maximum": max(
+                    (value for _layer, value in rows), default=None
+                ),
+                "layer_count": len(rows),
+            }
+            for name, rows in replicated_local_numeric.items()
+        },
         "resource": {
             "latency_median_ratio": latency_median_ratio,
             "latency_p95_ratio": latency_p95_ratio,

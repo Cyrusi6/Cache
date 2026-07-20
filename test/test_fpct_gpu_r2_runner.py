@@ -61,6 +61,20 @@ def test_metric_trace_reader_preserves_layer_identity() -> None:
     assert runner._metric_from_trace(trace, "jensen_gap") == [(0, 0.5), (27, 1.0)]
 
 
+def test_replicated_numeric_trace_uses_dtype_specific_tolerance() -> None:
+    trace = {
+        "rows": [{
+            "trace": {"layers": {
+                "0": {"mechanism": {"replicated_expanded_delta/max": 1e-6}},
+                "1": {"mechanism": {"replicated_expanded_delta/max": 2e-6}},
+            }}
+        }]
+    }
+    assert runner._metric_from_trace(
+        trace, "replicated_expanded_delta"
+    ) == [(0, 1e-6), (1, 2e-6)]
+
+
 def test_compact_trace_identity_and_first_divergence() -> None:
     def rows(delta: float):
         return [{
