@@ -216,7 +216,8 @@
 | FPCT-D061 | 2026-07-20 | R2 自然 operator matrix 使用 condition×dtype 独立 sealed 进程 | FP32/BF16 各 8 conditions；保存冻结 parent/last-token compact traces，支持逐层 first-divergence，不提交完整 KV |
 | FPCT-D062 | 2026-07-20 | 四步 smoke 的完整 integrity evidence 写入训练 manifest | step-0/RNG/data-order/keys、C_post/F pre-collapse、parent nuisance、Gumbel、gradient、eager、scheduler、checkpoint reload、mask 均为硬门 |
 | FPCT-D063 | 2026-07-20 | 旧 run/image/artifacts 不参与 R2 resume | 新 R2 controller、K8s templates、image digest、run UID 与 artifact root 全部独立；任何 scientific-code 变更使新 lock 失效 |
-| FPCT-D064 | 2026-07-20 | R2 two-lock 完成 | scientific SHA `9f2ffcd9...`；image digest `sha256:d04455bf...`；run UID `fpct-r2-9f2ffcd9-v1`；operative run-lock SHA `b7a279d7...`；尚无新 pretrained output |
+| FPCT-D064 | 2026-07-20 | R2 two-lock 完成 | scientific SHA `9f2ffcd9...`；image digest `sha256:d04455bf...`；run UID `fpct-r2-9f2ffcd9-v1`；operative run-lock SHA `c4b0ca20...`；尚无新 pretrained output |
+| FPCT-D065 | 2026-07-20 | 首个 R2 gate Pod 在 container start 前因 digest alias 缺失 pending | 删除本 run UID pending Job；loader前瞻增加 `repository@digest` alias；无 container/pretrained/scientific output，不计 scientific retry |
 
 ## 6. 已锁定决定与 deferred items
 
@@ -274,9 +275,9 @@ R2 prospective protocol 已由 commit `f7a5f3c421a7738c9f69224cff1cebb53205c2e2`
 
 当前 scientific recovery 已实现 canonical FP32 prior、C_post/F shared eager adapter、exact collapse-to-parent bypass、replicated-atoms、FP32/BF16 condition-isolated trace、scope-aware profiler 和训练 integrity manifest。CPU 定向测试通过；完整 repo suite 按仓库约定在 `local/tmp` 重跑为 `401 passed, 2 warnings`。
 
-R2 two-lock 现已完成：scientific SHA `9f2ffcd9...`、新 image digest `sha256:d04455bf...`、run UID `fpct-r2-9f2ffcd9-v1` 和 operative run-lock SHA `b7a279d7...` 已冻结。首次 lock commit 后、任何 execution 前补入独立 image-loader template SHA，因此原 `b9d371cc...` 版本在执行前 superseded。新 run root只含 image tar、byte-identical training sidecar 和空的 results/state/jobs/attestations目录。
+R2 two-lock 现已完成：scientific SHA `9f2ffcd9...`、新 image digest `sha256:d04455bf...`、run UID `fpct-r2-9f2ffcd9-v1` 和 operative run-lock SHA `c4b0ca20...` 已冻结。早期 lock SHA 均在任何 scientific container/output 前 superseded。首个 gate Pod 因 kubelet需要 `repository@digest` alias而保持 pending，容器从未启动；该本 run UID Job 已删除，loader/lock已前瞻修正。
 
-本状态仍不构成新 GPU 或 pretrained GO。尚未导入 image、提交 R2 Job、生成 GPU numerical artifact或运行自然 label-free operator matrix；accuracy/correctness、训练 loss、checkpoint 与正式 performance cells 均未读取或生成。
+本状态仍不构成新 GPU 或 pretrained GO。image tar已导入，但 GPU gate container尚未成功启动，未生成 GPU numerical artifact或运行自然 label-free operator matrix；accuracy/correctness、训练 loss、checkpoint 与正式 performance cells 均未读取或生成。
 
 ### FPCT-3.5：GO
 

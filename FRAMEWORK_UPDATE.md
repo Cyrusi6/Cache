@@ -1051,7 +1051,7 @@ R2 当前只到 CPU/HF engineering readiness。没有运行新 pretrained model 
 - Image：`docker.io/library/fpct-gpu-r2:9f2ffcd9@sha256:d04455bf67177792548c3add74214f23ce097a004131481624886631725817ef`。
 - Image source tree：`b3278fc7e950221177c7d575a4ecc4269cf0473dfa4b3b46147962a2182b65fe`；tar SHA `9167434a...`。
 - Run UID/root：`fpct-r2-9f2ffcd9-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2-9f2ffcd9-v1`。
-- Operative run-lock SHA256：`b7a279d7a85f2ce3a1bbec59a87745426fb9b3c2b1d7cfddb74a42a12ffefb12`。首次 `b9d371cc...` lock 在任何 execution 前补入独立 image-loader template SHA 后 superseded。
+- Operative run-lock SHA256：`c4b0ca20bea54f2dbbb9eaabf5bdbb0dc5b74835a3284e5d846b46f1e6a2a331`。此前 lock 版本均在任何 scientific container/output 前 superseded。
 - 2048 sidecar复制到新 root 后保持 SHA `48caee80...`；旧 terminal result/job/state均未复制或复用。
 
 ### 验证
@@ -1064,3 +1064,5 @@ R2 当前只到 CPU/HF engineering readiness。没有运行新 pretrained model 
 ### 下一步
 
 只允许先导入该 digest image并运行 complete synthetic GPU numerical sequence。只有该 gate GO 后才允许新 label-free pretrained matrix。
+
+运行前基础设施更正：首次 gate Pod 因 loader 只创建 `tag@digest`、kubelet实际解析 `repository@digest` 而 `ImagePullBackOff`；容器从未启动。删除本 run UID pending Job后，loader与lock前瞻增加第二 digest alias。该事件没有 scientific output，不构成 tolerance/threshold/code retry。

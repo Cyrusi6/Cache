@@ -8,7 +8,7 @@ Status: `PRE_OUTPUT_LOCKED_R2`
 - Image: `docker.io/library/fpct-gpu-r2:9f2ffcd9@sha256:d04455bf67177792548c3add74214f23ce097a004131481624886631725817ef`.
 - Image source-tree SHA256: `b3278fc7e950221177c7d575a4ecc4269cf0473dfa4b3b46147962a2182b65fe`.
 - Image tar SHA256: `9167434a3bfa1fb4a078a20cf49ee72945d20b8228da4d3953ecea20c8558e93` (`3,520,229,376` bytes).
-- Run-lock SHA256: `b7a279d7a85f2ce3a1bbec59a87745426fb9b3c2b1d7cfddb74a42a12ffefb12`.
+- Operative run-lock SHA256: `c4b0ca20bea54f2dbbb9eaabf5bdbb0dc5b74835a3284e5d846b46f1e6a2a331`.
 - Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2-9f2ffcd9-v1`.
 - Node pool: `4090-48gx2`; formal seed parallelism is one dual-GPU pod.
 
@@ -33,3 +33,9 @@ training, checkpoint, accuracy or correctness access. The first authorized
 execution is image import followed by the complete synthetic GPU numerical
 sequence. Natural pretrained diagnostics remain blocked until that sequence is
 GO.
+
+The first gate Pod never started because kubelet resolved `repository@digest`
+while the initial loader had created only a `tag@digest` alias. The pending Job
+was deleted before container start. The loader and lock were prospectively
+amended to create both aliases; this is an infrastructure-only pre-output
+amendment, not a scientific retry.
