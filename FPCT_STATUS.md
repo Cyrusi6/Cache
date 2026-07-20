@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2f immutable execution locked
-> 当前判定：R2e-v2 terminal；R2f scientific SHA、image、run-lock与独立run root已冻结，尚无R2f GPU/pretrained output
-> 下一阶段：从complete synthetic GPU numerical gate启动；仅GO后运行pretrained matrix
+> 当前阶段：FPCT-GPU-R2f terminal
+> 当前判定：R2f complete numerical gate GO；pretrained matrix因FP32 checkpoint-native null超冻结floor而GPU_ENGINEERING_BLOCKED_R2
+> 下一阶段：不得resume/patch R2f；任何parent-first数值顺序修复必须新SHA/image/run-lock/run UID
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -234,6 +234,7 @@
 | FPCT-D079 | 2026-07-20 | R2e-v2 pretrained terminal | precollapse/bypass/rep/m1/hot-sync通过；flat max_slots softmax使native-null FP32 `4.12e-5`/BF16 `0.625`；inactive atom抬高D_K/D_V floors；0 training/accuracy |
 | FPCT-D080 | 2026-07-20 | R2f hierarchical repair冻结 | global-equivalent beta/gamma；exact parent-equivalent branch；inactive logA=-inf/diagnostics active-only；targeted 55/full 408 pass；待新image/run-lock |
 | FPCT-D081 | 2026-07-20 | R2f replacement two-lock | scientific SHA `d08b22b...`；image `sha256:cb91ec54...`；run-lock `1990589f...`；run UID `fpct-r2f-d08b22b-v1`；lock前无GPU/pretrained/training/checkpoint/accuracy output |
+| FPCT-D082 | 2026-07-20 | R2f pretrained terminal | 22/23 hard checks通过；唯一失败为FP32 native-null `4.2915e-5 > 4.0e-5`，BF16=0；504 layer-panel KV exact；controller terminal；0 training/accuracy |
 
 ## 6. 已锁定决定与 deferred items
 

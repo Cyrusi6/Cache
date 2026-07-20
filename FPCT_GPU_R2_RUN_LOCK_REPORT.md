@@ -204,3 +204,27 @@ training, checkpoint, accuracy or correctness result. The first authorized
 operation is the complete synthetic GPU numerical gate. Pretrained conditions
 remain blocked until that gate is recorded as GO; matched smoke and formal
 training remain conditionally blocked behind the subsequent R2 pretrained GO.
+
+## Terminal R2f execution outcome
+
+R2f passed the complete synthetic GPU gate and completed all 16 isolated
+pretrained conditions plus P2--P6 profiles. It passed eager runtime,
+canonical FP32 prior, finite/mask checks, forced-on activation, pre-collapse
+identity, collapse bypass, replicated-atoms, m<=1, hot-path no-sync and all
+latency/HBM/expansion gates.
+
+The sole failure was the frozen checkpoint-native numerical-null check. FP32
+`Delta_fact` was `4.291534423828125e-5`, exceeding the pre-output
+`4.0e-5` floor by `2.91534423828125e-6`; BF16 was exactly zero. Offline
+tensor-only review found all fused candidate K/V and collapsed K/V exactly
+equal to native K/V in all 504 FP32 panel-layer records, and reconstructed all
+records as parent-equivalent. C_post, replicated-atoms and bypass logits were
+exactly equal. The residual difference therefore occurs only after entering
+the hierarchical execution order; the first above-`2e-5` pre-o-proj,
+post-o-proj and residual differences occurred at layers 23, 26 and 22.
+
+The threshold is unchanged and the run will not be patched or resumed. The
+controller is terminal `GPU_ENGINEERING_BLOCKED_R2`. No matched smoke,
+training, checkpoint, accuracy or correctness evaluation ran. Any parent-first
+call-order test requires a new prospective scientific SHA, image, run-lock,
+run UID and complete restart from the synthetic GPU gate.

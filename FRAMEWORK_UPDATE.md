@@ -1171,3 +1171,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Run UID/root为`fpct-r2f-d08b22b-v1`；image source-tree `df0246f...`；tar SHA `8cb0983f...`；2048 certified sidecar保持`48caee80...`。
 - 新run不patch/resume R2e-v2，也不复用其numerical、condition、profile或result artifacts。Lock前无R2f GPU/pretrained/training/checkpoint/accuracy output。
 - 下一步只授权complete synthetic GPU numerical gate；pretrained matrix、matched smoke与formal training仍分别受前置GO约束。
+
+### R2f terminal result
+
+- Complete synthetic GPU gate=`GO`；16 conditions与P2--P6全部完成。Eager、FP32 prior、finite/mask、forced-on activation、precollapse、bypass、replicated、m≤1、hot-sync和resource全部通过。
+- 唯一失败为`expected_native_null`：FP32 `Delta_fact=4.291534423828125e-5`，超过冻结`tau=4.0e-5`约`2.9153e-6`；BF16为0。阈值未修改。
+- Offline exact-tensor audit确认504个FP32 panel×layer单元中candidate fused K/V、collapsed K/V都逐元素等于native，重建packed后全部parent-equivalent；C_post/replicated/bypass final logits完全相等。
+- FP32微差只在hierarchical执行顺序后深层累积：pre-o-proj/post-o-proj/residual首次超过`2e-5`分别为layer 23/26/22。Parent eager adapter前置只能作为下一新revision的前瞻性测试，R2f不patch/resume。
+- Controller terminal `GPU_ENGINEERING_BLOCKED_R2`；0 matched smoke/training/checkpoint/accuracy。

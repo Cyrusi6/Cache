@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v6_failure",
+  "status": "GPU_ENGINEERING_BLOCKED_R2",
+  "run_uid": "fpct-r2f-d08b22b-v1",
+  "scientific_code_commit": "d08b22b339698ad81c0a3651891185294d8307e6",
+  "image_digest": "sha256:cb91ec54576d55885891d0f4dc07d81b8876866bfe196c088f67c3a7dee1ede9",
+  "run_lock_sha256": "1990589f1c3eb07e08b56b1bf9e0c90e16c6ac0c92cbe5d067ce95f2294d683a",
+  "gpu_numerical": {
+    "status": "GO",
+    "sequence_sha256": "a523129786a1e39a0edfe186bd8eb181192d3e64593793ffa4a91999218a5c61"
+  },
+  "pretrained_matrix": {
+    "condition_manifest_count": 16,
+    "profile_manifest_count": 5,
+    "result_sha256": "73af6279b5d30c41271b17810a747884d05f83b1e2afe338e048399baa2d35df",
+    "passed_checks": [
+      "eager_runtime",
+      "projector_state_identity",
+      "panel_identity",
+      "canonical_prior",
+      "finite",
+      "no_mask_leakage",
+      "forced_on_dk",
+      "forced_on_dv",
+      "forced_on_logit_range",
+      "forced_on_query_activation",
+      "precollapse_candidate_identity",
+      "collapse_bypass",
+      "replicated_atoms",
+      "replicated_local_numeric",
+      "m1_control",
+      "hot_path_no_sync",
+      "f_no_new_scientific_sync",
+      "latency_median",
+      "latency_p95",
+      "hbm",
+      "expansion_mean",
+      "expansion_p95"
+    ],
+    "failed_checks": [
+      "expected_native_null"
+    ],
+    "root_cause_evidence": {
+      "checkpoint_native_delta": {
+        "fp32_max_abs": 4.291534423828125e-05,
+        "bf16_max_abs": 0.0,
+        "frozen_tau": 4e-05
+      },
+      "exact_kv_audit": "Across all 504 FP32 panel-by-layer records, fused candidate K/V and collapsed K/V were elementwise equal to native parent K/V; all reconstructed packed records were parent-equivalent.",
+      "first_deep_divergence": {
+        "pre_o_proj_layer": 23,
+        "post_o_proj_layer": 26,
+        "residual_layer": 22,
+        "comparison_tolerance": 2e-05
+      },
+      "control_isolation": "C_post, replicated-atoms and collapse-bypass final logits are exactly equal in FP32 and BF16. The remaining FP32 deviation is isolated to the hierarchical execution order after exact parent-equivalent K/V, not to candidate fusion, prior normalization or masking.",
+      "host_sync": "P2-P5 hot-path and scientific-scope synchronization counts are zero. P6 reports four non-hot scientific boundary events and does not change the hot-path verdict.",
+      "resource": {
+        "latency_median_ratio": 1.0770335370958257,
+        "latency_p95_ratio": 1.0680156490820685,
+        "peak_hbm_gib": 4.245347499847412
+      },
+      "prospective_only_inference": "A future revision may test computing the shared parent eager adapter before any hierarchical atom/group kernels so the exact-equivalent branch has the same numerical call order as C_post. This was not patched or tested in the terminal R2f execution."
+    },
+    "resume_or_patch": false
+  },
+  "firewall": {
+    "accuracy_or_correctness_accessed": false,
+    "matched_smoke_started": false,
+    "formal_training_started": false,
+    "checkpoint_created": false
+  },
+  "evidence": {
+    "controller_state": {
+      "sha256": "144063ccd79dad98e88d9e65fcc536bdb390d59c971279f26da97d0602fbbdf1",
+      "bytes": 1024
+    },
+    "event_ledger": {
+      "sha256": "6b3288df79e5eb5346423dad25daf76f6e10df2164a6fb6cfc818796465c166a",
+      "bytes": 230
+    },
+    "gpu_attestation": {
+      "sha256": "86dbc205b9732f0d6364a781c13bd52200dbcefa4a1d5560e3f9692c6e7098ba",
+      "bytes": 42551
+    },
+    "pretrained_attestation": {
+      "sha256": "c2615a31849981e91dd7f39aed388349f3edfdc3049a815de61de29e9a8157b1",
+      "bytes": 43041
+    }
+  },
+  "claim_boundary": "R2f validates the hierarchical beta/gamma path, exact structural controls, forced-on engineering activation, resource gates and hot-path synchronization removal. It fails the frozen checkpoint-native numerical-null gate by 2.91534423828125e-06 in FP32. No matched-training or performance evidence exists."
+}
