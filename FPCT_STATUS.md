@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2f prospective execution preparation
-> 当前判定：R2e-v2 terminal；R2f hierarchical adapter与active-only diagnostics已通过CPU/HF验证
-> 下一阶段：提交R2f scientific SHA，构建新image/run-lock/run UID并从complete GPU gate重启
+> 当前阶段：FPCT-GPU-R2f immutable execution locked
+> 当前判定：R2e-v2 terminal；R2f scientific SHA、image、run-lock与独立run root已冻结，尚无R2f GPU/pretrained output
+> 下一阶段：从complete synthetic GPU numerical gate启动；仅GO后运行pretrained matrix
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -233,6 +233,7 @@
 | FPCT-D078 | 2026-07-20 | R2e v2 pre-output infra amendment | 纯数字short SHA需quoted label；v1在Job/Pod/container前放弃；v2 run-lock `05c100a7...`、run UID `fpct-r2e-2653930-v2`；scientific image/threshold不变 |
 | FPCT-D079 | 2026-07-20 | R2e-v2 pretrained terminal | precollapse/bypass/rep/m1/hot-sync通过；flat max_slots softmax使native-null FP32 `4.12e-5`/BF16 `0.625`；inactive atom抬高D_K/D_V floors；0 training/accuracy |
 | FPCT-D080 | 2026-07-20 | R2f hierarchical repair冻结 | global-equivalent beta/gamma；exact parent-equivalent branch；inactive logA=-inf/diagnostics active-only；targeted 55/full 408 pass；待新image/run-lock |
+| FPCT-D081 | 2026-07-20 | R2f replacement two-lock | scientific SHA `d08b22b...`；image `sha256:cb91ec54...`；run-lock `1990589f...`；run UID `fpct-r2f-d08b22b-v1`；lock前无GPU/pretrained/training/checkpoint/accuracy output |
 
 ## 6. 已锁定决定与 deferred items
 

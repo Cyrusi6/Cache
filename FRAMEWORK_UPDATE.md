@@ -1164,3 +1164,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Exact-equivalent parents直接使用parent logit/value；整样本equivalent时返回与C_post同一parent eager adapter output。Distinct parents保持candidate factorization。
 - Inactive atoms设`log_prior=-inf`，D_K/D_V/gamma/count只统计active atoms，恢复null floor识别性。
 - Targeted `55 passed`；full `408 passed, 2 warnings`。下一run必须新SHA/image/run-lock/run UID。
+
+### R2f replacement two-lock
+
+- Scientific SHA `d08b22b339698ad81c0a3651891185294d8307e6`；image digest `sha256:cb91ec54576d55885891d0f4dc07d81b8876866bfe196c088f67c3a7dee1ede9`；run-lock SHA `1990589f1c3eb07e08b56b1bf9e0c90e16c6ac0c92cbe5d067ce95f2294d683a`。
+- Run UID/root为`fpct-r2f-d08b22b-v1`；image source-tree `df0246f...`；tar SHA `8cb0983f...`；2048 certified sidecar保持`48caee80...`。
+- 新run不patch/resume R2e-v2，也不复用其numerical、condition、profile或result artifacts。Lock前无R2f GPU/pretrained/training/checkpoint/accuracy output。
+- 下一步只授权complete synthetic GPU numerical gate；pretrained matrix、matched smoke与formal training仍分别受前置GO约束。

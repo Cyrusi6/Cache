@@ -180,3 +180,27 @@ forced-on check non-identifying.
 
 The controller is terminal `GPU_ENGINEERING_BLOCKED_R2`; no matched smoke,
 training, checkpoint, accuracy or correctness evaluation ran.
+
+## R2f hierarchical replacement lock
+
+- Scientific SHA: `d08b22b339698ad81c0a3651891185294d8307e6`.
+- Run UID: `fpct-r2f-d08b22b-v1`.
+- Image: `docker.io/library/fpct-gpu-r2f:d08b22b@sha256:cb91ec54576d55885891d0f4dc07d81b8876866bfe196c088f67c3a7dee1ede9`.
+- Image config/source-tree SHA256: `af92705d...` / `df0246f1...`.
+- Image tar SHA256: `8cb0983f8c9d4fda21e1a4bdb071c6b07ae2f880cfe77fd5fdde93a3f3c88760` (`3,520,301,056` bytes).
+- R2f run-lock SHA256: `1990589f1c3eb07e08b56b1bf9e0c90e16c6ac0c92cbe5d067ce95f2294d683a`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2f-d08b22b-v1`.
+- ConfigMap: `fpct-r2f-lock-d08b22b`.
+
+R2f is a new immutable execution. It does not patch or resume R2e-v2, and it
+does not reuse R2e numerical, condition, profile or result artifacts. The
+operative change is the prospectively frozen global-equivalent hierarchical
+beta/gamma attention adapter with an exact parent-equivalent branch and
+active-only diagnostics. Source, tests, image, tar, certified sidecar and all
+normative inputs are bound by the run-lock.
+
+Before this lock there was no R2f GPU numerical output, pretrained output,
+training, checkpoint, accuracy or correctness result. The first authorized
+operation is the complete synthetic GPU numerical gate. Pretrained conditions
+remain blocked until that gate is recorded as GO; matched smoke and formal
+training remain conditionally blocked behind the subsequent R2 pretrained GO.
