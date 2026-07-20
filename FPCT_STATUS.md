@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-3.7 certified-support execution
-> 当前判定：`INCONCLUSIVE`；runtime import provenance mismatch，0/12 shards、0 alignment rows
-> 下一阶段：本 execution revision 硬停止；若要重试，必须先人工授权新的 prospective execution revision
+> 当前阶段：FPCT-3.5P / FPCT-3.7-R1 prospective sealed-import recovery
+> 当前判定：`PRE-DATA PROTOCOL READY`；hostile subprocess 20/20，尚未读取新的自然 tokenizer/data
+> 下一阶段：只允许先 commit/push clean prospective execution SHA，再生成 pre-data lock 和重放 FPCT-3.5P
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -53,6 +53,8 @@
 
 本次 `FPCT-OVERNIGHT` 进一步提供条件式 R1–R4 授权，但严格受 correctness gate 约束。Corrected execution commit `b11a046...` 已在 certified-support audit 前推送并冻结；首次自然 invocation 随即暴露 runtime import provenance mismatch，因此 FPCT-3.7 按硬规则判定 `INCONCLUSIVE`，该 execution revision 的全部下游条件授权失效。
 
+本次 `FPCT-OVERNIGHT-R1` 已人工授权一个全新的 prospective revision。旧 `b11a046...` execution、`e394321...` failure record、旧 lock 与 local artifacts 保持不可变；新 revision 不补 `PYTHONPATH`、不卸载旧 editable、不复用旧 shard。当前只完成 sealed bootstrap、regular package、protocol diff、replay/audit targets 与结果前 hostile subprocess tests；自然 replay/audit 必须等待 clean commit push 后开始。
+
 下列操作在本 execution revision 中已被硬停止：
 
 - 运行任何 Hugging Face/LLM model forward；
@@ -82,6 +84,8 @@
 | FPCT-3.5 | `GO` | pre-data SHA `0398d26...` | R1 CPU | 已完成 | 7,265/7,265 identity；802 raw anomalies 全为 receiver-offset overlap alias |
 | FPCT-3.6 | `GO` | FPCT-3.5 identity forensic GO | R1 CPU | 已完成 | commit `b11a046...`；exact_identity + common sanitizer；102 tests pass |
 | FPCT-3.7 | `INCONCLUSIVE` | pushed/frozen `b11a046...` | R1 CPU | 已停止 | wrong editable `rosetta` resolved under script mode；0 shards/0 rows；不原地重跑 |
+| FPCT-3.5P | `PRE-DATA PROTOCOL READY` | 新 prospective clean/pushed SHA | R1 CPU | 条件授权 | sealed deterministic replay；提交前未读取自然数据 |
+| FPCT-3.7-R1 | `NOT STARTED` | FPCT-3.5P exact replay | R1 CPU | 条件授权 | 新 lock/root；不得复用 `b11a046...` shard |
 | FPCT-3.8 | `BLOCKED / NOT ENTERED` | certified TinyLlama readiness | R1/R2 | 否 | FPCT-3.7 未完成 |
 | FPCT-3.9 | `BLOCKED / NOT ENTERED` | FPCT-3.8 GO | R1 CPU | 否 | 未运行 real Qwen CPU integration |
 | FPCT-4 | `BLOCKED / NOT ENTERED` | FPCT-3.9 GO | R2+ | 否 | 未冻结 GPU/K8s formal manifest |
@@ -183,6 +187,8 @@
 | FPCT-D037 | 2026-07-20 | `exact_identity` 成为 same-tokenizer hard K=1 production strategy | rendered/IDs/offset/content/range/fingerprint 任一不等即 hard error；不 fallback |
 | FPCT-D038 | 2026-07-20 | `certified_slot0_v1` 只在显式 FPCT recipe 中共同作用于三臂 | uncertified m>=2 使用 raw slot0 one-hot；truncate 后重验并重算 parent entropy；legacy default 不变 |
 | FPCT-D039 | 2026-07-20 | FPCT-3.7 execution `b11a046...` 判定 `INCONCLUSIVE` | script-mode import 命中 `/home/lijunsi/projects/KVcache/C2C/rosetta` 而非冻结 worktree；0 shard/0 row；禁止补 `PYTHONPATH` 原地重跑 |
+| FPCT-D040 | 2026-07-20 | R1 使用 regular `rosetta` package + absolute `python -I` bootstrap，而非临时 `PYTHONPATH` | 不修改全局 editable；同进程冻结完整 module closure、origin/SHA/signature 与 pre/post target fingerprint |
+| FPCT-D041 | 2026-07-20 | FPCT-3.5P/3.7-R1 scientific fields 零变化 | exact identity、certifier、`certified_slot0_v1`、top-k、readiness/ranking/resource formulas 全部继承；新增 geometry/exposure 仅描述性 |
 
 ## 6. 已锁定决定与 deferred items
 

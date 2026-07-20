@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "diff_id": "fpct_3_5p_3_7r_scientific_contract_diff_v1",
+  "status": "ZERO_SCIENTIFIC_CHANGES_REQUIRED",
+  "sources": {
+    "fpct_3_5": "recipe/eval_recipe/fpct_3_5/alignment_correctness_manifest.json",
+    "fpct_3_7": "recipe/eval_recipe/fpct_3_7/certified_support_manifest.json"
+  },
+  "preserved_fields": {
+    "fpct_3_5": [
+      "tokenizer_identity",
+      "anomaly_taxonomy_precedence",
+      "certified_one_to_many",
+      "conditional_sanitizer",
+      "qwen3_qwen25_comparison",
+      "readiness",
+      "claim_boundary"
+    ],
+    "fpct_3_7": [
+      "canonical_input",
+      "production_correction",
+      "alignment",
+      "readiness",
+      "claim_boundary"
+    ]
+  },
+  "allowed_change_classes": [
+    "execution_import_contract",
+    "runtime_provenance",
+    "artifact_revision_path",
+    "descriptive_nonoperative_outputs"
+  ],
+  "scientific_change_count": 0,
+  "hard_fail_if_nonzero": true
+}

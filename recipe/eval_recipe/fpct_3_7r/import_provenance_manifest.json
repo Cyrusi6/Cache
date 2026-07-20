@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_3_7r_sealed_certified_support_v1",
+  "stage": "FPCT-3.7-R1",
+  "status": "CONDITIONAL_ON_FPCT_3_5P_PROVENANCE_CONFIRMED",
+  "failed_historical_execution": {
+    "execution_sha": "b11a046597b2466c1c6ba95c4d3693e76523c3b3",
+    "failure_record_commit": "e3943216ee7324b2a010ee006a30dcfa6145284f",
+    "overwrite_or_resume_forbidden": true
+  },
+  "new_artifact_root": "local/final_results/fpct_factorized_transport/fpct_3_7r_certified_support/rev_<execution_sha>",
+  "inherited_scientific_contract": {
+    "source_manifest": "recipe/eval_recipe/fpct_3_7/certified_support_manifest.json",
+    "canonical_input": "unchanged",
+    "production_correction": "unchanged",
+    "alignment": "unchanged",
+    "readiness": "unchanged",
+    "resource_formulas": "unchanged",
+    "scientific_change_count": 0
+  },
+  "alignment": {
+    "raw_strategy": "soft_span_overlap_v2",
+    "top_k": 4,
+    "score_mode": "uniform",
+    "boundary_bonus": 0.5,
+    "boundary_tolerance": 1,
+    "min_weight": 0.0,
+    "candidate_window": 0,
+    "reweight_mode": "none",
+    "apply_confidence_control": false,
+    "sanitizer": "certified_slot0_v1"
+  },
+  "readiness": {
+    "primary": "certified_sanitized_m_ge_2",
+    "fit_calibration_only": true,
+    "minimum_positive_groups_each_task": 30,
+    "minimum_pooled_positive_groups": 100,
+    "same_tokenizer_control_ranked": false,
+    "confirmatory_pair": "tinyllama"
+  },
+  "descriptive_additions_nonoperative": {
+    "three_stage_transition": [
+      "raw_pre_truncation",
+      "retained_after_truncation",
+      "sanitized"
+    ],
+    "units": [
+      "parent",
+      "sample",
+      "distinct_content_group"
+    ],
+    "factorization_exposure": true,
+    "geometry_ledger": true,
+    "resource_p99": true,
+    "ambiguity_density_correlation": true,
+    "sanitizer_arm_input_hash_equality": true
+  },
+  "sealed_execution": {
+    "bootstrap": "script/runtime/fpct_bootstrap.py",
+    "target": "script/analysis/fpct_3_7r_certified_support_audit.py",
+    "twelve_pair_task_shards": true,
+    "each_shard_references_stable_attestation": true,
+    "pre_and_post_target_closure_check": true
+  },
+  "tinyllama_failure_state": "NO_GO_GPU_CURRENT_CERTIFIER",
+  "gpu_authorized": false
+}

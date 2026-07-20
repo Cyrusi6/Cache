@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_3_5p_sealed_provenance_replay_v1",
+  "stage": "FPCT-3.5P",
+  "status": "LOCKS_BY_CLEAN_PUSHED_CONTAINING_COMMIT",
+  "historical_execution": {
+    "execution_sha": "0398d26b63e96263b813730368275ee66e313f66",
+    "status_before_replay": "PROVISIONAL_IMPORT_ORIGIN_UNSEALED",
+    "artifact_root": "local/final_results/fpct_factorized_transport/fpct_3_5_alignment_correctness/rev_0398d26b63e96263b813730368275ee66e313f66",
+    "overwrite_forbidden": true
+  },
+  "new_artifact_root": "local/final_results/fpct_factorized_transport/fpct_3_5p_provenance_replay/rev_<execution_sha>",
+  "canonical_runtime": {
+    "python_realpath": "/home/lijunsi/miniconda3/envs/c2c-py310-cu124/bin/python3.10",
+    "isolated_flag": "-I",
+    "repo_realpath": "/home/lijunsi/projects/Cache-fpct-factorized-transport",
+    "bootstrap": "script/runtime/fpct_bootstrap.py",
+    "target": "script/analysis/fpct_3_5p_provenance_replay.py",
+    "cwd_equals_repo": true,
+    "pythonpath_used": false,
+    "pythonhome_used": false,
+    "user_site_used": false,
+    "global_editable_modified": false
+  },
+  "inherited_scientific_contract": {
+    "source_manifest": "recipe/eval_recipe/fpct_3_5/alignment_correctness_manifest.json",
+    "exact_identity": "unchanged",
+    "certified_one_to_many": "unchanged",
+    "conditional_sanitizer": "unchanged",
+    "anomaly_taxonomy_precedence": "unchanged",
+    "pair_task_split_universe": "unchanged",
+    "top_k": 4,
+    "minimum_positive_groups_each_task": 30,
+    "minimum_pooled_positive_groups": 100,
+    "scientific_change_count": 0
+  },
+  "sealed_closure": {
+    "mandatory": [
+      "rosetta",
+      "rosetta.model.aligner",
+      "rosetta.train.dataset_adapters",
+      "rosetta.utils.evaluate",
+      "script/analysis/fpct_1b_structural_support_audit.py",
+      "script/analysis/fpct_3_5_alignment_correctness.py",
+      "script/analysis/fpct_3_7_certified_support_audit.py"
+    ],
+    "pre_and_post_target_recomputed": true,
+    "foreign_rosetta_module_action": "hard_error",
+    "signature_or_sha_drift_action": "hard_error",
+    "fake_tokenizer_probe_before_natural_data": true
+  },
+  "replay_hard_expectations": {
+    "canonical_samples": 7265,
+    "identity_samples": 7265,
+    "raw_m2_parents": 802,
+    "raw_positive_groups": 104,
+    "fit_calibration_m2_parents": 410,
+    "fit_calibration_positive_groups": 56,
+    "overlap_clusters": 401,
+    "ordered_and_multiset_candidate_atom_equality": true,
+    "fixed_context_radius": 4,
+    "qwen3_qwen25_row_equality": true
+  },
+  "secondary_geometry_flags": [
+    "receiver_zero_length",
+    "receiver_overlap",
+    "source_zero_length",
+    "source_duplicate",
+    "source_overlap",
+    "coverage_gap",
+    "non_monotonic",
+    "topk_non_exhaustive",
+    "truncation_loss",
+    "illegal_slot0"
+  ],
+  "failure_states": [
+    "IMPORT_PROVENANCE_BLOCKED",
+    "FORENSIC_REPLAY_MISMATCH"
+  ],
+  "gpu_authorized": false
+}
