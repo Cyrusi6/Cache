@@ -6,7 +6,7 @@ metadata:
   labels: &labels
     project: fpct
     study: confirmatory-r2
-    git_sha: __GIT_SHA_SHORT__
+    git_sha: "__GIT_SHA_SHORT__"
     seed: "104729"
     arm: pretrained-matrix
     run_uid: __RUN_UID__

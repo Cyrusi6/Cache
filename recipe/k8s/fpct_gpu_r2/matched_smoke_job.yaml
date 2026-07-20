@@ -3,7 +3,7 @@ kind: Job
 metadata:
   name: __JOB_NAME__
   namespace: c2c-research
-  labels: &labels {project: fpct, study: confirmatory-r2, git_sha: __GIT_SHA_SHORT__, seed: "104729", arm: matched-smoke, run_uid: __RUN_UID__}
+  labels: &labels {project: fpct, study: confirmatory-r2, git_sha: "__GIT_SHA_SHORT__", seed: "104729", arm: matched-smoke, run_uid: __RUN_UID__}
 spec:
   backoffLimit: 0
   template:

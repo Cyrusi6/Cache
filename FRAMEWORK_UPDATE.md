@@ -1142,3 +1142,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Scientific SHA `26539300de50d89a1be5a7871b6e78d9b715f535`；image digest `sha256:50b89faa7148a73e32caf7be62220fca874d5a5d084de09d33278eed2e1374ba`；run-lock SHA `e4d4392f4b3039541ab940acb16e4091a428af6da0f0eb2f6fa40d18c2b1cc5b`。
 - Run UID/root `fpct-r2e-2653930-v1`；source-tree `63a3e128...`；tar `f47b7f80...`；sidecar `48caee80...`。
 - Lock前无R2e GPU/pretrained/training/checkpoint/accuracy；只允许先跑complete synthetic GPU gate。
+
+### R2e v2 pre-output Kubernetes label amendment
+
+- Scientific short SHA `26539300`为纯数字；未quoted的YAML label被解析为number，`kubectl apply`在Job创建前拒绝。
+- 0 Job/Pod/container/GPU/scientific output；R2e-v1 controller root与ConfigMap不再使用。
+- 所有共享R2 execution templates及R2e loader将`git_sha`显式quoted；新增YAML类型regression。
+- Operative run UID `fpct-r2e-2653930-v2`，run-lock SHA `05c100a74e8737317f78977177b18ccfae9aed17c20444ac22c49fa250f6746e`；image/scientific SHA/threshold不变。

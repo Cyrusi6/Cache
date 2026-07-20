@@ -153,3 +153,16 @@ R2e is fully isolated from R2d numerical, condition and profile artifacts. Its
 source, addendum, tests, image provenance, tar and sidecar copy are frozen by
 hash. Before this lock there was no R2e pretrained/GPU output, training,
 checkpoint, accuracy or correctness result.
+
+The first R2e v1 loader render was rejected by Kubernetes client-side decoding
+before a Job existed because the pure-numeric short SHA was parsed as a numeric
+label. No Pod, container, GPU or scientific output existed. All R2 execution
+templates now quote `git_sha`; the abandoned v1 controller/config map is not
+used. The operative infrastructure-only replacement is:
+
+- Run UID: `fpct-r2e-2653930-v2`.
+- Run-lock SHA256: `05c100a74e8737317f78977177b18ccfae9aed17c20444ac22c49fa250f6746e`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2e-2653930-v2`.
+- ConfigMap: `fpct-r2e-v2-lock-2653930`.
+
+The scientific image and all scientific thresholds are unchanged.
