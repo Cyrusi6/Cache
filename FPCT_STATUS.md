@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-3.8/3.9 production hardening and real-Qwen CPU integration
-> 当前判定：`CPU/HF HARDENING GO`；FPCT-3.5P provenance-confirmed，FPCT-3.7-R1 single-pair ready
-> 下一阶段：先 commit/push hardening，再冻结 confirmatory/GPU/K8s manifest；GPU 尚未启动
+> 当前阶段：FPCT frozen GPU execution terminal gate
+> 当前判定：synthetic GPU numerical `GO`；pretrained smoke `GPU_ENGINEERING_BLOCKED`
+> 下一阶段：当前 frozen execution 无后续阶段；任何恢复必须新建 prospective revision 和新 run lock
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -90,9 +90,9 @@
 | FPCT-3.7-R1 | `SINGLE_PAIR_PILOT_READY` | FPCT-3.5P exact replay | R1 CPU | 已完成 | 12 shards verified；TinyLlama 511/228/2495，Qwen exact identity |
 | FPCT-3.8 | `GO` | certified TinyLlama readiness | R1 CPU | 已完成 | reusable vectorized layout；hot path 无 host-sync API/parent loop |
 | FPCT-3.9 | `GO` | FPCT-3.8 GO | R1 CPU | 已完成 | actual Qwen3 eager/DynamicCache random-config integration；360 full-suite pass |
-| FPCT-4 | `PRE-OUTPUT RUN LOCK READY` | FPCT-3.9 GO | R2+ | 条件授权 | scientific SHA、image digest、sidecar/model/data hashes 与 sealed container probe 已冻结；GPU 尚未启动 |
-| FPCT-5 | `BLOCKED / NOT ENTERED` | FPCT-4 GO | R2 | 否 | 未运行 fixed-checkpoint diagnostic |
-| FPCT-6 | `BLOCKED / NOT ENTERED` | FPCT-5 GO | R3 | 否 | 未运行 matched-training smoke |
+| FPCT-4 | `GPU NUMERICAL GO` | FPCT-3.9 GO + frozen run lock | R2+ | 已完成 | exact imageID；FP32/FP16/BF16、gradient、invalid、m≤1、replicated-null gates 通过 |
+| FPCT-5 | `GPU_ENGINEERING_BLOCKED / TERMINAL` | FPCT-4 GO | R2 | 已停止 | pretrained smoke activation、replicated-collapse、profiled host-sync 三项失败；无 accuracy |
+| FPCT-6 | `BLOCKED / NOT ENTERED` | FPCT-5 GO | R3 | 否 | 未提交 matched-training smoke |
 | FPCT-7 | `BLOCKED / NOT ENTERED` | FPCT-6 GO | R3 | 否 | 未冻结 confirmatory execution |
 | FPCT-8 | `BLOCKED / NOT ENTERED` | FPCT-7 GO | R4 | 否 | 未启动 12-seed training |
 | FPCT-9 | `BLOCKED / NOT ENTERED` | FPCT-8 GO | R4 | 否 | 未运行 model-selection/held-out evaluation |
@@ -202,6 +202,8 @@
 | FPCT-D050 | 2026-07-20 | 正式 K8s hardware pool 收窄到 `4090-48gx2`，seed parallelism=1 | pre-output probes 证明 `/netdisk` 仅该节点可见，`/home/lijunsi` 不含冻结资产；不在 lock 后复制模型/sidecar 到其他节点 |
 | FPCT-D051 | 2026-07-20 | 首次 synthetic GPU gate artifact 作废并从 gate 重启 | 数值 tolerance 全通过，但 activation floor 错由 BF16 probability row-sum error 推导；在任何 pretrained output 前改为 independent FP32 reference + replicated/m≤1 output-null，禁止使用旧 floor `0.024414` |
 | FPCT-D052 | 2026-07-20 | Pretrained smoke resource gate 改为 7-repeat median/p95 + CUDA profiler | 单次 latency 占位在任何 pretrained forward 前删除；硬门保持 median≤1.50、p95≤1.75、无 profiled host sync |
+| FPCT-D053 | 2026-07-20 | Final synthetic GPU numerical gate=`GO` | actual image digest 匹配；FP32 max abs `2.38e-7`，FP16/BF16、gradient、invalid、m≤1 与 replicated-collapse controls 全通过；activation-null floor 前瞻冻结为 `0.0390625` |
+| FPCT-D054 | 2026-07-20 | Pretrained smoke=`GPU_ENGINEERING_BLOCKED`，当前 execution 终止 | activation 为 numerical null、replicated-collapse delta `0.71875`、profiler 检出 device/stream synchronize；非 infrastructure failure，不重试、不进入 matched/formal training |
 
 ## 6. 已锁定决定与 deferred items
 
@@ -247,9 +249,11 @@ Reference equations、flat/hierarchical、退化、refinement/permutation、mask
 
 Production seam、shared candidate fuser、parent nuisance broadcast、ambiguous-only packed global attention、GQA/MQA、gradient、default/state-dict/config regression 均通过 CPU tests。没有运行 HF/LLM forward，因此该 GO 不构成 real-model activation 或 accuracy 证据。
 
-### FPCT-4：SCIENTIFIC CODE LOCK IN REVIEW / GPU NOT STARTED
+### FPCT-4/5：GPU NUMERICAL GO；PRETRAINED SMOKE GPU_ENGINEERING_BLOCKED
 
-旧 CPU-GATE 生成的 non-operative draft作为历史记录保留。当前已冻结 single-pair confirmatory preregistration、GPU numerical protocol、K8s protocol、50,000-replicate hierarchical statistics、4096 sign-flip/paired-t/sign-test code、一次性 split firewall controller、matched triplet runner、immutable image 和 K8s templates。首次 scientific lock `92724ec...` 后的镜像复核发现每臂重复 alignment 不满足 frozen-sidecar 复用合同；后续 candidate image 又在模型加载前分别因 evaluator closure dependency 和 Python realpath 硬停。首个 synthetic gate 虽通过 tolerance，但因 activation floor 数量使用错误在 pretrained output 前作废；corrected gate 后又在 pretrained output 前补齐 7-repeat latency/profiler hard gate。最终 scientific SHA 为 `371e72f1...`，image digest 为 `sha256:c8510567...`，sealed probe fingerprint 为 `acfdea9d...`；2048 sidecar SHA 为 `48caee80...`。当前没有 pretrained model output、训练或 accuracy；下一步是重跑 final synthetic GPU numerical gate。
+旧 CPU-GATE 生成的 non-operative draft作为历史记录保留。当前 frozen execution 使用 scientific SHA `371e72f1...`、image digest `sha256:c8510567...`、sealed fingerprint `acfdea9d...`、2048 sidecar SHA `48caee80...` 和 run-lock SHA `2a4db8f...`。Final synthetic GPU numerical gate 通过全部冻结 tolerance/null checks，artifact SHA 为 `0b23d937...`。
+
+随后首次真实 TinyLlama→Qwen3 pretrained smoke 在不读取 accuracy 的前提下触发三个硬门：operator activation 为 numerical null；replicated-collapse 与 C_post 最大输出差 `0.71875`；CUDA profiler 检出 `cudaDeviceSynchronize` 与 `cudaStreamSynchronize`。m≤1、finite、HBM（约 4.17 GiB）、median ratio `1.2769`、p95 ratio `1.2839` 通过，但不能覆盖硬失败。Controller 已进入 terminal `GPU_ENGINEERING_BLOCKED`；matched smoke、12-seed formal training、model-selection、held-out 和 checkpoint 全部未进入。
 
 ### FPCT-3.5：GO
 

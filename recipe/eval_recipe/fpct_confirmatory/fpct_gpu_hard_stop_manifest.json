@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_single_pair_confirmatory_v1_gpu_hard_stop_20260720",
+  "status": "GPU_ENGINEERING_BLOCKED",
+  "run_uid": "fpct-cfm-371e72f1-20260720",
+  "scientific_code_commit": "371e72f14da41f5509eafa21553c7a7418c9a53e",
+  "run_lock": {
+    "path": "recipe/eval_recipe/fpct_confirmatory/confirmatory_run_lock.json",
+    "sha256": "2a4db8f26def997c95b590a34718916b772f686f5c00eabb2f2b69f0dfe5e5ec"
+  },
+  "image": {
+    "reference": "docker.io/library/fpct-confirmatory:371e72f1@sha256:c851056733f3b7affc85ae5dabd870043f3ae7d3010d245705f5b9ded8dc36ab",
+    "observed_image_id_sha256": "c851056733f3b7affc85ae5dabd870043f3ae7d3010d245705f5b9ded8dc36ab",
+    "node": "4090-48gx2",
+    "device": "NVIDIA GeForce RTX 4090"
+  },
+  "jobs": [
+    {
+      "name": "fpct-load-371e72f1-48x2",
+      "status": "COMPLETE",
+      "retry_count": 0
+    },
+    {
+      "name": "fpct-gpu-gate-371e72f1",
+      "status": "GO",
+      "retry_count": 0,
+      "submitted_yaml_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-371e72f1-20260720/jobs/gpu_gate_job.yaml",
+      "submitted_yaml_sha256": "0acc369d64ed6c1b65aa098a112b480dd05c94bd8faabe7f095cabbfebc8a522"
+    },
+    {
+      "name": "fpct-pretrained-smoke-371e72f1",
+      "status": "GPU_ENGINEERING_BLOCKED",
+      "retry_count": 0,
+      "submitted_yaml_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-371e72f1-20260720/jobs/pretrained_smoke_job.yaml",
+      "submitted_yaml_sha256": "48c6d68b94cf1604d0047bbf258e05118a6a6fe84b6218091afedf45b06586ce"
+    }
+  ],
+  "artifacts": {
+    "gpu_numerical": {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-371e72f1-20260720/results/gpu_numerical.json",
+      "sha256": "0b23d937d18d8ebc29452f5f531c8e6e04a7da2cb895019d4be3fce1e5ea3b8b",
+      "bytes": 1856,
+      "status": "GO"
+    },
+    "pretrained_smoke": {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-371e72f1-20260720/results/pretrained_smoke.json",
+      "sha256": "7b7471aa62880521b0ac4b185af3c6ece1e4f21096f36c8bea9eb6e82e8be90b",
+      "bytes": 1688,
+      "status": "GPU_ENGINEERING_BLOCKED"
+    },
+    "controller_state": {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-371e72f1-20260720/state/controller_state.json",
+      "sha256": "5ae0ab2e5a107ba16fcc3729caab47a8d085e2cd9ea79b8d0ab230bd07404116",
+      "bytes": 1007,
+      "terminal_classification": "GPU_ENGINEERING_BLOCKED"
+    },
+    "controller_event_ledger": {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-371e72f1-20260720/state/event_ledger.jsonl",
+      "sha256": "bd17486487513f5b0709b6bfe884229ec61226f8778919f1a4bea39523b73900",
+      "bytes": 247
+    }
+  },
+  "synthetic_gpu_gate": {
+    "fp32_reference_max_abs_error": 2.384185791015625e-7,
+    "fp32_reference_gradient_relative_l2": 1.5795092167536495e-7,
+    "activation_null_floor": 0.0390625,
+    "all_frozen_checks_passed": true
+  },
+  "pretrained_smoke": {
+    "checks": {
+      "activation": false,
+      "replicated_collapse": false,
+      "no_profiled_host_sync": false,
+      "m1_control": true,
+      "finite": true,
+      "hbm": true,
+      "latency_median_ratio": true,
+      "latency_p95_ratio": true
+    },
+    "max_output_delta": 0.71875,
+    "replicated_delta": 0.71875,
+    "expanded_slot_ratio": 1.1458333730697632,
+    "latency_median_ratio": 1.2769313217999374,
+    "latency_p95_ratio": 1.2838936479796925,
+    "peak_hbm_gib": {
+      "c_post": 4.155043601989746,
+      "f": 4.1709513664245605
+    },
+    "profiled_host_sync_events": [
+      "cudaDeviceSynchronize",
+      "cudaStreamSynchronize"
+    ]
+  },
+  "downstream": {
+    "matched_smoke_submitted": false,
+    "formal_seed_jobs_submitted": 0,
+    "formal_triplets_complete": 0,
+    "model_selection_releases": 0,
+    "held_out_releases": 0,
+    "accuracy_evaluation_run": false,
+    "checkpoint_created_or_modified": false
+  },
+  "claim_boundary": "Execution stopped at an unlabeled pretrained engineering gate; no performance or query-time mechanism claim is identified."
+}
