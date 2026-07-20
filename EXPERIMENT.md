@@ -1,5 +1,62 @@
 # EXPERIMENT.md
 
+## 2026-07-20：Phase 2A-2b Prompt Identity Audit（CPU-only）
+
+### 审计范围与约束
+
+- 起点：`f1059dee343969661bb9492f0231d9bb58261706`；隔离分支 `research/phase2a2-prompt-identity-audit`。
+- 不运行 GPU/Kubernetes、不训练或评估 selector、不修改 B6/checkpoint、不读取 correctness、标签、sealed outcomes 或 prediction CSV 内容。
+- 只审计 tokenizer assets/chat templates、eval configs、artifact filename/date、execution manifest 与 provenance。
+- 正式模型集合固定为 Llama3.2-1B-Instruct、Qwen2.5-0.5B-Instruct、Qwen3-0.6B、Qwen3-1.7B 与 TinyLlama-1.1B-Chat。
+
+### Template 与环境审计
+
+- 仅 Llama3.2 template 命中动态依赖：`strftime_now` 注入 `Today Date`；template SHA256 `5816fce10444e03c2e9ee1ef8a4a1ea61ae7e69e438613f3b17b69d0426223a4`。
+- Llama3.2 支持显式 `date_string`，其余四类 tokenizer 未发现 clock/timezone/locale/process-env/randomness 依赖。
+- 固定 `17 Jul 2026` 后，在三个人工 ambient dates、三个 TZ 与三个 locale 下，rendered prompt SHA、input IDs SHA、record SHA 和 token count 完全一致。
+- 默认环境与 `Asia/Shanghai + zh_CN.utf8` 两次两样本 CPU freeze 得到相同 manifest SHA `e3e23dc807d4eb41828f26f977158e5d01f7808bed207765950af11983f90884`；`America/New_York + en_US.utf8` CPU verify 在 CUDA 查询前通过。
+
+### 历史分类
+
+| Phase | Safe | Ambiguous | Invalid |
+|---|---:|---:|---:|
+| Phase 1 | 9 | 1 | 0 |
+| Phase 1.5 | 24 | 0 | 30 |
+| Phase 2A-0 | 1 | 1 | 0 |
+| Phase 2A-1 | 1 | 1 | 0 |
+| Phase 2A-2a | 0 | 1 | 2 |
+| 合计 | 35 | 4 | 32 |
+
+- Phase 1 的 Llama within-seed/task 组件对照同日期且配置一致，保持 safe；三 seed aggregate 因 17/18 July 与 seed 共线而 ambiguous。
+- Phase 1.5 的 30 个跨日期 native/intervention task rows 判 invalid；24 个同日期 rows 保持 safe。
+- Phase 2A-0/2A-1 对 immutable SHA-bound artifacts 的 CPU 计算本身 safe，但 Llama cross-seed/generalization 解释继承日期混杂，判 ambiguous。
+- Phase 2A-2a ARC/OpenBookQA 的 17 July reference vs 19 July Gate-1 comparisons 判 invalid；geometry predictivity 未运行。
+
+### 实现与复现
+
+```bash
+PYTHONPATH=. python script/analysis/phase2a_2b_prompt_identity_audit.py \
+  --output-json recipe/eval_recipe/phase2a_2b_prompt_identity_audit/affected_experiments.json \
+  --output-csv recipe/eval_recipe/phase2a_2b_prompt_identity_audit/affected_experiments.csv
+
+python script/evaluation/unified_evaluator.py \
+  --config <freeze-config.yaml> \
+  --freeze-prompt-identity-manifest local/prompt_identity/<run-id>.json
+
+python script/evaluation/unified_evaluator.py \
+  --config <verify-config.yaml> \
+  --verify-prompt-identity-only
+
+python -m pytest -q --no-cov --basetemp=local/tmp/pytest-all-prompt-identity
+```
+
+### 验证与停止状态
+
+- 聚焦测试：`91 passed`；全量测试：`297 passed`；4 个 warning 均非本次功能失败。
+- 正式 evaluator 现在在 GPU/model activity 前 fail-closed，并在 runtime model call 前逐例复核 compact identity。
+- 原 Phase 2A-2a 的非覆盖式状态为：**STOPPED/NO_GO under preregistration; Gate-1 inference superseded by historical input drift diagnosis; geometry predictivity remains untested.**
+- 交付见 `PHASE2A_2B_PROMPT_IDENTITY_AUDIT_REPORT.md`、`PHASE2A_2B_AFFECTED_EXPERIMENTS.md`、`PHASE2A_2B_PROTOCOL_RECOMMENDATIONS.md` 与 `PHASE2A_2A_STATUS_ADDENDUM_PROMPT_IDENTITY.md`。完成后停止，不自动运行新 equivalence、geometry 或 selector 实验。
+
 ## 2026-07-19：Phase 2A-2a Llama3.2 Gate-1 Equivalence Debug
 
 ### 诊断范围

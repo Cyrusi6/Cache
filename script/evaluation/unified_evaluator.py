@@ -68,6 +68,23 @@ from rosetta.utils.eval_interventions import (
     apply_projector_eval_intervention,
     build_eval_intervention_provenance,
 )
+from rosetta.utils.prompt_identity import (
+    PROMPT_IDENTITY_PROTOCOL,
+    PROMPT_IDENTITY_SCHEMA_VERSION,
+    PromptIdentityContract,
+    PromptIdentityError,
+    build_prompt_identity_record,
+    canonical_json_bytes,
+    flatten_prompt_identity_record,
+    load_prompt_identity_manifest,
+    manifest_row_map,
+    prompt_identity_record_sha256,
+    prompt_identity_sample_key,
+    sha256_bytes,
+    tokenizer_identity,
+    validate_formal_template_contract,
+    verify_prompt_identity_row,
+)
 from rosetta.baseline.multi_stage import TwoStageInference, TwoStageRosetta
 
 
@@ -713,6 +730,21 @@ class UnifiedEvaluator:
         self.eval_config = config["eval"]
         self.dataset_name = self.eval_config.get("dataset", "mmlu-redux")
         self.data_root = self.eval_config.get("data_root")
+        prompt_identity_config = config.get(
+            "prompt_identity", self.eval_config.get("prompt_identity")
+        )
+        if self.eval_config.get("formal_experiment", False):
+            prompt_identity_config = dict(prompt_identity_config or {})
+            prompt_identity_config.setdefault("formal_experiment", True)
+        self.prompt_identity_contract = PromptIdentityContract.from_config(
+            prompt_identity_config, repo_root=REPO_ROOT
+        )
+        self._prompt_identity_manifest: Optional[Dict[str, Any]] = None
+        self._prompt_identity_expected_rows: Dict[str, Mapping[str, Any]] = {}
+        self._prompt_identity_tokenizer_records: Dict[str, Dict[str, Any]] = {}
+        self._prompt_identity_model_paths: Dict[str, Path] = {}
+        self._prompt_identity_runtime_verified = 0
+        self._prompt_identity_preflight_receipt: Optional[Dict[str, Any]] = None
 
         # Extract generation config if provided
         self.generation_config = self.model_config.get("generation_config", {})
@@ -933,7 +965,6 @@ class UnifiedEvaluator:
                 print(f"  Rosetta subfolder: {self.rosetta_subfolder}")
 
         print(f"Evaluating on dataset: {self.dataset_name}")
-        print(f"Available GPUs: {torch.cuda.device_count()}")
         print(f"Requested GPU IDs: {self.eval_config['gpu_ids']}")
         print(f"Answer method: {self.eval_config['answer_method']}")
         print(
@@ -952,6 +983,13 @@ class UnifiedEvaluator:
                 f"{self.content_group_filter.split} from "
                 f"{self.content_group_filter.manifest}"
             )
+        if self.prompt_identity_contract.enabled:
+            print(
+                "Prompt identity: "
+                f"mode={self.prompt_identity_contract.mode}, "
+                f"formal={self.prompt_identity_contract.formal_experiment}, "
+                f"date_string={self.prompt_identity_contract.date_string!r}"
+            )
 
     def _make_subject_splits(self, num_gpus: int) -> List[str]:
         """Create virtual subject splits for datasets without native subjects.
@@ -960,6 +998,428 @@ class UnifiedEvaluator:
         so we can distribute the workload across GPUs evenly.
         """
         return [f"SPLIT_{i}_OF_{num_gpus}" for i in range(num_gpus)]
+
+    def _evaluation_subjects(self) -> List[str]:
+        """Return the exact subject list used by both CPU preflight and workers."""
+        num_gpus = len(self.eval_config["gpu_ids"])
+        subjects = list(self.dataset_config["subjects"])
+        if self.dataset_name in [
+            "math-500",
+            "gsm8k",
+            "openbookqa",
+            "gpqa",
+            "ai2-arc",
+            "mmlu-pro",
+        ]:
+            subjects = self._make_subject_splits(num_gpus)
+        configured_subjects = self.eval_config.get("subjects")
+        if configured_subjects is not None:
+            subjects = [
+                subject for subject in subjects if subject in configured_subjects
+            ]
+            if self.dataset_name == "longbench" and self.eval_config.get(
+                "longbench_e", False
+            ):
+                subjects = [f"{subject}_e" for subject in configured_subjects]
+        if self.dataset_name == "longbench" and self.eval_config.get(
+            "longbench_e", False
+        ):
+            subjects = [f"{subject}_e" for subject in self.dataset_config["subjects_e"]]
+        return subjects
+
+    @staticmethod
+    def _virtual_subject_parts(subject: str) -> Tuple[bool, int, int]:
+        match = re.match(r"^SPLIT_(\d+)_OF_(\d+)$", str(subject))
+        if match is None:
+            return False, 0, 1
+        return True, int(match.group(1)), max(1, int(match.group(2)))
+
+    def _load_subject_test_data(self, subject: str):
+        is_virtual, _split_index, _total_splits = self._virtual_subject_parts(subject)
+        if self.dataset_name == "math-500":
+            config_name = None
+        elif self.dataset_name == "gsm8k":
+            config_name = "main" if is_virtual else subject
+        elif self.dataset_name == "openbookqa":
+            config_name = "main"
+        elif self.dataset_name == "gpqa":
+            config_name = "gpqa_diamond" if is_virtual else subject
+        elif self.dataset_name == "ai2-arc":
+            config_name = "ARC-Challenge" if is_virtual else subject
+        elif self.dataset_name == "mmlu-pro":
+            config_name = None
+        else:
+            config_name = subject
+        return load_c2c_dataset(
+            self.dataset_config["dataset_name"],
+            config_name=config_name,
+            split=self.dataset_config["test_split"],
+            data_root_path=self.data_root,
+        )
+
+    def _subject_sample_indices(
+        self, test_data: Sequence[Any], subject: str
+    ) -> List[int]:
+        sample_interval = int(self.eval_config.get("sample_interval", 1))
+        indices = list(range(0, len(test_data), sample_interval))
+        is_virtual, split_index, total_splits = self._virtual_subject_parts(subject)
+        if is_virtual and total_splits > 1:
+            start = (split_index * len(test_data)) // total_splits
+            end = ((split_index + 1) * len(test_data)) // total_splits
+            indices = [index for index in indices if start <= index < end]
+        limit = self.eval_config.get("limit")
+        if isinstance(limit, int) and limit > 0:
+            indices = indices[:limit]
+        elif isinstance(limit, (list, tuple)) and len(limit) == 2:
+            start, end = limit
+            start = 0 if start is None else int(start)
+            end = len(test_data) if end is None else int(end)
+            indices = [index for index in indices if start <= index < end]
+        return indices
+
+    def _format_example_prompt(
+        self, example: Mapping[str, Any], *, subject: str, tokenizer: Any
+    ) -> str:
+        if self.dataset_name == "mmmlu":
+            return self._format_mmmlu_example(
+                example,
+                use_cot=self.eval_config["use_cot"],
+                subject=subject,
+                use_template=self.eval_config["use_template"],
+            )
+        if self.dataset_name == "mmlu-redux":
+            return self._format_mmlu_redux_example(
+                example,
+                use_cot=self.eval_config["use_cot"],
+                use_template=self.eval_config["use_template"],
+            )
+        if self.dataset_name == "gpqa":
+            return self._format_gpqa_example(
+                example,
+                use_cot=self.eval_config["use_cot"],
+                use_template=self.eval_config["use_template"],
+            )
+        if self.dataset_name in ["math-500", "gsm8k"]:
+            return self._format_math_problem_example(
+                example,
+                use_cot=self.eval_config["use_cot"],
+                use_template=self.eval_config["use_template"],
+            )
+        if self.dataset_name == "openbookqa":
+            return self._format_openbookqa_example(
+                example,
+                use_cot=self.eval_config["use_cot"],
+                use_template=self.eval_config["use_template"],
+            )
+        if self.dataset_name == "ai2-arc":
+            return self._format_ai2_arc_example(
+                example,
+                use_cot=self.eval_config["use_cot"],
+                use_template=self.eval_config["use_template"],
+            )
+        if self.dataset_name == "mmlu-pro":
+            return self._format_mmlu_pro_example(
+                example,
+                use_cot=self.eval_config["use_cot"],
+                use_template=self.eval_config["use_template"],
+            )
+        if self.dataset_name == "ceval":
+            return self._format_ceval_example(
+                example,
+                use_cot=self.eval_config["use_cot"],
+                use_template=self.eval_config["use_template"],
+            )
+        if self.dataset_name == "longbench":
+            self.current_evaluating_subject = subject
+            return self._format_longbench_example(example, tokenizer)
+        raise ValueError(f"Unknown dataset: {self.dataset_name}")
+
+    def _prompt_messages(self, prompt: str) -> Tuple[List[Dict[str, str]], bool, bool]:
+        messages = [{"role": "user", "content": prompt}]
+        if self.eval_config["answer_method"] == "logits":
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": self.eval_config.get(
+                        "response_text", "The correct answer is"
+                    ),
+                }
+            )
+            return messages, False, True
+        return messages, True, False
+
+    def _load_prompt_identity_tokenizers(self) -> Dict[str, Any]:
+        if self.use_two_stage:
+            raise PromptIdentityError(
+                "formal prompt identity is not implemented for two-stage evaluation"
+            )
+        model_name = str(self.model_config["model_name"])
+        model_paths: Dict[str, Path] = {}
+        if "rosetta" in model_name.lower():
+            rosetta_config = self.model_config.get("rosetta_config", {})
+            receiver_value = rosetta_config.get("base_model")
+            if not receiver_value:
+                raise PromptIdentityError("Rosetta prompt identity requires base_model")
+            model_paths["receiver"] = Path(resolve_model_path(receiver_value)).resolve()
+            is_do_alignment = self.model_config.get(
+                "is_do_alignment", rosetta_config.get("is_do_alignment", False)
+            )
+            sender_value = rosetta_config.get("teacher_model")
+            if is_do_alignment and sender_value:
+                model_paths["sender"] = Path(resolve_model_path(sender_value)).resolve()
+        else:
+            model_paths["receiver"] = Path(resolve_model_path(model_name)).resolve()
+
+        tokenizers: Dict[str, Any] = {}
+        records: Dict[str, Dict[str, Any]] = {}
+        for role, model_path in model_paths.items():
+            tokenizer = AutoTokenizer.from_pretrained(model_path, local_files_only=True)
+            if tokenizer.pad_token is None:
+                tokenizer.pad_token = tokenizer.eos_token
+            set_default_chat_template(tokenizer, str(model_path))
+            record = tokenizer_identity(tokenizer, model_path)
+            validate_formal_template_contract(
+                record,
+                date_string=self.prompt_identity_contract.date_string,
+                timezone=self.prompt_identity_contract.timezone,
+                locale=self.prompt_identity_contract.locale,
+                template_kwargs=self.prompt_identity_contract.template_kwargs,
+            )
+            tokenizers[role] = tokenizer
+            records[role] = record
+        self._prompt_identity_model_paths = model_paths
+        self._prompt_identity_tokenizer_records = records
+        return tokenizers
+
+    def _prompt_scope_sha256(self) -> str:
+        content_filter = self.eval_config.get("content_group_filter")
+        scope = {
+            "model": self.model_config,
+            "eval": {
+                key: self.eval_config.get(key)
+                for key in (
+                    "dataset",
+                    "answer_method",
+                    "response_text",
+                    "use_cot",
+                    "use_template",
+                    "sample_interval",
+                    "limit",
+                    "subjects",
+                    "gpu_ids",
+                )
+            },
+            "content_group_filter": content_filter,
+            "date_string": self.prompt_identity_contract.date_string,
+            "timezone": self.prompt_identity_contract.timezone,
+            "locale": self.prompt_identity_contract.locale,
+            "template_kwargs": self.prompt_identity_contract.template_kwargs,
+        }
+        return sha256_bytes(canonical_json_bytes(scope))
+
+    def _build_prompt_identity_rows(
+        self, *, include_material: bool
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+        tokenizers = self._load_prompt_identity_tokenizers()
+        rows: List[Dict[str, Any]] = []
+        for subject in self._evaluation_subjects():
+            test_data = self._load_subject_test_data(subject)
+            for question_id in self._subject_sample_indices(test_data, subject):
+                example = test_data[question_id]
+                content_hash = None
+                if self.content_group_filter is not None:
+                    content_hash = self.content_group_filter.match(example)
+                    if content_hash is None:
+                        continue
+                elif self.cache_geometry_configured:
+                    content_hash = content_group_hash_for_example(
+                        self.cache_geometry_identity["task"], example
+                    )
+                if self.dataset_name == "longbench":
+                    id_hash = int(
+                        hashlib.sha256(
+                            str(example["_id"]).encode("utf-8")
+                        ).hexdigest(),
+                        16,
+                    )
+                    if id_hash % 4 != 1:
+                        continue
+                prompt = self._format_example_prompt(
+                    example, subject=subject, tokenizer=tokenizers["receiver"]
+                )
+                messages, add_generation_prompt, remove_last_suffix = (
+                    self._prompt_messages(prompt)
+                )
+                sample_identity = {
+                    "task": self.dataset_name,
+                    "subject": str(subject),
+                    "question_id": str(question_id),
+                    "content_hash": content_hash,
+                }
+                record = build_prompt_identity_record(
+                    messages=messages,
+                    tokenizers=tokenizers,
+                    model_paths=self._prompt_identity_model_paths,
+                    tokenizer_records=self._prompt_identity_tokenizer_records,
+                    add_generation_prompt=add_generation_prompt,
+                    enable_thinking=False,
+                    remove_last_suffix=remove_last_suffix,
+                    template_kwargs=self.prompt_identity_contract.template_kwargs,
+                    tokenize_add_special_tokens=(
+                        "rosetta" not in str(self.model_config["model_name"]).lower()
+                    ),
+                    sample_identity=sample_identity,
+                    include_material=include_material,
+                )
+                record["sample_key"] = prompt_identity_sample_key(sample_identity)
+                record["record_sha256"] = prompt_identity_record_sha256(record)
+                rows.append(record)
+        rows.sort(key=lambda row: str(row["sample_key"]))
+        header = {
+            "schema_version": PROMPT_IDENTITY_SCHEMA_VERSION,
+            "protocol": PROMPT_IDENTITY_PROTOCOL,
+            "prompt_scope_sha256": self._prompt_scope_sha256(),
+            "date_string": self.prompt_identity_contract.date_string,
+            "timezone": self.prompt_identity_contract.timezone,
+            "locale": self.prompt_identity_contract.locale,
+            "template_kwargs": dict(self.prompt_identity_contract.template_kwargs),
+            "tokenizers": self._prompt_identity_tokenizer_records,
+            "task": self.dataset_name,
+            "row_count": len(rows),
+            "material_frozen": bool(include_material),
+            "created_without_labels_or_outputs": True,
+        }
+        return rows, header
+
+    def freeze_prompt_identity_manifest(self, output: Path) -> Dict[str, Any]:
+        if not self.prompt_identity_contract.enabled:
+            raise PromptIdentityError("prompt identity must be enabled to freeze")
+        if self.prompt_identity_contract.mode != "freeze":
+            raise PromptIdentityError("freezing requires prompt_identity.mode=freeze")
+        rows, header = self._build_prompt_identity_rows(include_material=True)
+        if (
+            self.prompt_identity_contract.expected_rows is not None
+            and len(rows) != self.prompt_identity_contract.expected_rows
+        ):
+            raise PromptIdentityError(
+                "prompt identity freeze row count mismatch: "
+                f"{len(rows)} != {self.prompt_identity_contract.expected_rows}"
+            )
+        value = {**header, "rows": rows}
+        output = Path(output).expanduser().resolve()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        temporary = output.with_suffix(output.suffix + ".tmp")
+        temporary.write_bytes(canonical_json_bytes(value) + b"\n")
+        temporary.replace(output)
+        result = {
+            "path": str(output),
+            "sha256": hashlib.sha256(output.read_bytes()).hexdigest(),
+            "rows": len(rows),
+        }
+        print(f"Prompt identity manifest frozen: {result}")
+        return result
+
+    def preflight_prompt_identity(self) -> Optional[Dict[str, Any]]:
+        """Regenerate and verify every prompt before CUDA visibility/model load."""
+        if not self.prompt_identity_contract.enabled:
+            return None
+        if self.prompt_identity_contract.mode != "verify":
+            raise PromptIdentityError(
+                "normal evaluation requires prompt_identity.mode=verify"
+            )
+        manifest = load_prompt_identity_manifest(
+            self.prompt_identity_contract.manifest,
+            expected_sha256=self.prompt_identity_contract.manifest_sha256,
+        )
+        rows, header = self._build_prompt_identity_rows(include_material=True)
+        if manifest.get("material_frozen") is not True:
+            raise PromptIdentityError(
+                "formal prompt identity manifest must freeze canonical messages, "
+                "rendered prompts, and input IDs"
+            )
+        if manifest.get("prompt_scope_sha256") != header["prompt_scope_sha256"]:
+            raise PromptIdentityError("prompt identity prompt-scope SHA mismatch")
+        if manifest.get("tokenizers") != header["tokenizers"]:
+            raise PromptIdentityError("prompt identity tokenizer fingerprint mismatch")
+        if manifest.get("date_string") != header["date_string"]:
+            raise PromptIdentityError("prompt identity date_string mismatch")
+        if (
+            manifest.get("timezone") != header["timezone"]
+            or manifest.get("locale") != header["locale"]
+        ):
+            raise PromptIdentityError("prompt identity environment contract mismatch")
+        expected = manifest_row_map(manifest)
+        actual = {str(row["sample_key"]): row for row in rows}
+        if set(expected) != set(actual):
+            raise PromptIdentityError(
+                "prompt identity sample-key set mismatch: "
+                f"expected={len(expected)}, actual={len(actual)}"
+            )
+        for sample_key in sorted(expected):
+            verify_prompt_identity_row(
+                expected=expected[sample_key],
+                actual=actual[sample_key],
+                sample_key=sample_key,
+                require_material=True,
+            )
+        expected_rows = self.prompt_identity_contract.expected_rows
+        if expected_rows is not None and len(rows) != expected_rows:
+            raise PromptIdentityError(
+                f"prompt identity expected rows mismatch: {len(rows)} != {expected_rows}"
+            )
+        self._prompt_identity_manifest = manifest
+        self._prompt_identity_expected_rows = expected
+        receipt = {
+            "schema_version": PROMPT_IDENTITY_SCHEMA_VERSION,
+            "protocol": PROMPT_IDENTITY_PROTOCOL,
+            "status": "verified_before_gpu_start",
+            "manifest": str(self.prompt_identity_contract.manifest),
+            "manifest_sha256": self.prompt_identity_contract.manifest_sha256,
+            "prompt_scope_sha256": header["prompt_scope_sha256"],
+            "rows": len(rows),
+            "tokenizers": header["tokenizers"],
+            "date_string": header["date_string"],
+            "timezone": header["timezone"],
+            "locale": header["locale"],
+        }
+        receipt_path = self.output_dir / "prompt_identity_preflight_receipt.json"
+        receipt_path.write_text(
+            json.dumps(receipt, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        receipt["receipt_path"] = str(receipt_path.resolve())
+        receipt["receipt_sha256"] = hashlib.sha256(
+            receipt_path.read_bytes()
+        ).hexdigest()
+        self._prompt_identity_preflight_receipt = receipt
+        print(
+            "Prompt identity preflight verified before GPU start: "
+            f"rows={len(rows)}"
+        )
+        return receipt
+
+    def _verify_runtime_prompt_identity(
+        self, *, sample_identity: Mapping[str, Any], record: Mapping[str, Any]
+    ) -> Dict[str, Any]:
+        if not self.prompt_identity_contract.enabled:
+            return dict(record)
+        sample_key = prompt_identity_sample_key(sample_identity)
+        expected = self._prompt_identity_expected_rows.get(sample_key)
+        if expected is None:
+            raise PromptIdentityError(
+                f"runtime prompt identity sample not in frozen manifest: {sample_key}"
+            )
+        actual = {
+            **record,
+            "sample_identity": dict(sample_identity),
+            "sample_key": sample_key,
+        }
+        verify_prompt_identity_row(
+            expected=expected, actual=actual, sample_key=sample_key
+        )
+        actual["record_sha256"] = prompt_identity_record_sha256(actual)
+        self._prompt_identity_runtime_verified += 1
+        return actual
 
     def _dump_bad_sample(
         self,
@@ -1108,6 +1568,7 @@ class UnifiedEvaluator:
                 tokenize=False,
                 add_generation_prompt=True,
                 enable_thinking=False,
+                **self.prompt_identity_contract.template_kwargs,
             )
         else:
             final_prompt = raw_prompt
@@ -1640,6 +2101,9 @@ class UnifiedEvaluator:
         - printable_text (str): chat-formatted input text for logging
         """
         messages = [{"role": "user", "content": prompt}]
+        identity_messages, identity_add_generation_prompt, identity_remove_suffix = (
+            self._prompt_messages(prompt)
+        )
 
         use_aligner = (model_type == "rosetta") and (llm_tokenizer is not None)
 
@@ -1651,6 +2115,7 @@ class UnifiedEvaluator:
                     tokenize=False,
                     add_generation_prompt=True,
                     enable_thinking=False,
+                    **self.prompt_identity_contract.template_kwargs,
                 )
                 # Use custom response text if provided, otherwise default
                 response_text = self.eval_config.get(
@@ -1667,6 +2132,7 @@ class UnifiedEvaluator:
                     tokenize=False,
                     add_generation_prompt=True,
                     enable_thinking=False,
+                    **self.prompt_identity_contract.template_kwargs,
                 )
                 response_length = 1
             # Default HF/Qwen path (and Rosetta generate path)
@@ -1702,6 +2168,19 @@ class UnifiedEvaluator:
                         attention_mask.long().cumsum(-1) - 1
                     )
                 outputs["inputs"]["kv_cache_index"] = kv_cache_list
+
+            if self.prompt_identity_contract.enabled:
+                outputs["prompt_identity"] = build_prompt_identity_record(
+                    messages=identity_messages,
+                    tokenizers={"receiver": tokenizer},
+                    model_paths=self._prompt_identity_model_paths,
+                    tokenizer_records=self._prompt_identity_tokenizer_records,
+                    add_generation_prompt=identity_add_generation_prompt,
+                    enable_thinking=False,
+                    remove_last_suffix=identity_remove_suffix,
+                    template_kwargs=self.prompt_identity_contract.template_kwargs,
+                    tokenize_add_special_tokens=True,
+                )
 
         # Rosetta logits path with alignment (dual tokenizers)
         # TODO: add rosetta proportion for aligner
@@ -1767,6 +2246,7 @@ class UnifiedEvaluator:
                 learned_alignment_prior_mode=self.model_config["rosetta_config"].get(
                     "learned_alignment_prior_mode", "anchor"
                 ),
+                chat_template_kwargs=self.prompt_identity_contract.template_kwargs,
             )
 
             if answer_method == "logits":
@@ -1967,6 +2447,18 @@ class UnifiedEvaluator:
                 "printable_text": (details["slm_text"], details["llm_text"]),
                 "alignment_diagnostics": summarize_alignment_diagnostics(details),
             }
+            if self.prompt_identity_contract.enabled:
+                outputs["prompt_identity"] = build_prompt_identity_record(
+                    messages=identity_messages,
+                    tokenizers={"receiver": tokenizer, "sender": llm_tokenizer},
+                    model_paths=self._prompt_identity_model_paths,
+                    tokenizer_records=self._prompt_identity_tokenizer_records,
+                    add_generation_prompt=identity_add_generation_prompt,
+                    enable_thinking=False,
+                    remove_last_suffix=identity_remove_suffix,
+                    template_kwargs=self.prompt_identity_contract.template_kwargs,
+                    tokenize_add_special_tokens=False,
+                )
             if soft_alignment_list:
                 outputs["inputs"]["soft_alignment"] = soft_alignment_list
 
@@ -2162,60 +2654,9 @@ class UnifiedEvaluator:
                         skip_count += 1
                         continue
 
-                # Format prompt (pass subject for locale-aware templates)
-                if self.dataset_name == "mmmlu":
-                    prompt = self._format_mmmlu_example(
-                        example,
-                        use_cot=self.eval_config["use_cot"],
-                        subject=subject,
-                        use_template=self.eval_config["use_template"],
-                    )
-                elif self.dataset_name == "mmlu-redux":
-                    prompt = self._format_mmlu_redux_example(
-                        example,
-                        use_cot=self.eval_config["use_cot"],
-                        use_template=self.eval_config["use_template"],
-                    )
-                elif self.dataset_name == "gpqa":
-                    prompt = self._format_gpqa_example(
-                        example,
-                        use_cot=self.eval_config["use_cot"],
-                        use_template=self.eval_config["use_template"],
-                    )
-                elif self.dataset_name in ["math-500", "gsm8k"]:
-                    prompt = self._format_math_problem_example(
-                        example,
-                        use_cot=self.eval_config["use_cot"],
-                        use_template=self.eval_config["use_template"],
-                    )
-                elif self.dataset_name == "openbookqa":
-                    prompt = self._format_openbookqa_example(
-                        example,
-                        use_cot=self.eval_config["use_cot"],
-                        use_template=self.eval_config["use_template"],
-                    )
-                elif self.dataset_name == "ai2-arc":
-                    prompt = self._format_ai2_arc_example(
-                        example,
-                        use_cot=self.eval_config["use_cot"],
-                        use_template=self.eval_config["use_template"],
-                    )
-                elif self.dataset_name == "mmlu-pro":
-                    prompt = self._format_mmlu_pro_example(
-                        example,
-                        use_cot=self.eval_config["use_cot"],
-                        use_template=self.eval_config["use_template"],
-                    )
-                elif self.dataset_name == "ceval":
-                    prompt = self._format_ceval_example(
-                        example,
-                        use_cot=self.eval_config["use_cot"],
-                        use_template=self.eval_config["use_template"],
-                    )
-                elif self.dataset_name == "longbench":
-                    prompt = self._format_longbench_example(example, tokenizer)
-                else:
-                    raise ValueError(f"Unknown dataset: {self.dataset_name}")
+                prompt = self._format_example_prompt(
+                    example, subject=subject, tokenizer=tokenizer
+                )
 
                 # Generate answer
                 gate_diagnostic_summary: Dict[str, Any] = {}
@@ -2352,6 +2793,19 @@ class UnifiedEvaluator:
                         proportion=proportion,
                         order_mode=order_mode,
                     )
+                    if self.prompt_identity_contract.enabled:
+                        prompt_sample_identity = {
+                            "task": self.dataset_name,
+                            "subject": str(subject),
+                            "question_id": str(i),
+                            "content_hash": content_hash,
+                        }
+                        prepared["prompt_identity"] = (
+                            self._verify_runtime_prompt_identity(
+                                sample_identity=prompt_sample_identity,
+                                record=prepared["prompt_identity"],
+                            )
+                        )
 
                     if self.eval_config["answer_method"] == "logits":
                         # Forward for logits
@@ -2571,6 +3025,13 @@ class UnifiedEvaluator:
                 }
                 if prepared is not None:
                     cot_log_entry.update(prepared.get("alignment_diagnostics", {}))
+                    if prepared.get("prompt_identity") is not None:
+                        cot_log_entry["_prompt_identity_record"] = prepared[
+                            "prompt_identity"
+                        ]
+                        cot_log_entry.update(
+                            flatten_prompt_identity_record(prepared["prompt_identity"])
+                        )
                 cot_log_entry.update(gate_diagnostic_summary)
 
                 # Add question and choices based on dataset format
@@ -3169,6 +3630,31 @@ class UnifiedEvaluator:
         Args:
             Various result arrays and dictionaries
         """
+        prompt_identity_records = []
+        for row in all_cot_logs:
+            record = row.pop("_prompt_identity_record", None)
+            if record is not None:
+                prompt_identity_records.append(record)
+        prompt_identity_contract = getattr(
+            self,
+            "prompt_identity_contract",
+            PromptIdentityContract.from_config(None),
+        )
+        if prompt_identity_contract.enabled:
+            expected_count = len(self._prompt_identity_expected_rows)
+            if len(prompt_identity_records) != expected_count:
+                raise PromptIdentityError(
+                    "runtime prompt identity record count mismatch: "
+                    f"{len(prompt_identity_records)} != {expected_count}"
+                )
+            sample_keys = [
+                str(record["sample_key"]) for record in prompt_identity_records
+            ]
+            if len(sample_keys) != len(set(sample_keys)):
+                raise PromptIdentityError(
+                    "duplicate runtime prompt identity sample key"
+                )
+
         # Calculate overall accuracy (skip for LongBench)
         if self.dataset_name != "longbench":
             overall_accuracy = np.mean(np.concatenate(all_cors)) if all_cors else 0
@@ -3212,6 +3698,40 @@ class UnifiedEvaluator:
             f"{model_name_for_file}_{self.dataset_name}_"
             f"{self.eval_config['answer_method']}_{timestamp}"
         )
+
+        if prompt_identity_contract.enabled:
+            prompt_identity_file = (
+                self.output_dir / f"{prediction_stem}_prompt_identity.jsonl"
+            )
+            with prompt_identity_file.open(
+                "w", encoding="utf-8", newline="\n"
+            ) as handle:
+                for record in sorted(
+                    prompt_identity_records, key=lambda value: str(value["sample_key"])
+                ):
+                    handle.write(
+                        json.dumps(
+                            record,
+                            ensure_ascii=False,
+                            sort_keys=True,
+                            separators=(",", ":"),
+                            allow_nan=False,
+                        )
+                        + "\n"
+                    )
+            summary["prompt_identity"] = {
+                "enabled": True,
+                "protocol": PROMPT_IDENTITY_PROTOCOL,
+                "preflight_receipt": self._prompt_identity_preflight_receipt,
+                "runtime_record_count": len(prompt_identity_records),
+                "artifact": str(prompt_identity_file.resolve()),
+                "artifact_sha256": hashlib.sha256(
+                    prompt_identity_file.read_bytes()
+                ).hexdigest(),
+            }
+            print(f"Prompt identity records saved to {prompt_identity_file}")
+        else:
+            summary["prompt_identity"] = {"enabled": False}
 
         if gate_diagnostics is not None:
             gate_diagnostics_file = (
@@ -3519,38 +4039,13 @@ class UnifiedEvaluator:
         """Run the evaluation."""
         gpu_ids = self.eval_config["gpu_ids"]
         num_gpus = len(gpu_ids)
+        print(f"Available GPUs: {torch.cuda.device_count()}")
         print(f"Using {num_gpus} GPUs: {gpu_ids}")
         # Enable CUDA synchronous errors if requested
         if self.cuda_launch_blocking:
             os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
-        # Get subjects for this dataset
-        subjects = self.dataset_config["subjects"]
-        if self.dataset_name in [
-            "math-500",
-            "gsm8k",
-            "openbookqa",
-            "gpqa",
-            "ai2-arc",
-            "mmlu-pro",
-        ]:
-            # Create virtual subject splits to distribute across GPUs
-            subjects = self._make_subject_splits(num_gpus)
-
-        # Filter subjects if specified in config
-        if "subjects" in self.eval_config and self.eval_config["subjects"] is not None:
-            subjects = [s for s in subjects if s in self.eval_config["subjects"]]
-
-            # For LongBench, check if we're evaluating on LongBench-E
-            if self.dataset_name == "longbench" and self.eval_config.get(
-                "longbench_e", False
-            ):
-                subjects = [f"{s}_e" for s in self.eval_config["subjects"]]
-
-        if self.dataset_name == "longbench" and self.eval_config.get(
-            "longbench_e", False
-        ):
-            subjects = [f"{s}_e" for s in self.dataset_config["subjects_e"]]
+        subjects = self._evaluation_subjects()
         # Distribute subjects across GPUs
         subject_chunks = [subjects[i::num_gpus] for i in range(num_gpus)]
 
@@ -3627,6 +4122,19 @@ def main():
         ],
         help="View a trained B6 gate as learned, static confidence, or forced-on",
     )
+    parser.add_argument(
+        "--freeze-prompt-identity-manifest",
+        type=Path,
+        help=(
+            "CPU-only: regenerate and freeze the prompt identity manifest, then exit "
+            "before CUDA visibility or model loading"
+        ),
+    )
+    parser.add_argument(
+        "--verify-prompt-identity-only",
+        action="store_true",
+        help="CPU-only: regenerate and verify the frozen prompt identity, then exit",
+    )
     args = parser.parse_args()
 
     # Load configuration
@@ -3652,6 +4160,16 @@ def main():
 
     print("Using config: ", args.config)
 
+    # Prompt identity construction and full-row verification intentionally run
+    # before CUDA visibility changes, torch.cuda queries, worker spawn, or model load.
+    evaluator = UnifiedEvaluator(config)
+    if args.freeze_prompt_identity_manifest is not None:
+        evaluator.freeze_prompt_identity_manifest(args.freeze_prompt_identity_manifest)
+        return
+    evaluator.preflight_prompt_identity()
+    if args.verify_prompt_identity_only:
+        return
+
     if configure_cuda_visibility():
         print(
             "Preserving scheduler-assigned CUDA_VISIBLE_DEVICES=",
@@ -3660,8 +4178,6 @@ def main():
     else:
         print("Using evaluator config GPU ids without an inherited CUDA mask")
 
-    # Create and run evaluator
-    evaluator = UnifiedEvaluator(config)
     evaluator.run()
 
 

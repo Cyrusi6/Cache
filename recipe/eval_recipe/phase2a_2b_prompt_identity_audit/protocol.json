@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "role": "phase2a_2b_prompt_identity_protocol",
+  "source_commit": "f1059dee343969661bb9492f0231d9bb58261706",
+  "branch": "research/phase2a2-prompt-identity-audit",
+  "constraints": {
+    "gpu_allowed": false,
+    "selector_training_allowed": false,
+    "sealed_outcomes_allowed": false,
+    "checkpoint_changes_allowed": false
+  },
+  "formal_config_contract": {
+    "eval.formal_experiment": true,
+    "prompt_identity.enabled": true,
+    "prompt_identity.formal_experiment": true,
+    "prompt_identity.mode": "freeze_then_verify",
+    "prompt_identity.date_string": "DD Mon YYYY; explicit and immutable",
+    "prompt_identity.timezone": "UTC",
+    "prompt_identity.locale": "C",
+    "prompt_identity.expected_rows": "required after scope freeze",
+    "prompt_identity.manifest": "required in verify mode",
+    "prompt_identity.manifest_sha256": "required in verify mode"
+  },
+  "frozen_material": {
+    "per_sample": [
+      "canonical_messages",
+      "canonical_messages_sha256",
+      "sender_rendered_prompt",
+      "sender_input_ids",
+      "receiver_rendered_prompt",
+      "receiver_input_ids",
+      "per_role_hashes_and_token_counts"
+    ],
+    "per_tokenizer": [
+      "chat_template_sha256",
+      "tokenizer_revision_or_local_asset_sha256",
+      "tokenizer_asset_file_sha256"
+    ],
+    "storage_rule": "Raw frozen prompt material remains local; commit only compact audit summaries and artifact SHA values."
+  },
+  "execution_order": [
+    "Run --freeze-prompt-identity-manifest in CPU-only mode.",
+    "Record the canonical manifest SHA256 and exact expected row count.",
+    "Change the config to verify mode and bind manifest plus manifest_sha256.",
+    "At normal evaluator startup, regenerate and compare all rows before CUDA visibility, CUDA queries, worker spawn, checkpoint load, or model forward.",
+    "Abort on any scope, sample-key, message, prompt, input-ID, tokenizer, template, revision, environment-contract, or row-count mismatch.",
+    "During evaluation, recheck each runtime prompt against its frozen row and emit compact per-example hash records."
+  ],
+  "unsupported_formal_paths": [
+    "two_stage",
+    "two_stage_rosetta",
+    "dynamic templates without an explicit date_string override",
+    "templates depending on timezone, locale, process environment, or randomness"
+  ]
+}

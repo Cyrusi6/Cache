@@ -1,5 +1,40 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-07-20：Phase 2A-2b prompt identity audit 与 fail-closed evaluator 协议
+
+### 研究目标
+
+定位正式 sender/receiver tokenizer/chat template 中的系统日期、时区、locale、环境变量或随机依赖；在不运行 GPU、不训练 selector、不读取 sealed outcomes 的前提下，冻结并核验正式评测的 exact prompt identity，同时重审 Llama3.2 历史实验的输入同一性。
+
+### 核心改动
+
+- 从 `f1059dee343969661bb9492f0231d9bb58261706` 创建隔离分支 `research/phase2a2-prompt-identity-audit`，不修改 main、FPCT 或既有研究分支。
+- 新增通用 tokenizer/template scanner 与 tokenizer asset fingerprint；动态模板只有在显式支持固定 `date_string` 且不存在 timezone/locale/process-env/random 依赖时才允许正式运行。
+- evaluator 新增 CPU-only freeze/verify：冻结 canonical messages、sender/receiver rendered prompt 与 input IDs；记录逐例 hashes、token count、chat-template SHA 和 tokenizer revision。
+- 正式 verify 在 CUDA visibility、`torch.cuda` 查询、worker spawn、checkpoint load 与 model call 前重建全量 prompt；任一 scope、row、material、hash、template 或 tokenizer mismatch 立即退出。
+- `TokenAligner` 与普通 evaluator 输入共享同一个 deterministic chat-template renderer，确保 sender/receiver 收到相同固定模板变量。
+- 新增只读历史审计脚本，仅使用配置、manifest、artifact filename/date 与 provenance，不打开 prediction CSV 内容或 correctness。
+
+### 实验配置
+
+- 正式 tokenizer：Llama3.2-1B-Instruct、Qwen2.5-0.5B-Instruct、Qwen3-0.6B、Qwen3-1.7B、TinyLlama-1.1B-Chat。
+- CPU 环境矩阵：三个人工 ambient dates；UTC/Asia-Shanghai/America-New_York；C/zh_CN.utf8/en_US.utf8；固定 `date_string=17 Jul 2026`。
+- 历史范围：Phase 1、Phase 1.5、Phase 2A-0、Phase 2A-1、Phase 2A-2a 的 Llama3.2/dynamic-template 配置与 provenance。
+- 分类：same-date/同 prompt-relevant config 为 safe；可能跨日期但无 input hash 为 ambiguous；确认跨执行日期且动态日期 token 会变化为 invalid。
+
+### 验证结果
+
+- 5 个正式 tokenizer 中只有 Llama3.2 使用 `strftime_now`；其 chat-template SHA256 为 `5816fce10444...`，并支持显式 `date_string`。
+- 固定日期后，三组 ambient date/TZ/locale 的 record、rendered prompt、input IDs hashes 与 token count 全部相同。
+- 两次端到端两样本 CPU freeze 的完整 manifest SHA 均为 `e3e23dc807d4eb41828f26f977158e5d01f7808bed207765950af11983f90884`；第三环境的 verify 在任何 CUDA 路径前通过。
+- 历史审计 71 行：35 safe、4 ambiguous、32 invalid。Phase 1.5 Llama3.2 中 24 个同日期 task-level 对照 safe，30 个跨日期对照 invalid。
+- 聚焦回归 `91 passed`；仓库标准全量测试 `297 passed`；仅有 2 个既有 Pydantic warning 与 2 个 SentencePiece SWIG deprecation warning。
+- `git diff --check` 通过；本阶段未提交或启动任何 Kubernetes/GPU job。
+
+### 结论与下一步
+
+Llama3.2 历史 prompt drift 是已确认的输入身份问题。Phase 2A-2a 保持 preregistration 下的 STOPPED/NO_GO，但 Gate-1 的 instrumentation observer-effect 推断被历史输入漂移诊断取代；geometry predictivity 仍未测试。完成后停止，只有新 preregistration、全臂共享 prompt-manifest SHA 且 exact equivalence 通过，才可考虑重新授权 Phase 2A-2b。
+
 ## 2026-07-19：Llama3.2 Gate-1 equivalence-only diagnostic
 
 ### 研究目标

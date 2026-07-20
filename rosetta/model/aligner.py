@@ -12,6 +12,8 @@ import torch
 from transformers import PreTrainedTokenizerBase
 from enum import Enum
 
+from rosetta.utils.prompt_identity import render_chat_template_text
+
 
 class AlignmentStrategy(Enum):
     """Strategies for handling 1-to-many token alignments"""
@@ -54,6 +56,7 @@ class TokenAligner:
         soft_alignment_reweight_power: float = 2.0,
         soft_alignment_candidate_window: int = 0,
         learned_alignment_prior_mode: str = "anchor",
+        chat_template_kwargs: Optional[Dict[str, Any]] = None,
         verbose: bool = False,
     ):
         """
@@ -104,6 +107,8 @@ class TokenAligner:
             learned_alignment_prior_mode: Initial Route-3 source weights.
                      Supported values are 'anchor' and 'soft_span'. The default
                      preserves the original one-hot anchor behavior.
+            chat_template_kwargs: Explicit variables passed identically to both
+                     tokenizer chat templates, such as a frozen date_string.
             verbose: Whether to print debug information during alignment
         """
         self.slm_tokenizer = slm_tokenizer
@@ -212,6 +217,7 @@ class TokenAligner:
             0, int(soft_alignment_candidate_window)
         )
         self.learned_alignment_prior_mode = learned_alignment_prior_mode
+        self.chat_template_kwargs = dict(chat_template_kwargs or {})
         self.verbose = verbose
 
         # Cache for token mappings to improve performance
@@ -546,19 +552,22 @@ class TokenAligner:
             assert (
                 messages[-1]["role"] == "assistant"
             ), "Last message must be an assistant message"
-            templated_text = tokenizer.apply_chat_template(
-                messages[:-1],
-                tokenize=False,
-                add_generation_prompt=True,
-                enable_thinking=enable_thinking,
-            )
-            templated_text += messages[-1]["content"]
-        else:
-            templated_text = tokenizer.apply_chat_template(
+            _canonical, templated_text = render_chat_template_text(
+                tokenizer,
                 messages,
-                tokenize=False,
+                add_generation_prompt=False,
+                enable_thinking=enable_thinking,
+                remove_last_suffix=True,
+                template_kwargs=self.chat_template_kwargs,
+            )
+        else:
+            _canonical, templated_text = render_chat_template_text(
+                tokenizer,
+                messages,
                 add_generation_prompt=add_generation_prompt,
                 enable_thinking=enable_thinking,
+                remove_last_suffix=False,
+                template_kwargs=self.chat_template_kwargs,
             )
         encoded = tokenizer(
             templated_text, add_special_tokens=False, return_offsets_mapping=True
