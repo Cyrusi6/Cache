@@ -361,4 +361,5 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - Local-only probe：`local/final_results/fpct_factorized_transport/fpct_gpu_r2/rev_f7a5f3c421a7738c9f69224cff1cebb53205c2e2/zero_output_provenance.json`；firewall 记录 tokenizer/natural prompt/model forward/accuracy 均为 false。
 - Recovery config：canonical FP32 A/logA/mask/C_post reduction/softmax；C_post/F shared eager adapter；FP32/BF16 × 8 isolated operator conditions；18-row label-free panel；metric-specific null floors；P0–P6 scoped profiler；四步 seed 104729 matched integrity。
 - 当前验证：R2 扩展定向集 `53 passed`；首次 repo full suite 使用 repo 外 `/tmp` basetemp 时为 `396 passed, 2 path-contract failures, 2 warnings`，随后在 `local/tmp` 按仓库约定重跑为 `401 passed, 2 warnings`。
-- 当前没有新 pretrained output、GPU/K8s、训练、checkpoint 或 accuracy。新的 image/run-lock 尚未生成。
+- 新 two-lock：scientific SHA `9f2ffcd9ff21e4575f8fe870167eb04a7c86edb5`；image digest `sha256:d04455bf67177792548c3add74214f23ce097a004131481624886631725817ef`；run-lock SHA `b9d371ccc4e1fac18d60b1f674e3dbe3cb930bd0f99179d7ec6beb0ebb2564c2`；run root `fpct-r2-9f2ffcd9-v1`。
+- Lock时仍没有新 pretrained output、GPU/K8s、训练、checkpoint 或 accuracy；下一步仅为 image import + complete synthetic gate。

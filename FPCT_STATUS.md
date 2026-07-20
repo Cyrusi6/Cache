@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2 scientific recovery 与新 execution two-lock 准备
-> 当前判定：旧 execution 永久保持 terminal `GPU_ENGINEERING_BLOCKED`；R2 protocol 已锁定，CPU/HF recovery tests 通过，`NEW PRETRAINED OUTPUT NOT STARTED`
-> 下一阶段：提交并推送 clean R2 scientific SHA，构建全新 immutable image/run-lock 后从完整 synthetic GPU gate 开始
+> 当前阶段：FPCT-GPU-R2 `PRE_OUTPUT_LOCKED_R2`
+> 当前判定：旧 execution 永久 terminal；R2 scientific SHA/image/run-lock 已独立冻结，尚无新 pretrained output
+> 下一阶段：导入新 image，运行 complete synthetic numerical + runtime provenance gate；GO 前不得运行自然 pretrained matrix
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -216,6 +216,7 @@
 | FPCT-D061 | 2026-07-20 | R2 自然 operator matrix 使用 condition×dtype 独立 sealed 进程 | FP32/BF16 各 8 conditions；保存冻结 parent/last-token compact traces，支持逐层 first-divergence，不提交完整 KV |
 | FPCT-D062 | 2026-07-20 | 四步 smoke 的完整 integrity evidence 写入训练 manifest | step-0/RNG/data-order/keys、C_post/F pre-collapse、parent nuisance、Gumbel、gradient、eager、scheduler、checkpoint reload、mask 均为硬门 |
 | FPCT-D063 | 2026-07-20 | 旧 run/image/artifacts 不参与 R2 resume | 新 R2 controller、K8s templates、image digest、run UID 与 artifact root 全部独立；任何 scientific-code 变更使新 lock 失效 |
+| FPCT-D064 | 2026-07-20 | R2 two-lock 完成 | scientific SHA `9f2ffcd9...`；image digest `sha256:d04455bf...`；run UID `fpct-r2-9f2ffcd9-v1`；run-lock SHA `b9d371cc...`；尚无新 pretrained output |
 
 ## 6. 已锁定决定与 deferred items
 
@@ -273,7 +274,9 @@ R2 prospective protocol 已由 commit `f7a5f3c421a7738c9f69224cff1cebb53205c2e2`
 
 当前 scientific recovery 已实现 canonical FP32 prior、C_post/F shared eager adapter、exact collapse-to-parent bypass、replicated-atoms、FP32/BF16 condition-isolated trace、scope-aware profiler 和训练 integrity manifest。CPU 定向测试通过；完整 repo suite 按仓库约定在 `local/tmp` 重跑为 `401 passed, 2 warnings`。
 
-本状态不构成新 GPU 或 pretrained GO。新 image、run UID、run-lock、GPU numerical artifacts、自然 label-free operator matrix 与 K8s Jobs 均尚未创建；accuracy/correctness、训练 loss、checkpoint 与正式 performance cells 均未读取或生成。
+R2 two-lock 现已完成：scientific SHA `9f2ffcd9...`、新 image digest `sha256:d04455bf...`、run UID `fpct-r2-9f2ffcd9-v1` 和 run-lock SHA `b9d371cc...` 已冻结。新 run root只含 image tar、byte-identical training sidecar 和空的 results/state/jobs/attestations目录。
+
+本状态仍不构成新 GPU 或 pretrained GO。尚未导入 image、提交 R2 Job、生成 GPU numerical artifact或运行自然 label-free operator matrix；accuracy/correctness、训练 loss、checkpoint 与正式 performance cells 均未读取或生成。
 
 ### FPCT-3.5：GO
 
