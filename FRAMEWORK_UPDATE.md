@@ -871,7 +871,7 @@ FPCT-3.7 判定 `INCONCLUSIVE`。补 `PYTHONPATH`、改变 invocation mode 或 p
 
 ### 验证结果
 
-- Hostile real-subprocess sealed-import suite：`20 passed`。
+- Hostile real-subprocess sealed-import suite：初版 `20 passed`；stable-temp amendment 后 `21 passed`。
 - FPCT alignment/sanitizer/certified-audit + sealed-import targeted suite：`57 passed`。
 - Full suite 首次使用 `/tmp` basetemp 时两项既有 Route1 K8s 测试因 manifest 路径不在 repo/workspace 而拒绝；按仓库约定改用 repo-local basetemp 后正式 gate 为 `348 passed, 2 warnings`。
 - `py_compile`、JSON syntax 与 `git diff --check` 通过。
@@ -879,3 +879,9 @@ FPCT-3.7 判定 `INCONCLUSIVE`。补 `PYTHONPATH`、改变 invocation mode 或 p
 ### 结论与下一步
 
 状态为 `PRE-DATA PROTOCOL READY`，不是自然 forensic 或 certified-support GO。下一步必须先提交并推送当前 prospective code；clean containing commit 才能成为新 execution SHA。随后 3.5P exact replay 任一差异均停止；只有 provenance-confirmed 后才允许新的 3.7-R1 12-cell CPU audit。
+
+### Pre-data attestation amendment
+
+首个 pushed prospective SHA `9e501d7...` 的 freeze 成功，但三个自然 shard 都在 target 前被 fingerprint mismatch 拦截，因此仍为 0 natural rows。唯一不稳定字段是 Torch 每进程生成的 `/tmp/tmpXXXX/_remote_module_non_scriptable.py` 路径名。
+
+修订后的 bootstrap 继续记录完整随机路径；stable projection 只在目录精确包含 generated source 与匹配 `__pycache__`、生成源码 SHA 被记录、且不存在 foreign `rosetta` candidate 时，把随机目录名替换为 source-SHA identity。任何其他临时 payload 仍 hard error。双进程 fingerprint 稳定性已加入 hostile suite，结果为 `21 passed`。该修订需要新的 clean/pushed execution SHA；`9e501d7...` lock/artifacts 不复用。

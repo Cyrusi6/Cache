@@ -1,7 +1,7 @@
 # FPCT 状态
 
 > 当前阶段：FPCT-3.5P / FPCT-3.7-R1 prospective sealed-import recovery
-> 当前判定：`PRE-DATA PROTOCOL READY`；hostile subprocess 20/20，尚未读取新的自然 tokenizer/data
+> 当前判定：`PRE-DATA PROTOCOL READY`；hostile subprocess 21/21，尚未读取新的自然 tokenizer/data
 > 下一阶段：只允许先 commit/push clean prospective execution SHA，再生成 pre-data lock 和重放 FPCT-3.5P
 > 更新时间：2026-07-20（Asia/Shanghai）
 
@@ -54,6 +54,8 @@
 本次 `FPCT-OVERNIGHT` 进一步提供条件式 R1–R4 授权，但严格受 correctness gate 约束。Corrected execution commit `b11a046...` 已在 certified-support audit 前推送并冻结；首次自然 invocation 随即暴露 runtime import provenance mismatch，因此 FPCT-3.7 按硬规则判定 `INCONCLUSIVE`，该 execution revision 的全部下游条件授权失效。
 
 本次 `FPCT-OVERNIGHT-R1` 已人工授权一个全新的 prospective revision。旧 `b11a046...` execution、`e394321...` failure record、旧 lock 与 local artifacts 保持不可变；新 revision 不补 `PYTHONPATH`、不卸载旧 editable、不复用旧 shard。当前只完成 sealed bootstrap、regular package、protocol diff、replay/audit targets 与结果前 hostile subprocess tests；自然 replay/audit 必须等待 clean commit push 后开始。
+
+首个 prospective commit `9e501d7...` 成功生成 pre-data lock，但三个 shard 均在自然路径读取前因 stable fingerprint mismatch hard-fail。差异仅来自 Torch 每进程生成的 `/tmp/tmpXXXX/_remote_module_non_scriptable.py` 目录名；0 natural rows、0 shard artifact。该 execution 不继续使用。新 prospective amendment 记录完整随机路径，并只在生成源码 SHA、cache 结构和无 foreign `rosetta` 候选全部验证后规范化目录名；hostile suite 增至 21/21。
 
 下列操作在本 execution revision 中已被硬停止：
 
@@ -189,6 +191,7 @@
 | FPCT-D039 | 2026-07-20 | FPCT-3.7 execution `b11a046...` 判定 `INCONCLUSIVE` | script-mode import 命中 `/home/lijunsi/projects/KVcache/C2C/rosetta` 而非冻结 worktree；0 shard/0 row；禁止补 `PYTHONPATH` 原地重跑 |
 | FPCT-D040 | 2026-07-20 | R1 使用 regular `rosetta` package + absolute `python -I` bootstrap，而非临时 `PYTHONPATH` | 不修改全局 editable；同进程冻结完整 module closure、origin/SHA/signature 与 pre/post target fingerprint |
 | FPCT-D041 | 2026-07-20 | FPCT-3.5P/3.7-R1 scientific fields 零变化 | exact identity、certifier、`certified_slot0_v1`、top-k、readiness/ranking/resource formulas 全部继承；新增 geometry/exposure 仅描述性 |
+| FPCT-D042 | 2026-07-20 | `9e501d7...` pre-data lock 后的三个 shard 在 0-row 时因随机 Torch remote-module temp path 停止 | 不放宽 closure；完整路径继续记录，stable identity 改为验证后的 generated-source SHA；旧 execution 不复用 |
 
 ## 6. 已锁定决定与 deferred items
 

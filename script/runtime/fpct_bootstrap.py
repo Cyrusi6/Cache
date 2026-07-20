@@ -270,6 +270,58 @@ def _loaded_rosetta_modules(repo: Path) -> list[dict[str, Any]]:
     return records
 
 
+def _stable_sys_path(repo: Path) -> list[str]:
+    """Normalize only verified-empty interpreter-created temporary entries.
+
+    Torch distributed imports append a fresh ``/tmp/tmpXXXX`` directory that
+    contains a generated ``_remote_module_non_scriptable.py``.  Its directory
+    name is random; the generated source bytes are the relevant identity.
+    Any other temporary payload remains forbidden rather than normalized.
+    """
+
+    stable: list[str] = []
+    expected_rosetta = (repo / "rosetta").resolve(strict=True)
+    for raw in sys.path:
+        if not raw or not os.path.isabs(raw):
+            stable.append(raw)
+            continue
+        path = Path(raw).resolve(strict=False)
+        foreign_rosetta = path / "rosetta"
+        if foreign_rosetta.exists() and foreign_rosetta.resolve() != expected_rosetta:
+            raise BootstrapError(
+                f"sys.path contains a foreign rosetta candidate: {foreign_rosetta}"
+            )
+        if path.parent == Path("/tmp") and path.name.startswith("tmp"):
+            if not path.is_dir():
+                raise BootstrapError(
+                    f"ephemeral sys.path entry is not a directory: {path}"
+                )
+            entries = sorted(item.name for item in path.iterdir())
+            allowed = {"_remote_module_non_scriptable.py", "__pycache__"}
+            if set(entries) != allowed:
+                raise BootstrapError(
+                    f"unexpected ephemeral sys.path payload: {path}: {entries}"
+                )
+            source = path / "_remote_module_non_scriptable.py"
+            if not source.is_file():
+                raise BootstrapError("generated torch remote-module source missing")
+            cached = path / "__pycache__"
+            if not cached.is_dir() or any(
+                item.is_dir()
+                or not item.name.startswith("_remote_module_non_scriptable.")
+                or item.suffix != ".pyc"
+                for item in cached.iterdir()
+            ):
+                raise BootstrapError("unexpected generated remote-module cache")
+            stable.append(
+                "/tmp/<torch-remote-module-sha256="
+                f"{sha256_file(source)}>"
+            )
+            continue
+        stable.append(str(path) if path.exists() else raw)
+    return stable
+
+
 def _closure(repo: Path, include_gpu: bool) -> dict[str, ModuleType]:
     loaded: dict[str, ModuleType] = {}
     for key, module_name in MANDATORY_MODULES.items():
@@ -345,6 +397,7 @@ def _attest(repo: Path, target: Path, include_gpu: bool) -> dict[str, Any]:
             "cwd": str(Path.cwd().resolve()),
             "argv": list(sys.argv),
             "sys_path": list(sys.path),
+            "stable_sys_path": _stable_sys_path(repo),
             "meta_path_types": [
                 f"{type(item).__module__}.{type(item).__qualname__}"
                 for item in sys.meta_path
@@ -368,7 +421,7 @@ def _attest(repo: Path, target: Path, include_gpu: bool) -> dict[str, Any]:
         "repo_root": full["repo_root"],
         "executable": full["executable"],
         "python": full["python"],
-        "sys_path": full["process"]["sys_path"],
+        "sys_path": full["process"]["stable_sys_path"],
         "meta_path_types": full["process"]["meta_path_types"],
         "git": {
             "head": git_head,

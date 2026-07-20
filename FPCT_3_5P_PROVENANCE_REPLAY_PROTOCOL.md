@@ -47,6 +47,13 @@ the cwd must be the repository root.  `python -I` is mandatory.  `PYTHONPATH`,
 are non-operative.  The existing Conda editable distribution is recorded but
 is neither removed nor used for source resolution.
 
+Torch may create a fresh `/tmp/tmpXXXX` import entry containing only generated
+`_remote_module_non_scriptable.py` and its matching bytecode cache.  The full
+random path is always recorded.  The stable projection replaces only the
+directory name with the generated source SHA256 after verifying that exact
+payload and absence of any foreign `rosetta` candidate; any other temporary
+payload is a hard error.
+
 Before the target runs, the bootstrap imports and attests the regular `rosetta`
 package, aligner, dataset adapter, prompt evaluator, FPCT-1B audit, FPCT-3.5
 audit and FPCT-3.7 audit in the same process.  It performs a real fake-tokenizer

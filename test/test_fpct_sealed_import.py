@@ -80,6 +80,7 @@ def _run(
 
 
 def _success(tmp_path: Path, **kwargs):
+    tmp_path.mkdir(parents=True, exist_ok=True)
     command, output, attestation = _command(tmp_path, **kwargs)
     result = _run(command)
     assert result.returncode == 0, result.stderr
@@ -256,6 +257,27 @@ def test_freeze_shard_fingerprint_mismatch_hard_fails(tmp_path: Path) -> None:
     result = _run(command)
     assert result.returncode != 0
     assert "fingerprint mismatch" in result.stderr
+
+
+def test_stable_fingerprint_normalizes_only_empty_runtime_temp_names(
+    tmp_path: Path,
+) -> None:
+    _probe_a, attestation_a = _success(tmp_path / "a")
+    _probe_b, attestation_b = _success(tmp_path / "b")
+    assert (
+        attestation_a["stable_fingerprint_sha256"]
+        == attestation_b["stable_fingerprint_sha256"]
+    )
+    assert attestation_a["process"]["sys_path"] != attestation_b["process"][
+        "sys_path"
+    ]
+    assert attestation_a["process"]["stable_sys_path"] == attestation_b[
+        "process"
+    ]["stable_sys_path"]
+    assert any(
+        item.startswith("/tmp/<torch-remote-module-sha256=")
+        for item in attestation_a["process"]["stable_sys_path"]
+    )
 
 
 def test_synthetic_probe_reads_no_protected_natural_data(tmp_path: Path) -> None:

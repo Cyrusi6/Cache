@@ -20,7 +20,17 @@
     "pythonpath_used": false,
     "pythonhome_used": false,
     "user_site_used": false,
-    "global_editable_modified": false
+    "global_editable_modified": false,
+    "generated_torch_remote_module": {
+      "full_random_path_recorded": true,
+      "stable_identity": "generated_source_sha256",
+      "allowed_payload": [
+        "_remote_module_non_scriptable.py",
+        "matching___pycache__"
+      ],
+      "foreign_rosetta_candidate_action": "hard_error",
+      "unexpected_payload_action": "hard_error"
+    }
   },
   "inherited_scientific_contract": {
     "source_manifest": "recipe/eval_recipe/fpct_3_5/alignment_correctness_manifest.json",
