@@ -15,7 +15,7 @@ spec:
       - name: gpu-gate
         image: __IMAGE_DIGEST__
         imagePullPolicy: IfNotPresent
-        command: ["/opt/conda/bin/python", "-I", "/opt/fpct/script/runtime/fpct_bootstrap.py"]
+        command: ["/opt/conda/bin/python3.11", "-I", "/opt/fpct/script/runtime/fpct_bootstrap.py"]
         args: ["--repo-root", "/opt/fpct", "--target", "/opt/fpct/script/experiment/fpct_confirmatory_runner.py", "--include-gpu-closure", "--", "gpu-numerical", "--run-lock", "/opt/fpct-lock/confirmatory_run_lock.json", "--output", "/fpct-run/results/gpu_numerical.json"]
         resources:
           limits: {nvidia.com/gpu: "1"}

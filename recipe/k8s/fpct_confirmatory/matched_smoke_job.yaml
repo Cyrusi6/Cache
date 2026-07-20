@@ -14,7 +14,7 @@ spec:
       - name: matched-smoke
         image: __IMAGE_DIGEST__
         imagePullPolicy: IfNotPresent
-        command: ["/opt/conda/bin/python", "-I", "/opt/fpct/script/runtime/fpct_bootstrap.py"]
+        command: ["/opt/conda/bin/python3.11", "-I", "/opt/fpct/script/runtime/fpct_bootstrap.py"]
         args: ["--repo-root", "/opt/fpct", "--target", "/opt/fpct/script/experiment/fpct_confirmatory_runner.py", "--include-gpu-closure", "--", "matched-smoke", "--run-lock", "/opt/fpct-lock/confirmatory_run_lock.json", "--output-root", "/fpct-run/results"]
         env:
         - {name: C2C_MODEL_ROOT, value: /models/c2c}

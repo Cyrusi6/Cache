@@ -32,6 +32,7 @@ def test_k8s_templates_are_digest_only_and_have_scoped_labels():
         assert "/home/lijunsi/miniconda" not in text
         assert "/home/lijunsi/projects/Cache" not in text
         assert "persistentVolumeClaim" not in text
+        assert "/opt/conda/bin/python3.11" in text
         if "hostPath:" in text:
             assert "/netdisk/lijunsi/" in text
         labels = payload["metadata"]["labels"]
