@@ -151,7 +151,7 @@ def training_config(
     lock: dict[str, Any], seed: int, arm: str, output: Path,
     *, examples: int = 2048, optimizer_steps: int = 64,
 ) -> dict[str, Any]:
-    sidecar_key = f"training_alignment_sidecar_{examples}"
+    sidecar_key = "training_alignment_sidecar_2048"
     sidecar = lock.get("assets", {}).get(sidecar_key, {}).get("container_path")
     if not sidecar:
         raise GateError("run lock does not bind a frozen training alignment sidecar")

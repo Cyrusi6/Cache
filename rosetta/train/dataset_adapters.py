@@ -1413,9 +1413,9 @@ class AlignedChatDataset(Dataset):
         if int(payload.get("top_k", -1)) != self.soft_alignment_top_k:
             raise ValueError("FPCT alignment cache top-k mismatch")
         items = payload.get("items")
-        if not isinstance(items, list) or len(items) != len(self.dataset):
-            raise ValueError("FPCT alignment cache dataset length mismatch")
-        return items
+        if not isinstance(items, list) or len(items) < len(self.dataset):
+            raise ValueError("FPCT alignment cache is shorter than the dataset")
+        return items[: len(self.dataset)]
 
     @classmethod
     def _clone_fpct_cached_item(cls, value: Any) -> Any:
