@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v3_failure",
+  "status": "GPU_ENGINEERING_BLOCKED_R2",
+  "run_uid": "fpct-r2c-e1133549-v1",
+  "scientific_code_commit": "e1133549c8d5efda7c09b06632e55964d94cad4d",
+  "image_digest": "sha256:94437d56d3a496935eb6486b83cebbf556a39c468d06e820514315be2adf0550",
+  "run_lock_sha256": "3ea3c3ea99e4e7d3e7a814082aaa038bc264779b49ce2206cd64b74515ca9c61",
+  "gpu_numerical": {
+    "status": "GO",
+    "sequence_sha256": "555df14e0bf13886f2a0a567a151eebedfa1b525b07abecd4a2090397efae492",
+    "numerical_sha256": "2deb133db0fb92454ba0d79714822993df6578cb3bb6db996b9f37892baaed41",
+    "metric_null_floor_sha256": "328d13bd2445a89bbc1a63fa6316d30d8a94263a2cfa3510b14a91a4848cc7cf",
+    "runtime_provenance_sha256": "8239fe89e97e5294ff22a9bd2cdaa809e98960584dcb9ad78fdbad36975a0fe6"
+  },
+  "pretrained_matrix": {
+    "job": "fpct-r2c-pretrained-e1133549",
+    "condition_manifest_count": 16,
+    "profile_manifest_count": 5,
+    "result_sha256": "9ed8e47277ea47b81c5b9191179a54dc74e0b178bb81e96d837d449e5c634aa9",
+    "passed_checks": [
+      "eager_runtime",
+      "projector_state_identity",
+      "panel_identity",
+      "canonical_prior",
+      "finite",
+      "no_mask_leakage",
+      "expected_native_null",
+      "forced_on_dk",
+      "forced_on_dv",
+      "forced_on_logit_range",
+      "forced_on_query_activation",
+      "f_no_new_scientific_sync",
+      "latency_median",
+      "latency_p95",
+      "hbm",
+      "expansion_mean",
+      "expansion_p95"
+    ],
+    "failed_checks": [
+      "precollapse_candidate_identity",
+      "collapse_bypass",
+      "replicated_atoms",
+      "m1_control",
+      "hot_path_no_sync"
+    ],
+    "root_cause_evidence": {
+      "shared_adapter_gap": "C_post did not retain the same candidate sidecars/layout as F; BF16 C_post/F candidate traces were identical at layer 0 but diverged from layer 1 after different numerical paths",
+      "replicated_depth_error": "FP32 replicated final delta was 3.4332275390625e-05 and first exceeded per-layer 2e-5 tolerance at depth 18/24; BF16 controls accumulated to 0.9375",
+      "host_sync": "336 sync events in every P2-P6 profile came from CPU scalar tensor construction in Projector._current_alignment_layer_scales under fpct.project_candidates",
+      "resource": {
+        "latency_median_ratio": 1.00349887528625,
+        "latency_p95_ratio": 0.9819648862215739,
+        "peak_hbm_gib": 4.217408657073975
+      }
+    },
+    "resume_or_patch": false
+  },
+  "firewall": {
+    "label_free_panel_only": true,
+    "accuracy_or_correctness_accessed": false,
+    "matched_smoke_started": false,
+    "formal_training_started": false,
+    "checkpoint_created": false
+  },
+  "evidence": {
+    "controller_state": {"sha256": "0941ebf435498d837f1fdb9760bd5aa380b0932f69c738ca29c256afef651e68", "bytes": 1027},
+    "event_ledger": {"sha256": "17733b3ba3abc6d2ac04b1844e0a6d369a0014d9f08d30e7c9a20101ae9bf1af", "bytes": 230},
+    "gpu_attestation": {"sha256": "b6a05f647855acc1d356f1d70f3919e10677235c8f3704e517451e77a5295a49", "bytes": 42551},
+    "pretrained_attestation": {"sha256": "5556b91696bd6bf796a8c5cdb5f81f6b947afcb466c8337e86e957c04925f747", "bytes": 43041}
+  },
+  "claim_boundary": "R2c establishes label-free forced-on engineering activation and passing resource gates, but fails exact/numerical controls and hot-path synchronization. It contains no accuracy, training or checkpoint evidence."
+}

@@ -371,3 +371,4 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - R2b numerical=`GO`，但首个FP32 C_post trace forward在第一层attention因`packed`未初始化失败；0 complete output/0 condition artifact/0 accuracy。R2b terminal，不resume。
 - R2c修复`packed=None`并新增actual Qwen C_post trace regression；targeted `28 passed`、full `403 passed, 2 warnings`。
 - R2c two-lock：scientific SHA `e1133549...`；image digest `sha256:94437d56...`；run-lock `3ea3c3ea...`；run UID `fpct-r2c-e1133549-v1`；image tar SHA `aeda9aab...`。新run从complete GPU numerical gate开始，不复用R2/R2b artifacts，lock前无pretrained output或accuracy。
+- R2c complete numerical=`GO`，16 conditions+5 profiles完成；forced-on activation与resource gates通过，但precollapse/bypass/replicated/m1/hot-sync硬门失败，terminal `GPU_ENGINEERING_BLOCKED_R2`。未进入matched smoke、training、checkpoint或accuracy；R2c不resume。

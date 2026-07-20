@@ -87,3 +87,22 @@ sidecar copy and image-loader; no numerical or natural condition artifact is
 reused. At this lock boundary R2c has produced no pretrained output, training,
 checkpoint, accuracy or correctness result. It must restart from the complete
 GPU numerical sequence.
+
+## Terminal R2c execution outcome
+
+R2c passed the complete synthetic GPU sequence and completed all 16 isolated
+pretrained operator conditions plus P2--P6 profiles. Eager runtime, canonical
+FP32 prior, finite/mask controls, fresh-gate `EXPECTED_NATIVE_NULL`, forced-on
+activation and resource/latency gates passed. It nevertheless failed the hard
+pre-collapse, bypass, replicated-atoms, m<=1 and hot-path synchronization
+checks. The controller is terminal `GPU_ENGINEERING_BLOCKED_R2`; the run root
+will not be patched or resumed. No matched smoke, training, checkpoint,
+accuracy or correctness evaluation was started.
+
+The label-free trace identifies two prospective repair targets. First, C_post
+did not retain the same sidecar/layout allocation path as F, so BF16 controls
+were identical at layer 0 but diverged after different numerical paths. Second,
+all P2--P6 profiles contained 336 scalar H2D synchronizations from
+`Projector._current_alignment_layer_scales` inside `fpct.project_candidates`.
+Any repair requires a new scientific SHA, image, run-lock, run UID and complete
+restart from the synthetic GPU gate.

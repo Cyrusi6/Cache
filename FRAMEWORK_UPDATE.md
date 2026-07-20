@@ -1097,3 +1097,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Image config/source-tree为`195e2225...`/`742b1458...`，tar SHA `aeda9aab...`；2048 sidecar保持`48caee80...`。
 - 新run root、ConfigMap和image-loader完全隔离；R2/R2b继续terminal且不可resume，不复用其numerical或condition artifacts。
 - Lock边界前R2c无pretrained output、training、checkpoint、accuracy或correctness；必须从complete synthetic GPU numerical gate重启。
+
+### R2c terminal gate and prospective R2d targets
+
+- R2c complete synthetic GPU gate=`GO`；16个isolated operator conditions与P2--P6 profiles全部生成，label-free result SHA `9ed8e472...`。
+- 通过：eager、canonical FP32 prior、finite/mask、`EXPECTED_NATIVE_NULL`、forced-on D_K/D_V/logit/query activation、latency/HBM/expansion。
+- 失败：BF16 pre-collapse identity、collapse bypass、replicated-atoms、m<=1 exact control，以及hot-path no-sync。FP32 replicated final delta `3.433e-5`，per-layer首次在depth 18/24越过`2e-5`；BF16 controls累积到`0.9375`。
+- P2--P6各有336个同步，Chrome trace定位到`Projector._current_alignment_layer_scales`在`fpct.project_candidates`内创建GPU scalar tensor。
+- R2c controller已terminal `GPU_ENGINEERING_BLOCKED_R2`，不patch/resume；未运行matched smoke/training/checkpoint/accuracy。后续修复必须新SHA/image/run-lock/run UID并从GPU gate重启。
