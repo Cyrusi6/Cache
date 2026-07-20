@@ -201,6 +201,7 @@
 | FPCT-D049 | 2026-07-20 | Operative scientific SHA=`850b9d1a...`，image digest=`sha256:447ab481...` | 独立 FP32 oracle + exact-null floor；sealed no-model fingerprint `a56ee395...`；sidecar SHA `48caee80...` |
 | FPCT-D050 | 2026-07-20 | 正式 K8s hardware pool 收窄到 `4090-48gx2`，seed parallelism=1 | pre-output probes 证明 `/netdisk` 仅该节点可见，`/home/lijunsi` 不含冻结资产；不在 lock 后复制模型/sidecar 到其他节点 |
 | FPCT-D051 | 2026-07-20 | 首次 synthetic GPU gate artifact 作废并从 gate 重启 | 数值 tolerance 全通过，但 activation floor 错由 BF16 probability row-sum error 推导；在任何 pretrained output 前改为 independent FP32 reference + replicated/m≤1 output-null，禁止使用旧 floor `0.024414` |
+| FPCT-D052 | 2026-07-20 | Pretrained smoke resource gate 改为 7-repeat median/p95 + CUDA profiler | 单次 latency 占位在任何 pretrained forward 前删除；硬门保持 median≤1.50、p95≤1.75、无 profiled host sync |
 
 ## 6. 已锁定决定与 deferred items
 

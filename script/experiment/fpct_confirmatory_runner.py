@@ -10,6 +10,7 @@ from pathlib import Path
 import subprocess
 import sys
 import time
+import statistics
 from typing import Any
 
 import torch
@@ -341,7 +342,7 @@ def pretrained_smoke(lock_path: Path, gpu_gate_path: Path, output_path: Path) ->
         raise GateError("fixed unlabeled prompts did not activate certified ambiguity")
     batch = _to_device_batch(collator([selected]), device)
 
-    def timed(operator: str, *, replicated: bool = False, m1: bool = False):
+    def timed(operator: str, *, replicated: bool = False, m1: bool = False, repeats: int = 1):
         local = batch
         if m1:
             local = dict(batch); local["soft_alignment"] = []
@@ -351,16 +352,33 @@ def pretrained_smoke(lock_path: Path, gpu_gate_path: Path, output_path: Path) ->
                 weights[..., 0] = torch.where(indices[..., 0] >= 0, torch.ones_like(weights[..., 0]), torch.zeros_like(weights[..., 0]))
                 copy = dict(section); copy["source_indices"] = indices; copy["source_weights"] = weights; local["soft_alignment"].append(copy)
         model.fpct_operator = operator; model.fpct_replicated_collapse = replicated; model.fpct_instrumentation = operator == "f" and not replicated
-        torch.cuda.synchronize(); torch.cuda.reset_peak_memory_stats(); start = time.perf_counter()
-        with torch.no_grad(): result = _forward(model, local)
-        torch.cuda.synchronize()
-        return result.logits.detach().float(), time.perf_counter() - start, torch.cuda.max_memory_allocated() / 2**30, {key: float(value.detach().cpu()) for key, value in model._fpct_mechanism_metrics.items()}
+        with torch.no_grad(): _forward(model, local)
+        durations = []
+        result = None
+        torch.cuda.reset_peak_memory_stats()
+        for _ in range(repeats):
+            torch.cuda.synchronize(); start = time.perf_counter()
+            with torch.no_grad(): result = _forward(model, local)
+            torch.cuda.synchronize(); durations.append(time.perf_counter() - start)
+        assert result is not None
+        return result.logits.detach().float(), durations, torch.cuda.max_memory_allocated() / 2**30, {key: float(value.detach().cpu()) for key, value in model._fpct_mechanism_metrics.items()}
 
-    cpost, cpost_time, cpost_hbm, _ = timed("c_post")
-    factorized, f_time, f_hbm, diagnostics = timed("f")
+    cpost, cpost_times, cpost_hbm, _ = timed("c_post", repeats=7)
+    factorized, f_times, f_hbm, diagnostics = timed("f", repeats=7)
     replicated, _, _, _ = timed("f", replicated=True)
     m1_post, _, _, _ = timed("c_post", m1=True)
     m1_f, _, _, _ = timed("f", m1=True)
+    cpost_median = statistics.median(cpost_times)
+    f_median = statistics.median(f_times)
+    cpost_p95 = sorted(cpost_times)[-1]
+    f_p95 = sorted(f_times)[-1]
+    latency_median_ratio = f_median / cpost_median
+    latency_p95_ratio = f_p95 / cpost_p95
+
+    model.fpct_operator = "f"; model.fpct_replicated_collapse = False
+    with torch.profiler.profile(activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA]) as profile:
+        with torch.no_grad(): _forward(model, batch)
+    host_sync_events = sorted({event.key for event in profile.key_averages() if "cudaDeviceSynchronize" in event.key or "cudaStreamSynchronize" in event.key})
     delta = float((factorized - cpost).abs().max().cpu())
     replicated_delta = float((replicated - cpost).abs().max().cpu())
     m1_delta = float((m1_f - m1_post).abs().max().cpu())
@@ -372,14 +390,22 @@ def pretrained_smoke(lock_path: Path, gpu_gate_path: Path, output_path: Path) ->
         "m1_control": m1_delta <= floor,
         "finite": bool(torch.isfinite(factorized).all()),
         "hbm": max(cpost_hbm, f_hbm) < .9 * torch.cuda.get_device_properties(0).total_memory / 2**30,
-        "latency_single_pass_diagnostic_only": True,
+        "latency_median_ratio": latency_median_ratio <= 1.50,
+        "latency_p95_ratio": latency_p95_ratio <= 1.75,
+        "no_profiled_host_sync": not host_sync_events,
     }
     payload = {
         "schema_version": 1, "run_uid": lock["run_uid"], "checks": checks,
         "activation_floor": floor, "max_output_delta": delta,
         "replicated_delta": replicated_delta, "m1_delta": m1_delta,
-        "latency_seconds": {"c_post": cpost_time, "f": f_time, "ratio": f_time / cpost_time},
+        "latency_seconds": {
+            "c_post_samples": cpost_times, "f_samples": f_times,
+            "c_post_median": cpost_median, "f_median": f_median,
+            "c_post_p95": cpost_p95, "f_p95": f_p95,
+            "median_ratio": latency_median_ratio, "p95_ratio": latency_p95_ratio,
+        },
         "peak_hbm_gib": {"c_post": cpost_hbm, "f": f_hbm}, "diagnostics": diagnostics,
+        "profiled_host_sync_events": host_sync_events,
         "status": "GO" if all(checks.values()) else "GPU_ENGINEERING_BLOCKED",
     }
     atomic_json(output_path, payload)

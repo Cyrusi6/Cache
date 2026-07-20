@@ -35,3 +35,12 @@ def test_activation_floor_comes_from_operator_null_controls():
     assert "m1_output_delta" in source
     floor_source = source[source.index("activation_floor"):source.index("serializable")]
     assert "row_sum_error" not in floor_source
+
+
+def test_pretrained_smoke_enforces_resource_and_profiler_gates():
+    module = __import__("script.experiment.fpct_confirmatory_runner", fromlist=["pretrained_smoke"])
+    source = inspect.getsource(module.pretrained_smoke)
+    assert "repeats=7" in source
+    assert "latency_median_ratio <= 1.50" in source
+    assert "latency_p95_ratio <= 1.75" in source
+    assert "no_profiled_host_sync" in source
