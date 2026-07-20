@@ -367,3 +367,4 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - R2 v1 complete numerical gate=`GO`；artifact SHA：sequence `9cf75832...`、numerical `588c5c42...`、floors `f0d01226...`、runtime `69101e4d...`。
 - 首个 FP32 C_post condition在第一 model forward前因scalar state hash失败；已加载label-free panel/tokenizer/weights，但0 forward/0 accuracy/0 training/checkpoint。v1 controller terminal，不resume。
 - v2 prospective repair仅修正0-D tensor hashing并新增回归；targeted `25 passed`、full `402 passed, 2 warnings`。新 run必须从image/GPU gate重启。
+- R2b two-lock：SHA `7ceae185...`；image digest `sha256:d035cb31...`；run UID `fpct-r2b-7ceae185-v1`；run-lock SHA `99dcb811...`。不复用v1 numerical/condition artifacts。

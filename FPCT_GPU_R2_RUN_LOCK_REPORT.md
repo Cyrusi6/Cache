@@ -50,3 +50,16 @@ forward while hashing fresh projector state: a scalar gate tensor was passed to
 Tokenizers, weights and the frozen label-free panel had been loaded, but there
 were zero condition output files, zero model forwards, zero accuracy reads,
 zero training and zero checkpoints.
+
+## R2b replacement lock
+
+- Scientific SHA: `7ceae185512b100b4b7d7f6970710a4637c568b0`.
+- Run UID: `fpct-r2b-7ceae185-v1`.
+- Image: `docker.io/library/fpct-gpu-r2b:7ceae185@sha256:d035cb31abe71640258aeb9cf48b9c7b7d39ff71346f0ac44bf0a2c5408ff463`.
+- Image source tree: `db84f6546539fd2eed3b2afcd0e1a9f3f84d94fba1fbeb6bd2d22835fa610d49`.
+- Image tar SHA256: `29c13fbb5be88004df367c0454d7f09e748c57b4943e4f828929c6f1b43d3caa`.
+- R2b run-lock SHA256: `99dcb8114d60f55604f69b4c721e8348fc6f2f14e4eea17976bfe8df49a3f913`.
+
+R2b changes only scalar tensor hashing and its regression test. It does not
+reuse v1 numerical outputs or condition directories and must restart from the
+GPU numerical sequence.

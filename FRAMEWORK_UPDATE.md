@@ -1075,3 +1075,11 @@ R2 当前只到 CPU/HF engineering readiness。没有运行新 pretrained model 
 - Controller终止为 `GPU_ENGINEERING_BLOCKED_R2`；v1 run root不patch/resume。修复必须新 scientific SHA/image/run-lock/run UID。
 
 R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`view(uint8)`改为`reshape(-1).view(uint8)`，不改变operator、prior、threshold、panel、training或evaluation规则。新增0-D gate regression；targeted `25 passed`，CPU-safe full suite `402 passed, 2 warnings`。该修复必须形成全新 image/run-lock/run UID并从GPU gate重启。
+
+### R2b replacement two-lock
+
+- Scientific SHA `7ceae185512b100b4b7d7f6970710a4637c568b0`。
+- Image digest `sha256:d035cb31abe71640258aeb9cf48b9c7b7d39ff71346f0ac44bf0a2c5408ff463`；source tree `db84f654...`；tar SHA `29c13fbb...`。
+- Run UID `fpct-r2b-7ceae185-v1`；run-lock SHA `99dcb8114d60f55604f69b4c721e8348fc6f2f14e4eea17976bfe8df49a3f913`。
+- 2048 sidecar保持`48caee80...`；全新results/state/jobs/attestations目录；不复制v1 GPU numerical或condition artifacts。
+- R2b必须从complete GPU numerical gate重启。
