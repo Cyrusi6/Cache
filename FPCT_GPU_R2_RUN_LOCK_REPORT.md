@@ -166,3 +166,17 @@ used. The operative infrastructure-only replacement is:
 - ConfigMap: `fpct-r2e-v2-lock-2653930`.
 
 The scientific image and all scientific thresholds are unchanged.
+
+## Terminal R2e-v2 execution outcome
+
+R2e-v2 passed the complete GPU gate and all exact structural controls:
+pre-collapse identity, bypass, replicated, grouped-probability canary, m<=1 and
+hot-path no-sync. P2--P5 each recorded zero scientific/hot synchronization.
+It still failed because flat attention retained expanded kernel width even when
+only one atom per parent was active, yielding native-null deltas of `4.12e-5`
+(FP32) and `0.625` (BF16). In addition, inactive collapsed atoms remained in
+the diagnostic prior mask and inflated D_K/D_V synthetic floors, making the
+forced-on check non-identifying.
+
+The controller is terminal `GPU_ENGINEERING_BLOCKED_R2`; no matched smoke,
+training, checkpoint, accuracy or correctness evaluation ran.

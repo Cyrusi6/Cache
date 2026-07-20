@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v5_failure",
+  "status": "GPU_ENGINEERING_BLOCKED_R2",
+  "run_uid": "fpct-r2e-2653930-v2",
+  "scientific_code_commit": "26539300de50d89a1be5a7871b6e78d9b715f535",
+  "image_digest": "sha256:50b89faa7148a73e32caf7be62220fca874d5a5d084de09d33278eed2e1374ba",
+  "run_lock_sha256": "05c100a74e8737317f78977177b18ccfae9aed17c20444ac22c49fa250f6746e",
+  "gpu_numerical": {
+    "status": "GO",
+    "sequence_sha256": "9ae1de5d4a12963956c23c9ced28a62cec9680c7be67478cb597f2e3a982825e"
+  },
+  "pretrained_matrix": {
+    "condition_manifest_count": 16,
+    "profile_manifest_count": 5,
+    "result_sha256": "7727fe8d8c0017fe225b31b905481c7fdadd4dac559a618a1653aba043c8d962",
+    "passed_recovery_checks": [
+      "precollapse_candidate_identity",
+      "collapse_bypass",
+      "replicated_atoms",
+      "replicated_local_numeric",
+      "m1_control",
+      "hot_path_no_sync",
+      "f_no_new_scientific_sync"
+    ],
+    "failed_checks": [
+      "expected_native_null",
+      "forced_on_dk",
+      "forced_on_dv"
+    ],
+    "root_cause_evidence": {
+      "packed_kernel_shape": "Even with one active atom per exact-replicated parent, flat softmax retained max_slots width and produced FP32 4.124641418457031e-05 and BF16 0.625 native-null deltas.",
+      "diagnostic_active_mask": "Inactive collapsed atoms retained finite log priors in FPCTPackedMemory diagnostics, inflating synthetic D_K/D_V null floors to about 2.0 and making forced-on activation checks non-identifying.",
+      "host_sync": "P2-P5 hot/scientific sync counts are exactly zero; P6 has only four non-hot scientific boundary events.",
+      "resource": {
+        "latency_median_ratio": 1.0872371290990546,
+        "latency_p95_ratio": 1.0766975224633042,
+        "peak_hbm_gib": 4.217436790466309
+      }
+    },
+    "resume_or_patch": false
+  },
+  "firewall": {
+    "accuracy_or_correctness_accessed": false,
+    "matched_smoke_started": false,
+    "formal_training_started": false,
+    "checkpoint_created": false
+  },
+  "evidence": {
+    "controller_state": {"sha256": "07b6c5b4033665e020e460d8b8be7ea421482dc9c5e5449139eda7f9e2943a82", "bytes": 1027},
+    "event_ledger": {"sha256": "e41e234c5760ddfadb9b2a0df5473580e4a67987376d6072209c0cf7d616823f", "bytes": 229},
+    "gpu_attestation": {"sha256": "cefe575f633ca47d89a0eb57e9075967e251666f8c65f225201b2b44fdbf6fc7", "bytes": 42551},
+    "pretrained_attestation": {"sha256": "534986c6cf1ac0825e8c92c71a93d0184e5162138e510a01f8e5862aef594bba", "bytes": 43041}
+  },
+  "claim_boundary": "R2e-v2 validates exact controls and removes FPCT hot-path synchronization, but flat packed attention still fails native-null equivalence and the D_K/D_V floor generator mishandles dynamically inactive atoms. No performance evidence exists."
+}

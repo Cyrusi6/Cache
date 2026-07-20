@@ -1149,3 +1149,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 0 Job/Pod/container/GPU/scientific output；R2e-v1 controller root与ConfigMap不再使用。
 - 所有共享R2 execution templates及R2e loader将`git_sha`显式quoted；新增YAML类型regression。
 - Operative run UID `fpct-r2e-2653930-v2`，run-lock SHA `05c100a74e8737317f78977177b18ccfae9aed17c20444ac22c49fa250f6746e`；image/scientific SHA/threshold不变。
+
+### R2e-v2 terminal result
+
+- Complete gate与16 conditions+5 profiles完成。precollapse/bypass/replicated/local probability/m≤1均通过；P2--P5 hot/scientific sync=0。
+- Flat packed attention即使每parent只剩一个active atom仍保留`max_slots` kernel width，native-null delta为FP32 `4.1246e-5`、BF16 `0.625`。
+- Dynamic inactive atoms仍带finite diagnostic log-prior，使synthetic D_K/D_V floor约2.0，forced-on D_K/D_V失去识别性。
+- R2e-v2 terminal且不resume；0 matched smoke/training/checkpoint/accuracy。下一revision只能使用预注册允许的global-equivalent hierarchical beta/gamma并修正active diagnostics。

@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2e-v2 pre-output infrastructure lock
-> 当前判定：R2e-v1纯数字git_sha label在Job创建前被拒；v2新run UID/root/lock已冻结，scientific image不变
-> 下一阶段：R2e-v2仅从image import和complete synthetic GPU numerical gate开始
+> 当前阶段：FPCT-GPU-R2f prospective hierarchical adapter repair
+> 当前判定：R2e-v2 terminal；exact controls与hot-sync恢复，但flat expanded kernel仍破坏native null
+> 下一阶段：实现global-equivalent hierarchical beta/gamma adapter并修正diagnostic active mask；任何重跑需新SHA/image/run-lock
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -231,6 +231,7 @@
 | FPCT-D076 | 2026-07-20 | R2e prospective repair冻结 | no-sidecar C_post/F共用adapter；exact replicated groups tensor-only单原子；FP32 grouped probability canary；residual-scale device-native constants；targeted 53/full 406 pass；待新image/run-lock |
 | FPCT-D077 | 2026-07-20 | R2e replacement two-lock | SHA `2653930...`；image `sha256:50b89faa...`；run-lock `e4d4392f...`；run UID `fpct-r2e-2653930-v1`；全新root/tar/sidecar copy |
 | FPCT-D078 | 2026-07-20 | R2e v2 pre-output infra amendment | 纯数字short SHA需quoted label；v1在Job/Pod/container前放弃；v2 run-lock `05c100a7...`、run UID `fpct-r2e-2653930-v2`；scientific image/threshold不变 |
+| FPCT-D079 | 2026-07-20 | R2e-v2 pretrained terminal | precollapse/bypass/rep/m1/hot-sync通过；flat max_slots softmax使native-null FP32 `4.12e-5`/BF16 `0.625`；inactive atom抬高D_K/D_V floors；0 training/accuracy |
 
 ## 6. 已锁定决定与 deferred items
 
