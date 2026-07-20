@@ -106,3 +106,20 @@ all P2--P6 profiles contained 336 scalar H2D synchronizations from
 `Projector._current_alignment_layer_scales` inside `fpct.project_candidates`.
 Any repair requires a new scientific SHA, image, run-lock, run UID and complete
 restart from the synthetic GPU gate.
+
+## R2d replacement lock
+
+- Scientific SHA: `71ba96d2cad1cbf6894cff4e4ad08ef5a915d0e6`.
+- Run UID: `fpct-r2d-71ba96d-v1`.
+- Image: `docker.io/library/fpct-gpu-r2d:71ba96d@sha256:04b7b6428bd3bb4f31bb4968f8bfff68c6fb09f477f402211f1631984c0ff6cb`.
+- Image config/source-tree SHA256: `1cae6486...` / `4d1c8eb6...`.
+- Image tar SHA256: `86282ff639d1fb50e8ebdd233ff30ae40e0e91a56b0f91db78aa407db1e2b717` (`3,520,287,232` bytes).
+- R2d run-lock SHA256: `2e1c998ff7e61438db2808ed82c694bf0afbae164a576064e5860b09f3126a4e`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2d-71ba96d-v1`.
+
+The R2d addendum, source files, tests, image provenance, tar and sidecar copy
+have been independently hashed. R2d is a new execution and does not reuse R2c
+conditions, profiles or numerical artifacts. Before this lock there was no R2d
+pretrained forward, GPU execution, training, checkpoint, accuracy or
+correctness result. The first authorized step is the complete synthetic GPU
+gate.

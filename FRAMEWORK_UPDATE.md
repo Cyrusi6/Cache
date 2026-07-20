@@ -1113,3 +1113,9 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Replicated diagnostic仍执行expanded identical-atoms+logA并记录每层local numerical delta，但返回analytic parent output，避免把数值null扰动反馈并放大到后续层；它仍不是训练arm。
 - Projector static alignment layer scales改为non-persistent device buffers，消除`fpct.project_candidates`内每次CPU scalar→GPU copy，不增加state_dict key或parameter。
 - Validation：targeted `53 passed`；CPU-safe full suite `406 passed, 2 warnings`；`git diff --check`通过。下一次执行必须新scientific SHA/image/run-lock/run UID。
+
+### R2d replacement two-lock
+
+- Scientific SHA `71ba96d2cad1cbf6894cff4e4ad08ef5a915d0e6`；image digest `sha256:04b7b6428bd3bb4f31bb4968f8bfff68c6fb09f477f402211f1631984c0ff6cb`；run-lock SHA `2e1c998ff7e61438db2808ed82c694bf0afbae164a576064e5860b09f3126a4e`。
+- Run UID/root为`fpct-r2d-71ba96d-v1`；image source-tree `4d1c8eb6...`；tar SHA `86282ff6...`；2048 sidecar copy保持`48caee80...`。
+- 新root没有R2c numerical/condition/profile artifacts。Lock前无R2d pretrained/GPU/training/checkpoint/accuracy；必须从complete GPU numerical sequence重启。

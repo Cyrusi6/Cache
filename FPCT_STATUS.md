@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2d prospective execution preparation
-> 当前判定：R2/R2b/R2c均terminal且不可resume；R2d修复与CPU/HF验证已完成
-> 下一阶段：提交R2d scientific SHA，构建新image/run-lock/run UID并从complete GPU numerical gate重启
+> 当前阶段：FPCT-GPU-R2d pre-output execution lock
+> 当前判定：R2/R2b/R2c均terminal且不可resume；R2d新SHA/image/run-lock/run UID已独立冻结
+> 下一阶段：R2d仅从complete synthetic GPU numerical gate开始，GO后才允许label-free pretrained matrix
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -226,6 +226,7 @@
 | FPCT-D071 | 2026-07-20 | R2c replacement two-lock | SHA `e1133549...`；image `sha256:94437d56...`；run-lock `3ea3c3ea...`；run UID `fpct-r2c-e1133549-v1`；全新run root/loader/sidecar copy，不复用R2/R2b numerical或condition artifacts |
 | FPCT-D072 | 2026-07-20 | R2c pretrained matrix terminal | Complete numerical=`GO`；16 conditions+5 profiles完成；forced-on/resource通过，但precollapse/bypass/replicated/m1/hot-sync失败；0 accuracy/0 training/0 checkpoint；R2c不resume |
 | FPCT-D073 | 2026-07-20 | R2d prospective repair冻结 | C_post/F共享sidecar/layout；m≤1同parent path；replicated expanded local canary+analytic parent return；static scale non-persistent buffer；targeted 53 pass/full 406 pass；待新image/run-lock |
+| FPCT-D074 | 2026-07-20 | R2d replacement two-lock | SHA `71ba96d...`；image `sha256:04b7b642...`；run-lock `2e1c998f...`；run UID `fpct-r2d-71ba96d-v1`；全新root/tar/sidecar copy，不复用R2c outputs |
 
 ## 6. 已锁定决定与 deferred items
 
