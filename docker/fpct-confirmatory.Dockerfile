@@ -2,7 +2,9 @@ FROM swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.6.0-cu
 
 RUN python -m pip install --no-cache-dir \
     transformers==4.52.4 datasets==4.0.0 accelerate==1.9.0 \
-    scipy==1.15.3 wandb==0.21.0 pytest==8.4.1 pyyaml==6.0.2
+    scipy==1.15.3 wandb==0.21.0 pytest==8.4.1 pyyaml==6.0.2 \
+    jsonlines==4.0.0 openai==1.99.9 math-verify==0.8.0 \
+    latex2sympy2-extended==1.10.2
 
 WORKDIR /opt/fpct
 COPY . /opt/fpct

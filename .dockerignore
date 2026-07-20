@@ -5,3 +5,5 @@ __pycache__
 .pytest_cache
 .coverage
 wandb
+FPCT_CONFIRMATORY_RUN_LOCK_REPORT.md
+recipe/eval_recipe/fpct_confirmatory/confirmatory_run_lock.json
