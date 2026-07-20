@@ -198,7 +198,7 @@
 | FPCT-D046 | 2026-07-20 | 正式 performance 设计锁定为 TinyLlama→Qwen3 单 pair、12 seeds、三臂 64-step matched triplets | `F-C_post` 唯一 headline；36 个 step-64 checkpoint 全部完成前不释放 performance |
 | FPCT-D047 | 2026-07-20 | exact sign-flip 的假设边界按 R1 前瞻修正 | 检验 sharp/symmetric sign-exchangeability；mean estimand 与 +1pp practical gate 独立；固定报告 paired-t 与 exact-sign sensitivities |
 | FPCT-D048 | 2026-07-20 | 正式执行采用两层锁 | 先提交 scientific code/protocol，再以该 commit 构建 digest-addressed image 并提交 run lock；任一 scientific-code 变更使 image/run lock 失效 |
-| FPCT-D049 | 2026-07-20 | Operative scientific SHA=`0a549c95...`，image digest=`sha256:8c2441dd...` | 所有 K8s stages 含 init probe；sealed no-model closure fingerprint `fd5aa9ee...`；sidecar SHA `48caee80...` |
+| FPCT-D049 | 2026-07-20 | Operative scientific SHA=`850b9d1a...`，image digest=`sha256:447ab481...` | 独立 FP32 oracle + exact-null floor；sealed no-model fingerprint `a56ee395...`；sidecar SHA `48caee80...` |
 | FPCT-D050 | 2026-07-20 | 正式 K8s hardware pool 收窄到 `4090-48gx2`，seed parallelism=1 | pre-output probes 证明 `/netdisk` 仅该节点可见，`/home/lijunsi` 不含冻结资产；不在 lock 后复制模型/sidecar 到其他节点 |
 | FPCT-D051 | 2026-07-20 | 首次 synthetic GPU gate artifact 作废并从 gate 重启 | 数值 tolerance 全通过，但 activation floor 错由 BF16 probability row-sum error 推导；在任何 pretrained output 前改为 independent FP32 reference + replicated/m≤1 output-null，禁止使用旧 floor `0.024414` |
 
@@ -248,7 +248,7 @@ Production seam、shared candidate fuser、parent nuisance broadcast、ambiguous
 
 ### FPCT-4：SCIENTIFIC CODE LOCK IN REVIEW / GPU NOT STARTED
 
-旧 CPU-GATE 生成的 non-operative draft作为历史记录保留。当前已冻结 single-pair confirmatory preregistration、GPU numerical protocol、K8s protocol、50,000-replicate hierarchical statistics、4096 sign-flip/paired-t/sign-test code、一次性 split firewall controller、matched triplet runner、immutable image 和 K8s templates。首次 scientific lock `92724ec...` 后的镜像复核发现每臂重复 alignment 不满足 frozen-sidecar 复用合同；后续 candidate image 又在模型加载前分别因 evaluator closure dependency 和 Python realpath 硬停，均未运行 GPU。最终 scientific SHA 为 `0a549c95...`，image digest 为 `sha256:8c2441dd...`，sealed probe fingerprint 为 `fd5aa9ee...`；2048 sidecar SHA 为 `48caee80...`。所有 K8s stages 均有 init probe 并固定到唯一可见冻结资产的双 GPU worker。当前没有 pretrained model output、GPU kernel、训练或 accuracy；下一步是 synthetic GPU numerical gate。
+旧 CPU-GATE 生成的 non-operative draft作为历史记录保留。当前已冻结 single-pair confirmatory preregistration、GPU numerical protocol、K8s protocol、50,000-replicate hierarchical statistics、4096 sign-flip/paired-t/sign-test code、一次性 split firewall controller、matched triplet runner、immutable image 和 K8s templates。首次 scientific lock `92724ec...` 后的镜像复核发现每臂重复 alignment 不满足 frozen-sidecar 复用合同；后续 candidate image 又在模型加载前分别因 evaluator closure dependency 和 Python realpath 硬停。首个 synthetic gate 虽通过 tolerance，但因 activation floor 数量使用错误在 pretrained output 前作废。最终 scientific SHA 为 `850b9d1a...`，image digest 为 `sha256:447ab481...`，sealed probe fingerprint 为 `a56ee395...`；2048 sidecar SHA 为 `48caee80...`。所有 K8s stages 均有 init probe 并固定到唯一可见冻结资产的双 GPU worker。当前没有 pretrained model output、训练或 accuracy；下一步是重跑 corrected synthetic GPU numerical gate。
 
 ### FPCT-3.5：GO
 
