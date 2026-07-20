@@ -1186,3 +1186,9 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 唯一scientific change：`fpct_qwen_hierarchical_attention_forward`先计算与C_post相同的parent eager adapter，再执行不变的atom/group beta-gamma路径，最后仍用tensor-only `where(all_parent_equivalent, parent, hierarchical)`。
 - 不引入host scalar branch，不改变prior、mask、diagnostics、operator、parameter、threshold、panel、data或training recipe。
 - 新增call-order regression；targeted `68 passed`，CPU-safe full suite `409 passed, 2 warnings`。下一步以新SHA/image/run-lock/run UID从complete GPU gate重启。
+
+### R2g replacement two-lock
+
+- Scientific SHA `509a68af59e0565fc8869fc9e4a0b273b4938596`；image digest `sha256:e7061bb8ec96f9f9a8b37d8da5bc7f682ce967dd35fadeb036e9d61c32c546a0`；run-lock SHA `4ba3cb77eb012dd435804ca87f9326b642bef41ac50e514fb1d2aaaf99b94492`。
+- Run UID/root为`fpct-r2g-509a68a-v1`；source-tree `c1ae3c49...`；tar SHA `0df3fd5a...`；certified sidecar保持`48caee80...`。
+- 新run不patch/resume R2f，阈值、panel、model/data和downstream recipe不变。Lock前无R2g GPU/pretrained/training/checkpoint/accuracy output。

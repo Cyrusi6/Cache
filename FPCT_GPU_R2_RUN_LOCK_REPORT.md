@@ -228,3 +228,21 @@ controller is terminal `GPU_ENGINEERING_BLOCKED_R2`. No matched smoke,
 training, checkpoint, accuracy or correctness evaluation ran. Any parent-first
 call-order test requires a new prospective scientific SHA, image, run-lock,
 run UID and complete restart from the synthetic GPU gate.
+
+## R2g parent-first replacement lock
+
+- Scientific SHA: `509a68af59e0565fc8869fc9e4a0b273b4938596`.
+- Run UID: `fpct-r2g-509a68a-v1`.
+- Image: `docker.io/library/fpct-gpu-r2g:509a68a@sha256:e7061bb8ec96f9f9a8b37d8da5bc7f682ce967dd35fadeb036e9d61c32c546a0`.
+- Image config/source-tree SHA256: `3c1bd8e6...` / `c1ae3c49...`.
+- Image tar SHA256: `0df3fd5a1554ed21068af70844d1ad3198681c8bf96fb6f15fc96a2e8791296a` (`3,520,309,760` bytes).
+- R2g run-lock SHA256: `4ba3cb77eb012dd435804ca87f9326b642bef41ac50e514fb1d2aaaf99b94492`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2g-509a68a-v1`.
+- ConfigMap: `fpct-r2g-lock-509a68a`.
+
+R2g does not patch or resume R2f. The only scientific difference is that the
+same shared parent eager adapter is evaluated before hierarchical atom/group
+kernels; beta/gamma equations, tensor-only mixed-batch selection, thresholds,
+panels and all downstream recipes are unchanged. Before this lock there was no
+R2g GPU numerical, pretrained, training, checkpoint, accuracy or correctness
+output. The complete synthetic GPU gate is again the first authorized step.
