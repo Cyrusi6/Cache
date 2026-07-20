@@ -2,10 +2,10 @@
   "schema_version": 1,
   "protocol_id": "fpct_single_pair_confirmatory_v1_run_20260720",
   "status": "PRE_OUTPUT_LOCKED",
-  "run_uid": "fpct-cfm-850b9d1a-20260720",
-  "scientific_code_commit": "850b9d1a2298f5026abba61d59d0f07cb73d29c0",
+  "run_uid": "fpct-cfm-371e72f1-20260720",
+  "scientific_code_commit": "371e72f14da41f5509eafa21553c7a7418c9a53e",
   "scientific_code_branch": "research/fpct-factorized-transport",
-  "scientific_code_upstream": "850b9d1a2298f5026abba61d59d0f07cb73d29c0",
+  "scientific_code_upstream": "371e72f14da41f5509eafa21553c7a7418c9a53e",
   "manifest_sha256": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4",
   "normative": {
     "confirmatory_preregistration": "c97f7322ad6aa1123e09591570ee876d86bd7a4601c82d4b88f342f77ff4783c",
@@ -14,13 +14,13 @@
     "content_group_split_manifest": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050"
   },
   "image": {
-    "reference": "docker.io/library/fpct-confirmatory:850b9d1a@sha256:447ab481673803fdaf362956e674daad46c4b500ad0d2f2a950491d6ed91dded",
-    "manifest_list_sha256": "447ab481673803fdaf362956e674daad46c4b500ad0d2f2a950491d6ed91dded",
-    "config_sha256": "b80aa446c27719da460c511fbd81dc40b3d7184fb0d1216d8f9e8c2b400a3157",
+    "reference": "docker.io/library/fpct-confirmatory:371e72f1@sha256:c851056733f3b7affc85ae5dabd870043f3ae7d3010d245705f5b9ded8dc36ab",
+    "manifest_list_sha256": "c851056733f3b7affc85ae5dabd870043f3ae7d3010d245705f5b9ded8dc36ab",
+    "config_sha256": "eeeb482919832383c97fa498c0baf41f529c0fb16ca7c05ab3c82d9e14dba0b8",
     "architecture": "amd64",
     "distribution": "preloaded by run_uid-scoped loader; runtime imageID must match",
-    "distribution_tar_sha256": "1b63c5811c48dfb18a20184018bab69d06a40a65f79819f8952241744fc6d227",
-    "distribution_tar_bytes": 3520159232,
+    "distribution_tar_sha256": "fa151a55cec4ec945c2ea85506feedcf252e60ede405c2377425e48863b4dea6",
+    "distribution_tar_bytes": 3520160768,
     "base": "pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime@sha256:77f17f843507062875ce8be2a6f76aa6aa3df7f9ef1e31d9d7432f4b0f563dee"
   },
   "runtime": {
@@ -31,11 +31,11 @@
     "datasets": "4.0.0",
     "accelerate": "1.9.0",
     "scipy": "1.15.3",
-    "sealed_container_probe_fingerprint": "a56ee395994013b35809612c2ddddc74b5c47f3b998d0195b22fddab51f31614"
+    "sealed_container_probe_fingerprint": "acfdea9dd6ee52040856bfdc037cd28c10b66b1036cc19fa7ee9f470e4db1800"
   },
   "assets": {
     "training_alignment_sidecar_2048": {
-      "host_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-850b9d1a-20260720/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "host_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-371e72f1-20260720/assets/mmlu_auxiliary_train_2048_certified.pt",
       "container_path": "/fpct-run/assets/mmlu_auxiliary_train_2048_certified.pt",
       "sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990",
       "bytes": 41023706,
@@ -70,7 +70,7 @@
     }
   },
   "storage": {
-    "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-850b9d1a-20260720",
+    "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-cfm-371e72f1-20260720",
     "container_run_root": "/fpct-run",
     "model_host_root": "/netdisk/lijunsi/c2c-route1-identifiability/models",
     "source_worktree_mount": false,
@@ -79,12 +79,12 @@
   },
   "kubernetes": {
     "namespace": "c2c-research",
-    "config_map": "fpct-lock-850b9d1a",
+    "config_map": "fpct-lock-371e72f1",
     "eligible_nodes": {"4090-48gx2": 2},
     "node_binding_reason": "pre-output storage probes showed frozen /netdisk assets are visible only on 4090-48gx2; no model/sidecar replication is permitted after lock",
     "maximum_parallel_seed_pods": 1,
     "gpu_per_seed_pod": 2,
-    "required_labels": {"project": "fpct", "study": "confirmatory", "run_uid": "fpct-cfm-850b9d1a-20260720"},
+    "required_labels": {"project": "fpct", "study": "confirmatory", "run_uid": "fpct-cfm-371e72f1-20260720"},
     "retry": {"whole_triplet_infrastructure_only": 1, "selective_arm_retry": false}
   },
   "firewall": {
