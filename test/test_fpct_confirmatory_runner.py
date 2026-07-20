@@ -21,6 +21,20 @@ def test_formal_recipe_is_exact_64_step_contract(tmp_path):
     assert config["training"]["expected_optimizer_steps"] == 64
     assert config["model"]["fpct_alignment_sanitizer"] == "certified_slot0_v1"
     assert config["model"]["include_response"] is False
+    assert config["model"]["attn_implementation"] == "eager"
+    assert config["model"]["fpct_r2_enforce_eager"] is True
+    assert config["model"]["fpct_trace"] is False
+    assert config["output"]["save_steps"] == 32
+
+
+def test_four_step_recipe_emits_official_checkpoint_and_trace(tmp_path):
+    lock = {"run_uid": "test", "assets": {"training_alignment_sidecar_2048": {"container_path": "/fpct-assets/train2048.pt"}}}
+    config = training_config(
+        lock, 104729, "f", tmp_path, examples=128, optimizer_steps=4
+    )
+    assert config["model"]["fpct_trace"] is True
+    assert config["training"]["fpct_r2_matched_smoke"] is True
+    assert config["output"]["save_steps"] == 4
 
 
 def test_triplet_runner_never_selectively_retries_an_arm():

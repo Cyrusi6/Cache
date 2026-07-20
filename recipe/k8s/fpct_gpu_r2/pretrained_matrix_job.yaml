@@ -1,0 +1,47 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: __JOB_NAME__
+  namespace: c2c-research
+  labels: &labels
+    project: fpct
+    study: confirmatory-r2
+    git_sha: __GIT_SHA_SHORT__
+    seed: "104729"
+    arm: pretrained-matrix
+    run_uid: __RUN_UID__
+spec:
+  backoffLimit: 0
+  template:
+    metadata: {labels: *labels}
+    spec:
+      restartPolicy: Never
+      nodeName: __NODE_NAME__
+      containers:
+      - name: pretrained-matrix
+        image: __IMAGE_DIGEST__
+        imagePullPolicy: IfNotPresent
+        command: ["/opt/conda/bin/python3.11", "-I", "/opt/fpct/script/runtime/fpct_bootstrap.py"]
+        args: ["--repo-root", "/opt/fpct", "--target", "/opt/fpct/script/experiment/fpct_gpu_r2_runner.py", "--include-gpu-closure", "--attestation-out", "/fpct-run/attestations/pretrained_matrix.json", "--", "pretrained-matrix", "--run-lock", "/opt/fpct-lock/fpct_gpu_r2_run_lock.json", "--panel", "/opt/fpct/recipe/eval_recipe/fpct_gpu_r2/diagnostic_panel_manifest.json", "--data-root", "/datasets/c2c", "--floors", "/fpct-run/results/gpu_gate/metric_null_floors.json", "--gpu-gate", "/fpct-run/results/gpu_gate/gpu_numerical/gpu_numerical.json", "--runtime-provenance", "/fpct-run/results/gpu_gate/runtime_provenance.json", "--root", "/fpct-run/results/pretrained_matrix"]
+        env:
+        - {name: C2C_MODEL_ROOT, value: /models/c2c}
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TRANSFORMERS_OFFLINE, value: "1"}
+        - {name: TOKENIZERS_PARALLELISM, value: "false"}
+        resources:
+          limits: {nvidia.com/gpu: "1"}
+          requests: {nvidia.com/gpu: "1", cpu: "8", memory: 64Gi}
+        volumeMounts:
+        - {name: run-lock, mountPath: /opt/fpct-lock, readOnly: true}
+        - {name: models, mountPath: /models/c2c, readOnly: true}
+        - {name: datasets, mountPath: /datasets/c2c, readOnly: true}
+        - {name: fpct-run, mountPath: /fpct-run}
+      volumes:
+      - name: run-lock
+        configMap: {name: __RUN_LOCK_CONFIGMAP__}
+      - name: models
+        hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/models, type: Directory}
+      - name: datasets
+        hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/data/c2c, type: Directory}
+      - name: fpct-run
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/__RUN_UID__, type: Directory}

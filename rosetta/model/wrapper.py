@@ -5,10 +5,12 @@ The ensemble of multiple standard transformers LLM models, with automatic kv-cac
 from typing import Any, Dict, List, Optional, Union
 import torch
 from torch import nn
+from torch.profiler import record_function
 from transformers.cache_utils import Cache, DynamicCache
 from transformers.modeling_utils import PreTrainedModel
 from transformers.modeling_outputs import CausalLMOutputWithPast
 import json
+import hashlib
 
 from rosetta.model.projector import Projector
 from rosetta.model.fpct_attention import (
@@ -17,6 +19,7 @@ from rosetta.model.fpct_attention import (
     build_fpct_packed_layout,
     fpct_eager_attention,
     fpct_mechanism_diagnostics,
+    fpct_qwen_eager_attention_forward,
     normalize_fpct_operator,
     normalize_prior as normalize_fpct_prior,
     pack_fpct_memory,
@@ -75,6 +78,9 @@ class RosettaModel(nn.Module):
         fpct_operator: Optional[str] = None,
         fpct_replicated_collapse: bool = False,
         fpct_instrumentation: bool = False,
+        fpct_collapse_to_parent_bypass: bool = False,
+        fpct_profile_scopes: bool = False,
+        fpct_trace: bool = False,
     ):
         super().__init__()
         # model list: a list of model, model 0 by default is the base model
@@ -98,14 +104,34 @@ class RosettaModel(nn.Module):
         self.fpct_operator = normalize_fpct_operator(fpct_operator)
         self._fpct_sidecars: Dict[int, List[FPCTSidecarSegment]] = {}
         self._fpct_structure_segments: Dict[
-            tuple[int, int, int], tuple[torch.Tensor, torch.Tensor]
+            tuple[int, int, int], tuple[torch.Tensor, torch.Tensor, str, int, int, bool]
         ] = {}
         self._fpct_packed_layout: Optional[FPCTPackedLayout] = None
+        # Historical name retained for config/state compatibility. In R2 this
+        # means expanded replicated atoms, not the exact parent bypass.
         self.fpct_replicated_collapse = bool(fpct_replicated_collapse)
         self.fpct_instrumentation = bool(fpct_instrumentation)
         self._fpct_mechanism_metrics: Dict[str, torch.Tensor] = {}
+        self._fpct_layer_metrics: Dict[int, Dict[str, torch.Tensor]] = {}
+        self._fpct_input_prior_sha256: Optional[str] = None
+        self.fpct_collapse_to_parent_bypass = bool(
+            fpct_collapse_to_parent_bypass
+        )
+        self.fpct_profile_scopes = bool(fpct_profile_scopes)
+        self.fpct_trace = bool(fpct_trace)
+        self._fpct_candidate_trace_tensors: Dict[
+            int, List[Dict[str, torch.Tensor]]
+        ] = {}
+        self._fpct_attention_trace_tensors: Dict[
+            int, List[Dict[str, torch.Tensor]]
+        ] = {}
         if self.fpct_replicated_collapse and self.fpct_operator != "f":
             raise ValueError("replicated collapse is an F-only inference control")
+        if self.fpct_collapse_to_parent_bypass and self.fpct_operator != "f":
+            raise ValueError("collapse-to-parent bypass is an F-only control")
+        if self.fpct_operator in {"c_post", "f"}:
+            for projector in self.projector_list:
+                projector.suppress_host_diagnostics = True
 
         # Multi-source fusion mode:
         # "sequential" (default): each source updates base cache iteratively
@@ -122,7 +148,10 @@ class RosettaModel(nn.Module):
     def fpct_config_dict(self) -> Dict[str, Optional[str]]:
         config = {"operator": self.fpct_operator, "position_mode": "legacy", "a": "1", "g": "1"}
         if self.fpct_replicated_collapse:
+            config["replicated_atoms"] = True
             config["replicated_collapse"] = True
+        if self.fpct_collapse_to_parent_bypass:
+            config["collapse_to_parent_bypass"] = True
         if self.fpct_instrumentation:
             config["instrumentation"] = True
         return config
@@ -263,6 +292,12 @@ class RosettaModel(nn.Module):
         fpct_layout: Optional[FPCTPackedLayout] = None,
         fpct_replicated_collapse: bool = False,
         fpct_metric_sink: Optional[Dict[str, torch.Tensor]] = None,
+        fpct_layer_metric_sink: Optional[Dict[int, Dict[str, torch.Tensor]]] = None,
+        fpct_collapse_to_parent_bypass: bool = False,
+        fpct_profile_scopes: bool = False,
+        fpct_attention_trace_sink: Optional[
+            Dict[int, List[Dict[str, torch.Tensor]]]
+        ] = None,
     ):
         """
         Monkeypatch Qwen3Attention.forward so that *current step* attention uses the
@@ -338,76 +373,149 @@ class RosettaModel(nn.Module):
                 base_key_states = key_states
                 base_value_states = value_states
                 parent_attention_mask = attention_mask
-                packed = pack_fpct_memory(
-                    base_key_states,
-                    base_value_states,
-                    parent_attention_mask,
-                    fpct_sidecars,
-                    query_length=query_states.shape[-2],
-                    layout=fpct_layout,
-                    replicated_collapse=fpct_replicated_collapse,
-                )
-                key_states = packed.key
-                value_states = packed.value
-                attention_mask = packed.attention_mask
-                if fpct_metric_sink is not None:
-                    metrics = fpct_mechanism_diagnostics(query_states, packed)
-                    replicated = pack_fpct_memory(
-                        base_key_states,
-                        base_value_states,
-                        parent_attention_mask,
-                        fpct_sidecars,
-                        query_length=query_states.shape[-2],
-                        layout=fpct_layout,
-                        replicated_collapse=True,
-                    )
-                    factorized_output, _ = fpct_eager_attention(
-                        query_states, packed
-                    )
-                    collapsed_output, _ = fpct_eager_attention(
-                        query_states, replicated
-                    )
-                    metrics["output_delta_l2"] = (
-                        factorized_output.float() - collapsed_output.float()
-                    ).square().mean().sqrt()
-                    fpct_metric_sink.clear()
-                    fpct_metric_sink.update(
-                        {name: value.detach() for name, value in metrics.items()}
-                    )
-
-            attention_interface = eager_attention_forward
-            if self.config._attn_implementation != "eager":
-                if self.config._attn_implementation == "sdpa" and kwargs.get(
-                    "output_attentions", False
-                ):
-                    # fall back to eager, same as upstream behavior (warning omitted here)
-                    attention_interface = eager_attention_forward
+                if fpct_collapse_to_parent_bypass:
+                    fpct_layout.validate_runtime(base_key_states, fpct_sidecars)
+                    packed = None
                 else:
-                    attention_interface = ALL_ATTENTION_FUNCTIONS[
-                        self.config._attn_implementation
-                    ]
+                    with record_function("fpct.pack"):
+                        packed = pack_fpct_memory(
+                            base_key_states,
+                            base_value_states,
+                            parent_attention_mask,
+                            fpct_sidecars,
+                            query_length=query_states.shape[-2],
+                            layout=fpct_layout,
+                            replicated_collapse=fpct_replicated_collapse,
+                        )
+                    key_states = packed.key
+                    value_states = packed.value
+                    attention_mask = packed.attention_mask
+                if fpct_metric_sink is not None and packed is not None:
+                    with record_function("fpct.diagnostics"):
+                        metrics = fpct_mechanism_diagnostics(query_states, packed)
+                        replicated = pack_fpct_memory(
+                            base_key_states,
+                            base_value_states,
+                            parent_attention_mask,
+                            fpct_sidecars,
+                            query_length=query_states.shape[-2],
+                            layout=fpct_layout,
+                            replicated_collapse=True,
+                        )
+                        factorized_output, _ = fpct_eager_attention(
+                            query_states, packed
+                        )
+                        collapsed_output, _ = fpct_eager_attention(
+                            query_states, replicated
+                        )
+                        metrics["output_delta_l2"] = (
+                            factorized_output.float() - collapsed_output.float()
+                        ).square().mean().sqrt()
+                    detached_metrics = {
+                        name: value.detach() for name, value in metrics.items()
+                    }
+                    if fpct_layer_metric_sink is not None:
+                        layer_bucket = fpct_layer_metric_sink.setdefault(
+                            self.layer_idx, {}
+                        )
+                        for name, value in detached_metrics.items():
+                            sum_key, max_key, count_key = (
+                                f"{name}/sum", f"{name}/max", f"{name}/count"
+                            )
+                            layer_bucket[sum_key] = (
+                                layer_bucket.get(sum_key, torch.zeros_like(value))
+                                + value
+                            )
+                            layer_bucket[max_key] = torch.maximum(
+                                layer_bucket.get(max_key, value), value
+                            )
+                            layer_bucket[count_key] = (
+                                layer_bucket.get(count_key, torch.zeros_like(value))
+                                + torch.ones_like(value)
+                            )
+                    for name, value in detached_metrics.items():
+                        sum_key, max_key, count_key = (
+                            f"{name}/sum", f"{name}/max", f"{name}/count"
+                        )
+                        fpct_metric_sink[sum_key] = (
+                            fpct_metric_sink.get(sum_key, torch.zeros_like(value)) + value
+                        )
+                        fpct_metric_sink[max_key] = torch.maximum(
+                            fpct_metric_sink.get(max_key, value), value
+                        )
+                        fpct_metric_sink[count_key] = (
+                            fpct_metric_sink.get(count_key, torch.zeros_like(value))
+                            + torch.ones_like(value)
+                        )
+                        fpct_metric_sink[name] = (
+                            fpct_metric_sink[sum_key]
+                            / fpct_metric_sink[count_key].clamp_min(1)
+                        )
 
-            attn_output, attn_weights = attention_interface(
-                self,
-                query_states,
-                key_states,
-                value_states,
-                attention_mask,
-                dropout=0.0 if not self.training else self.attention_dropout,
-                scaling=self.scaling,
-                sliding_window=self.sliding_window,
-                **kwargs,
-            )
+            if self.config._attn_implementation != "eager":
+                raise RuntimeError("FPCT R2 requires eager attention at runtime")
+            attention_interface = fpct_qwen_eager_attention_forward
 
+            with record_function("receiver_attention"):
+                with record_function("fpct.attention"):
+                    attn_output, attn_weights = attention_interface(
+                        self,
+                        query_states,
+                        key_states,
+                        value_states,
+                        attention_mask,
+                        dropout=0.0 if not self.training else self.attention_dropout,
+                        scaling=self.scaling,
+                        sliding_window=self.sliding_window,
+                        **kwargs,
+                    )
+
+            if fpct_attention_trace_sink is not None:
+                trace_row = {"pre_o_proj": attn_output.detach()}
+                if packed is not None:
+                    invalid = ~packed.active[:, None, None, :]
+                    invalid_probability = torch.where(
+                        invalid,
+                        attn_weights.float(),
+                        torch.zeros_like(attn_weights, dtype=torch.float32),
+                    )
+                    trace_row["invalid_probability_max"] = (
+                        invalid_probability.abs().amax().detach()
+                    )
+                fpct_attention_trace_sink.setdefault(self.layer_idx, []).append(
+                    trace_row
+                )
             attn_output = attn_output.reshape(*input_shape, -1).contiguous()
             attn_output = self.o_proj(attn_output)
+            if fpct_attention_trace_sink is not None:
+                fpct_attention_trace_sink[self.layer_idx][-1]["post_o_proj"] = (
+                    attn_output.detach()
+                )
             return attn_output, attn_weights
 
         attn_module.forward = types.MethodType(patched_forward, attn_module)
         return orig_forward
 
     def _install_fpct_attention_hooks(self, source_length: int):
-        if self.fpct_operator != "f" or not self._fpct_sidecars:
+        if self.fpct_operator not in {"c_post", "f"}:
+            return []
+        if self.model_list[self.base_model_idx].config._attn_implementation != "eager":
+            raise RuntimeError("FPCT R2 requires receiver eager attention")
+        if self.fpct_operator == "c_post":
+            handlers = []
+            for layer_idx, layer in enumerate(
+                self.model_list[self.base_model_idx].model.layers
+            ):
+                attn = layer.self_attn
+                original = self._monkeypatch_qwen3_attention_forward(
+                    attn, None, None, fpct_profile_scopes=self.fpct_profile_scopes,
+                    fpct_attention_trace_sink=(
+                        self._fpct_attention_trace_tensors if self.fpct_trace else None
+                    ),
+                )
+                handlers.append((attn, original))
+            return handlers
+        if not self._fpct_sidecars:
             return []
         ordered = [
             (layer_idx, segments)
@@ -431,9 +539,10 @@ class RosettaModel(nn.Module):
             self._fpct_packed_layout is None
             or self._fpct_packed_layout.source_length != source_length
         ):
-            self._fpct_packed_layout = build_fpct_packed_layout(
-                source_length, ordered[0][1]
-            )
+            with record_function("fpct.layout_prepare"):
+                self._fpct_packed_layout = build_fpct_packed_layout(
+                    source_length, ordered[0][1]
+                )
         handlers = []
         for layer_idx, segments in ordered:
             attn = self.model_list[self.base_model_idx].model.layers[
@@ -450,6 +559,16 @@ class RosettaModel(nn.Module):
                     self._fpct_mechanism_metrics
                     if self.fpct_instrumentation
                     else None
+                ),
+                fpct_layer_metric_sink=(
+                    self._fpct_layer_metrics if self.fpct_instrumentation else None
+                ),
+                fpct_collapse_to_parent_bypass=(
+                    self.fpct_collapse_to_parent_bypass
+                ),
+                fpct_profile_scopes=self.fpct_profile_scopes,
+                fpct_attention_trace_sink=(
+                    self._fpct_attention_trace_tensors if self.fpct_trace else None
                 ),
             )
             handlers.append((attn, original))
@@ -689,17 +808,22 @@ class RosettaModel(nn.Module):
         source_indices: torch.Tensor,
         source_weights: torch.Tensor,
         source_length: int,
-        dtype: torch.dtype,
         device: torch.device,
+        *,
+        certified: bool,
     ) -> tuple:
         indices = source_indices.to(device=device)
-        weights = source_weights.to(device=device, dtype=dtype)
+        weights = source_weights.to(device=device, dtype=torch.float32)
+        index_valid = (indices >= 0) & (indices < source_length)
+        if certified:
+            return weights, index_valid & (weights > 0)
+        if device.type == "cuda":
+            raise ValueError("CUDA FPCT prior must be CPU-certified before forward")
         finite = torch.isfinite(weights)
         if torch.any(~finite):
             raise ValueError("FPCT source prior contains nonfinite mass")
         if torch.any(weights < 0):
             raise ValueError("FPCT source prior contains negative mass")
-        index_valid = (indices >= 0) & (indices < source_length)
         if torch.any((weights > 0) & ~index_valid):
             raise ValueError("FPCT source prior assigns positive mass to an invalid index")
         legal = index_valid & (weights > 0)
@@ -737,6 +861,7 @@ class RosettaModel(nn.Module):
         source_indices: torch.Tensor,
         source_weights: torch.Tensor,
         soft_section: dict,
+        target_layer_idx: Optional[int] = None,
     ) -> tuple:
         if not self._fpct_projector_is_supported(projector):
             raise ValueError(
@@ -754,15 +879,18 @@ class RosettaModel(nn.Module):
             source_indices,
             source_weights,
             source_key_cache.shape[2],
-            source_key_cache.dtype,
             source_key_cache.device,
+            certified=soft_section.get("fpct_prior_certified") is True,
         )
         legal = legal & index_valid.to(device=legal.device)
-        prior, legal = normalize_fpct_prior(prior, legal)
-        weights = prior[:, None, :, :, None]
+        weights = prior[:, None, :, :, None].float()
         averaged_source = (
-            (source_candidates_k * weights).sum(dim=3),
-            (source_candidates_v * weights).sum(dim=3),
+            (source_candidates_k.float() * weights).sum(dim=3).to(
+                dtype=source_candidates_k.dtype
+            ),
+            (source_candidates_v.float() * weights).sum(dim=3).to(
+                dtype=source_candidates_v.dtype
+            ),
         )
         projector_uses_confidence = (
             hasattr(projector, "uses_internal_source_confidence")
@@ -830,11 +958,53 @@ class RosettaModel(nn.Module):
         fused_value = torch.stack(candidate_values, dim=3)
         projector._last_alignment_confidence_aux_loss = parent_confidence_aux
         projector._last_alignment_residual_scale_aux_loss = parent_residual_aux
-        collapsed_key = (fused_key * weights).sum(dim=3)
-        collapsed_value = (fused_value * weights).sum(dim=3)
+        collapsed_key = (fused_key.float() * weights).sum(dim=3).to(
+            dtype=base_kv[0].dtype
+        )
+        collapsed_value = (fused_value.float() * weights).sum(dim=3).to(
+            dtype=base_kv[1].dtype
+        )
+        candidate_count = legal.sum(dim=-1)
+        first_candidate = legal.to(torch.long).argmax(dim=-1)
+        gather_index = first_candidate[:, None, :, None, None].expand(
+            fused_key.shape[0], fused_key.shape[1], fused_key.shape[2], 1,
+            fused_key.shape[-1],
+        )
+        single_key = torch.gather(fused_key, 3, gather_index).squeeze(3)
+        single_value = torch.gather(fused_value, 3, gather_index).squeeze(3)
+        singleton = (candidate_count == 1)[:, None, :, None]
+        collapsed_key = torch.where(singleton, single_key, collapsed_key)
+        collapsed_value = torch.where(singleton, single_value, collapsed_value)
         has_support = legal.any(dim=-1)[:, None, :, None]
         collapsed_key = torch.where(has_support, collapsed_key, base_kv[0])
         collapsed_value = torch.where(has_support, collapsed_value, base_kv[1])
+        if self.fpct_trace:
+            if target_layer_idx is None:
+                raise ValueError("FPCT trace requires target_layer_idx")
+            self._fpct_candidate_trace_tensors.setdefault(
+                int(target_layer_idx), []
+            ).append(
+                {
+                    "source_candidate_key": source_candidates_k.detach(),
+                    "source_candidate_value": source_candidates_v.detach(),
+                    "native_parent_key": base_kv[0].detach(),
+                    "native_parent_value": base_kv[1].detach(),
+                    "fused_candidate_key": fused_key.detach(),
+                    "fused_candidate_value": fused_value.detach(),
+                    "collapsed_key": collapsed_key.detach(),
+                    "collapsed_value": collapsed_value.detach(),
+                    "prior": prior.detach(),
+                    "legal": legal.detach(),
+                    "legacy_key_gate": nuisance["legacy_key_gate"].detach(),
+                    "legacy_value_gate": nuisance["legacy_value_gate"].detach(),
+                    "key_alignment_confidence": nuisance[
+                        "key_alignment_confidence"
+                    ].detach(),
+                    "value_alignment_confidence": nuisance[
+                        "value_alignment_confidence"
+                    ].detach(),
+                }
+            )
         return (
             collapsed_key,
             collapsed_value,
@@ -854,18 +1024,50 @@ class RosettaModel(nn.Module):
         fused_value: torch.Tensor,
         prior: torch.Tensor,
         legal: torch.Tensor,
+        prior_sha256: str = "",
+        max_slots_hint: int = -1,
+        source_length_hint: int = -1,
+        certified: bool = False,
     ) -> None:
+        if not certified:
+            if prior.device.type == "cuda":
+                raise ValueError("CUDA FPCT sidecar requires CPU-certified metadata")
+            prior, legal = normalize_fpct_prior(prior, legal)
+            digest = hashlib.sha256()
+            digest.update(b"fpct-test-prior-v1\0")
+            digest.update(prior.contiguous().numpy().tobytes())
+            prior_sha256 = digest.hexdigest()
+            counts = legal.sum(dim=-1)
+            slots = torch.where(
+                counts >= 2, counts, torch.ones_like(counts)
+            ).sum(dim=-1)
+            max_slots_hint = int(slots.max()) if slots.numel() else 0
+            source_length_hint = parent_start + int(fused_key.shape[2])
+            certified = True
+        if not prior_sha256 or max_slots_hint < 0 or source_length_hint < 0:
+            raise ValueError("FPCT sidecar certification metadata is incomplete")
         structure_key = (parent_start, fused_key.shape[2], fused_key.shape[3])
         canonical = self._fpct_structure_segments.get(structure_key)
         if canonical is None:
-            canonical = (prior.detach(), legal.detach())
+            canonical = (
+                prior.detach(), legal.detach(), prior_sha256,
+                int(max_slots_hint), int(source_length_hint), True,
+            )
             self._fpct_structure_segments[structure_key] = canonical
+        elif canonical[2:] != (
+            prior_sha256, int(max_slots_hint), int(source_length_hint), True
+        ):
+            raise ValueError("FPCT sidecar prior provenance differs across layers")
         segment = FPCTSidecarSegment(
             parent_start=parent_start,
             key=fused_key,
             value=fused_value,
             prior=canonical[0],
             valid=canonical[1],
+            prior_sha256=canonical[2],
+            max_slots_hint=canonical[3],
+            source_length_hint=canonical[4],
+            certified=canonical[5],
         )
         segment.validate()
         segments = self._fpct_sidecars.setdefault(target_layer_idx, [])
@@ -964,6 +1166,10 @@ class RosettaModel(nn.Module):
             self._fpct_sidecars = {}
             self._fpct_structure_segments = {}
             self._fpct_packed_layout = None
+        self._fpct_mechanism_metrics.clear()
+        self._fpct_layer_metrics.clear()
+        self._fpct_candidate_trace_tensors.clear()
+        self._fpct_attention_trace_tensors.clear()
 
         num_sections = len(kv_cache_index) if kv_cache_index is not None else 1
         use_soft_alignment = soft_alignment is not None
@@ -975,6 +1181,18 @@ class RosettaModel(nn.Module):
                     f"soft_alignment section count {len(soft_alignment)} does not match "
                     f"kv_cache_index section count {num_sections}"
                 )
+            if self.fpct_operator in {"c_post", "f"}:
+                if not all(
+                    section.get("fpct_prior_certified") is True
+                    for section in soft_alignment
+                ):
+                    raise ValueError("FPCT R2 requires CPU-certified alignment metadata")
+                prior_hashes = {
+                    section.get("fpct_prior_sha256") for section in soft_alignment
+                }
+                if len(prior_hashes) != 1 or None in prior_hashes:
+                    raise ValueError("FPCT sections do not share one canonical prior SHA")
+                self._fpct_input_prior_sha256 = prior_hashes.pop()
             if seqlen > 1:
                 self._prefill_soft_source_caches(input_ids, attention_mask)
 
@@ -1141,7 +1359,14 @@ class RosettaModel(nn.Module):
                 # calculate source model kvcache and apply projections
                 if self.base_model_idx in self.projector_dict:
                     # Iterate over all source models in projector_dict
-                    sharer_mask = kv_cache_index[i][0][0][0].item()
+                    if self.fpct_operator in {"c_post", "f"}:
+                        sharer_mask = soft_alignment[i].get("fpct_sharer_mask")
+                        if not isinstance(sharer_mask, int):
+                            raise ValueError(
+                                "FPCT R2 requires CPU scalar sharer metadata"
+                            )
+                    else:
+                        sharer_mask = kv_cache_index[i][0][0][0].item()
                     if sharer_mask > 0:
                         base_cache = clone_kv_cache(curr_base_kv_cache)
 
@@ -1195,17 +1420,21 @@ class RosettaModel(nn.Module):
                                         soft_section = soft_alignment[i]
                                         source_weights = soft_section["source_weights"]
                                         if self.fpct_operator in {"c_post", "f"}:
-                                            fpct_record = self._project_fpct_candidates(
-                                                projector=projector,
-                                                source_key_cache=source_key_cache,
-                                                source_value_cache=source_value_cache,
-                                                base_kv=new_base_kv_cache,
-                                                source_indices=soft_section[
-                                                    "source_indices"
-                                                ],
-                                                source_weights=source_weights,
-                                                soft_section=soft_section,
-                                            )
+                                            with record_function(
+                                                "fpct.project_candidates"
+                                            ):
+                                                fpct_record = self._project_fpct_candidates(
+                                                    projector=projector,
+                                                    source_key_cache=source_key_cache,
+                                                    source_value_cache=source_value_cache,
+                                                    base_kv=new_base_kv_cache,
+                                                    source_indices=soft_section[
+                                                        "source_indices"
+                                                    ],
+                                                    source_weights=source_weights,
+                                                    soft_section=soft_section,
+                                                    target_layer_idx=target_layer_idx,
+                                                )
                                             projected_kv_list.append(
                                                 (fpct_record[0], fpct_record[1])
                                             )
@@ -1344,6 +1573,25 @@ class RosettaModel(nn.Module):
                                         fused_value=fpct_record[3],
                                         prior=fpct_record[4],
                                         legal=fpct_record[5],
+                                        prior_sha256=soft_section.get(
+                                            "fpct_prior_sha256", ""
+                                        ),
+                                        max_slots_hint=int(
+                                            soft_section.get(
+                                                "fpct_max_slots_hint", -1
+                                            )
+                                        ),
+                                        source_length_hint=int(
+                                            soft_section.get(
+                                                "fpct_target_length_hint", -1
+                                            )
+                                        ),
+                                        certified=(
+                                            soft_section.get(
+                                                "fpct_prior_certified"
+                                            )
+                                            is True
+                                        ),
                                     )
 
                                 # Collect or apply projection based on mode

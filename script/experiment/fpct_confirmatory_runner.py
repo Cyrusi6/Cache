@@ -76,17 +76,27 @@ def make_case(device: torch.device, dtype: torch.dtype):
     prior = torch.tensor([
         [[.55,.45,0,0],[1,0,0,0],[.2,.3,.5,0],[0,0,0,0],[.25,.25,.25,.25]],
         [[1,0,0,0],[.7,.3,0,0],[0,0,0,0],[.4,.6,0,0],[1,0,0,0]],
-    ], device=device, dtype=dtype)
+    ], device=device, dtype=torch.float32)
     valid = prior > 0
-    collapsed_k = (fused_k * prior[:, None, :, :, None]).sum(3)
-    collapsed_v = (fused_v * prior[:, None, :, :, None]).sum(3)
+    collapsed_k = (
+        fused_k.float() * prior[:, None, :, :, None]
+    ).sum(3).to(dtype)
+    collapsed_v = (
+        fused_v.float() * prior[:, None, :, :, None]
+    ).sum(3).to(dtype)
     supported = valid.any(-1)[:, None, :, None]
     cache_k = torch.where(supported, collapsed_k, native_k)
     cache_v = torch.where(supported, collapsed_v, native_v)
-    mask = torch.zeros(2, 1, 3, 5, device=device, dtype=dtype)
+    mask = torch.zeros(2, 1, 3, 5, device=device, dtype=torch.float32)
     mask[:, :, 0, 3:] = -torch.inf
     mask[1, :, :, 0] = -torch.inf
-    sidecar = FPCTSidecarSegment(0, fused_k, fused_v, prior, valid)
+    sidecar = FPCTSidecarSegment(
+        0, fused_k, fused_v, prior, valid,
+        max_slots_hint=11,
+        source_length_hint=5,
+        prior_sha256="synthetic-complete-gpu-gate",
+        certified=True,
+    )
     return q, native_k, native_v, cache_k, cache_v, fused_k, fused_v, prior, valid, mask, sidecar
 
 
@@ -131,7 +141,13 @@ def run_one(dtype: torch.dtype) -> dict[str, Any]:
     first_v = torch.gather(fused_v.detach(), 3, gather_index).squeeze(3)
     onehot_cache_k = torch.where(has[:, None, :, None], first_k, native_k.detach())
     onehot_cache_v = torch.where(has[:, None, :, None], first_v, native_v.detach())
-    onehot_sidecar = FPCTSidecarSegment(0, fused_k.detach(), fused_v.detach(), onehot, onehot_valid)
+    onehot_sidecar = FPCTSidecarSegment(
+        0, fused_k.detach(), fused_v.detach(), onehot, onehot_valid,
+        max_slots_hint=5,
+        source_length_hint=5,
+        prior_sha256="synthetic-complete-gpu-gate-m1",
+        certified=True,
+    )
     onehot_layout = build_fpct_packed_layout(onehot_cache_k.shape[2], [onehot_sidecar])
     onehot_packed = pack_fpct_memory(onehot_cache_k, onehot_cache_v, mask, [onehot_sidecar], query_length=q.shape[2], layout=onehot_layout)
     onehot_f, _ = fpct_eager_attention(q.detach(), onehot_packed)
@@ -175,8 +191,13 @@ def relative_l2(actual: torch.Tensor, reference: torch.Tensor) -> float:
     return float(torch.linalg.vector_norm(actual - reference) / torch.linalg.vector_norm(reference).clamp_min(1e-30))
 
 
-def gpu_numerical(lock_path: Path, output_path: Path) -> dict[str, Any]:
-    lock = load_lock(lock_path)
+def gpu_numerical(
+    lock_path: Path,
+    output_path: Path,
+    *,
+    lock_payload: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    lock = load_lock(lock_path) if lock_payload is None else lock_payload
     if not torch.cuda.is_available():
         raise GateError("CUDA is unavailable")
     results = {"fp32": run_one(torch.float32), "fp16": run_one(torch.float16), "bf16": run_one(torch.bfloat16)}
@@ -231,17 +252,21 @@ def training_config(
     return {
         "model": {
             "base_model": "Qwen/Qwen3-0.6B", "teacher_model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+            "attn_implementation": "eager",
+            "fpct_r2_enforce_eager": True,
             "is_do_alignment": True, "alignment_strategy": "soft_span_overlap_v2", "soft_alignment_top_k": 4,
             "soft_alignment_score_mode": "uniform", "soft_alignment_boundary_bonus": .5,
             "soft_alignment_boundary_tolerance": 1, "soft_alignment_min_weight": 0.0,
             "soft_alignment_confidence_mode": "entropy", "soft_alignment_confidence_alpha": .5,
             "soft_alignment_confidence_floor": .5, "soft_alignment_fallback_confidence": .25,
             "fpct_alignment_sanitizer": "certified_slot0_v1", "fpct_operator": arm,
+            "projector_init_seed": seed,
+            "fpct_trace": optimizer_steps == 4 and arm in {"c_post", "f"},
             "include_response": False, "mapping": "last_aligned",
             "projector": {"type": "C2CProjector", "params": {"hidden_dim": 1024, "intermediate_dim": 1024, "num_layers": 3, "dropout": .1, "initial_temperature": 1.0, "final_temperature": .001, "anneal_steps": 64, "alignment_confidence_gate_mode": "token_mlp", "alignment_confidence_max_delta": 2.0}}
         },
-        "training": {"learning_rate": 1e-4, "weight_decay": .01, "num_epochs": 1, "max_length": 1024, "device": "cuda", "scheduler_type": "linear", "warmup_ratio": .1, "max_grad_norm": 1.0, "gradient_accumulation_steps": 16, "per_device_train_batch_size": 1, "num_processes": 2, "freeze": ["teacher", "base"], "seed": seed, "fpct_formal_run": True, "expected_optimizer_steps": optimizer_steps, "fpct_expected_training_examples": examples, "fpct_alignment_cache_path": sidecar},
-        "output": {"output_dir": str(output), "save_steps": 32, "eval_steps": 1000000, "wandb_config": {"project": "FPCT", "mode": "offline", "entity": "nics-efc", "run_name": f"fpct-{lock['run_uid']}-{seed}-{arm}"}},
+        "training": {"learning_rate": 1e-4, "weight_decay": .01, "num_epochs": 1, "max_length": 1024, "device": "cuda", "scheduler_type": "linear", "warmup_ratio": .1, "max_grad_norm": 1.0, "gradient_accumulation_steps": 16, "per_device_train_batch_size": 1, "num_processes": 2, "freeze": ["teacher", "base"], "seed": seed, "fpct_formal_run": True, "fpct_r2_matched_smoke": optimizer_steps == 4, "expected_optimizer_steps": optimizer_steps, "fpct_expected_training_examples": examples, "fpct_alignment_cache_path": sidecar},
+        "output": {"output_dir": str(output), "save_steps": optimizer_steps if optimizer_steps < 32 else 32, "eval_steps": 1000000, "wandb_config": {"project": "FPCT", "mode": "offline", "entity": "nics-efc", "run_name": f"fpct-{lock['run_uid']}-{seed}-{arm}"}},
         "data": {"type": "MMLUChatDataset", "kwargs": {"split": "auxiliary_train", "num_samples": examples, "max_word_count": 1024}, "train_ratio": 1.0, "split_mode": "seeded"}
     }
 
@@ -286,8 +311,23 @@ def train_triplet(lock_path: Path, seed: int, output_root: Path) -> dict[str, An
     init_hashes = {records[arm]["step0_trainable_sha256"] for arm in records}
     data_hashes = {records[arm]["data_order_sha256"] for arm in records}
     keys_hashes = {records[arm]["trainable_keys_sha256"] for arm in records}
-    status = "COMPLETE" if len(init_hashes) == len(data_hashes) == len(keys_hashes) == 1 else "INTEGRITY_FAILURE"
-    payload = {"schema_version": 1, "run_uid": lock["run_uid"], "seed": seed, "arm_order": list(ARM_ORDER[seed]), "arms": records, "status": status}
+    rng_hashes = {records[arm]["rng_state_before_training_sha256"] for arm in records}
+    backend_values = {
+        tuple(sorted(records[arm]["eager_backends"].items())) for arm in records
+    }
+    checks = {
+        "step0_identity": len(init_hashes) == 1,
+        "data_order_identity": len(data_hashes) == 1,
+        "trainable_keys_identity": len(keys_hashes) == 1,
+        "rng_identity": len(rng_hashes) == 1,
+        "eager_identity": len(backend_values) == 1
+        and all(value == "eager" for _key, value in next(iter(backend_values))),
+        "checkpoint_reload": all(record["checkpoint_reload_equal"] for record in records.values()),
+        "scheduler_steps": all(record["scheduler_step_matches"] for record in records.values()),
+        "optimizer_state": all(record["optimizer_state_entry_count"] > 0 for record in records.values()),
+    }
+    status = "COMPLETE" if all(checks.values()) else "INTEGRITY_FAILURE"
+    payload = {"schema_version": 1, "run_uid": lock["run_uid"], "seed": seed, "arm_order": list(ARM_ORDER[seed]), "arms": records, "checks": checks, "status": status}
     atomic_json(triplet / "triplet_manifest.json", payload)
     if status != "COMPLETE":
         raise GateError("matched triplet identity failure")
@@ -301,7 +341,13 @@ def _to_device_batch(batch: dict[str, Any], device: torch.device) -> dict[str, A
         "position_ids": batch["position_ids"].to(device),
         "labels": batch["labels"].to(device),
         "kv_cache_index": [value.to(device) for value in batch["kv_cache_index"]],
-        "soft_alignment": [{key: value.to(device) for key, value in section.items()} for section in batch["soft_alignment"]],
+        "soft_alignment": [
+            {
+                key: value.to(device) if isinstance(value, torch.Tensor) else value
+                for key, value in section.items()
+            }
+            for section in batch["soft_alignment"]
+        ],
     }
 
 
@@ -417,10 +463,45 @@ def matched_smoke(lock_path: Path, output_root: Path) -> dict[str, Any]:
     lock = load_lock(lock_path); repo = Path(__file__).resolve().parents[2]
     root = output_root / "diagnostic_seed_104729"; root.mkdir(parents=True, exist_ok=False)
     records = {arm: run_arm(repo, lock, 104729, arm, root / arm, examples=128, optimizer_steps=4) for arm in ("c_pre", "c_post", "f")}
+    cpost_trace = records["c_post"].get("r2_training_trace_rank_records", [])
+    f_trace = records["f"].get("r2_training_trace_rank_records", [])
+    cpost_grad = records["c_post"].get("r2_candidate_gradient_rank_records", [])
+    f_grad = records["f"].get("r2_candidate_gradient_rank_records", [])
     checks = {
         "step0_identity": len({record["step0_trainable_sha256"] for record in records.values()}) == 1,
         "trainable_keys": len({record["trainable_keys_sha256"] for record in records.values()}) == 1,
         "data_order": len({record["data_order_sha256"] for record in records.values()}) == 1,
+        "rng_identity": len({record["rng_state_before_training_sha256"] for record in records.values()}) == 1,
+        "eager_all_arms": all(
+            all(value == "eager" for value in record["eager_backends"].values())
+            for record in records.values()
+        ),
+        "precollapse_candidate_identity": bool(cpost_trace)
+        and len(cpost_trace) == len(f_trace)
+        and all(
+            left["precollapse_candidate_sha256"] == right["precollapse_candidate_sha256"]
+            for left, right in zip(cpost_trace, f_trace)
+        ),
+        "parent_nuisance_identity": bool(cpost_trace)
+        and len(cpost_trace) == len(f_trace)
+        and all(
+            left["parent_nuisance_sha256"] == right["parent_nuisance_sha256"]
+            for left, right in zip(cpost_trace, f_trace)
+        ),
+        "gumbel_non_degenerate": bool(cpost_trace)
+        and all(row["legacy_gumbel_non_degenerate"] for row in cpost_trace + f_trace),
+        "no_mask_leakage": bool(cpost_trace)
+        and all(row["invalid_probability_max"] == 0.0 for row in cpost_trace + f_trace),
+        "candidate_sensitive_gradient": bool(cpost_grad)
+        and len(cpost_grad) == len(f_grad)
+        and all(
+            row["candidate_sensitive_gradients_finite"]
+            and row["candidate_sensitive_nonzero_gradient_count"] > 0
+            for row in cpost_grad + f_grad
+        ),
+        "checkpoint_reload": all(record["checkpoint_reload_equal"] for record in records.values()),
+        "optimizer_state": all(record["optimizer_state_entry_count"] > 0 for record in records.values()),
+        "scheduler_steps": all(record["scheduler_step_matches"] for record in records.values()),
         "four_steps": all(record["optimizer_steps"] == 4 for record in records.values()),
     }
     payload = {"schema_version": 1, "run_uid": lock["run_uid"], "seed": 104729, "arms": records, "checks": checks, "status": "GO" if all(checks.values()) else "INTEGRITY_FAILURE"}

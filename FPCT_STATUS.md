@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2 prospective root-cause protocol locking
-> 当前判定：旧 execution 保持 terminal `GPU_ENGINEERING_BLOCKED`；R2 为 `PRE-OUTPUT PROTOCOL READY`
-> 下一阶段：先 commit/push R2 protocol SHA，再执行零输出 provenance 和 scientific recovery；尚无新 pretrained output
+> 当前阶段：FPCT-GPU-R2 scientific recovery 与新 execution two-lock 准备
+> 当前判定：旧 execution 永久保持 terminal `GPU_ENGINEERING_BLOCKED`；R2 protocol 已锁定，CPU/HF recovery tests 通过，`NEW PRETRAINED OUTPUT NOT STARTED`
+> 下一阶段：提交并推送 clean R2 scientific SHA，构建全新 immutable image/run-lock 后从完整 synthetic GPU gate 开始
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -92,7 +92,10 @@
 | FPCT-3.9 | `GO` | FPCT-3.8 GO | R1 CPU | 已完成 | actual Qwen3 eager/DynamicCache random-config integration；360 full-suite pass |
 | FPCT-4 | `GPU NUMERICAL GO` | FPCT-3.9 GO + frozen run lock | R2+ | 已完成 | exact imageID；FP32/FP16/BF16、gradient、invalid、m≤1、replicated-null gates 通过 |
 | FPCT-5 | `GPU_ENGINEERING_BLOCKED / TERMINAL` | FPCT-4 GO | R2 | 已停止 | pretrained smoke activation、replicated-collapse、profiled host-sync 三项失败；无 accuracy |
-| FPCT-6 | `BLOCKED / NOT ENTERED` | FPCT-5 GO | R3 | 否 | 未提交 matched-training smoke |
+| FPCT-GPU-R2-P | `GO / PRE-OUTPUT LOCKED` | old terminal evidence | R0 | 已完成 | commit `f7a5f3c...`；H1–H4、8 conditions、18-row panel、metric floors、P0–P6 已前瞻冻结 |
+| FPCT-GPU-R2-C | `CPU/HF READY` | R2 protocol lock | R1 | 已完成 | canonical FP32 prior、shared eager adapter、exact bypass、replicated atoms、scoped profiler、matched-smoke integrity；尚无新 pretrained output |
+| FPCT-GPU-R2-K | `NOT STARTED` | clean scientific SHA + new image/run-lock | R2 | 条件授权 | 必须先完整 synthetic gate，再运行 FP32/BF16 label-free pretrained matrix |
+| FPCT-6 | `CONDITIONALLY AUTHORIZED / NOT ENTERED` | FPCT-GPU-R2 pretrained GO | R3 | 条件授权 | 仅 R2 GO 后执行 seed 104729 四步 matched smoke |
 | FPCT-7 | `BLOCKED / NOT ENTERED` | FPCT-6 GO | R3 | 否 | 未冻结 confirmatory execution |
 | FPCT-8 | `BLOCKED / NOT ENTERED` | FPCT-7 GO | R4 | 否 | 未启动 12-seed training |
 | FPCT-9 | `BLOCKED / NOT ENTERED` | FPCT-8 GO | R4 | 否 | 未运行 model-selection/held-out evaluation |
@@ -208,6 +211,11 @@
 | FPCT-D056 | 2026-07-20 | R2 activation 改为同 packed path 的 `Delta_fact=F_real-F_replicated` | `Delta_rep` 与 `Delta_bypass` 独立识别 refinement 和 wiring；fresh native gate=0 记为 `EXPECTED_NATIVE_NULL` |
 | FPCT-D057 | 2026-07-20 | R2 prior、mask、C_post reduction、diagnostics 和 attention accumulation 采用 canonical FP32 contract | 每行 logsumexp/exp-sum tolerance `2e-7`；C_post/F 必须共享同一 prior tensor/hash |
 | FPCT-D058 | 2026-07-20 | 18-row label-free diagnostic panel 和 metric-specific null/profiler panels 在新 pretrained output 前冻结 | 3 tasks × m2/m3/m4 × 2 groups；不访问 labels/correctness；废止单一 `0.0390625` floor |
+| FPCT-D059 | 2026-07-20 | 零输出 provenance 将旧 activation=0 分类为 `EXPECTED_NATIVE_NULL` | fresh projector 无 checkpoint；28 层 K/V gate logits 精确为 0；旧 config 未显式 eager，只能写“可能自动 dispatch 到 SDPA” |
+| FPCT-D060 | 2026-07-20 | R2 C_post/F 共用 Qwen eager adapter 与 canonical FP32 prior | A/logA/mask/logits/softmax/value reduction保持 FP32；KV 只在边界 cast；同 prior SHA 不重复归一化 |
+| FPCT-D061 | 2026-07-20 | R2 自然 operator matrix 使用 condition×dtype 独立 sealed 进程 | FP32/BF16 各 8 conditions；保存冻结 parent/last-token compact traces，支持逐层 first-divergence，不提交完整 KV |
+| FPCT-D062 | 2026-07-20 | 四步 smoke 的完整 integrity evidence 写入训练 manifest | step-0/RNG/data-order/keys、C_post/F pre-collapse、parent nuisance、Gumbel、gradient、eager、scheduler、checkpoint reload、mask 均为硬门 |
+| FPCT-D063 | 2026-07-20 | 旧 run/image/artifacts 不参与 R2 resume | 新 R2 controller、K8s templates、image digest、run UID 与 artifact root 全部独立；任何 scientific-code 变更使新 lock 失效 |
 
 ## 6. 已锁定决定与 deferred items
 
@@ -258,6 +266,14 @@ Production seam、shared candidate fuser、parent nuisance broadcast、ambiguous
 旧 CPU-GATE 生成的 non-operative draft作为历史记录保留。当前 frozen execution 使用 scientific SHA `371e72f1...`、image digest `sha256:c8510567...`、sealed fingerprint `acfdea9d...`、2048 sidecar SHA `48caee80...` 和 run-lock SHA `2a4db8f...`。Final synthetic GPU numerical gate 通过全部冻结 tolerance/null checks，artifact SHA 为 `0b23d937...`。
 
 随后首次真实 TinyLlama→Qwen3 pretrained smoke 在不读取 accuracy 的前提下触发三个硬门：operator activation 为 numerical null；replicated-collapse 与 C_post 最大输出差 `0.71875`；CUDA profiler 检出 `cudaDeviceSynchronize` 与 `cudaStreamSynchronize`。m≤1、finite、HBM（约 4.17 GiB）、median ratio `1.2769`、p95 ratio `1.2839` 通过，但不能覆盖硬失败。Controller 已进入 terminal `GPU_ENGINEERING_BLOCKED`；matched smoke、12-seed formal training、model-selection、held-out 和 checkpoint 全部未进入。
+
+### FPCT-GPU-R2：CPU/HF READY；NEW GPU EXECUTION NOT STARTED
+
+R2 prospective protocol 已由 commit `f7a5f3c421a7738c9f69224cff1cebb53205c2e2` 在任何新 pretrained output 前提交并推送。随后零输出 probe 只读取旧 config/code/provenance，确认 fresh projector 28 层 key/value gate logits 均精确为 0，checkpoint-native hard gate 因而产生预期 native null；旧 config 没有显式 eager runtime proof。
+
+当前 scientific recovery 已实现 canonical FP32 prior、C_post/F shared eager adapter、exact collapse-to-parent bypass、replicated-atoms、FP32/BF16 condition-isolated trace、scope-aware profiler 和训练 integrity manifest。CPU 定向测试通过；完整 repo suite 按仓库约定在 `local/tmp` 重跑为 `401 passed, 2 warnings`。
+
+本状态不构成新 GPU 或 pretrained GO。新 image、run UID、run-lock、GPU numerical artifacts、自然 label-free operator matrix 与 K8s Jobs 均尚未创建；accuracy/correctness、训练 loss、checkpoint 与正式 performance cells 均未读取或生成。
 
 ### FPCT-3.5：GO
 

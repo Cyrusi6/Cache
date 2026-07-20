@@ -352,3 +352,13 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 交付：`PHASE2A_0_OPPORTUNITY_AUDIT.md`、`PHASE2A_PREREGISTRATION.md`、小型 aggregate CSV/JSON、manifest、统计脚本与定向测试。大体积逐例文件继续只保留在 `/netdisk/.../local/`。
 - 验证：定向测试 `3 passed`；项目全量 `239 passed, 2 warnings`；正式 10,000-draw CSV 确定性重跑 byte-identical，JSON 除输出路径外 scientific content identical；`py_compile` 与 `git diff --check` 通过。
 - 结论：opportunity 存在且跨 pair/seed/task 稳定，但仍是 label-aware oracle 上界，不证明当前已有可实现 selector。Phase 2A-0 到此停止，等待审查。
+
+### 2026-07-20 FPCT-GPU-R2 零输出根因诊断与 CPU/HF recovery
+
+- Prospective protocol commit：`f7a5f3c421a7738c9f69224cff1cebb53205c2e2`，发生在任何新 tokenizer、自然 prompt、pretrained forward、GPU、训练或 accuracy 输出之前。
+- 旧 immutable execution：scientific SHA `371e72f14da41f5509eafa21553c7a7418c9a53e`，image digest `sha256:c851056733f3b7affc85ae5dabd870043f3ae7d3010d245705f5b9ded8dc36ab`，run-lock SHA256 `2a4db8f26def997c95b590a34718916b772f686f5c00eabb2f2b69f0dfe5e5ec`；不 patch、不 resume。
+- Zero-output probe：projector checkpoint 为空，fresh 28 层 key/value gate logits 全部精确为 0；checkpoint-native `(logit>0)` 选择 native，因此旧 activation=0 分类为 `EXPECTED_NATIVE_NULL`。旧 config 未显式 eager，只允许称“按当前 dispatch 规则可能使用 SDPA”。
+- Local-only probe：`local/final_results/fpct_factorized_transport/fpct_gpu_r2/rev_f7a5f3c421a7738c9f69224cff1cebb53205c2e2/zero_output_provenance.json`；firewall 记录 tokenizer/natural prompt/model forward/accuracy 均为 false。
+- Recovery config：canonical FP32 A/logA/mask/C_post reduction/softmax；C_post/F shared eager adapter；FP32/BF16 × 8 isolated operator conditions；18-row label-free panel；metric-specific null floors；P0–P6 scoped profiler；四步 seed 104729 matched integrity。
+- 当前验证：R2 扩展定向集 `53 passed`；首次 repo full suite 使用 repo 外 `/tmp` basetemp 时为 `396 passed, 2 path-contract failures, 2 warnings`，随后在 `local/tmp` 按仓库约定重跑为 `401 passed, 2 warnings`。
+- 当前没有新 pretrained output、GPU/K8s、训练、checkpoint 或 accuracy。新的 image/run-lock 尚未生成。

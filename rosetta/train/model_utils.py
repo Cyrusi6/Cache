@@ -104,6 +104,11 @@ def setup_models(
 ):
     """Setup RosettaModel with base model, teacher model, and projectors"""
 
+    fpct_operator = model_config.get("fpct_operator")
+    attention_backend = model_config.get("attn_implementation")
+    if fpct_operator in {"c_post", "f"} and attention_backend != "eager":
+        raise ValueError("FPCT R2 requires explicit eager attention")
+
     base_model_path = resolve_model_path(model_config["base_model"])
     teacher_model_path = resolve_model_path(model_config["teacher_model"])
 
@@ -114,11 +119,13 @@ def setup_models(
 
     # Load models
     base_model = AutoModelForCausalLM.from_pretrained(
-        base_model_path, torch_dtype=dtype, device_map=device
+        base_model_path, torch_dtype=dtype, device_map=device,
+        attn_implementation=attention_backend,
     )
 
     teacher_model = AutoModelForCausalLM.from_pretrained(
-        teacher_model_path, torch_dtype=dtype, device_map=device
+        teacher_model_path, torch_dtype=dtype, device_map=device,
+        attn_implementation=attention_backend,
     )
 
     # Create projector
@@ -148,6 +155,11 @@ def setup_models(
         fpct_instrumentation=model_config.get(
             "fpct_instrumentation", False
         ),
+        fpct_collapse_to_parent_bypass=model_config.get(
+            "fpct_collapse_to_parent_bypass", False
+        ),
+        fpct_profile_scopes=model_config.get("fpct_profile_scopes", False),
+        fpct_trace=model_config.get("fpct_trace", False),
     ).to(device)
 
     # Configure projector mappings

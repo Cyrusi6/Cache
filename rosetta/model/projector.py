@@ -4144,6 +4144,9 @@ class C2CProjector(Projector):
         key_confidence = token_confidence.expand(B, Ht, N, 1).to(dtype=dtype)
         value_confidence = key_confidence
         zero_delta = torch.zeros_like(key_confidence, dtype=torch.float32)
+        if getattr(self, "suppress_host_diagnostics", False):
+            self._last_alignment_confidence_aux_loss = None
+            return key_confidence, value_confidence
         source_for_record = token_confidence.detach().float().cpu()
         entropy_for_record = torch.zeros_like(source_for_record)
         if source_weights is not None or source_entropy is not None:
@@ -4346,6 +4349,9 @@ class C2CProjector(Projector):
         value_confidence = torch.sigmoid(base_logit + value_delta).to(dtype=dtype)
         key_confidence = key_confidence.expand(B, Ht, N, 1)
         value_confidence = value_confidence.expand(B, Ht, N, 1)
+
+        if getattr(self, "suppress_host_diagnostics", False):
+            return key_confidence, value_confidence
 
         try:
             self.last_alignment_delta_l2 = float(raw_delta_l2.detach().cpu().item())
@@ -4653,6 +4659,9 @@ class C2CProjector(Projector):
             * norm_value_scalar
             * projected_value
         )
+
+        if getattr(self, "suppress_host_diagnostics", False):
+            return output_key, output_value
 
         # Expose capture attributes for downstream analysis scripts
         try:

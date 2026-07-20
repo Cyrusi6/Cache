@@ -12,6 +12,7 @@ import os
 import hashlib
 import json
 from rosetta.model.aligner import AlignmentStrategy
+from rosetta.model.fpct_attention import canonical_log_prior
 from rosetta.utils.dataset_loading import load_c2c_dataset
 from rosetta.utils.model_loading import resolve_model_path
 
@@ -2219,6 +2220,12 @@ class RosettaDataCollator:
                     sec_kv, batch_first=True, padding_value=-1
                 )
             )
+            sharer_masks = {
+                int(value[0, 0]) for value in sec_kv if value.numel() > 0
+            }
+            if len(sharer_masks) > 1:
+                raise ValueError("FPCT batch section has inconsistent sharer masks")
+            fpct_sharer_mask = next(iter(sharer_masks), -1)
             padded_soft_alignment.append(
                 {
                     "source_indices": torch.nn.utils.rnn.pad_sequence(
@@ -2236,6 +2243,7 @@ class RosettaDataCollator:
                     "source_entropy_override": torch.nn.utils.rnn.pad_sequence(
                         sec_entropy_override, batch_first=True, padding_value=False
                     ),
+                    "fpct_sharer_mask": fpct_sharer_mask,
                 }
             )
 
@@ -2317,14 +2325,86 @@ class RosettaDataCollator:
                 output["soft_alignment"], self.max_length
             )
 
+        self._certify_fpct_soft_alignment(
+            output["soft_alignment"],
+            source_attention=output["attention_mask"][1],
+            target_length=int(output["input_ids"][0].shape[1]),
+        )
+
         return output
 
     @staticmethod
+    def _certify_fpct_soft_alignment(
+        soft_sections: List[Dict[str, Any]],
+        *,
+        source_attention: torch.Tensor,
+        target_length: int,
+    ) -> None:
+        """Canonicalize/hash alignment priors on CPU before any CUDA forward."""
+
+        if source_attention.device.type != "cpu":
+            raise ValueError("FPCT sidecar certification must run on CPU")
+        batch_size = int(source_attention.shape[0])
+        source_lengths = source_attention.to(torch.bool).sum(dim=-1).to(torch.long)
+        slots = torch.zeros(batch_size, dtype=torch.long)
+        digest = hashlib.sha256()
+        digest.update(b"fpct-canonical-prior-v1\0")
+        digest.update(source_lengths.contiguous().numpy().tobytes())
+        for section in soft_sections:
+            indices = section["source_indices"].to(device="cpu", dtype=torch.long)
+            weights = section["source_weights"].to(device="cpu", dtype=torch.float32)
+            if indices.shape != weights.shape or indices.shape[0] != batch_size:
+                raise ValueError("FPCT alignment indices/weights batch shape mismatch")
+            if not bool(torch.isfinite(weights).all()):
+                raise ValueError("FPCT source prior contains nonfinite mass")
+            if bool((weights < 0).any()):
+                raise ValueError("FPCT source prior contains negative mass")
+            index_valid = (indices >= 0) & (
+                indices < source_lengths[:, None, None]
+            )
+            if bool(((weights > 0) & ~index_valid).any()):
+                raise ValueError("FPCT source prior assigns mass to an invalid/padded index")
+            legal = index_valid & (weights > 0)
+            safe = indices.masked_fill(~legal, -1).sort(dim=-1).values
+            duplicate = (
+                (safe[..., 1:] == safe[..., :-1]) & (safe[..., 1:] >= 0)
+            )
+            if bool(duplicate.any()):
+                raise ValueError("FPCT source prior contains a duplicate legal index")
+            canonical, log_prior, legal = canonical_log_prior(weights, legal)
+            has_support = legal.any(dim=-1)
+            log_error = torch.where(
+                has_support,
+                torch.logsumexp(log_prior, dim=-1).abs(),
+                torch.zeros_like(has_support, dtype=torch.float32),
+            )
+            sum_error = torch.where(
+                has_support,
+                (canonical.sum(dim=-1) - 1.0).abs(),
+                torch.zeros_like(has_support, dtype=torch.float32),
+            )
+            if float(log_error.max()) > 2e-7 or float(sum_error.max()) > 2e-7:
+                raise ValueError("FPCT canonical prior exceeds frozen 2e-7 invariant")
+            section["source_weights"] = canonical
+            counts = legal.sum(dim=-1)
+            slots += torch.where(counts >= 2, counts, torch.ones_like(counts)).sum(dim=-1)
+            digest.update(indices.contiguous().numpy().tobytes())
+            digest.update(canonical.contiguous().numpy().tobytes())
+        max_slots_hint = int(slots.max()) if batch_size else 0
+        prior_sha256 = digest.hexdigest()
+        for section in soft_sections:
+            section["fpct_prior_certified"] = True
+            section["fpct_prior_sha256"] = prior_sha256
+            section["fpct_max_slots_hint"] = max_slots_hint
+            section["fpct_target_length_hint"] = int(target_length)
+            section["fpct_source_lengths"] = tuple(int(value) for value in source_lengths)
+
+    @staticmethod
     def _truncate_soft_alignment_sections(
-        soft_sections: List[Dict[str, torch.Tensor]],
+        soft_sections: List[Dict[str, Any]],
         max_length: int,
-    ) -> List[Dict[str, torch.Tensor]]:
-        truncated_sections: List[Dict[str, torch.Tensor]] = []
+    ) -> List[Dict[str, Any]]:
+        truncated_sections: List[Dict[str, Any]] = []
         current_pos = 0
         for section in soft_sections:
             section_length = section["source_indices"].size(1)
@@ -2352,6 +2432,11 @@ class RosettaDataCollator:
                         "source_entropy_override": section[
                             "source_entropy_override"
                         ][:, :remaining_length],
+                        **{
+                            key: value
+                            for key, value in section.items()
+                            if key.startswith("fpct_")
+                        },
                     }
                 )
                 break

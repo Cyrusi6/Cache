@@ -27,6 +27,7 @@ from typing import List, Dict, Any, Tuple, Optional, Union
 import math
 import contextlib
 import hashlib
+import io
 from pathlib import Path
 
 from rosetta.model.wrapper import RosettaModel
@@ -97,6 +98,113 @@ def _fpct_tree_sha(path: Path) -> str:
             for chunk in iter(lambda: handle.read(1024 * 1024), b""):
                 digest.update(chunk)
     return digest.hexdigest()
+
+
+def _fpct_file_sha(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _fpct_rng_state_sha() -> str:
+    digest = hashlib.sha256()
+    digest.update(repr(random.getstate()).encode("utf-8"))
+    numpy_state = np.random.get_state()
+    digest.update(str(numpy_state[0]).encode("ascii"))
+    digest.update(numpy_state[1].tobytes())
+    digest.update(repr(numpy_state[2:]).encode("utf-8"))
+    digest.update(torch.get_rng_state().contiguous().numpy().tobytes())
+    if torch.cuda.is_available():
+        for state in torch.cuda.get_rng_state_all():
+            digest.update(state.contiguous().cpu().numpy().tobytes())
+    return digest.hexdigest()
+
+
+def _fpct_torch_object_sha(value: Any) -> str:
+    buffer = io.BytesIO()
+    torch.save(value, buffer)
+    return hashlib.sha256(buffer.getvalue()).hexdigest()
+
+
+def _fpct_training_trace_integrity(model: nn.Module) -> Dict[str, Any]:
+    base = model.module if isinstance(model, DistributedDataParallel) else model
+    candidate_trace = getattr(base, "_fpct_candidate_trace_tensors", {})
+    attention_trace = getattr(base, "_fpct_attention_trace_tensors", {})
+    if not candidate_trace:
+        raise RuntimeError("FPCT matched smoke did not capture candidate tensors")
+    candidate_digest = hashlib.sha256()
+    nuisance_digest = hashlib.sha256()
+    gate_values = []
+    for layer, rows in sorted(candidate_trace.items()):
+        for row_index, row in enumerate(rows):
+            for key in ("fused_candidate_key", "fused_candidate_value"):
+                value = row[key].detach().contiguous().cpu()
+                candidate_digest.update(f"{layer}:{row_index}:{key}\0".encode())
+                candidate_digest.update(value.view(torch.uint8).numpy().tobytes())
+            for key in (
+                "legacy_key_gate", "legacy_value_gate",
+                "key_alignment_confidence", "value_alignment_confidence",
+            ):
+                value = row[key].detach().float().contiguous().cpu()
+                nuisance_digest.update(f"{layer}:{row_index}:{key}\0".encode())
+                nuisance_digest.update(value.view(torch.uint8).numpy().tobytes())
+                if key in {"legacy_key_gate", "legacy_value_gate"}:
+                    gate_values.append(value.reshape(-1))
+    invalid_max = 0.0
+    for rows in attention_trace.values():
+        for row in rows:
+            if "invalid_probability_max" in row:
+                invalid_max = max(
+                    invalid_max,
+                    float(row["invalid_probability_max"].detach().float().cpu()),
+                )
+    gates = torch.cat(gate_values) if gate_values else torch.empty(0)
+    return {
+        "precollapse_candidate_sha256": candidate_digest.hexdigest(),
+        "parent_nuisance_sha256": nuisance_digest.hexdigest(),
+        "legacy_gumbel_count": int(gates.numel()),
+        "legacy_gumbel_min": float(gates.min()) if gates.numel() else None,
+        "legacy_gumbel_max": float(gates.max()) if gates.numel() else None,
+        "legacy_gumbel_std": float(gates.std(unbiased=False)) if gates.numel() else None,
+        "legacy_gumbel_non_degenerate": bool(
+            gates.numel() and float(gates.max() - gates.min()) > 0
+        ),
+        "invalid_probability_max": invalid_max,
+    }
+
+
+def _fpct_candidate_gradient_integrity(model: nn.Module) -> Dict[str, Any]:
+    base = model.module if isinstance(model, DistributedDataParallel) else model
+    finite = True
+    nonzero = 0
+    count = 0
+    max_abs = 0.0
+    names = []
+    for name, parameter in base.named_parameters():
+        if not parameter.requires_grad or "projector_list" not in name:
+            continue
+        if "gate_logit" in name:
+            continue
+        gradient = parameter.grad
+        if gradient is None:
+            continue
+        count += 1
+        names.append(name)
+        finite = finite and bool(torch.isfinite(gradient).all())
+        current = float(gradient.detach().abs().max())
+        max_abs = max(max_abs, current)
+        nonzero += int(current > 0)
+    return {
+        "candidate_sensitive_gradient_tensor_count": count,
+        "candidate_sensitive_nonzero_gradient_count": nonzero,
+        "candidate_sensitive_gradient_max_abs": max_abs,
+        "candidate_sensitive_gradients_finite": finite,
+        "candidate_sensitive_parameter_names_sha256": hashlib.sha256(
+            json.dumps(names, separators=(",", ":")).encode()
+        ).hexdigest(),
+    }
 
 
 def _fpct_atomic_json(path: Path, payload: Dict[str, Any]) -> None:
@@ -1218,6 +1326,15 @@ def setup_models(
 ):
     """Setup models based on training mode (baseline or rosetta)"""
 
+    fpct_operator = model_config.get("fpct_operator")
+    attention_backend = model_config.get("attn_implementation")
+    require_r2_eager = bool(model_config.get("fpct_r2_enforce_eager", False))
+    if (
+        (fpct_operator in {"c_post", "f"} or require_r2_eager)
+        and attention_backend != "eager"
+    ):
+        raise ValueError("FPCT R2 requires explicit attn_implementation='eager'")
+
     if training_mode == "baseline":
         # Baseline mode: single model training
         model_name = model_config["baseline_model"]
@@ -1284,6 +1401,16 @@ def setup_models(
                 attn_implementation=model_config.get("attn_implementation", None),
             )
 
+        if fpct_operator in {"c_post", "f"} or require_r2_eager:
+            for role, loaded_model in (
+                ("receiver", base_model), ("sender", teacher_model)
+            ):
+                if loaded_model.config._attn_implementation != "eager":
+                    raise RuntimeError(
+                        f"FPCT R2 {role} backend is not eager: "
+                        f"{loaded_model.config._attn_implementation!r}"
+                    )
+
         # Get model dimensions and layer counts
         base_dim = int(
             base_model.model.layers[0].self_attn.k_proj.out_features
@@ -1302,6 +1429,10 @@ def setup_models(
         projector_config = model_config["projector"]
         projector_params = projector_config["params"].copy()
         projector_params["dtype"] = dtype
+        if model_config.get("projector_init_seed") is not None:
+            torch.manual_seed(int(model_config["projector_init_seed"]))
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(int(model_config["projector_init_seed"]))
         projector_list = []
         # Only M projectors (share projector across sources): one per target layer
         num_projectors = slm_num_layers
@@ -1377,6 +1508,13 @@ def setup_models(
                 fpct_instrumentation=model_config.get(
                     "fpct_instrumentation", False
                 ),
+                fpct_collapse_to_parent_bypass=model_config.get(
+                    "fpct_collapse_to_parent_bypass", False
+                ),
+                fpct_profile_scopes=model_config.get(
+                    "fpct_profile_scopes", False
+                ),
+                fpct_trace=model_config.get("fpct_trace", False),
             )
             .to(device)
             .eval()
@@ -1539,6 +1677,11 @@ def train_step(
                             dtype=torch.bool,
                         ),
                     ).to(device),
+                    **{
+                        key: value
+                        for key, value in section.items()
+                        if key.startswith("fpct_")
+                    },
                 }
                 for section in batch["soft_alignment"]
             ]
@@ -1940,7 +2083,17 @@ def main():
             "step0_trainable_sha256": step0_sha,
             "trainable_keys_sha256": trainable_keys_sha,
             "trainable_rank_hashes": gathered_step0,
+            "eager_backends": {
+                "receiver": model.module.model_list[0].config._attn_implementation
+                if isinstance(model, DistributedDataParallel)
+                else model.model_list[0].config._attn_implementation,
+                "sender": model.module.model_list[1].config._attn_implementation
+                if isinstance(model, DistributedDataParallel)
+                else model.model_list[1].config._attn_implementation,
+            },
         })
+        if any(value != "eager" for value in fpct_integrity["eager_backends"].values()):
+            raise RuntimeError("formal FPCT run did not load both models with eager attention")
 
     total_params = sum(p.numel() for p in model.parameters())
     trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -2199,6 +2352,21 @@ def main():
         num_warmup_steps=int(training_config["warmup_ratio"] * total_steps),
         num_training_steps=total_steps,
     )
+    if formal_run:
+        local_rng_sha = _fpct_rng_state_sha()
+        gathered_rng = [None for _ in range(world_size)] if distributed else [local_rng_sha]
+        if distributed:
+            dist.all_gather_object(gathered_rng, local_rng_sha)
+        fpct_integrity.update({
+            "rng_state_before_training_sha256": local_rng_sha,
+            "rng_state_before_training_rank_sha256": gathered_rng,
+            "optimizer_class": type(optimizer).__module__ + "." + type(optimizer).__name__,
+            "optimizer_group_count": len(optimizer.param_groups),
+            "optimizer_learning_rates": [float(group["lr"]) for group in optimizer.param_groups],
+            "optimizer_weight_decay": [float(group["weight_decay"]) for group in optimizer.param_groups],
+            "scheduler_class": type(scheduler).__module__ + "." + type(scheduler).__name__,
+            "scheduler_initial_state_sha256": _fpct_torch_object_sha(scheduler.state_dict()),
+        })
 
     # ------------------------------------------------------------------
     # Training loop
@@ -2206,6 +2374,8 @@ def main():
     print("Starting training…")
     global_step = 0
     optimizer.zero_grad()
+    r2_trace_captured = False
+    r2_gradient_captured = False
     for epoch in range(training_config["num_epochs"]):
         if distributed and train_sampler is not None:
             # Ensure different shuffles across epochs in distributed setup
@@ -2245,6 +2415,31 @@ def main():
                     answer_margin_config=answer_margin_config,
                     candidate_replay_config=candidate_replay_config,
                 )
+                if not bool(torch.isfinite(loss.detach())):
+                    raise RuntimeError("formal FPCT training produced nonfinite loss")
+                if (
+                    formal_run
+                    and training_config.get("fpct_r2_matched_smoke", False)
+                    and model_config.get("fpct_operator") in {"c_post", "f"}
+                    and not r2_trace_captured
+                ):
+                    local_trace = _fpct_training_trace_integrity(model)
+                    gathered_trace = (
+                        [None for _ in range(world_size)]
+                        if distributed else [local_trace]
+                    )
+                    if distributed:
+                        dist.all_gather_object(gathered_trace, local_trace)
+                    if not all(
+                        row["legacy_gumbel_non_degenerate"]
+                        and row["invalid_probability_max"] == 0.0
+                        for row in gathered_trace
+                    ):
+                        raise RuntimeError(
+                            "FPCT matched smoke Gumbel/mask trace integrity failed"
+                        )
+                    fpct_integrity["r2_training_trace_rank_records"] = gathered_trace
+                    r2_trace_captured = True
                 _accumulate_metric_window(
                     accum_metric_sums,
                     accum_metric_counts,
@@ -2263,6 +2458,29 @@ def main():
                 true_loss_value = loss.detach().item()
                 scaled_loss = loss / grad_accum_steps  # Gradient accumulation
                 scaled_loss.backward()
+                if (
+                    formal_run
+                    and training_config.get("fpct_r2_matched_smoke", False)
+                    and model_config.get("fpct_operator") in {"c_post", "f"}
+                    and not r2_gradient_captured
+                ):
+                    local_gradient = _fpct_candidate_gradient_integrity(model)
+                    gathered_gradient = (
+                        [None for _ in range(world_size)]
+                        if distributed else [local_gradient]
+                    )
+                    if distributed:
+                        dist.all_gather_object(gathered_gradient, local_gradient)
+                    if not all(
+                        row["candidate_sensitive_gradients_finite"]
+                        and row["candidate_sensitive_nonzero_gradient_count"] > 0
+                        for row in gathered_gradient
+                    ):
+                        raise RuntimeError(
+                            "FPCT matched smoke candidate-sensitive gradients are invalid"
+                        )
+                    fpct_integrity["r2_candidate_gradient_rank_records"] = gathered_gradient
+                    r2_gradient_captured = True
 
             # accumulate true (unscaled) loss for averaging/printing
             epoch_loss += true_loss_value
@@ -2273,6 +2491,14 @@ def main():
             did_step = (not is_accum_step) or (batch_idx + 1 == len(train_loader))
             grad_norm_value = None
             if did_step:
+                if formal_run:
+                    gradient_checks = [
+                        torch.isfinite(parameter.grad).all()
+                        for parameter in model.parameters()
+                        if parameter.requires_grad and parameter.grad is not None
+                    ]
+                    if gradient_checks and not bool(torch.stack(gradient_checks).all()):
+                        raise RuntimeError("formal FPCT training produced nonfinite gradients")
                 grad_norm = torch.nn.utils.clip_grad_norm_(
                     [p for p in model.parameters() if p.requires_grad],
                     max_norm=training_config["max_grad_norm"],
@@ -2551,6 +2777,41 @@ def main():
             official = Path(timestamped_output_dir) / f"checkpoint-{expected_steps}"
             if not official.is_dir():
                 raise RuntimeError(f"formal FPCT official checkpoint missing: {official}")
+            reload_equal = True
+            if training_mode == "rosetta":
+                for index, projector in enumerate(base_model_ref.projector_list):
+                    loaded_state = torch.load(
+                        official / f"projector_{index}.pt",
+                        map_location="cpu",
+                        weights_only=True,
+                    )
+                    current_state = {
+                        key: value.detach().cpu()
+                        for key, value in projector.state_dict().items()
+                    }
+                    if set(loaded_state) != set(current_state) or any(
+                        not torch.equal(loaded_state[key], current_state[key])
+                        for key in current_state
+                    ):
+                        reload_equal = False
+                        break
+            training_state_path = official / "training_state.pt"
+            training_state = torch.load(
+                training_state_path, map_location="cpu", weights_only=True
+            )
+            optimizer_state = training_state["optimizer_state_dict"]
+            scheduler_state = training_state["scheduler_state_dict"]
+            scheduler_step_matches = int(scheduler_state.get("last_epoch", -1)) == global_step
+            if not reload_equal or int(training_state.get("step", -1)) != global_step:
+                raise RuntimeError("formal FPCT checkpoint save/reload integrity failed")
+            if not scheduler_step_matches:
+                raise RuntimeError("formal FPCT scheduler step count mismatch")
+            if (
+                training_config.get("fpct_r2_matched_smoke", False)
+                and model_config.get("fpct_operator") in {"c_post", "f"}
+                and (not r2_trace_captured or not r2_gradient_captured)
+            ):
+                raise RuntimeError("FPCT matched smoke did not capture required integrity evidence")
             fpct_integrity.update({
                 "schema_version": 1,
                 "operator": model_config.get("fpct_operator"),
@@ -2559,6 +2820,13 @@ def main():
                 "official_checkpoint": str(official.resolve()),
                 "official_checkpoint_sha256": _fpct_tree_sha(official),
                 "final_artifact_sha256": _fpct_tree_sha(Path(final_dir)),
+                "checkpoint_reload_equal": reload_equal,
+                "training_state_sha256": _fpct_file_sha(training_state_path),
+                "optimizer_state_entry_count": len(optimizer_state.get("state", {})),
+                "optimizer_state_sha256": _fpct_torch_object_sha(optimizer_state),
+                "scheduler_state_sha256": _fpct_torch_object_sha(scheduler_state),
+                "scheduler_last_epoch": int(scheduler_state.get("last_epoch", -1)),
+                "scheduler_step_matches": scheduler_step_matches,
             })
             _fpct_atomic_json(Path(timestamped_output_dir) / "fpct_formal_integrity.json", fpct_integrity)
 

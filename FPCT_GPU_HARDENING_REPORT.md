@@ -100,3 +100,31 @@ The controller therefore entered terminal `GPU_ENGINEERING_BLOCKED`. This was
 not an infrastructure failure, so no retry, matched-training smoke, formal
 12-seed training, model-selection, held-out evaluation or checkpoint creation
 was permitted.
+
+## Prospective GPU R2 recovery (pre-execution)
+
+The historical image, run lock, Jobs and artifact root above remain immutable.
+After prospective protocol commit `f7a5f3c421a7738c9f69224cff1cebb53205c2e2`,
+a zero-output probe classified the fresh checkpoint-native activation null as
+`EXPECTED_NATIVE_NULL`: no projector checkpoint was configured and all 28
+key/value gate logits were exactly zero. The old config had no explicit eager
+runtime proof and its prior/log-prior/mask followed BF16 cache dtype.
+
+R2 scientific recovery now uses a CPU-certified canonical FP32 prior, shared
+C_post/F Qwen eager adapter, exact collapse-to-parent bypass, expanded
+replicated-atoms, layer-indexed metrics, FP32/BF16 isolated operator processes,
+compact first-divergence tensors and scope-aware profiler parsing. C_post and F
+share candidate fusion, prior SHA and parent nuisance; no F-only parameter is
+added.
+
+The four-step training manifest has also been hardened to record step-0/RNG/
+data-order identity, C_post/F pre-collapse candidates and parent nuisance,
+training Gumbel non-degeneracy, candidate-sensitive gradients, eager backends,
+scheduler state, invalid probability and exact checkpoint reload. This section
+describes CPU/HF code readiness only: no new pretrained forward, GPU, K8s,
+training, checkpoint or accuracy output has been produced yet. A clean new
+scientific SHA, immutable image and `PRE_OUTPUT_LOCKED_R2` run lock are required
+before execution.
+
+The completed CPU-safe repository suite for this R2 scientific revision is
+`401 passed, 2 warnings` using the repository-local pytest temp root.

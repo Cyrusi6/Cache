@@ -1545,22 +1545,18 @@ class UnifiedEvaluator:
                         soft_alignment_list.append(
                             {
                                 "source_indices": source_indices[start:j]
-                                .unsqueeze(0)
-                                .to(device),
+                                .unsqueeze(0),
                                 "source_weights": source_weights[start:j]
-                                .unsqueeze(0)
-                                .to(device),
+                                .unsqueeze(0),
                                 "source_confidence": source_confidence[start:j]
-                                .unsqueeze(0)
-                                .to(device),
+                                .unsqueeze(0),
                                 "source_entropy": source_entropy[start:j]
-                                .unsqueeze(0)
-                                .to(device),
+                                .unsqueeze(0),
                                 "source_entropy_override": source_entropy_override[
                                     start:j
                                 ]
-                                .unsqueeze(0)
-                                .to(device),
+                                .unsqueeze(0),
+                                "fpct_sharer_mask": 1 if current_value else -1,
                             }
                         )
 
@@ -1588,22 +1584,36 @@ class UnifiedEvaluator:
                 soft_alignment_list.append(
                     {
                         "source_indices": source_indices[start:]
-                        .unsqueeze(0)
-                        .to(device),
+                        .unsqueeze(0),
                         "source_weights": source_weights[start:]
-                        .unsqueeze(0)
-                        .to(device),
+                        .unsqueeze(0),
                         "source_confidence": source_confidence[start:]
-                        .unsqueeze(0)
-                        .to(device),
+                        .unsqueeze(0),
                         "source_entropy": source_entropy[start:]
-                        .unsqueeze(0)
-                        .to(device),
+                        .unsqueeze(0),
                         "source_entropy_override": source_entropy_override[start:]
-                        .unsqueeze(0)
-                        .to(device),
+                        .unsqueeze(0),
+                        "fpct_sharer_mask": 1 if current_value else -1,
                     }
                 )
+
+            if soft_alignment_list:
+                from rosetta.train.dataset_adapters import RosettaDataCollator
+
+                RosettaDataCollator._certify_fpct_soft_alignment(
+                    soft_alignment_list,
+                    source_attention=torch.ones(
+                        1, int(llm_ids.shape[1]), dtype=torch.float32
+                    ),
+                    target_length=int(slm_ids.shape[1]),
+                )
+                soft_alignment_list = [
+                    {
+                        key: value.to(device) if isinstance(value, torch.Tensor) else value
+                        for key, value in section.items()
+                    }
+                    for section in soft_alignment_list
+                ]
 
             input_ids = [slm_ids, llm_ids]
             attention_mask = [

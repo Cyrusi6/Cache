@@ -341,6 +341,10 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
     """
     # Prefer checkpoints_dir under model.rosetta_config; fall back to eval config for backward compatibility
     rosetta_config = model_config["rosetta_config"]
+    fpct_operator = rosetta_config.get("fpct_operator")
+    attention_backend = rosetta_config.get("attn_implementation")
+    if fpct_operator in {"c_post", "f"} and attention_backend != "eager":
+        raise ValueError("FPCT R2 evaluation requires explicit eager attention")
     slm_model_path = rosetta_config["base_model"]
     teacher_model_config = rosetta_config["teacher_model"]
     resolved_slm_model_path = resolve_model_path(slm_model_path)
@@ -375,7 +379,8 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
     slm_model = AutoModelForCausalLM.from_pretrained(
         resolved_slm_model_path,
         torch_dtype=torch.bfloat16,
-        device_map={"": device}
+        device_map={"": device},
+        attn_implementation=attention_backend,
     ).eval()
     
     # Apply generation config to SLM
@@ -391,12 +396,14 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
                 torch_dtype=torch.bfloat16,
                 device_map={"": device},
                 sliding_window=4096
+                ,attn_implementation=attention_backend
             ).eval()
         else:
             llm_model = AutoModelForCausalLM.from_pretrained(
                 resolved_llm_model_path,
                 torch_dtype=torch.bfloat16,
-                device_map={"": device}
+                device_map={"": device},
+                attn_implementation=attention_backend,
             ).eval()
         
         # Apply generation config to LLM
@@ -451,7 +458,22 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
         fpct_instrumentation=rosetta_config.get(
             "fpct_instrumentation", False
         ),
+        fpct_collapse_to_parent_bypass=rosetta_config.get(
+            "fpct_collapse_to_parent_bypass", False
+        ),
+        fpct_profile_scopes=rosetta_config.get("fpct_profile_scopes", False),
+        fpct_trace=rosetta_config.get("fpct_trace", False),
     ).to(device).eval()
+
+    if fpct_operator in {"c_post", "f"}:
+        for role, loaded_model in [("receiver", slm_model)] + [
+            (f"sender_{index}", value) for index, value in enumerate(llm_models)
+        ]:
+            if loaded_model.config._attn_implementation != "eager":
+                raise RuntimeError(
+                    f"FPCT R2 {role} backend is not eager: "
+                    f"{loaded_model.config._attn_implementation!r}"
+                )
 
     # Load projector mapping configs from each LLM's checkpoint directory
     # Each directory has standard config file: projector_config.json

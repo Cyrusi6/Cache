@@ -188,6 +188,22 @@ def test_actual_qwen3_m1_and_replicated_collapse_equal_cpost() -> None:
     torch.testing.assert_close(replicated_output, cpost_output, atol=2e-6, rtol=2e-6)
     assert replicated.fpct_config_dict()["replicated_collapse"] is True
 
+    bypass = RosettaModel(
+        [_model(2, state)],
+        fpct_operator="f",
+        fpct_collapse_to_parent_bypass=True,
+    )
+    _sidecar(
+        bypass,
+        batch_size=2,
+        source_length=4,
+        num_key_value_heads=2,
+        ambiguous=True,
+    )
+    bypass_output = _forward(bypass, input_ids, attention_mask).logits
+    torch.testing.assert_close(bypass_output, cpost_output, atol=0, rtol=0)
+    assert bypass.fpct_config_dict()["collapse_to_parent_bypass"] is True
+
 
 def test_actual_qwen3_ambiguous_f_activates_but_has_no_new_parameters() -> None:
     base = _model(2)
@@ -238,7 +254,8 @@ def test_actual_qwen3_off_by_default_mechanism_instrumentation() -> None:
         "extra_slots",
         "output_delta_l2",
     }
-    assert set(wrapper._fpct_mechanism_metrics) == expected
+    assert expected.issubset(wrapper._fpct_mechanism_metrics)
+    assert set(wrapper._fpct_layer_metrics) == {0}
     assert all(
         torch.isfinite(value).all()
         for value in wrapper._fpct_mechanism_metrics.values()

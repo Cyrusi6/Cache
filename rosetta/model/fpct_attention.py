@@ -8,6 +8,7 @@ from typing import Iterable, Optional, Sequence
 
 import torch
 from torch import Tensor
+from torch import nn
 
 
 FPCT_OPERATORS = frozenset({"c_pre", "c_post", "f"})
@@ -29,6 +30,10 @@ class FPCTSidecarSegment:
     value: Tensor  # [B,Hkv,N,K,D]
     prior: Tensor  # [B,N,K]
     valid: Tensor  # [B,N,K]
+    max_slots_hint: Optional[int] = None
+    source_length_hint: Optional[int] = None
+    prior_sha256: Optional[str] = None
+    certified: bool = False
 
     def validate(self) -> None:
         if self.parent_start < 0:
@@ -39,6 +44,14 @@ class FPCTSidecarSegment:
             self.key.shape[0], self.key.shape[2], self.key.shape[3]
         ):
             raise ValueError("sidecar prior/valid shape mismatch")
+        if self.certified and self.prior.dtype != torch.float32:
+            raise ValueError("FPCT canonical prior must be float32")
+        if self.max_slots_hint is not None and self.max_slots_hint < 0:
+            raise ValueError("max_slots_hint must be non-negative")
+        if self.source_length_hint is not None and self.source_length_hint < 0:
+            raise ValueError("source_length_hint must be non-negative")
+        if self.certified and not self.prior_sha256:
+            raise ValueError("certified FPCT sidecars require a prior SHA256")
 
 
 @dataclass
@@ -94,21 +107,44 @@ class FPCTPackedLayout:
             raise ValueError("FPCT sidecar structure differs from frozen layout")
 
 
-def normalize_prior(prior: Tensor, valid: Tensor) -> tuple[Tensor, Tensor]:
-    legal = valid.to(torch.bool) & torch.isfinite(prior) & (prior > 0)
-    positive = torch.where(legal, prior, torch.zeros_like(prior))
+def canonical_log_prior(prior: Tensor, valid: Tensor) -> tuple[Tensor, Tensor, Tensor]:
+    """Return canonical FP32 probability/log-probability and legal mask."""
+
+    prior_fp32 = prior.to(dtype=torch.float32)
+    legal = valid.to(torch.bool) & torch.isfinite(prior_fp32) & (prior_fp32 > 0)
+    positive = torch.where(legal, prior_fp32, torch.zeros_like(prior_fp32))
     total = positive.sum(dim=-1, keepdim=True)
     normalized = torch.where(
         total > 0,
-        positive / total.clamp_min(torch.finfo(prior.dtype).tiny),
+        positive / total.clamp_min(torch.finfo(torch.float32).tiny),
         torch.zeros_like(positive),
     )
+    raw_log = torch.where(
+        legal,
+        torch.log(normalized.clamp_min(torch.finfo(torch.float32).tiny)),
+        torch.full_like(normalized, -torch.inf),
+    )
+    has_support = legal.any(dim=-1, keepdim=True)
+    log_normalizer = torch.logsumexp(raw_log, dim=-1, keepdim=True)
+    log_prior = torch.where(
+        legal & has_support,
+        raw_log - log_normalizer,
+        torch.full_like(raw_log, -torch.inf),
+    )
+    canonical = torch.where(legal, torch.exp(log_prior), torch.zeros_like(log_prior))
+    return canonical, log_prior, legal
+
+
+def normalize_prior(prior: Tensor, valid: Tensor) -> tuple[Tensor, Tensor]:
+    normalized, _log_prior, legal = canonical_log_prior(prior, valid)
     return normalized, legal
 
 
 def build_fpct_packed_layout(
     source_length: int,
     sidecars: Iterable[FPCTSidecarSegment],
+    *,
+    max_slots_hint: Optional[int] = None,
 ) -> FPCTPackedLayout:
     """Build the candidate structural map once, before per-layer attention.
 
@@ -125,7 +161,7 @@ def build_fpct_packed_layout(
         segment.validate()
     batch_size = segments[0].key.shape[0]
     device = segments[0].key.device
-    dtype = segments[0].prior.dtype
+    dtype = torch.float32
     top_k = segments[0].key.shape[3]
     prior_full = torch.zeros(
         batch_size, source_length, top_k, device=device, dtype=dtype
@@ -151,8 +187,8 @@ def build_fpct_packed_layout(
         if any(start < prior_end and prior_start < end for prior_start, prior_end in occupied):
             raise ValueError("overlapping FPCT sidecar parent ranges")
         occupied.append((start, end))
-        normalized, legal = normalize_prior(
-            segment.prior.to(device=device, dtype=dtype),
+        normalized, _segment_log_prior, legal = canonical_log_prior(
+            segment.prior.to(device=device, dtype=torch.float32),
             segment.valid.to(device=device),
         )
         prior_full[:, start:end] = normalized
@@ -178,8 +214,27 @@ def build_fpct_packed_layout(
         dim=-1,
     )
     expanded_slots = row_offsets[:, -1]
-    # One synchronization per structural layout, never per layer/attention call.
-    max_slots = int(expanded_slots.max().detach().cpu()) if batch_size else 0
+    if max_slots_hint is None:
+        hints = {segment.max_slots_hint for segment in segments if segment.max_slots_hint is not None}
+        if len(hints) == 1:
+            max_slots_hint = hints.pop()
+    source_length_hints = {
+        segment.source_length_hint
+        for segment in segments
+        if segment.source_length_hint is not None
+    }
+    if max_slots_hint is not None and len(source_length_hints) == 1:
+        max_slots_hint = int(max_slots_hint) + max(
+            0, source_length - int(next(iter(source_length_hints)))
+        )
+    if max_slots_hint is None:
+        if device.type == "cuda":
+            raise ValueError("CUDA FPCT layout requires CPU-certified max_slots_hint")
+        max_slots = int(expanded_slots.max()) if batch_size else 0
+    else:
+        max_slots = int(max_slots_hint)
+        if device.type != "cuda" and batch_size and max_slots != int(expanded_slots.max()):
+            raise ValueError("max_slots_hint differs from computed CPU layout width")
     extra_slots = expanded_slots - source_length
 
     flat_emit = emit.reshape(batch_size, -1)
@@ -204,11 +259,10 @@ def build_fpct_packed_layout(
     candidate_flat_grid = (
         candidate_flat_by_parent.reshape(1, -1).expand(batch_size, -1)
     )
-    log_prior_full = torch.where(
-        legal_full,
-        torch.log(prior_full.clamp_min(torch.finfo(dtype).tiny)),
-        torch.zeros_like(prior_full),
-    ).reshape(batch_size, -1)
+    _canonical_prior, canonical_log, _canonical_legal = canonical_log_prior(
+        prior_full, legal_full
+    )
+    log_prior_full = canonical_log.reshape(batch_size, -1)
 
     parent_storage = torch.full(
         (batch_size, storage_width), -1, device=device, dtype=torch.long
@@ -272,7 +326,7 @@ def _canonical_attention_mask(
     device: torch.device,
 ) -> Tensor:
     if attention_mask is None:
-        return torch.zeros(batch_size, 1, query_length, source_length, dtype=dtype, device=device)
+        return torch.zeros(batch_size, 1, query_length, source_length, dtype=torch.float32, device=device)
     if attention_mask.ndim != 4:
         raise ValueError("attention_mask must be [B,Hmask,Q,S]")
     if (
@@ -283,8 +337,8 @@ def _canonical_attention_mask(
         raise ValueError("attention_mask batch/query/source shape mismatch")
     mask = attention_mask[..., :source_length].to(device=device)
     if mask.dtype == torch.bool:
-        mask = torch.where(mask, torch.zeros((), dtype=dtype, device=device), torch.full((), -torch.inf, dtype=dtype, device=device))
-    return mask.to(dtype=dtype)
+        mask = torch.where(mask, torch.zeros((), dtype=torch.float32, device=device), torch.full((), -torch.inf, dtype=torch.float32, device=device))
+    return mask.to(dtype=torch.float32)
 
 
 def pack_fpct_memory(
@@ -306,7 +360,7 @@ def pack_fpct_memory(
         batch_size=b,
         query_length=query_length,
         source_length=source_length,
-        dtype=key.dtype,
+        dtype=torch.float32,
         device=key.device,
     )
     segments = tuple(sidecars)
@@ -362,8 +416,8 @@ def pack_fpct_memory(
         b, mask.shape[1], query_length, layout.max_slots
     )
     packed_mask = torch.gather(mask, -1, mask_gather)
-    packed_mask = packed_mask + layout.log_prior.to(
-        device=key.device, dtype=key.dtype
+    packed_mask = packed_mask.float() + layout.log_prior.to(
+        device=key.device, dtype=torch.float32
     )[:, None, None, :]
     packed_mask = torch.where(
         layout.active[:, None, None, :],
@@ -419,6 +473,39 @@ def fpct_eager_attention(query: Tensor, packed: FPCTPackedMemory) -> tuple[Tenso
         "bhqm,bhmd->bhqd", probability, value.to(accumulation_dtype)
     ).to(query.dtype)
     return output, probability.to(query.dtype)
+
+
+def fpct_qwen_eager_attention_forward(
+    module: nn.Module,
+    query: Tensor,
+    key: Tensor,
+    value: Tensor,
+    attention_mask: Optional[Tensor],
+    scaling: float,
+    dropout: float = 0.0,
+    **_kwargs,
+) -> tuple[Tensor, Tensor]:
+    """Shared C_post/F eager adapter with FP32 logits, mask and reduction."""
+
+    groups = int(module.num_key_value_groups)
+    if groups > 1:
+        key = key[:, :, None, :, :].expand(
+            key.shape[0], key.shape[1], groups, key.shape[2], key.shape[3]
+        ).reshape(key.shape[0], key.shape[1] * groups, key.shape[2], key.shape[3])
+        value = value[:, :, None, :, :].expand(
+            value.shape[0], value.shape[1], groups, value.shape[2], value.shape[3]
+        ).reshape(
+            value.shape[0], value.shape[1] * groups, value.shape[2], value.shape[3]
+        )
+    logits = torch.matmul(query.float(), key.float().transpose(2, 3)) * float(scaling)
+    if attention_mask is not None:
+        logits = logits + attention_mask[:, :, :, : key.shape[-2]].float()
+    probability = nn.functional.softmax(logits, dim=-1, dtype=torch.float32)
+    probability = nn.functional.dropout(
+        probability, p=dropout, training=module.training
+    )
+    output = torch.matmul(probability, value.float()).to(dtype=query.dtype)
+    return output.transpose(1, 2).contiguous(), probability.to(dtype=query.dtype)
 
 
 def fpct_mechanism_diagnostics(
