@@ -123,3 +123,18 @@ conditions, profiles or numerical artifacts. Before this lock there was no R2d
 pretrained forward, GPU execution, training, checkpoint, accuracy or
 correctness result. The first authorized step is the complete synthetic GPU
 gate.
+
+## Terminal R2d execution outcome
+
+R2d passed its complete synthetic GPU gate and completed all 16 conditions and
+five profiles. FP32 replicated, bypass and m<=1 end-to-end deltas became exactly
+zero, and the FP32 expanded local canary was `9.54e-6`. BF16 still failed
+because the first section used different adapters before sidecars existed; its
+controls accumulated to `0.9375`. The BF16 expanded output canary also included
+one-ULP output quantization (`0.0625 > 0.02`). The scalar buffer fix reduced
+hot-path syncs from 336 to 280, with the remaining events isolated to
+`_current_alignment_residual_scales`.
+
+R2d is terminal `GPU_ENGINEERING_BLOCKED_R2` and will not be patched or
+resumed. No matched smoke, training, checkpoint, accuracy or correctness result
+was produced.

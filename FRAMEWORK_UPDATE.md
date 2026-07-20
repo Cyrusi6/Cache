@@ -1119,3 +1119,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Scientific SHA `71ba96d2cad1cbf6894cff4e4ad08ef5a915d0e6`；image digest `sha256:04b7b6428bd3bb4f31bb4968f8bfff68c6fb09f477f402211f1631984c0ff6cb`；run-lock SHA `2e1c998ff7e61438db2808ed82c694bf0afbae164a576064e5860b09f3126a4e`。
 - Run UID/root为`fpct-r2d-71ba96d-v1`；image source-tree `4d1c8eb6...`；tar SHA `86282ff6...`；2048 sidecar copy保持`48caee80...`。
 - 新root没有R2c numerical/condition/profile artifacts。Lock前无R2d pretrained/GPU/training/checkpoint/accuracy；必须从complete GPU numerical sequence重启。
+
+### R2d terminal result
+
+- Complete synthetic gate=`GO`；16 conditions+5 profiles完整。FP32 replicated/bypass/m≤1 end-to-end delta均为0，expanded local max `9.54e-6`。
+- BF16仍失败：pre-sidecar first section中C_post使用shared FP32 adapter而F走Transformers eager，导致candidate tensors分叉；controls最终`0.9375`。
+- Expanded local output canary在BF16先cast后比较，最大`0.0625`，混入1-ULP output quantization；下一revision只允许比较FP32 grouped probability mass。
+- Hot sync从336降到280；剩余Chrome stack精确定位`Projector._current_alignment_residual_scales`的device scalar construction。
+- R2d terminal且不resume；没有matched smoke/training/checkpoint/accuracy。任何修复需新SHA/image/run-lock/run UID。

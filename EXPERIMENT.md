@@ -374,3 +374,4 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - R2c complete numerical=`GO`，16 conditions+5 profiles完成；forced-on activation与resource gates通过，但precollapse/bypass/replicated/m1/hot-sync硬门失败，terminal `GPU_ENGINEERING_BLOCKED_R2`。未进入matched smoke、training、checkpoint或accuracy；R2c不resume。
 - R2d prospective repair：shared C_post/F sidecar adapter、m≤1 exact parent path、replicated expanded-local canary+analytic parent return、non-persistent device scale buffers；targeted `53 passed`、full `406 passed, 2 warnings`。尚无R2d pretrained/GPU/training/accuracy output。
 - R2d two-lock：scientific SHA `71ba96d...`；image `sha256:04b7b642...`；run-lock `2e1c998f...`；run UID `fpct-r2d-71ba96d-v1`；全新root/tar/sidecar copy，必须从complete GPU numerical gate开始。
+- R2d pretrained terminal：FP32 exact controls恢复；BF16 pre-sidecar adapter分叉、expanded output canary `0.0625`、residual-scale hot sync 280导致BLOCKED。0 matched smoke/training/checkpoint/accuracy；R2d不resume。

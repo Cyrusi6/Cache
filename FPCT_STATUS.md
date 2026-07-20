@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2d pre-output execution lock
-> 当前判定：R2/R2b/R2c均terminal且不可resume；R2d新SHA/image/run-lock/run UID已独立冻结
-> 下一阶段：R2d仅从complete synthetic GPU numerical gate开始，GO后才允许label-free pretrained matrix
+> 当前阶段：FPCT-GPU-R2e prospective final adapter/sync repair
+> 当前判定：R2/R2b/R2c/R2d均terminal且不可resume；R2d pretrained=`GPU_ENGINEERING_BLOCKED_R2`
+> 下一阶段：统一pre-sidecar adapter、动态折叠exact-replicated groups、改用FP32 probability-mass canary并清除residual-scale scalar sync；重跑需新SHA/image/run-lock
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -227,6 +227,7 @@
 | FPCT-D072 | 2026-07-20 | R2c pretrained matrix terminal | Complete numerical=`GO`；16 conditions+5 profiles完成；forced-on/resource通过，但precollapse/bypass/replicated/m1/hot-sync失败；0 accuracy/0 training/0 checkpoint；R2c不resume |
 | FPCT-D073 | 2026-07-20 | R2d prospective repair冻结 | C_post/F共享sidecar/layout；m≤1同parent path；replicated expanded local canary+analytic parent return；static scale non-persistent buffer；targeted 53 pass/full 406 pass；待新image/run-lock |
 | FPCT-D074 | 2026-07-20 | R2d replacement two-lock | SHA `71ba96d...`；image `sha256:04b7b642...`；run-lock `2e1c998f...`；run UID `fpct-r2d-71ba96d-v1`；全新root/tar/sidecar copy，不复用R2c outputs |
+| FPCT-D075 | 2026-07-20 | R2d pretrained matrix terminal | FP32 exact controls恢复；BF16 pre-sidecar adapter仍分叉，expanded output canary含0.0625量化；hot sync 336→280且定位residual scales；0 accuracy/training/checkpoint；R2d不resume |
 
 ## 6. 已锁定决定与 deferred items
 

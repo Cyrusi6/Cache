@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v4_failure",
+  "status": "GPU_ENGINEERING_BLOCKED_R2",
+  "run_uid": "fpct-r2d-71ba96d-v1",
+  "scientific_code_commit": "71ba96d2cad1cbf6894cff4e4ad08ef5a915d0e6",
+  "image_digest": "sha256:04b7b6428bd3bb4f31bb4968f8bfff68c6fb09f477f402211f1631984c0ff6cb",
+  "run_lock_sha256": "2e1c998ff7e61438db2808ed82c694bf0afbae164a576064e5860b09f3126a4e",
+  "gpu_numerical": {
+    "status": "GO",
+    "sequence_sha256": "88dd009a709d2610c9a483b50de01f7fc15833737ceb79cc753e65d4c76461aa",
+    "numerical_sha256": "d800d740679fa1067f8bc7e939f57b2b716025190b25622869a02202a5f6460c",
+    "metric_null_floor_sha256": "63720484b2a530d7d6f0b3a911f7bd181969434c404d1cb609c85a8c51e74e18",
+    "runtime_provenance_sha256": "7b5a5806de76a015b7384d89697d52a2efb750e027673f5c83ff1cd959e0a1bf"
+  },
+  "pretrained_matrix": {
+    "job": "fpct-r2d-pretrained-71ba96d",
+    "condition_manifest_count": 16,
+    "profile_manifest_count": 5,
+    "result_sha256": "c36d425ae615e3c0bbc63b2f263741444e7134a872109cdeda6d08552b570f4e",
+    "failed_checks": [
+      "expected_native_null",
+      "precollapse_candidate_identity",
+      "collapse_bypass",
+      "replicated_atoms",
+      "replicated_local_numeric",
+      "m1_control",
+      "hot_path_no_sync"
+    ],
+    "root_cause_evidence": {
+      "initial_section_adapter_gap": "Before sidecars existed, C_post used the shared FP32 eager adapter while F returned to the Transformers eager path; FP32 candidates matched but BF16 candidates diverged after the first section.",
+      "replicated_local_quantization": "The expanded replicated output was cast to BF16 before comparison, producing a 0.0625 local maximum despite an exact analytic parent return.",
+      "remaining_host_sync": "The first scalar-scale fix reduced P2-P6 hot syncs from 336 to 280. The remaining stack is Projector._current_alignment_residual_scales creating device scalars under fpct.project_candidates.",
+      "resource": {
+        "latency_median_ratio": 1.493134175104045,
+        "latency_p95_ratio": 0.9755630333900007,
+        "peak_hbm_gib": 4.217435359954834
+      }
+    },
+    "resume_or_patch": false
+  },
+  "firewall": {
+    "label_free_panel_only": true,
+    "accuracy_or_correctness_accessed": false,
+    "matched_smoke_started": false,
+    "formal_training_started": false,
+    "checkpoint_created": false
+  },
+  "evidence": {
+    "controller_state": {"sha256": "31a28d7a720c9228c29ea091cbc45116c4be2738b40e1865aba9e0dfdfb53f2b", "bytes": 1024},
+    "event_ledger": {"sha256": "892ace746989442a0a55b0cfc80cafb8a9f87c0f48ca577ba11968cfff6961c0", "bytes": 229},
+    "gpu_attestation": {"sha256": "ae03fcc28b783e59f6b9c7f392968afee8e7a44a837146e3ecbf69afcea07104", "bytes": 42551},
+    "pretrained_attestation": {"sha256": "59b0d3dbff2c0977fabcd47442366c0cc87d24a8896c7ea01144d53d7443df9b", "bytes": 43041}
+  },
+  "claim_boundary": "R2d validates the FP32 exact-return control and narrows the remaining failures to the pre-sidecar BF16 adapter, the replicated local metric definition and residual-scale scalar construction. It contains no accuracy, training or checkpoint evidence."
+}
