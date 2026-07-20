@@ -632,6 +632,21 @@ def fpct_qwen_hierarchical_attention_forward(
 ) -> tuple[Tensor, Tensor]:
     """Global-equivalent beta/gamma attention over parent-grouped atoms."""
 
+    # Preserve the exact C_post numerical call order for the parent branch.
+    # R2f established that candidate and collapsed K/V can be bit-identical to
+    # native while a parent matmul executed after the grouped atom kernels can
+    # still accumulate a deep FP32 deviation.  Compute the shared adapter first;
+    # the tensor-only final selection remains valid for mixed batches.
+    parent_output, _parent_probability = fpct_qwen_eager_attention_forward(
+        module,
+        query,
+        parent_key,
+        parent_value,
+        parent_attention_mask,
+        scaling=scaling,
+        dropout=dropout,
+    )
+
     groups = int(module.num_key_value_groups)
 
     def repeat_kv(value: Tensor) -> Tensor:
@@ -745,15 +760,6 @@ def fpct_qwen_hierarchical_attention_forward(
         hierarchical_output = (
             atom_probability[..., None] * atom_value[:, :, None, :, :]
         ).sum(dim=3)
-    parent_output, _parent_probability = fpct_qwen_eager_attention_forward(
-        module,
-        query,
-        parent_key,
-        parent_value,
-        parent_attention_mask,
-        scaling=scaling,
-        dropout=dropout,
-    )
     hierarchical_output = hierarchical_output.to(query.dtype).transpose(
         1, 2
     ).contiguous()

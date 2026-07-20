@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2f terminal
-> 当前判定：R2f complete numerical gate GO；pretrained matrix因FP32 checkpoint-native null超冻结floor而GPU_ENGINEERING_BLOCKED_R2
-> 下一阶段：不得resume/patch R2f；任何parent-first数值顺序修复必须新SHA/image/run-lock/run UID
+> 当前阶段：FPCT-GPU-R2g prospective parent-first recovery
+> 当前判定：R2f terminal且不可resume；R2g parent-first targeted 68/full 409通过，不改阈值/operator/data/training合同
+> 下一阶段：提交新scientific SHA，并以新image/run-lock从complete GPU gate重启
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -235,6 +235,7 @@
 | FPCT-D080 | 2026-07-20 | R2f hierarchical repair冻结 | global-equivalent beta/gamma；exact parent-equivalent branch；inactive logA=-inf/diagnostics active-only；targeted 55/full 408 pass；待新image/run-lock |
 | FPCT-D081 | 2026-07-20 | R2f replacement two-lock | scientific SHA `d08b22b...`；image `sha256:cb91ec54...`；run-lock `1990589f...`；run UID `fpct-r2f-d08b22b-v1`；lock前无GPU/pretrained/training/checkpoint/accuracy output |
 | FPCT-D082 | 2026-07-20 | R2f pretrained terminal | 22/23 hard checks通过；唯一失败为FP32 native-null `4.2915e-5 > 4.0e-5`，BF16=0；504 layer-panel KV exact；controller terminal；0 training/accuracy |
+| FPCT-D083 | 2026-07-20 | R2g parent-first prospective recovery | shared parent eager adapter移到hierarchical atom/group kernels之前；tensor-only mixed-batch selection与全部冻结threshold不变；targeted 68/full 409 pass；待新two-lock |
 
 ## 6. 已锁定决定与 deferred items
 

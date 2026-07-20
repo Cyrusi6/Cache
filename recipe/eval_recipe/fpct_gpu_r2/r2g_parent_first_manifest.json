@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2g_parent_first_v1",
+  "status": "PROSPECTIVE_PRE_OUTPUT",
+  "source_commit": "37efc73485e3a991978a3393425605c861efa294",
+  "terminal_source_execution": {
+    "run_uid": "fpct-r2f-d08b22b-v1",
+    "result_sha256": "73af6279b5d30c41271b17810a747884d05f83b1e2afe338e048399baa2d35df",
+    "failure_manifest": "recipe/eval_recipe/fpct_gpu_r2/fpct_gpu_r2f_failure_manifest.json",
+    "failure_manifest_sha256": "a9f575d3822f519967ae7419b214a648b746f0bdb35b2f06e5c86e38435ee2a7",
+    "resume": false
+  },
+  "numerical_hypothesis": {
+    "name": "parent_eager_call_order",
+    "frozen_fact": "R2f exact candidate/collapsed K/V and reconstructed parent equivalence passed in all 504 FP32 panel-layer records, but the hierarchical call produced a 4.291534423828125e-05 checkpoint-native final delta after running atom/group kernels before the parent adapter.",
+    "intervention": "compute the existing shared parent eager adapter before all hierarchical atom/group kernels",
+    "mixed_batch_selection": "tensor_only_where_all_parent_equivalent",
+    "threshold_changes": false,
+    "new_trainable_parameters": false
+  },
+  "frozen_contract": {
+    "operator": "hierarchical_beta_gamma_global_equivalent",
+    "prior": "canonical_fp32_single_use",
+    "attention_backend": "eager",
+    "checkpoint_native_delta_fact_tau": 4e-05,
+    "metric_null_floor_spec_sha256": "3206b7cda8d478575fedc471fd322cd224e72e569d192220f732a8ef7e3204eb",
+    "panel_data_model_training_and_statistics_unchanged": true
+  },
+  "tracked_source_sha256": {
+    "addendum": "e527f82d5734e79818c2b67a276c52dc3b223b884fc72665ad20f6dc21446b21",
+    "fpct_attention": "3813c0cec4520ec69401518d48648a045d132678fbecad7c995318f79307a45e",
+    "wrapper": "739f014d7746848951d9ea5d495f2372dd05817cf240bf5a4b126e1cc405347a",
+    "projector": "c5e0cb7836d0a30659cec240169a1e2a58df58a65b71534ad9b83ec33480b7be",
+    "r2_runner": "501bd64648227337e9167af5b4fa343cd19671f92714090992c500b7d8d9c495",
+    "production_tests": "47d9072b5b9c0c5d5db70681a78479a06f9e839153d5f75fb78601ee1a73db66",
+    "qwen_integration_tests": "9ad635854cc00d5079a2c5f724508be4d50c7a6d71e093ab12b2cea21a31ff21",
+    "r2_runner_tests": "d6ba85413246ed48d7e3a157fb6e268e23c55ce6f8a0c994fd5cf8ee040608b9"
+  },
+  "validation": {
+    "targeted": "68 passed",
+    "cpu_safe_full_suite": "409 passed, 2 warnings",
+    "r2g_gpu_or_pretrained_output_before_freeze": false,
+    "matched_smoke_or_training_started": false,
+    "accuracy_or_correctness_accessed": false
+  },
+  "next_gate": "new_scientific_sha_image_run_lock_then_complete_synthetic_gpu_gate"
+}

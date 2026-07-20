@@ -10,6 +10,8 @@ import pytest
 import torch
 from torch import nn
 
+import rosetta.model.fpct_attention as fpct_attention
+
 from rosetta.model.fpct_attention import (
     build_fpct_packed_layout,
     FPCTSidecarSegment,
@@ -383,6 +385,46 @@ def test_hierarchical_exact_replicated_sample_uses_parent_output() -> None:
         scaling=1.0 / (q.shape[-1] ** 0.5),
     )
     torch.testing.assert_close(actual, parent, atol=0, rtol=0)
+
+
+def test_hierarchical_parent_adapter_precedes_grouped_matmuls(monkeypatch) -> None:
+    q, _nk, _nv, _fk, _fv, _prior, _valid, ck, cv, term, sidecar = (
+        make_attention_case()
+    )
+    packed = pack_fpct_memory(
+        ck, cv, term, [sidecar], query_length=q.shape[2]
+    )
+    module = SimpleNamespace(
+        num_key_value_groups=q.shape[1] // ck.shape[1],
+        training=False,
+    )
+    events = []
+    original_parent = fpct_attention.fpct_qwen_eager_attention_forward
+    original_matmul = torch.matmul
+
+    def parent_first(*args, **kwargs):
+        events.append("parent_adapter")
+        return original_parent(*args, **kwargs)
+
+    def recorded_matmul(*args, **kwargs):
+        events.append("matmul")
+        return original_matmul(*args, **kwargs)
+
+    monkeypatch.setattr(
+        fpct_attention, "fpct_qwen_eager_attention_forward", parent_first
+    )
+    monkeypatch.setattr(fpct_attention.torch, "matmul", recorded_matmul)
+    fpct_qwen_hierarchical_attention_forward(
+        module,
+        q,
+        packed,
+        ck,
+        cv,
+        term,
+        scaling=1.0 / (q.shape[-1] ** 0.5),
+    )
+    assert events[0] == "parent_adapter"
+    assert events[1] == "matmul"
 
 
 def test_layout_is_reused_across_layers_without_autograd_state() -> None:

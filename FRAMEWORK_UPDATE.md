@@ -1179,3 +1179,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Offline exact-tensor audit确认504个FP32 panel×layer单元中candidate fused K/V、collapsed K/V都逐元素等于native，重建packed后全部parent-equivalent；C_post/replicated/bypass final logits完全相等。
 - FP32微差只在hierarchical执行顺序后深层累积：pre-o-proj/post-o-proj/residual首次超过`2e-5`分别为layer 23/26/22。Parent eager adapter前置只能作为下一新revision的前瞻性测试，R2f不patch/resume。
 - Controller terminal `GPU_ENGINEERING_BLOCKED_R2`；0 matched smoke/training/checkpoint/accuracy。
+
+### R2g prospective parent-first exact-null recovery
+
+- 新增`FPCT_GPU_R2G_PARENT_FIRST_ADDENDUM.md`，发生在任何R2g GPU/pretrained/training/accuracy output之前；R2f artifacts保持immutable。
+- 唯一scientific change：`fpct_qwen_hierarchical_attention_forward`先计算与C_post相同的parent eager adapter，再执行不变的atom/group beta-gamma路径，最后仍用tensor-only `where(all_parent_equivalent, parent, hierarchical)`。
+- 不引入host scalar branch，不改变prior、mask、diagnostics、operator、parameter、threshold、panel、data或training recipe。
+- 新增call-order regression；targeted `68 passed`，CPU-safe full suite `409 passed, 2 warnings`。下一步以新SHA/image/run-lock/run UID从complete GPU gate重启。
