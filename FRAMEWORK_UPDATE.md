@@ -1127,3 +1127,12 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Expanded local output canary在BF16先cast后比较，最大`0.0625`，混入1-ULP output quantization；下一revision只允许比较FP32 grouped probability mass。
 - Hot sync从336降到280；剩余Chrome stack精确定位`Projector._current_alignment_residual_scales`的device scalar construction。
 - R2d terminal且不resume；没有matched smoke/training/checkpoint/accuracy。任何修复需新SHA/image/run-lock/run UID。
+
+### R2e prospective final adapter/refinement/sync repair
+
+- 新增`FPCT_GPU_R2E_RECOVERY_ADDENDUM.md`，在任何R2e pretrained forward前冻结。
+- No-sidecar initial section中C_post/F均使用同一FP32 eager adapter。
+- 正式F packed path对candidate K/V与parent逐元素完全相同的group做tensor-only单原子等价折叠；distinct groups仍完整expanded，无host scalar decision。
+- Replicated canary改为expanded global FP32 probability按parent聚合后与parent probability比较，保持原`2e-5/2e-2`阈值；returned output仍analytic parent。
+- Residual-scale constants改为device-native `ones * scalar`，移除剩余`torch.tensor(..., device=cuda)`。
+- Targeted `53 passed`；full `406 passed, 2 warnings`。下一run必须新SHA/image/run-lock/run UID。

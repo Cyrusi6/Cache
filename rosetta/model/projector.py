@@ -3432,8 +3432,8 @@ class C2CProjector(Projector):
     ) -> Tuple[Tensor, Tensor]:
         self._last_alignment_residual_scale_aux_loss = None
         if self.alignment_residual_scale_mode == "none":
-            key_scale = torch.tensor(1.0, device=device, dtype=dtype)
-            value_scale = torch.tensor(1.0, device=device, dtype=dtype)
+            key_scale = torch.ones((), device=device, dtype=dtype)
+            value_scale = torch.ones((), device=device, dtype=dtype)
             self.last_alignment_key_residual_scale = 1.0
             self.last_alignment_value_residual_scale = 1.0
             self.last_alignment_residual_scale_delta_l2 = 0.0
@@ -3452,28 +3452,20 @@ class C2CProjector(Projector):
             dtype=compute_dtype,
         )
         if self.alignment_residual_scale_max_delta > 0:
-            max_delta = torch.tensor(
-                self.alignment_residual_scale_max_delta,
-                device=device,
-                dtype=compute_dtype,
-            )
+            max_delta = torch.ones(
+                (), device=device, dtype=compute_dtype
+            ) * float(self.alignment_residual_scale_max_delta)
             key_delta = max_delta * torch.tanh(key_delta / max_delta)
             value_delta = max_delta * torch.tanh(value_delta / max_delta)
 
         key_scale = (
-            torch.tensor(
-                self.alignment_residual_key_scale_init,
-                device=device,
-                dtype=compute_dtype,
-            )
+            torch.ones((), device=device, dtype=compute_dtype)
+            * float(self.alignment_residual_key_scale_init)
             + key_delta
         ).clamp_min(0.0)
         value_scale = (
-            torch.tensor(
-                self.alignment_residual_value_scale_init,
-                device=device,
-                dtype=compute_dtype,
-            )
+            torch.ones((), device=device, dtype=compute_dtype)
+            * float(self.alignment_residual_value_scale_init)
             + value_delta
         ).clamp_min(0.0)
         delta_l2 = 0.5 * (key_delta.square() + value_delta.square())

@@ -163,6 +163,16 @@ def test_actual_qwen3_m1_and_replicated_collapse_equal_cpost() -> None:
     )
     cpost_output = _forward(cpost, input_ids, attention_mask).logits
 
+    factorized_without_sidecar = RosettaModel(
+        [_model(2, state)], fpct_operator="f"
+    )
+    factorized_without_sidecar_output = _forward(
+        factorized_without_sidecar, input_ids, attention_mask
+    ).logits
+    torch.testing.assert_close(
+        factorized_without_sidecar_output, cpost_output, atol=0, rtol=0
+    )
+
     m1 = RosettaModel([_model(2, state)], fpct_operator="f")
     _sidecar(
         m1,

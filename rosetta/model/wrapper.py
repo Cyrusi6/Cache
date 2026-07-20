@@ -20,6 +20,7 @@ from rosetta.model.fpct_attention import (
     fpct_eager_attention,
     fpct_mechanism_diagnostics,
     fpct_qwen_eager_attention_forward,
+    fpct_replicated_probability_mass_delta,
     normalize_fpct_operator,
     normalize_prior as normalize_fpct_prior,
     pack_fpct_memory,
@@ -368,7 +369,7 @@ class RosettaModel(nn.Module):
                 )
 
             packed = None
-            replicated_output = None
+            replicated_delta = None
             replicated_weights = None
             if fpct_sidecars:
                 if fpct_layout is None:
@@ -392,24 +393,20 @@ class RosettaModel(nn.Module):
                             query_length=query_states.shape[-2],
                             layout=fpct_layout,
                             replicated_collapse=fpct_replicated_collapse,
+                            collapse_replicated_groups=(
+                                not fpct_replicated_collapse
+                            ),
                         )
                     if fpct_replicated_collapse:
                         with record_function("fpct.replicated_check"):
-                            replicated_output, replicated_weights = (
-                                fpct_qwen_eager_attention_forward(
+                            replicated_delta, replicated_weights = (
+                                fpct_replicated_probability_mass_delta(
                                     self,
                                     query_states,
-                                    packed.key,
-                                    packed.value,
-                                    packed.attention_mask,
-                                    dropout=(
-                                        0.0
-                                        if not self.training
-                                        else self.attention_dropout
-                                    ),
+                                    packed,
+                                    base_key_states,
+                                    parent_attention_mask,
                                     scaling=self.scaling,
-                                    sliding_window=self.sliding_window,
-                                    **kwargs,
                                 )
                             )
                     else:
@@ -496,10 +493,8 @@ class RosettaModel(nn.Module):
                         **kwargs,
                     )
 
-            if replicated_output is not None:
-                replicated_delta = (
-                    replicated_output.float() - attn_output.float()
-                ).abs().amax().detach()
+            if replicated_delta is not None:
+                replicated_delta = replicated_delta.detach()
                 if fpct_layer_metric_sink is not None:
                     layer_bucket = fpct_layer_metric_sink.setdefault(
                         self.layer_idx, {}
@@ -562,7 +557,7 @@ class RosettaModel(nn.Module):
             return []
         if self.model_list[self.base_model_idx].config._attn_implementation != "eager":
             raise RuntimeError("FPCT R2 requires receiver eager attention")
-        if self.fpct_operator == "c_post" and not self._fpct_sidecars:
+        if not self._fpct_sidecars:
             handlers = []
             for layer_idx, layer in enumerate(
                 self.model_list[self.base_model_idx].model.layers

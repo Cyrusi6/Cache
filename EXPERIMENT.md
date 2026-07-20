@@ -375,3 +375,4 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - R2d prospective repair：shared C_post/F sidecar adapter、m≤1 exact parent path、replicated expanded-local canary+analytic parent return、non-persistent device scale buffers；targeted `53 passed`、full `406 passed, 2 warnings`。尚无R2d pretrained/GPU/training/accuracy output。
 - R2d two-lock：scientific SHA `71ba96d...`；image `sha256:04b7b642...`；run-lock `2e1c998f...`；run UID `fpct-r2d-71ba96d-v1`；全新root/tar/sidecar copy，必须从complete GPU numerical gate开始。
 - R2d pretrained terminal：FP32 exact controls恢复；BF16 pre-sidecar adapter分叉、expanded output canary `0.0625`、residual-scale hot sync 280导致BLOCKED。0 matched smoke/training/checkpoint/accuracy；R2d不resume。
+- R2e prospective repair：pre-sidecar shared adapter、tensor-only exact-replicated group collapse、FP32 grouped-probability canary、residual-scale device-native constants；targeted `53 passed`、full `406 passed, 2 warnings`。尚无R2e GPU/pretrained/training/accuracy output。

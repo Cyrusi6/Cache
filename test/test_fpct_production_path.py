@@ -14,6 +14,7 @@ from rosetta.model.fpct_attention import (
     build_fpct_packed_layout,
     FPCTSidecarSegment,
     fpct_eager_attention,
+    fpct_replicated_probability_mass_delta,
     normalize_fpct_operator,
     pack_fpct_memory,
 )
@@ -81,6 +82,10 @@ def test_alignment_layer_scales_use_nonpersistent_device_buffers() -> None:
     assert value.data_ptr() == projector._alignment_confidence_value_token_delta_scale_buffer.data_ptr()
     source = inspect.getsource(projector._current_alignment_layer_scales)
     assert "torch.tensor(" not in source
+    residual_source = inspect.getsource(
+        projector._current_alignment_residual_scales
+    )
+    assert "torch.tensor(" not in residual_source
 
 
 def candidate_inputs(dtype=torch.float64, *, k=4):
@@ -284,6 +289,29 @@ def test_replicated_collapse_packed_equals_ordinary_cpost() -> None:
     )
     control, _ = fpct_eager_attention(q, packed_control)
     torch.testing.assert_close(control, post.output, atol=2e-7, rtol=2e-7)
+
+    expanded_canary = pack_fpct_memory(
+        ck,
+        cv,
+        term,
+        [FPCTSidecarSegment(0, replicated_k, replicated_v, prior, valid)],
+        query_length=q.shape[2],
+        collapse_replicated_groups=False,
+    )
+    module = SimpleNamespace(
+        num_key_value_groups=q.shape[1] // ck.shape[1]
+    )
+    delta, probability = fpct_replicated_probability_mass_delta(
+        module,
+        q,
+        expanded_canary,
+        ck,
+        term,
+        scaling=1.0 / (q.shape[-1] ** 0.5),
+    )
+    assert float(delta) <= 2e-7
+    assert probability.dtype == torch.float32
+    assert int(expanded_canary.active.sum()) > int(packed.active.sum())
 
 
 def test_layout_is_reused_across_layers_without_autograd_state() -> None:

@@ -352,6 +352,7 @@ def pack_fpct_memory(
     query_length: int,
     layout: Optional[FPCTPackedLayout] = None,
     replicated_collapse: bool = False,
+    collapse_replicated_groups: bool = True,
 ) -> FPCTPackedMemory:
     """Tensor-only per-layer packing using a reusable structural layout."""
     if key.ndim != 4 or value.shape != key.shape:
@@ -380,8 +381,10 @@ def pack_fpct_memory(
     parent_gather = safe_parent[:, None, :, None].expand(
         b, hkv, layout.max_slots, d
     )
-    packed_key = torch.gather(key, 2, parent_gather)
-    packed_value = torch.gather(value, 2, parent_gather)
+    parent_key = torch.gather(key, 2, parent_gather)
+    parent_value = torch.gather(value, 2, parent_gather)
+    packed_key = parent_key
+    packed_value = parent_value
     if not replicated_collapse:
         candidate_key = torch.cat(
             [
@@ -414,15 +417,52 @@ def pack_fpct_memory(
         packed_value = torch.where(
             use_candidate, gathered_candidate_value, packed_value
         )
+    active = layout.active
+    log_prior = layout.log_prior
+    if collapse_replicated_groups:
+        candidate_slots = layout.use_candidate & active
+        key_equal = (packed_key == parent_key).all(dim=(1, 3))
+        value_equal = (packed_value == parent_value).all(dim=(1, 3))
+        slot_equal = (~candidate_slots) | (key_equal & value_equal)
+        safe_parent = layout.parent_index.clamp_min(0)
+        group_equal = torch.ones(
+            b,
+            source_length,
+            device=key.device,
+            dtype=torch.long,
+        )
+        group_equal.scatter_reduce_(
+            1,
+            safe_parent,
+            slot_equal.to(torch.long),
+            reduce="amin",
+            include_self=True,
+        )
+        replicated_group = candidate_slots & torch.gather(
+            group_equal.to(torch.bool), 1, safe_parent
+        )
+        slot_index = torch.arange(
+            layout.max_slots, device=key.device, dtype=torch.long
+        )[None, :].expand(b, -1)
+        first_slot = torch.gather(
+            layout.row_offsets[:, :-1], 1, safe_parent
+        )
+        replicated_first = replicated_group & (slot_index == first_slot)
+        active = active & (~replicated_group | replicated_first)
+        log_prior = torch.where(
+            replicated_first,
+            torch.zeros_like(log_prior),
+            log_prior,
+        )
     mask_gather = safe_parent[:, None, None, :].expand(
         b, mask.shape[1], query_length, layout.max_slots
     )
     packed_mask = torch.gather(mask, -1, mask_gather)
-    packed_mask = packed_mask.float() + layout.log_prior.to(
+    packed_mask = packed_mask.float() + log_prior.to(
         device=key.device, dtype=torch.float32
     )[:, None, None, :]
     packed_mask = torch.where(
-        layout.active[:, None, None, :],
+        active[:, None, None, :],
         packed_mask,
         torch.full_like(packed_mask, -torch.inf),
     )
@@ -430,13 +470,72 @@ def pack_fpct_memory(
         key=packed_key,
         value=packed_value,
         attention_mask=packed_mask,
-        active=layout.active,
+        active=active,
         parent_index=layout.parent_index,
         candidate_index=layout.candidate_index,
-        log_prior=layout.log_prior,
+        log_prior=log_prior,
         row_offsets=layout.row_offsets,
         expanded_slots=layout.expanded_slots,
         extra_slots=layout.extra_slots,
+    )
+
+
+def fpct_replicated_probability_mass_delta(
+    module: nn.Module,
+    query: Tensor,
+    packed: FPCTPackedMemory,
+    parent_key: Tensor,
+    parent_attention_mask: Optional[Tensor],
+    *,
+    scaling: float,
+) -> tuple[Tensor, Tensor]:
+    """Compare expanded replicated group mass with parent FP32 probability."""
+
+    groups = int(module.num_key_value_groups)
+
+    def repeat_kv(value: Tensor) -> Tensor:
+        if groups == 1:
+            return value
+        return value[:, :, None, :, :].expand(
+            value.shape[0], value.shape[1], groups, value.shape[2], value.shape[3]
+        ).reshape(
+            value.shape[0],
+            value.shape[1] * groups,
+            value.shape[2],
+            value.shape[3],
+        )
+
+    expanded_key = repeat_kv(packed.key)
+    repeated_parent_key = repeat_kv(parent_key)
+    expanded_logits = (
+        torch.matmul(query.float(), expanded_key.float().transpose(2, 3))
+        * float(scaling)
+    )
+    expanded_logits = expanded_logits + packed.attention_mask.float()
+    parent_logits = (
+        torch.matmul(query.float(), repeated_parent_key.float().transpose(2, 3))
+        * float(scaling)
+    )
+    if parent_attention_mask is not None:
+        parent_logits = parent_logits + parent_attention_mask[
+            :, :, :, : parent_key.shape[-2]
+        ].float()
+    expanded_probability = nn.functional.softmax(
+        expanded_logits, dim=-1, dtype=torch.float32
+    )
+    parent_probability = nn.functional.softmax(
+        parent_logits, dim=-1, dtype=torch.float32
+    )
+    parent_index = packed.parent_index.clamp_min(0)[:, None, None, :].expand(
+        query.shape[0], query.shape[1], query.shape[2], -1
+    )
+    grouped_probability = torch.zeros_like(parent_probability)
+    grouped_probability.scatter_add_(
+        -1, parent_index, expanded_probability
+    )
+    return (
+        (grouped_probability - parent_probability).abs().amax(),
+        expanded_probability,
     )
 
 
