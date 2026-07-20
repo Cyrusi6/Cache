@@ -26,3 +26,12 @@ def test_formal_recipe_is_exact_64_step_contract(tmp_path):
 def test_triplet_runner_never_selectively_retries_an_arm():
     source = inspect.getsource(__import__("script.experiment.fpct_confirmatory_runner", fromlist=["train_triplet"]).train_triplet)
     assert "retry" not in source.lower()
+
+
+def test_activation_floor_comes_from_operator_null_controls():
+    module = __import__("script.experiment.fpct_confirmatory_runner", fromlist=["gpu_numerical"])
+    source = inspect.getsource(module.gpu_numerical)
+    assert "replicated_collapse_output_delta" in source
+    assert "m1_output_delta" in source
+    floor_source = source[source.index("activation_floor"):source.index("serializable")]
+    assert "row_sum_error" not in floor_source

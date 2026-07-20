@@ -200,6 +200,7 @@
 | FPCT-D048 | 2026-07-20 | 正式执行采用两层锁 | 先提交 scientific code/protocol，再以该 commit 构建 digest-addressed image 并提交 run lock；任一 scientific-code 变更使 image/run lock 失效 |
 | FPCT-D049 | 2026-07-20 | Operative scientific SHA=`0a549c95...`，image digest=`sha256:8c2441dd...` | 所有 K8s stages 含 init probe；sealed no-model closure fingerprint `fd5aa9ee...`；sidecar SHA `48caee80...` |
 | FPCT-D050 | 2026-07-20 | 正式 K8s hardware pool 收窄到 `4090-48gx2`，seed parallelism=1 | pre-output probes 证明 `/netdisk` 仅该节点可见，`/home/lijunsi` 不含冻结资产；不在 lock 后复制模型/sidecar 到其他节点 |
+| FPCT-D051 | 2026-07-20 | 首次 synthetic GPU gate artifact 作废并从 gate 重启 | 数值 tolerance 全通过，但 activation floor 错由 BF16 probability row-sum error 推导；在任何 pretrained output 前改为 independent FP32 reference + replicated/m≤1 output-null，禁止使用旧 floor `0.024414` |
 
 ## 6. 已锁定决定与 deferred items
 

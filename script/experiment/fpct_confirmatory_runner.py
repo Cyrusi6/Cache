@@ -24,6 +24,7 @@ from rosetta.model.fpct_attention import (
     fpct_eager_attention,
     pack_fpct_memory,
 )
+from script.analysis import fpct_reference_operator as reference_operator
 
 
 ARM_ORDER = {
@@ -85,12 +86,27 @@ def make_case(device: torch.device, dtype: torch.dtype):
     mask[:, :, 0, 3:] = -torch.inf
     mask[1, :, :, 0] = -torch.inf
     sidecar = FPCTSidecarSegment(0, fused_k, fused_v, prior, valid)
-    return q, cache_k, cache_v, mask, sidecar
+    return q, native_k, native_v, cache_k, cache_v, fused_k, fused_v, prior, valid, mask, sidecar
+
+
+def _identity_fuser(_base_k, _base_v, source_k, source_v):
+    return source_k, source_v
+
+
+def _plain_attention(q: torch.Tensor, key: torch.Tensor, value: torch.Tensor, mask: torch.Tensor) -> torch.Tensor:
+    hq, hkv = q.shape[1], key.shape[1]
+    expanded_key = key.repeat_interleave(hq // hkv, dim=1)
+    expanded_value = value.repeat_interleave(hq // hkv, dim=1)
+    accumulation = torch.float32 if q.dtype in (torch.float16, torch.bfloat16) else q.dtype
+    logits = torch.einsum("bhqd,bhmd->bhqm", q.to(accumulation), expanded_key.to(accumulation)) / (q.shape[-1] ** .5)
+    logits = logits + mask.to(accumulation)
+    probability = torch.softmax(logits, dim=-1)
+    return torch.einsum("bhqm,bhmd->bhqd", probability, expanded_value.to(accumulation)).to(q.dtype)
 
 
 def run_one(dtype: torch.dtype) -> dict[str, Any]:
     device = torch.device("cuda")
-    q, key, value, mask, sidecar = make_case(device, dtype)
+    q, native_k, native_v, key, value, fused_k, fused_v, prior, valid, mask, sidecar = make_case(device, dtype)
     layout = build_fpct_packed_layout(key.shape[2], [sidecar])
     packed = pack_fpct_memory(key, value, mask, [sidecar], query_length=q.shape[2], layout=layout)
     output, probability = fpct_eager_attention(q, packed)
@@ -99,6 +115,44 @@ def run_one(dtype: torch.dtype) -> dict[str, Any]:
     invalid = ~sidecar.valid
     invalid_k = gradients[1].masked_select(invalid[:, None, :, :, None].expand_as(gradients[1]))
     invalid_v = gradients[2].masked_select(invalid[:, None, :, :, None].expand_as(gradients[2]))
+    replicated = pack_fpct_memory(key, value, mask, [sidecar], query_length=q.shape[2], layout=layout, replicated_collapse=True)
+    replicated_output, _ = fpct_eager_attention(q.detach(), replicated)
+    cpost_output = _plain_attention(q.detach(), key.detach(), value.detach(), mask)
+    replicated_delta = float((replicated_output.float() - cpost_output.float()).abs().max().cpu())
+
+    first = valid.to(torch.long).argmax(dim=-1)
+    has = valid.any(dim=-1)
+    onehot = torch.zeros_like(prior).scatter(-1, first.unsqueeze(-1), 1.0)
+    onehot = torch.where(has.unsqueeze(-1), onehot, torch.zeros_like(onehot))
+    onehot_valid = onehot > 0
+    gather_index = first[:, None, :, None, None].expand(fused_k.shape[0], fused_k.shape[1], fused_k.shape[2], 1, fused_k.shape[-1])
+    first_k = torch.gather(fused_k.detach(), 3, gather_index).squeeze(3)
+    first_v = torch.gather(fused_v.detach(), 3, gather_index).squeeze(3)
+    onehot_cache_k = torch.where(has[:, None, :, None], first_k, native_k.detach())
+    onehot_cache_v = torch.where(has[:, None, :, None], first_v, native_v.detach())
+    onehot_sidecar = FPCTSidecarSegment(0, fused_k.detach(), fused_v.detach(), onehot, onehot_valid)
+    onehot_layout = build_fpct_packed_layout(onehot_cache_k.shape[2], [onehot_sidecar])
+    onehot_packed = pack_fpct_memory(onehot_cache_k, onehot_cache_v, mask, [onehot_sidecar], query_length=q.shape[2], layout=onehot_layout)
+    onehot_f, _ = fpct_eager_attention(q.detach(), onehot_packed)
+    onehot_post = _plain_attention(q.detach(), onehot_cache_k, onehot_cache_v, mask)
+    onehot_delta = float((onehot_f.float() - onehot_post.float()).abs().max().cpu())
+
+    reference_output = None
+    reference_gradient_relative_l2 = None
+    if dtype == torch.float32:
+        reference_result = reference_operator.f_flat(
+            q, native_k, native_v, fused_k, fused_v, prior, valid,
+            _identity_fuser, None, mask,
+        )
+        reference_output = reference_result.output
+        reference_gradients = torch.autograd.grad(
+            reference_output.float().square().sum(), (q, fused_k, fused_v)
+        )
+        reference_gradient_relative_l2 = max(
+            relative_l2(actual.detach().float().cpu(), expected.detach().float().cpu())
+            for actual, expected in zip(gradients, reference_gradients)
+        )
+        reference_output = reference_output.detach().float().cpu()
     return {
         "output": output.detach().float().cpu(),
         "probability": probability.detach().float().cpu(),
@@ -107,6 +161,12 @@ def run_one(dtype: torch.dtype) -> dict[str, Any]:
         "invalid_gradient_exact_zero": bool(torch.count_nonzero(invalid_k) == 0 and torch.count_nonzero(invalid_v) == 0),
         "finite": bool(torch.isfinite(output).all() and torch.isfinite(probability).all()),
         "expanded_slots": layout.expanded_slots.detach().cpu().tolist(),
+        "replicated_collapse_output_delta": replicated_delta,
+        "replicated_collapse_greedy_equal": bool(torch.equal(replicated_output.argmax(-1), cpost_output.argmax(-1))),
+        "m1_output_delta": onehot_delta,
+        "m1_greedy_equal": bool(torch.equal(onehot_f.argmax(-1), onehot_post.argmax(-1))),
+        "reference_output": reference_output,
+        "reference_gradient_relative_l2": reference_gradient_relative_l2,
     }
 
 
@@ -120,7 +180,10 @@ def gpu_numerical(lock_path: Path, output_path: Path) -> dict[str, Any]:
         raise GateError("CUDA is unavailable")
     results = {"fp32": run_one(torch.float32), "fp16": run_one(torch.float16), "bf16": run_one(torch.bfloat16)}
     fp32 = results["fp32"]
+    fp32_reference_error = float((fp32["output"] - fp32["reference_output"]).abs().max())
     checks = {
+        "fp32_reference_output": fp32_reference_error <= 2e-5,
+        "fp32_reference_gradient": fp32["reference_gradient_relative_l2"] <= 2e-5,
         "fp16_output": torch.allclose(results["fp16"]["output"], fp32["output"], atol=5e-3, rtol=5e-3),
         "bf16_output": torch.allclose(results["bf16"]["output"], fp32["output"], atol=2e-2, rtol=2e-2),
         "fp16_row_sum": results["fp16"]["row_sum_error"] <= 2e-3,
@@ -129,15 +192,24 @@ def gpu_numerical(lock_path: Path, output_path: Path) -> dict[str, Any]:
         "bf16_grad": max(relative_l2(a, b) for a, b in zip(results["bf16"]["gradients"], fp32["gradients"])) <= .05,
         "invalid_exact_zero": all(results[name]["invalid_gradient_exact_zero"] for name in results),
         "finite": all(results[name]["finite"] for name in results),
+        "replicated_collapse": all(results[name]["replicated_collapse_output_delta"] <= (2e-5 if name == "fp32" else 2e-2) and results[name]["replicated_collapse_greedy_equal"] for name in results),
+        "m1_control": all(results[name]["m1_output_delta"] <= (2e-5 if name == "fp32" else 2e-2) and results[name]["m1_greedy_equal"] for name in results),
     }
-    activation_floor = max(2e-5, 10.0 * max(results[name]["row_sum_error"] for name in results))
+    activation_floor = max(
+        2e-5,
+        10.0 * max(
+            max(results[name]["replicated_collapse_output_delta"], results[name]["m1_output_delta"])
+            for name in results
+        ),
+    )
     serializable = {
         "schema_version": 1, "run_uid": lock["run_uid"], "cuda_device": torch.cuda.get_device_name(0),
         "torch": torch.__version__, "checks": checks,
         "metrics": {
-            name: {k: v for k, v in value.items() if k not in {"output", "probability", "gradients"}}
+            name: {k: v for k, v in value.items() if k not in {"output", "probability", "gradients", "reference_output"}}
             for name, value in results.items()
         },
+        "fp32_reference_max_abs_error": fp32_reference_error,
         "synthetic_activation_null_floor": activation_floor,
         "status": "GO" if all(checks.values()) else "GPU_ENGINEERING_BLOCKED",
     }
