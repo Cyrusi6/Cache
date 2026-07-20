@@ -14,7 +14,7 @@
     "content_group_split_manifest": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050"
   },
   "image": {
-    "reference": "fpct-confirmatory@sha256:8c2441dd459c7d845e693f5b084ec40c241c2c2c60201b92a37329d87fe374ef",
+    "reference": "docker.io/library/fpct-confirmatory:0a549c95@sha256:8c2441dd459c7d845e693f5b084ec40c241c2c2c60201b92a37329d87fe374ef",
     "manifest_list_sha256": "8c2441dd459c7d845e693f5b084ec40c241c2c2c60201b92a37329d87fe374ef",
     "config_sha256": "19055a7c5ed7ec1d324ec51d925c544adeb1d0d43bf39028a27244fd2e96b67b",
     "architecture": "amd64",

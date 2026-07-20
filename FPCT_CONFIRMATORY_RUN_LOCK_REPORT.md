@@ -1,6 +1,6 @@
 # FPCT confirmatory pre-output run lock
 
-Operative scientific code is `0a549c95e9a8c90d6402d58b7eccead0b9d039cd`. The immutable image is `fpct-confirmatory@sha256:8c2441dd459c7d845e693f5b084ec40c241c2c2c60201b92a37329d87fe374ef` and contains no mounted host source, Conda environment, site-packages, or other worktree.
+Operative scientific code is `0a549c95e9a8c90d6402d58b7eccead0b9d039cd`. The immutable image is `docker.io/library/fpct-confirmatory:0a549c95@sha256:8c2441dd459c7d845e693f5b084ec40c241c2c2c60201b92a37329d87fe374ef` and contains no mounted host source, Conda environment, site-packages, or other worktree. The tag is included only to match the imported containerd reference; the digest remains authoritative.
 
 The single 2,048-example `certified_slot0_v1` training sidecar has SHA256 `48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990`. It was generated under sealed CPU execution at commit `4703ca0...`; the only tracked changes through the operative SHA are K8s templates, status documents, and their manifest test. Diagnostic 128 and all formal arms read the same frozen prefix/cache.
 
