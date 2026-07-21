@@ -364,3 +364,31 @@ The v2 root contains fresh attestation/result parents and separate W&B
 directories. V1 GPU/pretrained GO artifacts are non-operative for v2; the
 complete GPU numerical and pretrained gates must both be repeated before a
 new matched smoke may run.
+
+## R2j training-integrity replacement lock
+
+R2i-v2 repeated both engineering gates but failed at matched-smoke step 0:
+rank 1 could not byte-hash a scalar BF16 parameter, and rank 0 observed a
+duplicate byte-identical Torch remote-module marker after DDP initialization.
+No optimizer step, checkpoint or matched result was produced. V2 is terminal
+and non-resumable.
+
+R2j changes only integrity tooling: exact parameter bytes are flattened before
+the uint8 view, and already strictly validated Torch remote-module markers are
+deduplicated only when their source SHA256 is identical. W&B remains isolated
+under `/fpct-run`. Operator code, training recipe, thresholds and data are
+unchanged.
+
+- Scientific SHA: `efa02fba98adff2a891445c4908a8dc9ac8c7fff`.
+- Run UID: `fpct-r2j-efa02fb-v1`.
+- Image: `docker.io/library/fpct-gpu-r2j:efa02fb@sha256:8eac5693511a3172547d80e4348b72bb4c57cbe0ad15ed47d607d19e0d5ccccf`.
+- Image config/source-tree SHA256: `9053d1d9...` / `e0eae6eb...`.
+- Image tar SHA256: `5a6e0dad07019b8e6a88e29782716860df006c1cbf2c68e2de0922d71b4888da` (`3,531,368,448` bytes).
+- Run-lock SHA256: `51ce0a5e62906bb6388f9e0dbfd539fac120db3e70ef3259838e5f7289887c32`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2j-efa02fb-v1`.
+- ConfigMap: `fpct-r2j-lock-efa02fb`.
+
+Targeted integrity tests passed 29/29; the CPU-safe full suite passed 416/416
+with two existing warnings. No R2j GPU, pretrained, training, checkpoint,
+accuracy or correctness output existed before this lock. The complete GPU and
+pretrained gates must be repeated before matched smoke.

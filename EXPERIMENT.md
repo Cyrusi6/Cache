@@ -397,3 +397,4 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - R2i-v2 repeated gate：新root complete GPU/pretrained再次23/23 GO；checkpoint-native FP32/BF16 delta均0，未读accuracy。Matched smoke的W&B隔离成功，但step-0在0-D BF16 byte hash与DDP duplicate identical remote-module sealing处失败；0 optimizer-step/checkpoint/result，v2 terminal。
 - R2j prospective repair：state hash先flatten再uint8 byte view；sealed sys.path严格验证后只dedup byte-identical Torch remote-module marker；不改operator、recipe、threshold、panel、data或seed。需新scientific SHA/image/run-lock全量重启。
 - R2j CPU验证：targeted trainer/bootstrap integrity tests `29 passed, 2 warnings`；full suite `416 passed, 2 warnings`。尚无R2j GPU/pretrained/training/checkpoint/accuracy output。
+- R2j two-lock：scientific SHA `efa02fb...`；image `sha256:8eac5693...`；run-lock `51ce0a5e...`；run UID `fpct-r2j-efa02fb-v1`。新root预建attestations/results/W&B目录，lock前无GPU/pretrained/training/checkpoint/accuracy output。

@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2j prospective training-integrity recovery
-> 当前判定：R2i-v2 pretrained 23/23 GO，但matched smoke在step-0 scalar BF16 hash与DDP remote-module sealing处terminal；无optimizer step/checkpoint
-> 下一阶段：完成R2j CPU验证并冻结新scientific SHA/image/run-lock；之后从complete GPU gate重启
+> 当前阶段：FPCT-GPU-R2j immutable execution locked
+> 当前判定：R2i-v2 terminal且不可resume；R2j scientific SHA/image/run-lock与独立root已冻结
+> 下一阶段：从complete synthetic GPU gate重启；仅新pretrained GO后运行matched smoke
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -253,6 +253,7 @@
 | FPCT-D098 | 2026-07-21 | R2i-v2 repeated pretrained GO | v2 complete GPU+pretrained重新执行；23/23 checks通过，checkpoint-native FP32/BF16 delta均0；v1 evidence未复用；0 accuracy |
 | FPCT-D099 | 2026-07-21 | R2i-v2 smoke terminal | W&B隔离成功；rank1在0-D BF16 step-0 byte hash失败，rank0 DDP后duplicate identical remote-module marker触发sealed mismatch；0 optimizer-step/checkpoint/result |
 | FPCT-D100 | 2026-07-21 | R2j prospective integrity repair | scalar hash先flatten再byte-view；Torch temp module严格验证后只dedup byte-identical marker；operator/recipe/threshold不变；targeted 29/full 416 pass，尚无R2j GPU/training/accuracy output |
+| FPCT-D101 | 2026-07-21 | R2j replacement two-lock | scientific SHA `efa02fb...`；image `sha256:8eac5693...`；run-lock `51ce0a5e...`；run UID `fpct-r2j-efa02fb-v1`；root预建attestation/results/W&B目录 |
 
 ## 6. 已锁定决定与 deferred items
 

@@ -1271,3 +1271,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Bootstrap继续严格验证Torch temporary remote module目录、cache与source SHA；stable projection只去重byte-identical marker，distinct source或异常文件仍hard fail，raw sys.path仍完整记录。
 - W&B run-root隔离继续保留；operator、candidate metadata、prior/mask、threshold、panel、model/data/seed与训练recipe不变。下一执行必须新scientific SHA/image/run-lock/root并从complete GPU gate重启。
 - Targeted trainer/bootstrap integrity tests `29 passed, 2 warnings`；CPU-safe full suite `416 passed, 2 warnings`。
+
+### R2j replacement two-lock
+
+- Scientific SHA `efa02fba98adff2a891445c4908a8dc9ac8c7fff`；image digest `sha256:8eac5693511a3172547d80e4348b72bb4c57cbe0ad15ed47d607d19e0d5ccccf`；config/source-tree `9053d1d9...`/`e0eae6eb...`。
+- Run UID/root为`fpct-r2j-efa02fb-v1`；image tar SHA `5a6e0dad...`；run-lock SHA `51ce0a5e62906bb6388f9e0dbfd539fac120db3e70ef3259838e5f7289887c32`。
+- 新root预建attestations/results与W&B目录；R2i-v2不patch/resume且其GPU/pretrained evidence不复用。Lock前无R2j GPU/pretrained/training/checkpoint/accuracy output。
+- 下一步仅为complete synthetic GPU gate；pretrained与matched smoke仍受顺序GO约束。
