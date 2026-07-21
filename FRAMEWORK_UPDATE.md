@@ -1250,3 +1250,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 条件式matched smoke在c_pre model setup阶段失败：W&B offline默认写入`/opt/fpct/wandb`，nested与outer post-attestation均检测到immutable source-tree hash mismatch。仅产生config与pre-target attestations；无optimizer-step、checkpoint或matched result artifact。
 - V1 Job/root不patch、不resume、不复用smoke产物。Formal training、model-selection与held-out均未启动。
 - Prospective v2只在matched/formal K8s env中把`WANDB_DIR/CACHE_DIR/CONFIG_DIR/DATA_DIR`重定向到run-UID-scoped `/fpct-run`；science code、image、operator、threshold、panel与训练recipe不变。必须新root/configmap/run-lock并从complete GPU gate重跑。
+
+### R2i-v2 infrastructure replacement lock
+
+- Scientific SHA/image保持`8d21c725...`/`sha256:9ac006fe...`；operational source commit为`ff473e11ab1aeefaf7a5998df51dedcf6e6d5a8c`。
+- 新run UID/root为`fpct-r2i-8d21c72-v2`；run-lock SHA `0eb0133e11bfb5474416adbe732587bebcee319951963fa93525cace1e7f2f56`；ConfigMap `fpct-r2i-v2-lock-8d21c72`。
+- 新root独立复制同一immutable image tar与sidecar，并预建attestations/results和四个W&B目录。V1 smoke/job/artifacts不patch、不resume；V1 GPU/pretrained GO也不作为v2 evidence。
+- V2必须从complete synthetic GPU gate重跑；仅新pretrained GO后才可重跑matched smoke。

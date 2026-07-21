@@ -338,3 +338,29 @@ The new root pre-exists with all attestation and result parents. No R2i GPU,
 pretrained, training, checkpoint, accuracy or correctness output existed
 before this lock; the first authorized operation is the complete synthetic GPU
 gate.
+
+## R2i-v1 smoke infrastructure terminal and v2 lock
+
+R2i-v1 passed complete GPU numerical and pretrained gates, but the first
+matched-smoke c_pre subprocess wrote W&B offline metadata to
+`/opt/fpct/wandb`. The nested and outer post-target source-tree attestations
+therefore failed. No optimizer-step, checkpoint or matched-result artifact was
+created. V1 is terminal `MATCHED_SMOKE_INTEGRITY_FAILURE`; its smoke artifacts
+are not resumed or reused.
+
+The v2 amendment changes only K8s output-path environment variables for
+matched-smoke and formal seed Jobs. W&B run/cache/config/data directories are
+bound to the run-UID-scoped `/fpct-run` volume. Scientific code, image,
+thresholds, panels, data, seeds and training recipe are byte-identical.
+
+- Run UID: `fpct-r2i-8d21c72-v2`.
+- Scientific SHA/image: unchanged `8d21c725...` / `sha256:9ac006fe...`.
+- Operational source commit: `ff473e11ab1aeefaf7a5998df51dedcf6e6d5a8c`.
+- Run-lock SHA256: `0eb0133e11bfb5474416adbe732587bebcee319951963fa93525cace1e7f2f56`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2i-8d21c72-v2`.
+- ConfigMap: `fpct-r2i-v2-lock-8d21c72`.
+
+The v2 root contains fresh attestation/result parents and separate W&B
+directories. V1 GPU/pretrained GO artifacts are non-operative for v2; the
+complete GPU numerical and pretrained gates must both be repeated before a
+new matched smoke may run.
