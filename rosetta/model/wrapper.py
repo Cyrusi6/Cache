@@ -1043,6 +1043,38 @@ class RosettaModel(nn.Module):
             candidate_values.append(projected_value)
         fused_key = torch.stack(candidate_keys, dim=3)
         fused_value = torch.stack(candidate_values, dim=3)
+        expected_gate_shape = (*base_kv[0].shape[:-1], 1)
+        key_gate = torch.broadcast_to(
+            nuisance["legacy_key_gate"].to(
+                device=base_kv[0].device, dtype=base_kv[0].dtype
+            ),
+            expected_gate_shape,
+        )
+        value_gate = torch.broadcast_to(
+            nuisance["legacy_value_gate"].to(
+                device=base_kv[1].device, dtype=base_kv[1].dtype
+            ),
+            expected_gate_shape,
+        )
+        # A hard-zero legacy gate is mathematically the exact native path.  Do
+        # not let candidate-side numerical residue create a false factorized
+        # signal: canonicalize every candidate atom to the shared native parent
+        # with a tensor-only selection.  Nonzero and training-mode gates are
+        # unchanged, so candidate-specific fusion remains active there.
+        fused_key = torch.where(
+            (key_gate == 0).unsqueeze(3),
+            base_kv[0].unsqueeze(3),
+            fused_key,
+        )
+        fused_value = torch.where(
+            (value_gate == 0).unsqueeze(3),
+            base_kv[1].unsqueeze(3),
+            fused_value,
+        )
+        parent_projected = (
+            torch.where(key_gate == 0, base_kv[0], parent_projected[0]),
+            torch.where(value_gate == 0, base_kv[1], parent_projected[1]),
+        )
         projector._last_alignment_confidence_aux_loss = parent_confidence_aux
         projector._last_alignment_residual_scale_aux_loss = parent_residual_aux
         collapsed_key = (fused_key.float() * weights).sum(dim=3).to(
@@ -1072,24 +1104,24 @@ class RosettaModel(nn.Module):
                 int(target_layer_idx), []
             ).append(
                 {
-                    "source_candidate_key": source_candidates_k.detach(),
-                    "source_candidate_value": source_candidates_v.detach(),
-                    "native_parent_key": base_kv[0].detach(),
-                    "native_parent_value": base_kv[1].detach(),
-                    "fused_candidate_key": fused_key.detach(),
-                    "fused_candidate_value": fused_value.detach(),
-                    "collapsed_key": collapsed_key.detach(),
-                    "collapsed_value": collapsed_value.detach(),
-                    "prior": prior.detach(),
-                    "legal": legal.detach(),
-                    "legacy_key_gate": nuisance["legacy_key_gate"].detach(),
-                    "legacy_value_gate": nuisance["legacy_value_gate"].detach(),
+                    "source_candidate_key": source_candidates_k.detach().clone(),
+                    "source_candidate_value": source_candidates_v.detach().clone(),
+                    "native_parent_key": base_kv[0].detach().clone(),
+                    "native_parent_value": base_kv[1].detach().clone(),
+                    "fused_candidate_key": fused_key.detach().clone(),
+                    "fused_candidate_value": fused_value.detach().clone(),
+                    "collapsed_key": collapsed_key.detach().clone(),
+                    "collapsed_value": collapsed_value.detach().clone(),
+                    "prior": prior.detach().clone(),
+                    "legal": legal.detach().clone(),
+                    "legacy_key_gate": nuisance["legacy_key_gate"].detach().clone(),
+                    "legacy_value_gate": nuisance["legacy_value_gate"].detach().clone(),
                     "key_alignment_confidence": nuisance[
                         "key_alignment_confidence"
-                    ].detach(),
+                    ].detach().clone(),
                     "value_alignment_confidence": nuisance[
                         "value_alignment_confidence"
-                    ].detach(),
+                    ].detach().clone(),
                 }
             )
         return (

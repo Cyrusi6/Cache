@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2g-v2 terminal
-> 当前判定：parent-first假设被证伪；唯一失败仍为FP32 native-null `4.2915e-5 > 4.0e-5`
-> 下一阶段：不得resume/patch R2g；下一revision只可前瞻测试hard-gate-zero sidecar canonicalization
+> 当前阶段：FPCT-GPU-R2h prospective gate-zero canonicalization
+> 当前判定：R2g terminal且不可resume；R2h gate-zero canonicalization targeted 70/full 411通过
+> 下一阶段：提交新scientific SHA，并以新image/run-lock从complete GPU gate重启
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -240,6 +240,7 @@
 | FPCT-D085 | 2026-07-20 | R2g-v1 attestation infrastructure failure | target numerical JSON=GO但bootstrap因`attestations/`父目录不存在退出1；无sealed attestation；v1 terminal且artifacts不复用；0 pretrained/training/accuracy |
 | FPCT-D086 | 2026-07-20 | R2g-v2 infrastructure replacement lock | science/image/threshold不变；新root预建attestations/results/jobs；run-lock `8f59e0b1...`；必须重跑complete GPU gate |
 | FPCT-D087 | 2026-07-20 | R2g-v2 pretrained terminal | 22/23 checks通过；FP32 native-null与R2f完全相同，parent-first被证伪；504/504 trace cells存在微小fused-vs-native RMS；0 training/accuracy |
+| FPCT-D088 | 2026-07-20 | R2h gate-zero prospective recovery | C_post/F共享candidate边界用tensor-only where强制hard gate=0 exact native；非零/训练gate不变；trace capture clone；targeted 70/full 411 pass |
 
 ## 6. 已锁定决定与 deferred items
 

@@ -51,6 +51,57 @@ class FakeModel(nn.Module):
         return self.anchor.dtype
 
 
+class GateZeroPerturbationProjector(nn.Module):
+    alignment_weight_calibration_mode = "none"
+    learned_alignment_mode = "none"
+    learned_alignment_injection_gate_mode = "none"
+    learned_alignment_transfer_gate_mode = "none"
+
+    def __init__(self, gate: float):
+        super().__init__()
+        self.gate = float(gate)
+        self._last_alignment_confidence_aux_loss = None
+        self._last_alignment_residual_scale_aux_loss = None
+
+    def uses_internal_source_confidence(self):
+        return False
+
+    def _compute_alignment_confidence(self):
+        raise AssertionError("compatibility marker only")
+
+    def forward(
+        self,
+        source_kv,
+        target_kv,
+        fpct_parent_nuisance=None,
+        fpct_capture_parent_nuisance=False,
+        **_kwargs,
+    ):
+        source_key, source_value = source_kv
+        target_key, target_value = target_kv
+        b, h, n, _d = target_key.shape
+        gate = torch.full(
+            (1, 1, 1, 1), self.gate, dtype=target_key.dtype,
+            device=target_key.device,
+        )
+        if fpct_capture_parent_nuisance:
+            self._fpct_last_parent_nuisance = {
+                "legacy_key_gate": gate,
+                "legacy_value_gate": gate,
+                "key_alignment_confidence": torch.ones(
+                    b, h, n, 1, dtype=target_key.dtype,
+                    device=target_key.device,
+                ),
+                "value_alignment_confidence": torch.ones(
+                    b, h, n, 1, dtype=target_value.dtype,
+                    device=target_value.device,
+                ),
+            }
+        perturb_key = source_key.mean(dim=1, keepdim=True).expand_as(target_key)
+        perturb_value = source_value.mean(dim=1, keepdim=True).expand_as(target_value)
+        return target_key + 1e-4 * perturb_key, target_value + 1e-4 * perturb_value
+
+
 def make_projector(dtype=torch.float64, *, dropout=0.0) -> C2CProjector:
     return C2CProjector(
         source_dim=2,
@@ -139,6 +190,52 @@ def test_state_dict_has_no_operator_specific_parameters() -> None:
     for key in default.state_dict():
         torch.testing.assert_close(default.state_dict()[key], c_pre.state_dict()[key], atol=0, rtol=0)
         torch.testing.assert_close(default.state_dict()[key], factorized.state_dict()[key], atol=0, rtol=0)
+
+
+def test_hard_zero_gate_canonicalizes_candidates_to_native() -> None:
+    source_k, source_v, base_k, base_v, indices, weights, soft = candidate_inputs(
+        torch.float32
+    )
+    soft = {k: v for k, v in soft.items() if k != "source_confidence"}
+    wrapper = make_wrapper(GateZeroPerturbationProjector(0.0), "f", torch.float32)
+    record = wrapper._project_fpct_candidates(
+        projector=wrapper.projector_list[0],
+        source_key_cache=source_k,
+        source_value_cache=source_v,
+        base_kv=(base_k, base_v),
+        source_indices=indices,
+        source_weights=weights,
+        soft_section=soft,
+    )
+    collapsed_key, collapsed_value, fused_key, fused_value = record[:4]
+    torch.testing.assert_close(collapsed_key, base_k, atol=0, rtol=0)
+    torch.testing.assert_close(collapsed_value, base_v, atol=0, rtol=0)
+    torch.testing.assert_close(
+        fused_key, base_k.unsqueeze(3).expand_as(fused_key), atol=0, rtol=0
+    )
+    torch.testing.assert_close(
+        fused_value, base_v.unsqueeze(3).expand_as(fused_value), atol=0, rtol=0
+    )
+
+
+def test_nonzero_gate_preserves_candidate_specific_outputs() -> None:
+    source_k, source_v, base_k, base_v, indices, weights, soft = candidate_inputs(
+        torch.float32
+    )
+    soft = {k: v for k, v in soft.items() if k != "source_confidence"}
+    wrapper = make_wrapper(GateZeroPerturbationProjector(1.0), "f", torch.float32)
+    record = wrapper._project_fpct_candidates(
+        projector=wrapper.projector_list[0],
+        source_key_cache=source_k,
+        source_value_cache=source_v,
+        base_kv=(base_k, base_v),
+        source_indices=indices,
+        source_weights=weights,
+        soft_section=soft,
+    )
+    fused_key, fused_value = record[2], record[3]
+    assert not torch.equal(fused_key[:, :, 0, 0], fused_key[:, :, 0, 1])
+    assert not torch.equal(fused_value[:, :, 0, 0], fused_value[:, :, 0, 1])
 
 
 def test_legacy_weighted_gather_regression() -> None:
