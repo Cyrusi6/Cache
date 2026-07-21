@@ -1242,3 +1242,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Run UID/root为`fpct-r2i-8d21c72-v1`；image tar SHA `20ef745e...`、sidecar SHA `48caee80...`；run-lock SHA `ee377b398f1ee4c2f07fadbeba71e175573f9802ed44aa2d08b6dc8b3e3ca70d`。
 - 新root在lock前预建attestations/jobs及results父目录；R2h不patch/resume，threshold、panel、model/data和downstream recipe不变。Lock前无R2i GPU/pretrained/training/checkpoint/accuracy output。
 - 下一步只授权complete synthetic GPU gate；pretrained matrix、matched smoke与formal training继续受前置GO约束。
+
+### R2i-v1 pretrained GO and matched-smoke infrastructure failure
+
+- Sealed complete GPU gate=`GO`；pretrained 16 conditions+P2--P6完整，23/23 checks通过。Checkpoint-native `Delta_fact`在FP32/BF16均为0；forced-on FP32/BF16为`0.2450/0.71875`，bypass/replicated/m≤1/precollapse/no-sync/resource全部通过。
+- Median/p95 F/C_post latency ratio为`1.1540/1.1370`，peak HBM `4.2455 GiB`；accuracy/correctness仍未读取。
+- 条件式matched smoke在c_pre model setup阶段失败：W&B offline默认写入`/opt/fpct/wandb`，nested与outer post-attestation均检测到immutable source-tree hash mismatch。仅产生config与pre-target attestations；无optimizer-step、checkpoint或matched result artifact。
+- V1 Job/root不patch、不resume、不复用smoke产物。Formal training、model-selection与held-out均未启动。
+- Prospective v2只在matched/formal K8s env中把`WANDB_DIR/CACHE_DIR/CONFIG_DIR/DATA_DIR`重定向到run-UID-scoped `/fpct-run`；science code、image、operator、threshold、panel与训练recipe不变。必须新root/configmap/run-lock并从complete GPU gate重跑。

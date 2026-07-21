@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v9_v1_smoke_infrastructure_failure",
+  "status": "MATCHED_SMOKE_INFRASTRUCTURE_FAILURE",
+  "run_uid": "fpct-r2i-8d21c72-v1",
+  "scientific_code_commit": "8d21c725885b667a52e7dfeeff9a7e4652d06731",
+  "image_digest": "sha256:9ac006fecb615181051786cf37f2ec08960623a06a9cf55a966a17fd8f53ec21",
+  "run_lock_sha256": "ee377b398f1ee4c2f07fadbeba71e175573f9802ed44aa2d08b6dc8b3e3ca70d",
+  "completed_gates": {
+    "gpu_numerical": {
+      "status": "GO",
+      "sequence_sha256": "ad1a566e2044d3db51da9a236c81f66419f49d49de3a7812d245a7a8cec9f3f2",
+      "sealed_attestation_sha256": "b2408b0c4a5648fe3726d1cf139852e9621cc9383f75cc466ad4ea7edf869691"
+    },
+    "pretrained_matrix": {
+      "status": "GO",
+      "result_sha256": "d4c4815f53bf5b76c387e0eb36de0d32565efcf8b578ee52057f29f40444325f",
+      "sealed_attestation_sha256": "5aa77d843ecc3bd59551fbb735e9b709d806c257f7bd737336a882baf5ff3d9d"
+    }
+  },
+  "matched_smoke": {
+    "job_name": "fpct-r2i-matched-8d21c72",
+    "job_exit_code": 1,
+    "sealed_attestation_sha256": "d477c4705af9badcbd3c43bffd1703c9388c9f8222b1b853a1cb17fe2a7993d9",
+    "failure": "immutable image source tree hash mismatch",
+    "root_cause": "W&B offline output defaulted to /opt/fpct/wandb, so post-target sealed source-tree attestation observed runtime output inside the immutable scientific tree.",
+    "failure_phase": "c_pre model setup before any recorded optimizer-step or checkpoint artifact",
+    "completed_optimizer_step_artifact": false,
+    "checkpoint_artifact": false,
+    "matched_smoke_result_artifact": false,
+    "resume_or_reuse": false
+  },
+  "prospective_infrastructure_fix": {
+    "scientific_code_change": false,
+    "image_change": false,
+    "threshold_or_recipe_change": false,
+    "job_environment_only": true,
+    "rule": "redirect WANDB_DIR, WANDB_CACHE_DIR, WANDB_CONFIG_DIR and WANDB_DATA_DIR to the run-UID-scoped /fpct-run volume",
+    "applies_to_matched_smoke_and_formal_seed_jobs": true,
+    "requires_new_run_uid_root_configmap_and_run_lock": true,
+    "requires_repeat_gpu_and_pretrained_gates": true
+  },
+  "firewall": {
+    "formal_training_started": false,
+    "formal_checkpoint_created": false,
+    "accuracy_or_correctness_accessed": false,
+    "model_selection_released": false,
+    "held_out_released": false
+  },
+  "evidence": {
+    "controller_state": {"sha256": "95e314c2a886f39ea33c675014243d90ad7078d588e815f6f3c32d70e17d44f5", "bytes": 1019},
+    "event_ledger": {"sha256": "9c5b690a558ff9ba02b459eaa95dde90fb46ca544b70f2f5f05094373dd8e809", "bytes": 316},
+    "matched_smoke_attestation": {"sha256": "d477c4705af9badcbd3c43bffd1703c9388c9f8222b1b853a1cb17fe2a7993d9", "bytes": 23136},
+    "rendered_job_sha256": "2460c332d6a7eb90dfb8bfb5999abfb19e0d66648c1817f78a4a135e84780e14"
+  },
+  "claim_boundary": "V1 establishes R2 pretrained GO but not matched-smoke GO. The failure is an output-path/sealing infrastructure defect, not performance evidence. V1 is terminal and no smoke artifact may be resumed or reused."
+}

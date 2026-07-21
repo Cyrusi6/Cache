@@ -22,6 +22,10 @@ spec:
         - {name: HF_HUB_OFFLINE, value: "1"}
         - {name: TRANSFORMERS_OFFLINE, value: "1"}
         - {name: WANDB_MODE, value: offline}
+        - {name: WANDB_DIR, value: /fpct-run/wandb}
+        - {name: WANDB_CACHE_DIR, value: /fpct-run/wandb-cache}
+        - {name: WANDB_CONFIG_DIR, value: /fpct-run/wandb-config}
+        - {name: WANDB_DATA_DIR, value: /fpct-run/wandb-data}
         resources:
           limits: {nvidia.com/gpu: "2"}
           requests: {nvidia.com/gpu: "2", cpu: "8", memory: 48Gi}

@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2i immutable execution locked
-> 当前判定：R2h为`GPU_ENGINEERING_BLOCKED_R2`且不可resume；R2i scientific SHA/image/run-lock与独立root已冻结
-> 下一阶段：从complete synthetic GPU gate重启；仅GO后运行pretrained matrix
+> 当前阶段：FPCT-GPU-R2i-v2 infrastructure replacement locking
+> 当前判定：R2i-v1 pretrained GO，但matched smoke因W&B写入immutable source tree而sealed failure；v1 terminal且不可resume
+> 下一阶段：只允许同science/image的全新v2 root/run-lock，将W&B输出重定向到`/fpct-run`并重跑完整GPU+pretrained gates
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -246,6 +246,9 @@
 | FPCT-D091 | 2026-07-20 | R2h exact candidate boundary finding | FP32 504/504 trace cells中hard key/value gate=0，fused candidate与collapsed K/V均逐元素等于native；最终偏差不变，说明candidate值精确化不足以令packed path选中语义parent-equivalent branch；0 training/accuracy |
 | FPCT-D092 | 2026-07-20 | R2i prospective gate-metadata recovery | shared candidate boundary产生逐parent boolean hard-zero identity，sidecar携带至packed parent-equivalent mask；不改candidate/prior/mask/parameter/threshold；targeted 80/full 414 pass，尚无R2i GPU/pretrained/training/accuracy output |
 | FPCT-D093 | 2026-07-20 | R2i replacement two-lock | scientific SHA `8d21c72...`；image `sha256:9ac006fe...`；run-lock `ee377b39...`；run UID `fpct-r2i-8d21c72-v1`；root预建attestation/results，lock前无R2i GPU/pretrained/training/accuracy output |
+| FPCT-D094 | 2026-07-21 | R2i-v1 pretrained GO | complete GPU numerical sealed GO；16 conditions+5 profiles完整；23/23 checks通过；FP32/BF16 checkpoint-native delta均0，forced-on activation与全部resource/no-sync controls通过；0 accuracy |
+| FPCT-D095 | 2026-07-21 | R2i-v1 matched-smoke infra terminal | c_pre setup中W&B offline默认写`/opt/fpct/wandb`，post-attestation source-tree hash mismatch；无optimizer-step/checkpoint/result artifact；v1不resume，formal training未启动 |
+| FPCT-D096 | 2026-07-21 | R2i-v2 prospective output-path fix | matched/formal Job只新增W&B run-UID-scoped `/fpct-run`目录环境变量；science/image/threshold/training recipe不变；需新root/configmap/run-lock并重跑GPU+pretrained gates |
 
 ## 6. 已锁定决定与 deferred items
 
