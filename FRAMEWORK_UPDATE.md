@@ -1235,3 +1235,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 唯一scientific intervention：在C_post/F共享candidate边界生成逐parent boolean `parent_force_native`，仅当全部key/value heads的hard gate精确为0时为真；该字段随sidecar进入packed memory并与既有exact K/V equivalence取OR。
 - Forced-native parent使用attention时的最终parent cache/logit/value；整样本forced-native时返回与C_post共享的parent eager adapter。非零/training gate、candidate tensors、prior、mask、operator、parameter和threshold均不变。
 - 新增metadata shape/dtype/device、true/false branch、wrapper producer与trace regression；targeted CPU/HF/numerical tests `80 passed`，CPU-safe full suite `414 passed, 2 warnings`。下一步必须以新SHA/image/run-lock/run UID执行完整GPU gate。
+
+### R2i replacement two-lock
+
+- Scientific SHA `8d21c725885b667a52e7dfeeff9a7e4652d06731`；离线从R2h frozen runtime layers派生新image，digest `sha256:9ac006fecb615181051786cf37f2ec08960623a06a9cf55a966a17fd8f53ec21`，config/source-tree为`400e3686...`/`2c08042f...`。
+- Run UID/root为`fpct-r2i-8d21c72-v1`；image tar SHA `20ef745e...`、sidecar SHA `48caee80...`；run-lock SHA `ee377b398f1ee4c2f07fadbeba71e175573f9802ed44aa2d08b6dc8b3e3ca70d`。
+- 新root在lock前预建attestations/jobs及results父目录；R2h不patch/resume，threshold、panel、model/data和downstream recipe不变。Lock前无R2i GPU/pretrained/training/checkpoint/accuracy output。
+- 下一步只授权complete synthetic GPU gate；pretrained matrix、matched smoke与formal training继续受前置GO约束。

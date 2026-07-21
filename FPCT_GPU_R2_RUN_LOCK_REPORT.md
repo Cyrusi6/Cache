@@ -300,3 +300,41 @@ all downstream recipes are unchanged. The root includes all required
 attestation and result parent directories before submission. No R2h GPU,
 pretrained, training, checkpoint, accuracy or correctness output existed before
 this lock; execution must begin with the complete synthetic GPU gate.
+
+## Terminal R2h execution outcome
+
+R2h passed the sealed complete GPU numerical gate and completed all 16
+pretrained conditions plus P2--P6. Twenty-two of twenty-three checks passed.
+The sole failure remained `expected_native_null`: FP32
+`Delta_fact=4.291534423828125e-5 > 4.0e-5`, identical to R2f/R2g, while BF16
+was zero.
+
+The R2h projection intervention itself was exact. Across all 504 FP32 OP02
+panel-layer trace cells, hard key/value gates were zero and both candidate and
+collapsed K/V were elementwise identical to the trace-time native parent.
+Therefore exact candidate tensors alone did not preserve the semantic
+hard-zero parent identity through the packed-attention branch. R2h is terminal
+`GPU_ENGINEERING_BLOCKED_R2`, is not patched or resumed, and produced no
+matched-smoke, training, checkpoint, accuracy or correctness evidence.
+
+## R2i hard-gate metadata replacement lock
+
+- Scientific SHA: `8d21c725885b667a52e7dfeeff9a7e4652d06731`.
+- Run UID: `fpct-r2i-8d21c72-v1`.
+- Image: `docker.io/library/fpct-gpu-r2i:8d21c72@sha256:9ac006fecb615181051786cf37f2ec08960623a06a9cf55a966a17fd8f53ec21`.
+- Image config/source-tree SHA256: `400e3686...` / `2c08042f...`.
+- Parent runtime image: R2h digest `sha256:a1d9041f...`; dependency layers are unchanged and the source tree/provenance were rebuilt offline.
+- Image tar SHA256: `20ef745e547c27bc5fab769b4004e97f75b7268b2f8da480a4fa14ff8fce49d8` (`3,525,836,800` bytes).
+- R2i run-lock SHA256: `ee377b398f1ee4c2f07fadbeba71e175573f9802ed44aa2d08b6dc8b3e3ca70d`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2i-8d21c72-v1`.
+- ConfigMap: `fpct-r2i-lock-8d21c72`.
+
+R2i carries a parameter-free per-parent hard-zero identity boolean from the
+shared candidate boundary to the packed parent-equivalence mask. Nonzero and
+training gates, candidate tensors, priors, masks, thresholds, panels and all
+downstream recipes are unchanged. Targeted CPU/HF/numerical tests passed
+80/80 and the CPU-safe full suite passed 414/414 with two existing warnings.
+The new root pre-exists with all attestation and result parents. No R2i GPU,
+pretrained, training, checkpoint, accuracy or correctness output existed
+before this lock; the first authorized operation is the complete synthetic GPU
+gate.
