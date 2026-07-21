@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2h prospective gate-zero canonicalization
-> 当前判定：R2g terminal且不可resume；R2h gate-zero canonicalization targeted 70/full 411通过
-> 下一阶段：提交新scientific SHA，并以新image/run-lock从complete GPU gate重启
+> 当前阶段：FPCT-GPU-R2h immutable execution locked
+> 当前判定：R2g terminal且不可resume；R2h scientific SHA/image/run-lock与预建root已冻结，尚无R2h GPU/pretrained output
+> 下一阶段：从complete synthetic GPU gate重启；仅GO后运行pretrained matrix
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -241,6 +241,7 @@
 | FPCT-D086 | 2026-07-20 | R2g-v2 infrastructure replacement lock | science/image/threshold不变；新root预建attestations/results/jobs；run-lock `8f59e0b1...`；必须重跑complete GPU gate |
 | FPCT-D087 | 2026-07-20 | R2g-v2 pretrained terminal | 22/23 checks通过；FP32 native-null与R2f完全相同，parent-first被证伪；504/504 trace cells存在微小fused-vs-native RMS；0 training/accuracy |
 | FPCT-D088 | 2026-07-20 | R2h gate-zero prospective recovery | C_post/F共享candidate边界用tensor-only where强制hard gate=0 exact native；非零/训练gate不变；trace capture clone；targeted 70/full 411 pass |
+| FPCT-D089 | 2026-07-20 | R2h replacement two-lock | scientific SHA `39af03d...`；image `sha256:a1d9041f...`；run-lock `d34f17eb...`；run UID `fpct-r2h-39af03d-v1`；root预建attestation/results |
 
 ## 6. 已锁定决定与 deferred items
 

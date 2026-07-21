@@ -282,3 +282,21 @@ exact tensor-only gate-zero canonicalization at the shared candidate sidecar
 boundary, not another attention-order adjustment. R2g-v2 is terminal and will
 not be patched or resumed. No matched smoke, training, checkpoint, accuracy or
 correctness evaluation ran.
+
+## R2h hard-gate-zero replacement lock
+
+- Scientific SHA: `39af03d3e343c82ad995ae00c272f2b7c24967d3`.
+- Run UID: `fpct-r2h-39af03d-v1`.
+- Image: `docker.io/library/fpct-gpu-r2h:39af03d@sha256:a1d9041f46895ccb133602ac1edade346f950df6be7784f9140cfa34592c9a74`.
+- Image config/source-tree SHA256: `d024e964...` / `9a7a27b9...`.
+- Image tar SHA256: `f50d8a0564b5c9ce368c06738a9445ff6169b44c89934034ad5c17834ebd5cc5` (`3,520,316,928` bytes).
+- R2h run-lock SHA256: `d34f17eb76fdef695e544662f48cd312dfb82198b6e03cd7e90603d4d17957f2`.
+- Run root: `/netdisk/lijunsi/fpct-confirmatory/fpct-r2h-39af03d-v1`.
+- ConfigMap: `fpct-r2h-lock-39af03d`.
+
+R2h uses tensor-only hard-gate-zero candidate canonicalization shared by C_post
+and F. Nonzero/training gates, hierarchical equations, thresholds, panels and
+all downstream recipes are unchanged. The root includes all required
+attestation and result parent directories before submission. No R2h GPU,
+pretrained, training, checkpoint, accuracy or correctness output existed before
+this lock; execution must begin with the complete synthetic GPU gate.

@@ -387,3 +387,4 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - R2g-v1 infra terminal：target synthetic JSON为GO，但sealed bootstrap因缺少`attestations/`父目录退出1，0 attestation；v1 artifacts不复用。V2保持science/image/threshold不变，run UID `fpct-r2g-509a68a-v2`、run-lock `8f59e0b1...`，新root预建全部父目录后从complete GPU gate重跑。
 - R2g-v2 terminal：sealed GPU gate GO、16 conditions+5 profiles完整，22/23 checks通过；唯一失败FP32 native-null仍为`4.2915e-5 > 4.0e-5`，parent-first假设被证伪。504/504 trace cells存在微小fused-vs-native RMS；未训练、未生成checkpoint、未读accuracy。
 - R2h prospective repair：C_post/F共享candidate边界以tensor-only where强制hard gate=0 exact native，非零/训练gate不变；trace snapshots改为clone。Targeted `70 passed`，full `411 passed, 2 warnings`；尚无R2h GPU/pretrained/training/accuracy output。
+- R2h two-lock：scientific SHA `39af03d...`；image `sha256:a1d9041f...`；run-lock `d34f17eb...`；run UID `fpct-r2h-39af03d-v1`。新root预建attestations/results，lock前无R2h GPU/pretrained/training/checkpoint/accuracy output。

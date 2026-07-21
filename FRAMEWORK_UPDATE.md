@@ -1213,3 +1213,9 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 在C_post/F共享candidate fuser之后，将parent hard key/value gate广播到candidate轴；gate精确为0时用tensor-only `where`把对应candidate强制为native parent，非零与training-mode gate完全不变。
 - Trace capture改为detach+clone，避免后续cache原地更新污染first-divergence证据。
 - 不改threshold、operator、prior、mask、panel、model/data/training或statistics；targeted `70 passed`，CPU-safe full suite `411 passed, 2 warnings`。
+
+### R2h replacement two-lock
+
+- Scientific SHA `39af03d3e343c82ad995ae00c272f2b7c24967d3`；image digest `sha256:a1d9041f46895ccb133602ac1edade346f950df6be7784f9140cfa34592c9a74`；run-lock SHA `d34f17eb76fdef695e544662f48cd312dfb82198b6e03cd7e90603d4d17957f2`。
+- Run UID/root为`fpct-r2h-39af03d-v1`；source-tree `9a7a27b9...`；tar SHA `f50d8a05...`；sidecar `48caee80...`。
+- 新root在lock前预建attestations/jobs及results父目录；lock前无R2h GPU/pretrained/training/checkpoint/accuracy output。
