@@ -1257,3 +1257,17 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 新run UID/root为`fpct-r2i-8d21c72-v2`；run-lock SHA `0eb0133e11bfb5474416adbe732587bebcee319951963fa93525cace1e7f2f56`；ConfigMap `fpct-r2i-v2-lock-8d21c72`。
 - 新root独立复制同一immutable image tar与sidecar，并预建attestations/results和四个W&B目录。V1 smoke/job/artifacts不patch、不resume；V1 GPU/pretrained GO也不作为v2 evidence。
 - V2必须从complete synthetic GPU gate重跑；仅新pretrained GO后才可重跑matched smoke。
+
+### R2i-v2 repeated GO and step-0 integrity terminal
+
+- V2 complete GPU与pretrained matrix从新root重跑，未复用v1 evidence；23/23 checks再次通过，checkpoint-native FP32/BF16 delta均为0，accuracy未读取。
+- W&B输出已正确位于`/fpct-run`，source tree不再被运行时文件污染。
+- Matched smoke在c_pre step-0前失败：rank1的`_fpct_tensor_state_sha`对0-D BF16参数直接`view(uint8)`触发PyTorch维度错误；rank0 DDP初始化后新增第二个byte-identical Torch remote-module temp path，使stable sys.path含重复marker并触发sealed fingerprint mismatch。
+- 仅生成config、W&B offline日志和pre-target attestations；无optimizer-step、checkpoint或matched result。V2 controller terminal，不resume。
+
+### R2j prospective training-integrity recovery
+
+- Trainer exact-byte hash保持name/dtype/shape输入不变，仅在byte view前`reshape(-1)`，支持0-D BF16而不做数值转换。
+- Bootstrap继续严格验证Torch temporary remote module目录、cache与source SHA；stable projection只去重byte-identical marker，distinct source或异常文件仍hard fail，raw sys.path仍完整记录。
+- W&B run-root隔离继续保留；operator、candidate metadata、prior/mask、threshold、panel、model/data/seed与训练recipe不变。下一执行必须新scientific SHA/image/run-lock/root并从complete GPU gate重启。
+- Targeted trainer/bootstrap integrity tests `29 passed, 2 warnings`；CPU-safe full suite `416 passed, 2 warnings`。

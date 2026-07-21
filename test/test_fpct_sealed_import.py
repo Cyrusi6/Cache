@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 
 import pytest
 
@@ -278,6 +280,50 @@ def test_stable_fingerprint_normalizes_only_empty_runtime_temp_names(
         item.startswith("/tmp/<torch-remote-module-sha256=")
         for item in attestation_a["process"]["stable_sys_path"]
     )
+
+
+def test_stable_sys_path_deduplicates_identical_torch_remote_modules(
+    monkeypatch,
+) -> None:
+    from script.runtime import fpct_bootstrap
+
+    directories = [Path(tempfile.mkdtemp(prefix="tmp", dir="/tmp")) for _ in range(2)]
+    source_bytes = b"# fpct duplicate remote-module control\n"
+    try:
+        for directory in directories:
+            (directory / "_remote_module_non_scriptable.py").write_bytes(
+                source_bytes
+            )
+            cached = directory / "__pycache__"
+            cached.mkdir()
+            (cached / "_remote_module_non_scriptable.control.pyc").write_bytes(
+                b"control"
+            )
+        monkeypatch.setattr(
+            sys,
+            "path",
+            [
+                *(
+                    item
+                    for item in sys.path
+                    if not (
+                        item
+                        and os.path.isabs(item)
+                        and Path(item).resolve(strict=False).parent == Path("/tmp")
+                        and Path(item).resolve(strict=False).name.startswith("tmp")
+                    )
+                ),
+                *(str(directory) for directory in directories),
+            ],
+        )
+        marker = (
+            "/tmp/<torch-remote-module-sha256="
+            f"{hashlib.sha256(source_bytes).hexdigest()}>"
+        )
+        assert fpct_bootstrap._stable_sys_path(REPO).count(marker) == 1
+    finally:
+        for directory in directories:
+            shutil.rmtree(directory)
 
 
 def test_synthetic_probe_reads_no_protected_natural_data(tmp_path: Path) -> None:

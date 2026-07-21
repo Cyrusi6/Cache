@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v9_infrastructure_v2_smoke_failure",
+  "status": "MATCHED_SMOKE_INTEGRITY_FAILURE",
+  "run_uid": "fpct-r2i-8d21c72-v2",
+  "scientific_code_commit": "8d21c725885b667a52e7dfeeff9a7e4652d06731",
+  "image_digest": "sha256:9ac006fecb615181051786cf37f2ec08960623a06a9cf55a966a17fd8f53ec21",
+  "run_lock_sha256": "0eb0133e11bfb5474416adbe732587bebcee319951963fa93525cace1e7f2f56",
+  "completed_gates": {
+    "gpu_sequence_sha256": "dc929c273212b59959708d20439e4d69b1d587cf63752f116f71e4553acd341a",
+    "pretrained_result_sha256": "46e95e38e44fe0eaf6b2c52c72632941b87663e6cbec2825eef6f5a6d499c00e",
+    "pretrained_status": "GO",
+    "pretrained_check_count": 23
+  },
+  "matched_smoke": {
+    "job_name": "fpct-r2i-v2-matched-8d21c72",
+    "job_exit_code": 1,
+    "wandb_isolated_to_run_root": true,
+    "rank1_primary_error": "0-D BF16 tensor cannot be viewed directly as uint8 during step-0 state hashing",
+    "rank0_secondary_error": "duplicate byte-identical Torch remote-module sys.path marker changed sealed fingerprint after DDP initialization",
+    "failure_phase": "c_pre step-0 integrity setup before optimizer step",
+    "completed_optimizer_step_artifact": false,
+    "checkpoint_artifact": false,
+    "matched_smoke_result_artifact": false,
+    "resume_or_reuse": false
+  },
+  "evidence": {
+    "controller_state": {"sha256": "2030923029b971c9f0eacd48497d078671fa0e503f5469fc01db681f39614a9b", "bytes": 1020},
+    "event_ledger": {"sha256": "55a37cb01c314b94d9d431b38f9296cd4b0b9df4e2200704a4eba848f7bfa80a", "bytes": 315},
+    "outer_attestation": {"sha256": "517c66793c12dcdf4406352025787571d209f2a07f22beb55d0fe2df45510d69", "bytes": 42257},
+    "rank0_attestation": {"sha256": "8dc125f48fb58aab681c2cc74473e6b601f636745a4c614c8aff25f258ab46bb", "bytes": 23008},
+    "rank1_attestation": {"sha256": "218d3b4ae14f2087bf2564efee9f8d61530421979314c32c7040282b141a5d2a", "bytes": 41995},
+    "rendered_job_sha256": "9dc06f83d8e77541389fd27e58abb1733a33a50a5b813e303e84b620f2ff2a43"
+  },
+  "firewall": {
+    "formal_training_started": false,
+    "formal_checkpoint_created": false,
+    "accuracy_or_correctness_accessed": false,
+    "model_selection_released": false,
+    "held_out_released": false
+  },
+  "claim_boundary": "R2i-v2 reconfirms the pretrained engineering gate but provides no matched-training or performance evidence. Both integrity defects require a new prospective scientific SHA/image/run-lock and a full restart."
+}

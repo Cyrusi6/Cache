@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2j_training_integrity_v1",
+  "status": "PROSPECTIVE_PRE_OUTPUT",
+  "source_commit": "2bad95b530d427cff4f8a6ad82a90fa07e5e3a0e",
+  "terminal_source_execution": {
+    "run_uid": "fpct-r2i-8d21c72-v2",
+    "run_lock_sha256": "0eb0133e11bfb5474416adbe732587bebcee319951963fa93525cace1e7f2f56",
+    "pretrained_result_sha256": "46e95e38e44fe0eaf6b2c52c72632941b87663e6cbec2825eef6f5a6d499c00e",
+    "resume": false
+  },
+  "repairs": {
+    "scalar_tensor_hash": "reshape_flat_before_uint8_byte_view",
+    "remote_module_marker": "validate_then_deduplicate_identical_source_sha256_markers",
+    "wandb_output_isolation_retained": true,
+    "operator_or_training_recipe_change": false,
+    "new_trainable_parameters": false
+  },
+  "frozen_contract": {
+    "operator": "r2i_hard_gate_parent_equivalence_metadata",
+    "checkpoint_native_delta_fact_tau": 4e-05,
+    "attention_backend": "eager",
+    "panel_model_data_seed_training_and_statistics_unchanged": true,
+    "new_scientific_sha_image_run_lock_uid_and_root_required": true
+  },
+  "tracked_source_sha256": {
+    "addendum": "c8d913ab5c1c24949ba772e0fafd26fb5bbd6b013591187c6c914933cb30148e",
+    "trainer": "a5dbd927e6f23fd4a6a7e9c3491fb2aa1e6b64889a74228b5dbc8f5dd38be048",
+    "bootstrap": "b41889cff41986e15563632a7c10a2d67097d3e009f7f4c636a1ac3936818a29",
+    "confirmatory_tests": "090a8b8a22658e2c2401fb0194d71a4a841c10f012ff5cd5352d9b7cb44904bb",
+    "sealed_import_tests": "1baf2b6e1837e91b784139e8beb693aa421b5b6b3aecf722b097c03364c1996b"
+  },
+  "validation": {
+    "targeted": "29 passed, 2 warnings",
+    "cpu_safe_full_suite": "416 passed, 2 warnings",
+    "r2j_gpu_or_pretrained_output_before_freeze": false,
+    "optimizer_step_or_checkpoint_before_freeze": false,
+    "accuracy_or_correctness_accessed": false
+  }
+}

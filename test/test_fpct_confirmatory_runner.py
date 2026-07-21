@@ -1,6 +1,10 @@
 import inspect
 
+import torch
+from torch import nn
+
 from script.experiment.fpct_confirmatory_runner import ARM_ORDER, training_config
+from script.train.SFT_train import _fpct_tensor_state_sha
 
 
 def test_arm_order_is_position_balanced():
@@ -58,3 +62,24 @@ def test_pretrained_smoke_enforces_resource_and_profiler_gates():
     assert "latency_median_ratio <= 1.50" in source
     assert "latency_p95_ratio <= 1.75" in source
     assert "no_profiled_host_sync" in source
+
+
+def test_matched_state_hash_supports_scalar_bfloat16_parameters():
+    class ScalarState(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.scalar = nn.Parameter(torch.tensor(1.0, dtype=torch.bfloat16))
+            self.vector = nn.Parameter(
+                torch.tensor([2.0, 3.0], dtype=torch.float32)
+            )
+
+    model = ScalarState()
+    keys_a, state_a = _fpct_tensor_state_sha(model)
+    keys_b, state_b = _fpct_tensor_state_sha(model)
+    assert keys_a == keys_b
+    assert state_a == state_b
+    with torch.no_grad():
+        model.scalar.fill_(2.0)
+    keys_c, state_c = _fpct_tensor_state_sha(model)
+    assert keys_c == keys_a
+    assert state_c != state_a

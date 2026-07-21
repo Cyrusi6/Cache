@@ -86,7 +86,8 @@ def _fpct_tensor_state_sha(model: nn.Module) -> Tuple[str, str]:
         state.update(name.encode("utf-8") + b"\0")
         state.update(str(tensor.dtype).encode("ascii") + b"\0")
         state.update(json.dumps(list(tensor.shape)).encode("ascii") + b"\0")
-        state.update(tensor.contiguous().cpu().view(torch.uint8).numpy().tobytes())
+        raw = tensor.contiguous().cpu().reshape(-1).view(torch.uint8)
+        state.update(raw.numpy().tobytes())
     return hashlib.sha256(key_bytes).hexdigest(), state.hexdigest()
 
 

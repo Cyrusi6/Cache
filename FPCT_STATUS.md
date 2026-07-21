@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2i-v2 immutable infrastructure replacement locked
-> 当前判定：R2i-v1 pretrained GO，但matched smoke因W&B写入immutable source tree而sealed failure；v1 terminal且不可resume
-> 下一阶段：在v2独立root从complete synthetic GPU gate重启；仅新pretrained GO后重跑matched smoke
+> 当前阶段：FPCT-GPU-R2j prospective training-integrity recovery
+> 当前判定：R2i-v2 pretrained 23/23 GO，但matched smoke在step-0 scalar BF16 hash与DDP remote-module sealing处terminal；无optimizer step/checkpoint
+> 下一阶段：完成R2j CPU验证并冻结新scientific SHA/image/run-lock；之后从complete GPU gate重启
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -250,6 +250,9 @@
 | FPCT-D095 | 2026-07-21 | R2i-v1 matched-smoke infra terminal | c_pre setup中W&B offline默认写`/opt/fpct/wandb`，post-attestation source-tree hash mismatch；无optimizer-step/checkpoint/result artifact；v1不resume，formal training未启动 |
 | FPCT-D096 | 2026-07-21 | R2i-v2 prospective output-path fix | matched/formal Job只新增W&B run-UID-scoped `/fpct-run`目录环境变量；science/image/threshold/training recipe不变；需新root/configmap/run-lock并重跑GPU+pretrained gates |
 | FPCT-D097 | 2026-07-21 | R2i-v2 infrastructure lock | same science `8d21c72...`/image `sha256:9ac006fe...`；operational source `ff473e1...`；run-lock `0eb0133e...`；run UID `fpct-r2i-8d21c72-v2`；v1 GPU/pretrained evidence不复用 |
+| FPCT-D098 | 2026-07-21 | R2i-v2 repeated pretrained GO | v2 complete GPU+pretrained重新执行；23/23 checks通过，checkpoint-native FP32/BF16 delta均0；v1 evidence未复用；0 accuracy |
+| FPCT-D099 | 2026-07-21 | R2i-v2 smoke terminal | W&B隔离成功；rank1在0-D BF16 step-0 byte hash失败，rank0 DDP后duplicate identical remote-module marker触发sealed mismatch；0 optimizer-step/checkpoint/result |
+| FPCT-D100 | 2026-07-21 | R2j prospective integrity repair | scalar hash先flatten再byte-view；Torch temp module严格验证后只dedup byte-identical marker；operator/recipe/threshold不变；targeted 29/full 416 pass，尚无R2j GPU/training/accuracy output |
 
 ## 6. 已锁定决定与 deferred items
 

@@ -319,6 +319,7 @@ def _stable_sys_path(repo: Path) -> list[str]:
     """
 
     stable: list[str] = []
+    remote_module_markers: set[str] = set()
     expected_rosetta = (repo / "rosetta").resolve(strict=True)
     for raw in sys.path:
         if not raw or not os.path.isabs(raw):
@@ -352,10 +353,13 @@ def _stable_sys_path(repo: Path) -> list[str]:
                 for item in cached.iterdir()
             ):
                 raise BootstrapError("unexpected generated remote-module cache")
-            stable.append(
+            marker = (
                 "/tmp/<torch-remote-module-sha256="
                 f"{sha256_file(source)}>"
             )
+            if marker not in remote_module_markers:
+                stable.append(marker)
+                remote_module_markers.add(marker)
             continue
         stable.append(str(path) if path.exists() else raw)
     return stable
