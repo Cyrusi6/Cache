@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v8_failure",
+  "status": "GPU_ENGINEERING_BLOCKED_R2",
+  "run_uid": "fpct-r2h-39af03d-v1",
+  "scientific_code_commit": "39af03d3e343c82ad995ae00c272f2b7c24967d3",
+  "operational_lock_commit": "4f4ab7559fb078cc2de8e338fbe1bdc1369de16b",
+  "image_digest": "sha256:a1d9041f46895ccb133602ac1edade346f950df6be7784f9140cfa34592c9a74",
+  "run_lock_sha256": "d34f17eb76fdef695e544662f48cd312dfb82198b6e03cd7e90603d4d17957f2",
+  "gpu_numerical": {
+    "status": "GO",
+    "sequence_sha256": "93cd1c7bfcaa2ae3c5651e78a56787cb86ce0e470c04e77462d03b9e85600529",
+    "sealed_attestation_sha256": "6e602f7079c6d36b57e6f2b1bff08c7ebd5bf04f1d3d3a847859a852dc232f3c"
+  },
+  "pretrained_matrix": {
+    "condition_manifest_count": 16,
+    "profile_manifest_count": 5,
+    "result_sha256": "967ebe70421923390a47543d78f6e5f3dca8100addfffeb473fb434e5448067b",
+    "sealed_attestation_sha256": "702e1dfc260f467bc6e9a709731df91623c7cc3fa774bd3b81d212d0167bd5b9",
+    "passed_check_count": 22,
+    "failed_checks": ["expected_native_null"],
+    "checkpoint_native_delta": {
+      "fp32_max_abs": 4.291534423828125e-05,
+      "bf16_max_abs": 0.0,
+      "frozen_tau": 4e-05,
+      "identical_to_r2f_and_r2g_fp32": true
+    },
+    "gate_zero_canonicalization": {
+      "compact_trace_sha256": "6203df12eef439621d0a2b0fa52e971447ba633efee3140f93deb145e50ab475",
+      "fp32_panel_layer_count": 504,
+      "hard_key_gate_zero_count": 504,
+      "hard_value_gate_zero_count": 504,
+      "fused_candidate_key_exact_native_count": 504,
+      "fused_candidate_value_exact_native_count": 504,
+      "collapsed_key_exact_native_count": 504,
+      "collapsed_value_exact_native_count": 504,
+      "maximum_key_difference": 0.0,
+      "maximum_value_difference": 0.0,
+      "hypothesis": "SUPPORTED_AT_SHARED_CANDIDATE_BOUNDARY"
+    },
+    "interpretation": "Hard-gate-zero tensor canonicalization succeeds at the shared candidate boundary, but exact candidate values alone do not select the parent-equivalent packed-attention branch against the final parent cache. The remaining prospective engineering hypothesis is loss of explicit semantic parent-equivalence metadata between sidecar construction and packed attention; it was not patched or tested in this immutable run.",
+    "controls": {
+      "precollapse_candidate_identity": true,
+      "collapse_bypass": true,
+      "replicated_atoms": true,
+      "replicated_local_numeric": true,
+      "m1_control": true,
+      "forced_on_activation": true,
+      "hot_path_no_sync": true,
+      "resource_gates": true,
+      "latency_median_ratio": 1.0793245597371,
+      "latency_p95_ratio": 1.061494280946436,
+      "peak_hbm_gib": 4.245458126068115
+    },
+    "resume_or_patch": false
+  },
+  "firewall": {
+    "matched_smoke_started": false,
+    "formal_training_started": false,
+    "checkpoint_created": false,
+    "accuracy_or_correctness_accessed": false
+  },
+  "evidence": {
+    "controller_state": {"sha256": "df238552a046f95366bcb781df9fd98535b79c331fc59da26c9268f7e5984622", "bytes": 1024},
+    "event_ledger": {"sha256": "06348713f72d90519045f9de1f0d4e021ffcbe00ea2b56be95dddb3f5798da01", "bytes": 229},
+    "gpu_attestation": {"sha256": "6e602f7079c6d36b57e6f2b1bff08c7ebd5bf04f1d3d3a847859a852dc232f3c", "bytes": 42551},
+    "pretrained_attestation": {"sha256": "702e1dfc260f467bc6e9a709731df91623c7cc3fa774bd3b81d212d0167bd5b9", "bytes": 43041},
+    "pretrained_result": {"sha256": "967ebe70421923390a47543d78f6e5f3dca8100addfffeb473fb434e5448067b", "bytes": 7023}
+  },
+  "claim_boundary": "R2h proves that hard-gate-zero canonicalization makes the traced candidate and collapsed KV exactly native at the shared projection boundary. It still fails the frozen FP32 checkpoint-native numerical-null gate, so it provides no matched-training or performance evidence. A future revision may only propagate parameter-free hard-gate parent-equivalence metadata through the sidecar/packed layout under a new prospective lock and complete execution."
+}

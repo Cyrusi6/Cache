@@ -1219,3 +1219,12 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Scientific SHA `39af03d3e343c82ad995ae00c272f2b7c24967d3`；image digest `sha256:a1d9041f46895ccb133602ac1edade346f950df6be7784f9140cfa34592c9a74`；run-lock SHA `d34f17eb76fdef695e544662f48cd312dfb82198b6e03cd7e90603d4d17957f2`。
 - Run UID/root为`fpct-r2h-39af03d-v1`；source-tree `9a7a27b9...`；tar SHA `f50d8a05...`；sidecar `48caee80...`。
 - 新root在lock前预建attestations/jobs及results父目录；lock前无R2h GPU/pretrained/training/checkpoint/accuracy output。
+
+### R2h terminal result
+
+- Sealed synthetic GPU gate=`GO`；16个operator conditions与5个profiles完整，22/23 pretrained hard checks通过。
+- 唯一失败仍是冻结的`expected_native_null`：FP32 `Delta_fact=4.291534423828125e-5 > 4.0e-5`，BF16为0；与R2f/R2g逐值相同，阈值未修改。
+- R2h tensor-only gate-zero canonicalization本身成立：FP32 OP02 trace的504/504 panel×layer cells中hard key/value gate均为0，fused candidate K/V与collapsed K/V对trace-time native parent均逐元素精确相等，最大差为0。
+- Collapse-bypass、replicated-atoms、m≤1、C_post/F pre-collapse identity、forced-on activation、hot-path no-sync与resource gates全部通过；median/p95 latency ratio为`1.0793/1.0615`，peak HBM为`4.2455 GiB`。
+- 因最终hierarchical结果仍未回到parent adapter，exact candidate values不足以使packed path识别语义hard-zero parent equivalence。显式parameter-free gate metadata只能作为下一新revision的前瞻性假设；R2h root/image/run-lock/artifacts不patch、不resume。
+- Controller terminal `GPU_ENGINEERING_BLOCKED_R2`；未运行matched smoke、训练或checkpoint，未读取accuracy/correctness。

@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2h immutable execution locked
-> 当前判定：R2g terminal且不可resume；R2h scientific SHA/image/run-lock与预建root已冻结，尚无R2h GPU/pretrained output
-> 下一阶段：从complete synthetic GPU gate重启；仅GO后运行pretrained matrix
+> 当前阶段：FPCT-GPU-R2h terminal evidence sealing
+> 当前判定：R2h为`GPU_ENGINEERING_BLOCKED_R2`且不可resume；22/23 checks通过，唯一失败为FP32 checkpoint-native exact null
+> 下一阶段：仅可在新前瞻锁下验证parameter-free hard-gate parent-equivalence metadata；matched smoke/training仍未授权执行
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -242,6 +242,8 @@
 | FPCT-D087 | 2026-07-20 | R2g-v2 pretrained terminal | 22/23 checks通过；FP32 native-null与R2f完全相同，parent-first被证伪；504/504 trace cells存在微小fused-vs-native RMS；0 training/accuracy |
 | FPCT-D088 | 2026-07-20 | R2h gate-zero prospective recovery | C_post/F共享candidate边界用tensor-only where强制hard gate=0 exact native；非零/训练gate不变；trace capture clone；targeted 70/full 411 pass |
 | FPCT-D089 | 2026-07-20 | R2h replacement two-lock | scientific SHA `39af03d...`；image `sha256:a1d9041f...`；run-lock `d34f17eb...`；run UID `fpct-r2h-39af03d-v1`；root预建attestation/results |
+| FPCT-D090 | 2026-07-20 | R2h pretrained terminal | sealed GPU gate GO；16 conditions+5 profiles完整；22/23 checks通过；唯一失败为FP32 native-null `4.2915e-5 > 4.0e-5`，BF16=0；controller terminal且不可resume |
+| FPCT-D091 | 2026-07-20 | R2h exact candidate boundary finding | FP32 504/504 trace cells中hard key/value gate=0，fused candidate与collapsed K/V均逐元素等于native；最终偏差不变，说明candidate值精确化不足以令packed path选中语义parent-equivalent branch；0 training/accuracy |
 
 ## 6. 已锁定决定与 deferred items
 
