@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v10_failure",
+  "status": "GPU_ENGINEERING_BLOCKED_R2",
+  "run_uid": "fpct-r2j-efa02fb-v1",
+  "scientific_code_commit": "efa02fba98adff2a891445c4908a8dc9ac8c7fff",
+  "image_digest": "sha256:8eac5693511a3172547d80e4348b72bb4c57cbe0ad15ed47d607d19e0d5ccccf",
+  "run_lock_sha256": "51ce0a5e62906bb6388f9e0dbfd539fac120db3e70ef3259838e5f7289887c32",
+  "gpu_numerical": {
+    "status": "GO",
+    "sequence_sha256": "6c418bec38e4c6effe970ffe55412672b2aa7fb9ac13a2a7a6c361ab0aa54396",
+    "sealed_attestation_sha256": "0c27a8404202f0697d6cbe17e23c1c9d304d6904666ce0a58682413568aa88ac"
+  },
+  "pretrained_matrix": {
+    "condition_manifest_count": 16,
+    "profile_manifest_count": 5,
+    "result_sha256": "034baa1567613d21e5cfbf276c176ab68d9f2af908d7e3c9d317290a177fa2cc",
+    "sealed_attestation_sha256": "4ebfd50356d6017b459d42832846fa2b6fd0c23cfbb74406ddfeffa1d902aa57",
+    "passed_check_count": 22,
+    "failed_checks": ["latency_median"],
+    "operator_integrity": {
+      "checkpoint_native_fp32_delta": 0.0,
+      "checkpoint_native_bf16_delta": 0.0,
+      "forced_on_fp32_delta": 0.24501681327819824,
+      "forced_on_bf16_delta": 0.71875,
+      "precollapse_candidate_identity": true,
+      "collapse_bypass": true,
+      "replicated_atoms": true,
+      "replicated_local_numeric": true,
+      "m1_control": true,
+      "hot_path_no_sync": true,
+      "finite_and_mask_safe": true
+    },
+    "resource": {
+      "latency_median_ratio": 1.6885509119773743,
+      "latency_median_ceiling": 1.5,
+      "latency_median_pass": false,
+      "latency_p95_ratio": 1.3455029042453055,
+      "latency_p95_ceiling": 1.75,
+      "latency_p95_pass": true,
+      "peak_hbm_gib": 4.245471477508545,
+      "hbm_pass": true,
+      "expansion_mean_pass": true,
+      "expansion_p95_pass": true
+    },
+    "retry_or_threshold_change": false
+  },
+  "training_firewall": {
+    "matched_smoke_started": false,
+    "formal_training_started": false,
+    "checkpoint_created": false,
+    "accuracy_or_correctness_accessed": false,
+    "model_selection_released": false,
+    "held_out_released": false
+  },
+  "evidence": {
+    "controller_state": {"sha256": "c6f4bfce1fdc1d0f3cbf00981b071cf64a578364ed27c249c53fc4f43bf8ec0f", "bytes": 1023},
+    "event_ledger": {"sha256": "35cad40cec8fd11a238ed9eda26005db983b373e974009a795ace64c51964354", "bytes": 229},
+    "gpu_attestation": {"sha256": "0c27a8404202f0697d6cbe17e23c1c9d304d6904666ce0a58682413568aa88ac", "bytes": 42551},
+    "pretrained_attestation": {"sha256": "4ebfd50356d6017b459d42832846fa2b6fd0c23cfbb74406ddfeffa1d902aa57", "bytes": 43041},
+    "pretrained_result": {"sha256": "034baa1567613d21e5cfbf276c176ab68d9f2af908d7e3c9d317290a177fa2cc", "bytes": 7011}
+  },
+  "claim_boundary": "R2j preserves the R2i exact-native and forced-on operator engineering results and validates the training-integrity repairs on CPU. It fails the frozen median latency resource gate, so matched smoke and all confirmatory training/evaluation remain unauthorized. This is not accuracy or mechanism evidence and may not be retried or bypassed under the current run lock."
+}

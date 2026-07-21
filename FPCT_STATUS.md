@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2j immutable execution locked
-> 当前判定：R2i-v2 terminal且不可resume；R2j scientific SHA/image/run-lock与独立root已冻结
-> 下一阶段：从complete synthetic GPU gate重启；仅新pretrained GO后运行matched smoke
+> 当前阶段：FPCT-GPU-R2j terminal evidence sealing
+> 当前判定：R2j为`GPU_ENGINEERING_BLOCKED_R2`且不可resume；22/23 checks通过，唯一失败为冻结median latency resource gate
+> 下一阶段：matched smoke、formal training、model-selection与held-out全部BLOCKED；需新的人工授权与前瞻协议才能研究性能优化
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -254,6 +254,7 @@
 | FPCT-D099 | 2026-07-21 | R2i-v2 smoke terminal | W&B隔离成功；rank1在0-D BF16 step-0 byte hash失败，rank0 DDP后duplicate identical remote-module marker触发sealed mismatch；0 optimizer-step/checkpoint/result |
 | FPCT-D100 | 2026-07-21 | R2j prospective integrity repair | scalar hash先flatten再byte-view；Torch temp module严格验证后只dedup byte-identical marker；operator/recipe/threshold不变；targeted 29/full 416 pass，尚无R2j GPU/training/accuracy output |
 | FPCT-D101 | 2026-07-21 | R2j replacement two-lock | scientific SHA `efa02fb...`；image `sha256:8eac5693...`；run-lock `51ce0a5e...`；run UID `fpct-r2j-efa02fb-v1`；root预建attestation/results/W&B目录 |
+| FPCT-D102 | 2026-07-21 | R2j pretrained resource terminal | complete GPU GO；16 conditions+5 profiles完整；22/23 checks通过；median latency ratio `1.6886 > 1.50`，p95 `1.3455`与HBM/exact controls均通过；controller terminal，0 training/accuracy |
 
 ## 6. 已锁定决定与 deferred items
 

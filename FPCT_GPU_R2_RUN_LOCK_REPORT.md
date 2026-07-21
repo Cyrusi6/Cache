@@ -392,3 +392,19 @@ Targeted integrity tests passed 29/29; the CPU-safe full suite passed 416/416
 with two existing warnings. No R2j GPU, pretrained, training, checkpoint,
 accuracy or correctness output existed before this lock. The complete GPU and
 pretrained gates must be repeated before matched smoke.
+
+## Terminal R2j execution outcome
+
+R2j passed the complete synthetic GPU gate and completed all 16 isolated
+pretrained conditions plus P2--P6. Twenty-two of twenty-three checks passed.
+Checkpoint-native FP32 and BF16 deltas were exactly zero; forced-on activation,
+pre-collapse identity, bypass, replicated-atoms, m<=1, finite/mask, hot-path
+no-sync, p95 latency, HBM and expansion gates all passed.
+
+The sole failure was the frozen median latency resource gate:
+`F/C_post=1.6885509119773743`, above the `1.50` ceiling. The p95 ratio was
+`1.3455029042453055 <= 1.75`, and peak HBM was `4.245471477508545 GiB`.
+This resource failure is terminal and may not be retried, threshold-adjusted or
+bypassed. The controller is `GPU_ENGINEERING_BLOCKED_R2`; matched smoke,
+formal training, checkpoints, accuracy/correctness, model-selection and
+held-out release did not run.

@@ -1278,3 +1278,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Run UID/root为`fpct-r2j-efa02fb-v1`；image tar SHA `5a6e0dad...`；run-lock SHA `51ce0a5e62906bb6388f9e0dbfd539fac120db3e70ef3259838e5f7289887c32`。
 - 新root预建attestations/results与W&B目录；R2i-v2不patch/resume且其GPU/pretrained evidence不复用。Lock前无R2j GPU/pretrained/training/checkpoint/accuracy output。
 - 下一步仅为complete synthetic GPU gate；pretrained与matched smoke仍受顺序GO约束。
+
+### R2j terminal resource result
+
+- Complete synthetic GPU gate=`GO`；16 operator conditions与P2--P6全部完成，22/23 pretrained checks通过。
+- Operator/numerical integrity全部通过：checkpoint-native FP32/BF16 delta均0；forced-on为`0.2450/0.71875`；precollapse、bypass、replicated、m≤1、finite/mask、hot-path no-sync均通过。
+- 唯一失败为冻结resource hard gate：F/C_post median latency ratio `1.6885509 > 1.50`。P95 ratio `1.3455029 <= 1.75`、peak HBM `4.2455 GiB`、mean/p95 expansion均通过。
+- 该失败不能通过重跑、放宽threshold或继续matched smoke绕过。Controller terminal `GPU_ENGINEERING_BLOCKED_R2`；0 matched smoke、formal training、checkpoint、accuracy/correctness、model-selection或held-out release。
+- R2j证明integrity repairs在CPU测试中成立，并保持R2i exact-native/forced-on engineering结果；不提供task performance或正式mechanism证据。
