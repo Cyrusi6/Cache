@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2g-v2 infrastructure replacement locked
-> 当前判定：R2g-v1因sealed attestation目录缺失而terminal；v2保持同一science/image/threshold并使用全新预建root
-> 下一阶段：v2从complete synthetic GPU gate重启；不得复用v1 GPU artifacts
+> 当前阶段：FPCT-GPU-R2g-v2 terminal
+> 当前判定：parent-first假设被证伪；唯一失败仍为FP32 native-null `4.2915e-5 > 4.0e-5`
+> 下一阶段：不得resume/patch R2g；下一revision只可前瞻测试hard-gate-zero sidecar canonicalization
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -239,6 +239,7 @@
 | FPCT-D084 | 2026-07-20 | R2g replacement two-lock | scientific SHA `509a68a...`；image `sha256:e7061bb8...`；run-lock `4ba3cb77...`；run UID `fpct-r2g-509a68a-v1`；lock前无GPU/pretrained/training/checkpoint/accuracy output |
 | FPCT-D085 | 2026-07-20 | R2g-v1 attestation infrastructure failure | target numerical JSON=GO但bootstrap因`attestations/`父目录不存在退出1；无sealed attestation；v1 terminal且artifacts不复用；0 pretrained/training/accuracy |
 | FPCT-D086 | 2026-07-20 | R2g-v2 infrastructure replacement lock | science/image/threshold不变；新root预建attestations/results/jobs；run-lock `8f59e0b1...`；必须重跑complete GPU gate |
+| FPCT-D087 | 2026-07-20 | R2g-v2 pretrained terminal | 22/23 checks通过；FP32 native-null与R2f完全相同，parent-first被证伪；504/504 trace cells存在微小fused-vs-native RMS；0 training/accuracy |
 
 ## 6. 已锁定决定与 deferred items
 

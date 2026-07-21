@@ -265,3 +265,20 @@ created before submission:
 
 R2g-v2 must repeat the complete GPU numerical gate; the v1 `GO` JSON is not
 operative evidence.
+
+## Terminal R2g-v2 execution outcome
+
+R2g-v2 produced valid sealed attestations, passed the complete GPU gate and
+completed all 16 pretrained conditions plus P2--P6. Twenty-two of twenty-three
+checks passed. The sole failure remained `expected_native_null`: FP32
+`Delta_fact=4.291534423828125e-5 > 4.0e-5`, exactly the R2f value, while BF16
+was zero. Thus evaluating the parent adapter before hierarchical kernels did
+not change the failure and the parent-first hypothesis is falsified.
+
+The full checkpoint-native traces report nonzero fused-versus-native RMS in
+all 504 FP32 panel-layer cells (K maximum `4.8113e-7`, V maximum `1.8114e-7`)
+despite zero hard legacy gates. The remaining recovery target is therefore an
+exact tensor-only gate-zero canonicalization at the shared candidate sidecar
+boundary, not another attention-order adjustment. R2g-v2 is terminal and will
+not be patched or resumed. No matched smoke, training, checkpoint, accuracy or
+correctness evaluation ran.

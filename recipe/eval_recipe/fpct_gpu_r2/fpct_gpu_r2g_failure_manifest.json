@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2_execution_v7_failure",
+  "status": "GPU_ENGINEERING_BLOCKED_R2",
+  "run_uid": "fpct-r2g-509a68a-v2",
+  "scientific_code_commit": "509a68af59e0565fc8869fc9e4a0b273b4938596",
+  "image_digest": "sha256:e7061bb8ec96f9f9a8b37d8da5bc7f682ce967dd35fadeb036e9d61c32c546a0",
+  "run_lock_sha256": "8f59e0b124b0d008083e358ed482650c8cfe4b1c0a8b874a91e1e7f3b0619e46",
+  "gpu_numerical": {
+    "status": "GO",
+    "sequence_sha256": "342aeadf984e552a858f00db86e58a16929bae47437704d21bd745d36b84f159",
+    "sealed_attestation_sha256": "13d435f0b2ce431a9e853c535cd31a6036f919b5e920f6b70c0b2cb99e121944"
+  },
+  "pretrained_matrix": {
+    "condition_manifest_count": 16,
+    "profile_manifest_count": 5,
+    "result_sha256": "8c510e8fb6fffa76b3f3a4b39a5cab64fcf0a6c7ffaea90dd4dc0b3b27f39375",
+    "passed_check_count": 22,
+    "failed_checks": ["expected_native_null"],
+    "checkpoint_native_delta": {
+      "fp32_max_abs": 4.291534423828125e-05,
+      "bf16_max_abs": 0.0,
+      "frozen_tau": 4e-05,
+      "identical_to_r2f_fp32": true
+    },
+    "parent_first_hypothesis": "FALSIFIED",
+    "trace_evidence": {
+      "fp32_panel_layer_count": 504,
+      "fused_vs_native_key_rms_nonzero_count": 504,
+      "fused_vs_native_key_rms_max": 4.811253120351466e-07,
+      "fused_vs_native_value_rms_nonzero_count": 504,
+      "fused_vs_native_value_rms_max": 1.8113713906586781e-07,
+      "interpretation": "The checkpoint-native candidate tensors reaching the sidecar are not bitwise native even though the recorded hard legacy gates are zero. Parent-adapter call order is therefore not the remaining cause."
+    },
+    "controls": {
+      "precollapse_candidate_identity": true,
+      "collapse_bypass": true,
+      "replicated_atoms": true,
+      "m1_control": true,
+      "forced_on_activation": true,
+      "hot_path_no_sync": true,
+      "resource_gates": true,
+      "latency_median_ratio": 1.095229184738349,
+      "latency_p95_ratio": 1.0972864456265767,
+      "peak_hbm_gib": 4.245458126068115
+    },
+    "resume_or_patch": false
+  },
+  "firewall": {
+    "matched_smoke_started": false,
+    "formal_training_started": false,
+    "checkpoint_created": false,
+    "accuracy_or_correctness_accessed": false
+  },
+  "evidence": {
+    "controller_state": {"sha256": "add32bae0639346ed4d09613dafb46f05ae168bbc929123ff2af463a7a1c870b", "bytes": 1027},
+    "event_ledger": {"sha256": "ae11265458a855ab39c9b3bb9bea0404d09ef24b11589a3d6bcd37c370f9c0ae", "bytes": 230},
+    "gpu_attestation": {"sha256": "13d435f0b2ce431a9e853c535cd31a6036f919b5e920f6b70c0b2cb99e121944", "bytes": 42551},
+    "pretrained_attestation": {"sha256": "c558531b58b30d510f3bbaf31d130f5298cd75f6c8bb6ffac3caf7cfa9a3aebc", "bytes": 43041}
+  },
+  "claim_boundary": "R2g falsifies parent-first attention call order as the explanation of the FP32 native-null failure. It provides no performance evidence. A future revision may only test tensor-only hard-gate-zero canonicalization at the shared candidate sidecar boundary under a new complete execution."
+}

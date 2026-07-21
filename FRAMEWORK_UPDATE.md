@@ -1199,3 +1199,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - V1 controller terminal，不补目录、不resume、不复用其numerical/runtime/floor artifacts；failure manifest SHA `e14a6c5f...`。未进入pretrained/training/checkpoint/accuracy。
 - V2保持scientific SHA `509a68a...`、image `sha256:e7061bb8...`与全部threshold不变；run UID `fpct-r2g-509a68a-v2`，run-lock SHA `8f59e0b124b0d008083e358ed482650c8cfe4b1c0a8b874a91e1e7f3b0619e46`。
 - V2全新root在提交前预建attestations/jobs及各results父目录，必须从complete GPU gate重跑。
+
+### R2g-v2 terminal result
+
+- Sealed GPU gate=`GO`；16 conditions+5 profiles完整；22/23 checks通过。
+- 唯一失败仍为FP32 checkpoint-native `Delta_fact=4.291534423828125e-5 > 4.0e-5`，与R2f逐值相同；BF16=0。因此parent-first call-order假设被证伪。
+- 504/504 FP32 panel×layer trace cells的fused-vs-native RMS非零，K最大`4.8113e-7`、V最大`1.8114e-7`，尽管hard legacy gate记录为0。
+- 下一revision只能在shared candidate sidecar边界前瞻测试tensor-only hard-gate-zero exact canonicalization；R2g-v2不patch/resume。0 matched smoke/training/checkpoint/accuracy。
