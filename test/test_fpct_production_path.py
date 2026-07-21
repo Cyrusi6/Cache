@@ -216,6 +216,7 @@ def test_hard_zero_gate_canonicalizes_candidates_to_native() -> None:
     torch.testing.assert_close(
         fused_value, base_v.unsqueeze(3).expand_as(fused_value), atol=0, rtol=0
     )
+    assert torch.equal(record[8], torch.ones_like(record[8], dtype=torch.bool))
 
 
 def test_nonzero_gate_preserves_candidate_specific_outputs() -> None:
@@ -236,6 +237,7 @@ def test_nonzero_gate_preserves_candidate_specific_outputs() -> None:
     fused_key, fused_value = record[2], record[3]
     assert not torch.equal(fused_key[:, :, 0, 0], fused_key[:, :, 0, 1])
     assert not torch.equal(fused_value[:, :, 0, 0], fused_value[:, :, 0, 1])
+    assert not torch.any(record[8])
 
 
 def test_legacy_weighted_gather_regression() -> None:
@@ -482,6 +484,95 @@ def test_hierarchical_exact_replicated_sample_uses_parent_output() -> None:
         scaling=1.0 / (q.shape[-1] ** 0.5),
     )
     torch.testing.assert_close(actual, parent, atol=0, rtol=0)
+
+
+def test_hard_gate_metadata_forces_exact_parent_branch_despite_tensor_residue() -> None:
+    q, _nk, _nv, fk, fv, prior, valid, ck, cv, term, _sidecar = make_attention_case()
+    residual_key = ck.unsqueeze(3).expand_as(fk).clone()
+    residual_value = cv.unsqueeze(3).expand_as(fv).clone()
+    residual_key[:, :, 0] += 1e-4
+    residual_value[:, :, 0] -= 1e-4
+    sidecar = FPCTSidecarSegment(
+        0,
+        residual_key,
+        residual_value,
+        prior,
+        valid,
+        parent_force_native=torch.tensor([[True, False, False]]),
+    )
+    packed = pack_fpct_memory(ck, cv, term, [sidecar], query_length=q.shape[2])
+    assert torch.equal(
+        packed.parent_equivalent, torch.ones_like(packed.parent_equivalent)
+    )
+    assert torch.equal(
+        packed.all_parent_equivalent,
+        torch.ones_like(packed.all_parent_equivalent),
+    )
+    module = SimpleNamespace(
+        num_key_value_groups=q.shape[1] // ck.shape[1],
+        training=False,
+    )
+    actual, _ = fpct_qwen_hierarchical_attention_forward(
+        module,
+        q,
+        packed,
+        ck,
+        cv,
+        term,
+        scaling=1.0 / (q.shape[-1] ** 0.5),
+    )
+    parent, _ = fpct_qwen_eager_attention_forward(
+        module,
+        q,
+        ck,
+        cv,
+        term,
+        scaling=1.0 / (q.shape[-1] ** 0.5),
+    )
+    torch.testing.assert_close(actual, parent, atol=0, rtol=0)
+
+
+def test_false_hard_gate_metadata_does_not_hide_candidate_residue() -> None:
+    q, _nk, _nv, fk, fv, prior, valid, ck, cv, term, _sidecar = make_attention_case()
+    residual_key = ck.unsqueeze(3).expand_as(fk).clone()
+    residual_value = cv.unsqueeze(3).expand_as(fv).clone()
+    residual_key[:, :, 0] += 1e-4
+    residual_value[:, :, 0] -= 1e-4
+    sidecar = FPCTSidecarSegment(
+        0,
+        residual_key,
+        residual_value,
+        prior,
+        valid,
+        parent_force_native=torch.zeros(1, 3, dtype=torch.bool),
+    )
+    packed = pack_fpct_memory(ck, cv, term, [sidecar], query_length=q.shape[2])
+    assert not packed.parent_equivalent[0, 0]
+    assert not packed.all_parent_equivalent[0]
+
+
+def test_parent_force_native_contract_validation() -> None:
+    _q, _nk, _nv, _fk, _fv, _prior, _valid, _ck, _cv, _term, sidecar = (
+        make_attention_case()
+    )
+    with pytest.raises(ValueError, match="must be \\[B,N\\]"):
+        FPCTSidecarSegment(
+            sidecar.parent_start,
+            sidecar.key,
+            sidecar.value,
+            sidecar.prior,
+            sidecar.valid,
+            parent_force_native=torch.zeros(1, 1, dtype=torch.bool),
+        ).validate()
+    with pytest.raises(ValueError, match="must be boolean"):
+        FPCTSidecarSegment(
+            sidecar.parent_start,
+            sidecar.key,
+            sidecar.value,
+            sidecar.prior,
+            sidecar.valid,
+            parent_force_native=torch.zeros(1, 3),
+        ).validate()
 
 
 def test_hierarchical_parent_adapter_precedes_grouped_matmuls(monkeypatch) -> None:

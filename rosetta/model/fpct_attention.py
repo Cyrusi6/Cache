@@ -34,6 +34,7 @@ class FPCTSidecarSegment:
     source_length_hint: Optional[int] = None
     prior_sha256: Optional[str] = None
     certified: bool = False
+    parent_force_native: Optional[Tensor] = None  # [B,N], semantic hard-gate identity
 
     def validate(self) -> None:
         if self.parent_start < 0:
@@ -52,6 +53,17 @@ class FPCTSidecarSegment:
             raise ValueError("source_length_hint must be non-negative")
         if self.certified and not self.prior_sha256:
             raise ValueError("certified FPCT sidecars require a prior SHA256")
+        if self.parent_force_native is not None:
+            if self.parent_force_native.shape != (
+                self.key.shape[0], self.key.shape[2]
+            ):
+                raise ValueError("sidecar parent_force_native must be [B,N]")
+            if self.parent_force_native.dtype != torch.bool:
+                raise ValueError("sidecar parent_force_native must be boolean")
+            if self.parent_force_native.device != self.key.device:
+                raise ValueError(
+                    "sidecar parent_force_native and candidate tensors must share a device"
+                )
 
 
 @dataclass
@@ -439,7 +451,20 @@ def pack_fpct_memory(
         reduce="amin",
         include_self=True,
     )
-    parent_equivalent = group_equal.to(torch.bool)
+    semantic_parent_equivalent = torch.zeros(
+        b,
+        source_length,
+        device=key.device,
+        dtype=torch.bool,
+    )
+    for segment in segments:
+        if segment.parent_force_native is None:
+            continue
+        parent_end = segment.parent_start + segment.key.shape[2]
+        semantic_parent_equivalent[:, segment.parent_start:parent_end] = (
+            segment.parent_force_native
+        )
+    parent_equivalent = group_equal.to(torch.bool) | semantic_parent_equivalent
     if collapse_replicated_groups:
         replicated_group = candidate_slots & torch.gather(
             parent_equivalent, 1, safe_parent

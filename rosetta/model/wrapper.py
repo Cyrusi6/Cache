@@ -1075,6 +1075,9 @@ class RosettaModel(nn.Module):
             torch.where(key_gate == 0, base_kv[0], parent_projected[0]),
             torch.where(value_gate == 0, base_kv[1], parent_projected[1]),
         )
+        parent_force_native = (key_gate == 0).all(dim=(1, 3)) & (
+            value_gate == 0
+        ).all(dim=(1, 3))
         projector._last_alignment_confidence_aux_loss = parent_confidence_aux
         projector._last_alignment_residual_scale_aux_loss = parent_residual_aux
         collapsed_key = (fused_key.float() * weights).sum(dim=3).to(
@@ -1116,6 +1119,7 @@ class RosettaModel(nn.Module):
                     "legal": legal.detach().clone(),
                     "legacy_key_gate": nuisance["legacy_key_gate"].detach().clone(),
                     "legacy_value_gate": nuisance["legacy_value_gate"].detach().clone(),
+                    "parent_force_native": parent_force_native.detach().clone(),
                     "key_alignment_confidence": nuisance[
                         "key_alignment_confidence"
                     ].detach().clone(),
@@ -1133,6 +1137,7 @@ class RosettaModel(nn.Module):
             legal,
             parent_projected,
             nuisance,
+            parent_force_native,
         )
 
     def _store_fpct_sidecar(
@@ -1143,6 +1148,7 @@ class RosettaModel(nn.Module):
         fused_value: torch.Tensor,
         prior: torch.Tensor,
         legal: torch.Tensor,
+        parent_force_native: Optional[torch.Tensor] = None,
         prior_sha256: str = "",
         max_slots_hint: int = -1,
         source_length_hint: int = -1,
@@ -1187,6 +1193,7 @@ class RosettaModel(nn.Module):
             max_slots_hint=canonical[3],
             source_length_hint=canonical[4],
             certified=canonical[5],
+            parent_force_native=parent_force_native,
         )
         segment.validate()
         segments = self._fpct_sidecars.setdefault(target_layer_idx, [])
@@ -1692,6 +1699,7 @@ class RosettaModel(nn.Module):
                                         fused_value=fpct_record[3],
                                         prior=fpct_record[4],
                                         legal=fpct_record[5],
+                                        parent_force_native=fpct_record[8],
                                         prior_sha256=soft_section.get(
                                             "fpct_prior_sha256", ""
                                         ),

@@ -1,8 +1,8 @@
 # FPCT 状态
 
-> 当前阶段：FPCT-GPU-R2h terminal evidence sealing
-> 当前判定：R2h为`GPU_ENGINEERING_BLOCKED_R2`且不可resume；22/23 checks通过，唯一失败为FP32 checkpoint-native exact null
-> 下一阶段：仅可在新前瞻锁下验证parameter-free hard-gate parent-equivalence metadata；matched smoke/training仍未授权执行
+> 当前阶段：FPCT-GPU-R2i prospective hard-gate metadata recovery
+> 当前判定：R2h为`GPU_ENGINEERING_BLOCKED_R2`且不可resume；R2i只验证parameter-free semantic parent-equivalence transport
+> 下一阶段：完成CPU/HF验证并冻结新scientific SHA/image/run-lock后，从complete synthetic GPU gate重启
 > 更新时间：2026-07-20（Asia/Shanghai）
 
 ## 1. 隔离身份
@@ -244,6 +244,7 @@
 | FPCT-D089 | 2026-07-20 | R2h replacement two-lock | scientific SHA `39af03d...`；image `sha256:a1d9041f...`；run-lock `d34f17eb...`；run UID `fpct-r2h-39af03d-v1`；root预建attestation/results |
 | FPCT-D090 | 2026-07-20 | R2h pretrained terminal | sealed GPU gate GO；16 conditions+5 profiles完整；22/23 checks通过；唯一失败为FP32 native-null `4.2915e-5 > 4.0e-5`，BF16=0；controller terminal且不可resume |
 | FPCT-D091 | 2026-07-20 | R2h exact candidate boundary finding | FP32 504/504 trace cells中hard key/value gate=0，fused candidate与collapsed K/V均逐元素等于native；最终偏差不变，说明candidate值精确化不足以令packed path选中语义parent-equivalent branch；0 training/accuracy |
+| FPCT-D092 | 2026-07-20 | R2i prospective gate-metadata recovery | shared candidate boundary产生逐parent boolean hard-zero identity，sidecar携带至packed parent-equivalent mask；不改candidate/prior/mask/parameter/threshold；targeted 80/full 414 pass，尚无R2i GPU/pretrained/training/accuracy output |
 
 ## 6. 已锁定决定与 deferred items
 

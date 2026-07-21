@@ -1228,3 +1228,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Collapse-bypass、replicated-atoms、m≤1、C_post/F pre-collapse identity、forced-on activation、hot-path no-sync与resource gates全部通过；median/p95 latency ratio为`1.0793/1.0615`，peak HBM为`4.2455 GiB`。
 - 因最终hierarchical结果仍未回到parent adapter，exact candidate values不足以使packed path识别语义hard-zero parent equivalence。显式parameter-free gate metadata只能作为下一新revision的前瞻性假设；R2h root/image/run-lock/artifacts不patch、不resume。
 - Controller terminal `GPU_ENGINEERING_BLOCKED_R2`；未运行matched smoke、训练或checkpoint，未读取accuracy/correctness。
+
+### R2i prospective hard-gate parent-equivalence metadata
+
+- 新增`FPCT_GPU_R2I_GATE_METADATA_ADDENDUM.md`，在任何R2i GPU/pretrained/training/checkpoint/accuracy output前冻结；R2h artifacts保持immutable。
+- 唯一scientific intervention：在C_post/F共享candidate边界生成逐parent boolean `parent_force_native`，仅当全部key/value heads的hard gate精确为0时为真；该字段随sidecar进入packed memory并与既有exact K/V equivalence取OR。
+- Forced-native parent使用attention时的最终parent cache/logit/value；整样本forced-native时返回与C_post共享的parent eager adapter。非零/training gate、candidate tensors、prior、mask、operator、parameter和threshold均不变。
+- 新增metadata shape/dtype/device、true/false branch、wrapper producer与trace regression；targeted CPU/HF/numerical tests `80 passed`，CPU-safe full suite `414 passed, 2 warnings`。下一步必须以新SHA/image/run-lock/run UID执行完整GPU gate。

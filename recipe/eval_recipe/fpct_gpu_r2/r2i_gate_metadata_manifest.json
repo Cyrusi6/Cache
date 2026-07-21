@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2i_gate_metadata_v1",
+  "status": "PROSPECTIVE_PRE_OUTPUT",
+  "source_commit": "8683af42a0964b4f7bf28e6c15eb334e71ac69ab",
+  "terminal_source_execution": {
+    "run_uid": "fpct-r2h-39af03d-v1",
+    "result_sha256": "967ebe70421923390a47543d78f6e5f3dca8100addfffeb473fb434e5448067b",
+    "failure_manifest": "recipe/eval_recipe/fpct_gpu_r2/fpct_gpu_r2h_failure_manifest.json",
+    "failure_manifest_sha256": "d8c212c8f06bd63746cc69011c350b3f41893fe811df9a12b074cf694faa523e",
+    "resume": false
+  },
+  "intervention": {
+    "name": "hard_gate_parent_equivalence_metadata",
+    "producer": "shared_candidate_projection_boundary",
+    "transport": "FPCTSidecarSegment.parent_force_native",
+    "consumer": "packed_parent_equivalent_mask",
+    "rule": "all_heads_key_gate_zero_and_all_heads_value_gate_zero",
+    "combination": "exact_tensor_parent_equivalent_or_semantic_force_native",
+    "tensor_only": true,
+    "applies_to_c_post_and_f": true,
+    "nonzero_and_training_gate_unchanged": true,
+    "new_trainable_parameters": false
+  },
+  "frozen_contract": {
+    "operator": "hierarchical_beta_gamma_global_equivalent",
+    "prior": "canonical_fp32_single_use",
+    "attention_backend": "eager",
+    "checkpoint_native_delta_fact_tau": 4e-05,
+    "panel_model_data_training_and_statistics_unchanged": true,
+    "new_image_run_lock_uid_and_root_required": true
+  },
+  "tracked_source_sha256": {
+    "addendum": "f0e28b60c12964808f002805cb4111cea80fcb3759205081ce7ce35802a953e5",
+    "wrapper": "756a7e28b59fd12219bb00310a5c049bf718fbe37aa3b671d2fedb06b95626d6",
+    "fpct_attention": "e3eb717403adfd683f201c358538688c2329df74ee9157e2565468f529200ae3",
+    "projector": "c5e0cb7836d0a30659cec240169a1e2a58df58a65b71534ad9b83ec33480b7be",
+    "r2_runner": "09c7fc7f3cf9a208e2dd4064c7c44457916dc9b9c22242b12371660fe1306c99",
+    "production_tests": "90eb7e642c75d9cb967944f902424adf352a548a139732b031f0839b929aa9f7",
+    "qwen_integration_tests": "9ad635854cc00d5079a2c5f724508be4d50c7a6d71e093ab12b2cea21a31ff21",
+    "r2_runner_tests": "d6ba85413246ed48d7e3a157fb6e268e23c55ce6f8a0c994fd5cf8ee040608b9",
+    "r2_numerics_tests": "3b15dd688ba1e0029ab1ff2db6111e8f6d0e6cdb5119bed6597dc3b13ed8b072"
+  },
+  "validation": {
+    "targeted": "80 passed",
+    "cpu_safe_full_suite": "414 passed, 2 warnings",
+    "r2i_gpu_or_pretrained_output_before_freeze": false,
+    "matched_smoke_or_training_started": false,
+    "accuracy_or_correctness_accessed": false
+  },
+  "next_gate": "cpu_hf_validation_then_new_scientific_sha_image_run_lock_and_complete_gpu_gate"
+}

@@ -295,6 +295,7 @@ def _trace_summary(model: Any, residuals: dict[int, list[torch.Tensor]]) -> dict
                 "fused_candidate_key", "fused_candidate_value",
                 "collapsed_key", "collapsed_value", "prior",
                 "legacy_key_gate", "legacy_value_gate",
+                "parent_force_native",
                 "key_alignment_confidence", "value_alignment_confidence",
             ):
                 row[key] = _tensor_summary(last[key])
@@ -376,6 +377,7 @@ def _compact_trace_tensors(
                 row[key] = last[key][:, :, parent_index].detach().cpu()
             for key in (
                 "prior", "legal", "legacy_key_gate", "legacy_value_gate",
+                "parent_force_native",
                 "key_alignment_confidence", "value_alignment_confidence",
             ):
                 value = last[key]
