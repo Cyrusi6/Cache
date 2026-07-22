@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2l_focused_diagnostic_v1",
+  "classification": "DIAGNOSTIC_ONLY",
+  "may_produce_r2l_go": false,
+  "training_authorized": false,
+  "accuracy_or_correctness_allowed": false,
+  "synthetic": {
+    "dtypes": ["float32", "bfloat16"],
+    "qwen_layers": 28,
+    "prefill_and_decode_steps": 4,
+    "exact_requirements": ["torch.equal", "tensor_byte_sha", "max_abs_zero", "ulp_zero"],
+    "mixed_batch": true,
+    "gqa_and_mqa": true
+  },
+  "pretrained_conditions": {
+    "panel": "recipe/eval_recipe/fpct_gpu_r2l/focused_label_free_panel.json",
+    "dtypes": ["fp32", "bf16"],
+    "condition_ids": [
+      "OP01_CPOST_NATIVE",
+      "OP02_F_NATIVE",
+      "OP03_F_REP_NATIVE",
+      "OP04_F_FORCED",
+      "OP05_F_REP_FORCED"
+    ]
+  },
+  "latency": {
+    "runner": "script/experiment/fpct_gpu_r2k_latency.py",
+    "block_index": 0,
+    "warmups_per_arm": 20,
+    "measurements_per_arm": 50,
+    "checkpoint_native_and_forced_on": true,
+    "median_ratio_max": 1.5,
+    "p95_ratio_max": 1.75,
+    "peak_hbm_fraction_strict_max": 0.9,
+    "expansion_mean_max": 1.35,
+    "expansion_p95_max": 1.5
+  },
+  "trace": {
+    "separate_from_latency": true,
+    "hot_path_host_sync_max": 0
+  },
+  "qualification_checks": [
+    "native_parent_map_complete",
+    "unknown_sidecar_fails_closed",
+    "mixed_memory_exact_null_bitwise",
+    "mixed_batch_exact_active_isolation",
+    "actual_qwen_decode4_exact_null",
+    "active_route_not_bypassed",
+    "precollapse_candidate_identity",
+    "forced_on_metric_activation",
+    "focused_resource_pass",
+    "hot_path_no_sync",
+    "protocol_diff_clean"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2l_focused_label_free_panel_v1",
+  "status": "FROZEN_BEFORE_R2L_PRETRAINED_OUTPUT",
+  "panel_rows_sha256": "979ab81287479fbfd156bb0cbc1549fd1468f16ccd03398bf5e21a82980f9595",
+  "selection": {
+    "source": "first canonical row of the pre-R2l frozen R2 diagnostic panel",
+    "labels_or_correctness_accessed": false,
+    "ranking_or_result_based_selection": false
+  },
+  "rows": [
+    {
+      "cardinality": 2,
+      "content_group_sha256": "00b252bc779e7b0bc39ef946a9f195cf50774b6a9c5e65b10a4e438307f06b55",
+      "panel_id": "ai2-arc__m2__00",
+      "parent_index": 11,
+      "sample_key_sha256": "1fcdca84fc8821e90d610d56a670f5727add87de32b4038c5e7af6928dad99d9",
+      "split": "fit",
+      "task": "ai2-arc"
+    }
+  ]
+}

@@ -408,3 +408,10 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - 根因与公式冻结为`E = NOT U OR (U AND E_sc)`：非sidecar native parents天然true；sidecar span先fail-closed为false，再按`parent_equivalent`或`parent_force_native`写入；metadata缺失保持false。
 - 唯一允许修改的既有scientific function是`rosetta/model/fpct_attention.py::bind_fpct_layout_layer_semantics`。Flat atom kernel、parent eager/logit reuse、wrapper/projector/gate/prior/mask/certifier/timing/threshold/data/seed/training/statistics全部冻结。
 - Diagnostic与immutable gate严格分离；本状态尚未运行任何新R2l GPU/pretrained forward、训练、checkpoint、accuracy/correctness、model-selection或held-out。
+
+### R2l semantic-map CPU/HF implementation candidate
+
+- Red reproducer在R2k map上5/5失败；修复后truth table、unknown fail-closed、discontinuous spans和mixed batch全部通过。
+- 只修改获授权的`bind_fpct_layout_layer_semantics`：完整map ones初始化，每个sidecar span先置false，再复制离散metadata。Protocol verifier屏蔽该函数后确认其余`fpct_attention.py`字节与baseline一致。
+- Actual Qwen3 eager 28层FP32/BF16、GQA、padding、causal prefill+decode4在pre/post/residual/cache/final logits上均通过`torch.equal`、byte SHA、max_abs=0、ULP=0；active sample同batch保持非零差异。
+- FPCT targeted=`207 passed`；CPU-safe full suite=`446 passed`。尚未运行R2l focused GPU/pretrained diagnostic，science仍为diagnostic candidate而非immutable GO。

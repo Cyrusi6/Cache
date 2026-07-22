@@ -1356,3 +1356,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Function-level allowlist仅开放`bind_fpct_layout_layer_semantics`；机器verifier屏蔽该函数后要求`fpct_attention.py`其余字节与baseline `2091c109...`一致，并固定wrapper/projector/aligner/runner/training/prior/math等SHA。
 - 预注册red-green、mixed batch、28层Qwen bitwise exact-null、active-route、training gradient、focused diagnostic、一次性immutable 23+6 checks及后续条件式matched/formal决策树。
 - 本commit前没有新R2l GPU/pretrained output；accuracy/correctness、训练、checkpoint、model-selection、held-out均未访问。
+
+### 2026-07-22 FPCT-GPU-R2l semantic-map CPU/HF repair candidate
+
+- Red-green：新测试在R2k实现上5/5失败，直接显示sidecar外native parent被错误置false；修复后全部green。
+- 实现diff严格限定于`bind_fpct_layout_layer_semantics`：`zeros`改为完整`ones`，每个sidecar span在读取metadata前先置false，metadata缺失因此只在coverage内fail closed。
+- 新测试覆盖pre-bound map、多个span/gap、mixed exact/active batch、FP32/BF16、GQA/MQA、training fixed RNG/gradient，以及actual Qwen3 28层padding+prefill+decode4的逐层和final bitwise exact-null。
+- 验证：R2l focused `14 passed`；FPCT targeted `207 passed`；CPU-safe full suite按`local/tmp`契约重跑为`446 passed, 2 warnings`。Protocol diff verifier=`GO`，flat kernel/wrapper/projector/runner等冻结SHA未变。
+- 当前只形成focused diagnostic candidate；尚未运行新R2l GPU/pretrained output、训练、checkpoint或accuracy。

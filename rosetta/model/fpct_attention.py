@@ -159,7 +159,7 @@ def bind_fpct_layout_layer_semantics(
     layer_indices: list[int] = []
     layer_maps: list[Tensor] = []
     for layer_index, segments in ordered_layer_segments:
-        semantic = torch.zeros(
+        semantic = torch.ones(
             layout.batch_size,
             layout.source_length,
             device=layout.active.device,
@@ -167,6 +167,8 @@ def bind_fpct_layout_layer_semantics(
         )
         for segment in segments:
             segment.validate()
+            parent_end = segment.parent_start + segment.key.shape[2]
+            semantic[:, segment.parent_start:parent_end] = False
             parent_equivalent = (
                 segment.parent_equivalent
                 if segment.parent_equivalent is not None
@@ -174,7 +176,6 @@ def bind_fpct_layout_layer_semantics(
             )
             if parent_equivalent is None:
                 continue
-            parent_end = segment.parent_start + segment.key.shape[2]
             semantic[:, segment.parent_start:parent_end] = (
                 parent_equivalent
             )
