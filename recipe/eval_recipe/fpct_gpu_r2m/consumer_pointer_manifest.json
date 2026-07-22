@@ -52,12 +52,19 @@
     },
     {
       "path": "script/analysis/fpct_gpu_r2m_config_validator.py",
-      "sha256": "673f3116c885528817a5d73ef15acf97bc9067aeb5a75379a0f42ccbaa48293f",
+      "sha256": "3754744ef04b6b3b2314340015fb84a9035a418af54dc74f04edc686d55aba87",
       "function": "validate_run_lock/config_preflight",
       "run_lock_pointers": [
         {"pointer": "/config_closure", "type": "object", "required": true, "source": "R2m closure"},
         {"pointer": "/resource_geometry/tinyllama_all_splits", "type": "object", "required": true, "source": "canonical R2k geometry"}
       ]
+    },
+    {
+      "path": "script/analysis/fpct_gpu_r2m_finalize.py",
+      "sha256": "1399083c11a71b81b59a147d8120c7d7426cf472b44b191cb6069ff28e7ac35a",
+      "function": "finalize",
+      "run_lock_pointers": [],
+      "result_input_pointers": ["/status", "/checks", "/canaries/checkpoint_native/qualified", "/canaries/forced_on/qualified"]
     }
   ],
   "aggregate_geometry_consumer_ast_sha256": "0b609e30112b0daf4ac51fec97e548d2b16b179fba7f7e6143e502a26526acec",

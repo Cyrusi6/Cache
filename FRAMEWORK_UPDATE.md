@@ -1408,3 +1408,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 新schema对critical geometry subtree关闭additional properties，强制精确task集合、finite number、source/projection hash；consumer manifest枚举run-lock到原R2 aggregate、latency、semantic finalizer和training consumers的JSON pointers。
 - Validator使用原`aggregate_pretrained` AST中的geometry/geometry_rows及expansion expressions执行固定CPU fixture，避免重写近似消费逻辑；结果certified geometry精确相等，mean/p95 checks均true。
 - 21项config negative/full-closure tests全部通过，包括R2l missing pointer、空/缺/额外task、错误SHA/数值/类型、nonfinite、stale identity、ConfigMap/Git bytes和consumer blob mismatch。尚未产生R2m forward或scientific output。
+
+### 2026-07-22 FPCT-GPU-R2m immutable config preflight closure
+
+- 研究目标：在不改动任何 production scientific blob 的条件下，将 canonical certified geometry、consumer pointers、image identity、UID/root 与 immutable ConfigMap 形成可机器验证的闭包，并在首个 scientific output 前 fail closed。
+- Final candidate lock raw/canonical SHA=`3e85670c...`/`3665d462...`；geometry projection SHA=`221c5164...`；candidate image digest=`sha256:a374ca4c...`，run UID=`fpct-r2m-66e4cdd-v1`。
+- ConfigMap 由最终 lock 机械生成且 `immutable=true`。CPU-only K8s preflight 重新计算 Git、ConfigMap data、init-mounted 与 main-container 四份 raw SHA，四者均为 `3e85670c...`；schema、consumer closure、三 task 集合和 row count=3 全部通过。
+- Preflight 明确记录 `scientific_output=false` 与 `training_authorized=false`；没有加载模型或数据集，没有 CUDA/GPU forward，没有 task metric、checkpoint、accuracy/correctness、model-selection 或 held-out 访问。
+- Final gate additions只包含R2m validator/finalizer、immutable lock/ConfigMap绑定与run-UID-scoped K8s recipes；R2l production blobs保持byte-identical。下一步只能提交冻结的one-shot immutable GPU gate，不能直接训练。

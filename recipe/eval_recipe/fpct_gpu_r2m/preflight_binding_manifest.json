@@ -1,0 +1,15 @@
+{
+  "config_map_name": "fpct-r2m-lock-66e4cdd-v1",
+  "image_digest": "a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a",
+  "image_tree_sha256": "84b6a8b442dd44122be5cf3e94575f92e9bfededbb7905e39d0a567f0744aa2f",
+  "protocol_id": "fpct_gpu_r2m_preflight_binding_v1",
+  "run_lock_canonical_parsed_sha256": "3665d462d72b2aa586fcad4d1fb01bcc2dde5f00cab79340841ae58fc1bc9ca1",
+  "run_lock_path": "recipe/eval_recipe/fpct_gpu_r2m/immutable_v1_run_lock.json",
+  "run_lock_raw_sha256": "3e85670cda5e3895373b23a62b38b201e9191c259c1b7981ab8547e0280d1be9",
+  "run_uid": "fpct-r2m-66e4cdd-v1",
+  "schema_version": 1,
+  "scientific_code_commit": "66e4cdd197370edfb988bf5ae98d6987a9e43993",
+  "scientific_output": false,
+  "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1",
+  "training_authorized": false
+}

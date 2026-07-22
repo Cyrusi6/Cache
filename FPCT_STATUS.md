@@ -463,3 +463,12 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - Consumer closure枚举原R2 runner、balanced canary、semantic finalizer、confirmatory runner与validator实际JSON pointers，并锁定runner blob及原aggregate geometry AST SHA=`0b609e30...`。
 - Config validator与negative suite=`21 passed`；R2l lock因缺失`/resource_geometry`被明确拒绝，R2k geometry与R2m fixture通过，原aggregate AST fixture得到canonical geometry且expansion mean/p95均true。
 - 当前尚未创建R2m candidate/final lock、image、ConfigMap或Pod，未运行CUDA/model/dataset forward，未读取accuracy/correctness。
+
+### R2m config closure：CONFIG_PREFLIGHT_GO / IMMUTABLE GATE LOCKED
+
+- Protocol commit `66e4cdd197370edfb988bf5ae98d6987a9e43993` 已在任何新 model/CUDA/dataset forward 前推送；R2l 永久保持 `GPU_ENGINEERING_BLOCKED_R2L`，没有补写、重跑或重新解释。
+- Canonical certified geometry 从 R2k immutable lock 原对象机械提取，task 集合精确为 `ai2-arc,mmlu-redux,openbookqa`，row count=`3`，source/projection SHA=`6d5f6221...`/`221c5164...`。
+- R2m run UID/root=`fpct-r2m-66e4cdd-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1`；candidate image digest=`sha256:a374ca4c...`；run-lock raw/canonical SHA=`3e85670c...`/`3665d462...`。
+- CPU-only `CONFIG_PREFLIGHT_ONLY` Job 完成 `1/1`。Git、immutable ConfigMap、init-mounted 和 main-container lock 的 raw SHA 全部精确为 `3e85670c...`；schema 与 consumer closure 均 GO，`scientific_output=false`、`training_authorized=false`。
+- R2m config/finalizer targeted tests=`22 passed`。Production scientific blobs 与 R2l frozen allowlist byte-identical；未修改 operator/projector/prior/mask/certifier/training/statistics。
+- 当前仅授权按 frozen Job 顺序启动一次 immutable GPU gate。Matched smoke 仍要求 sealed finalizer 先写出 `R2M_IMMUTABLE_GO`；formal training 仍要求 matched smoke GO。Accuracy/correctness、model-selection、held-out 均未访问。

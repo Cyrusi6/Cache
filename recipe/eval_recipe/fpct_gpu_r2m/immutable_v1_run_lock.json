@@ -1,0 +1,323 @@
+{
+  "assets": {
+    "receiver": {
+      "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+      "id": "Qwen/Qwen3-0.6B",
+      "model_sha256": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b",
+      "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "root": "/models/c2c/Qwen3-0.6B",
+      "tokenizer_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+    },
+    "sender": {
+      "config_sha256": "486bedda3a6988332e60d9638a09ca4b260d34ebcf1b19e22cf3b140b63d8fe9",
+      "id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "model_sha256": "6e6001da2106d4757498752a021df6c2bdc332c650aae4bae6b0c004dcf14933",
+      "revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "root": "/models/c2c/TinyLlama-1.1B-Chat-v1.0",
+      "tokenizer_sha256": "bcd04f0eadf90287bd26e1a183ac487d8a141b09b06aecb7725bbdd343640f2e"
+    },
+    "training_alignment_sidecar_2048": {
+      "bytes": 41023706,
+      "container_path": "/fpct-run/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "examples": 2048,
+      "host_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990",
+      "source_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1/assets/mmlu_auxiliary_train_2048_certified.pt"
+    }
+  },
+  "classification": "IMMUTABLE_CONFIRMATORY_GATE",
+  "conditional_training": {
+    "formal": {
+      "examples": 2048,
+      "optimizer_steps": 64,
+      "performance_release_requires_complete_triplets": 12,
+      "requires_matched_smoke_go": true,
+      "runs": 36,
+      "seeds": [
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        56
+      ],
+      "triplets": 12
+    },
+    "matched_smoke": {
+      "arms": [
+        "c_pre",
+        "c_post",
+        "f"
+      ],
+      "examples": 128,
+      "optimizer_steps": 4,
+      "requires_immutable_final_go": true,
+      "seed": 104729
+    }
+  },
+  "config_closure": {
+    "canonical_parsed_sha256": "3665d462d72b2aa586fcad4d1fb01bcc2dde5f00cab79340841ae58fc1bc9ca1",
+    "consumer_ast_sha256": "0b609e30112b0daf4ac51fec97e548d2b16b179fba7f7e6143e502a26526acec",
+    "consumer_pointer_manifest_sha256": "db971da049e72871fabebfc6e040901086848649b6a5e405c29a7828aa56e036",
+    "geometry_projection_sha256": "221c5164c60ec4d27abe714a68cec2f6a1a630d031195e0f0e63818133a5c6a2",
+    "implementation_allowlist_sha256": "651fe57c93806133b0690fc41aabaf1577fd1ed97ca504894dae6e82663f28f6",
+    "schema_sha256": "ac662953139ca58a2f98ed81e3a08edeb154f0d6ac944c640d8cca5db5f73b6a"
+  },
+  "diagnostic_qualification": {
+    "aggregate_sha256": "275e24f031ae9f627b07eb91babe8847e192c9fa9891d102d8672d73a89d24ce",
+    "classification": "DIAGNOSTIC_ONLY",
+    "does_not_authorize_training": true,
+    "result_manifest_sha256": "0184b0a2573216923567fa98a76e3aed435ce2e8e454fd174781ba37b04041c8",
+    "run_lock_sha256": "93513df3113a074d6e0542bf918864c5c4b274eee6f3872e769a1532aa67c31a",
+    "run_uid": "fpct-r2l-diag-d71d21b-v1"
+  },
+  "execution_files": {
+    "active_canary_job": "57c6b74e0b11f3edcc33d82cb90f5bb0290a21b61edf77edfb66ac0701113a5c",
+    "bootstrap": "b41889cff41986e15563632a7c10a2d67097d3e009f7f4c636a1ac3936818a29",
+    "config_preflight_job": "b4592d6662052b292356114ddf37ea4e9a2f8cdaa770ddc95d57cf6f2a951c8b",
+    "confirmatory_runner": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75",
+    "dataset_adapters": "125c22bd09b2eec0f021f75496ff2a74ef1f795d9b8c0336b70342e6eba08dc0",
+    "fpct_attention": "14b52d9969b340e6a847e687b6725aece79aad96d87897aade18221ec701e9a0",
+    "gpu_gate_job": "38d34a5b5af0578fedad0cd02900c6b15a26a056d8fabdd8c982e82e592439a4",
+    "image_loader_job": "2b762c40b6a6962c85d4ed19a3d500790d92ea0633beba0dc8ca01b65acea283",
+    "matched_smoke_job": "99bb9409874380d63983ad0adde7df090da97a4ac221f8d13f6ddb388c7ca58a",
+    "pretrained_matrix_job": "c920037c1a9515287459495bc6f5fa2b003f408370aaa0be03bae1d7cf9495ad",
+    "projector": "c5e0cb7836d0a30659cec240169a1e2a58df58a65b71534ad9b83ec33480b7be",
+    "r2_runner": "61c423b8f6689e78c968bb7f5fbf50beff6fd338d3b447c758a19850b8ce925e",
+    "r2k_latency_runner": "2837a00be97f2dfd20031a88092e5d026918db362ca37fbe71119b7e16473d84",
+    "r2l_qwen_test": "cd6a1b3b2e862f9ceb456ec3e9b8e03093def92b15ae362f2cc58b6e4d34ca37",
+    "r2l_runner": "e621829457014a1f31277f3f399ccf5ebcdcb6432361426550dd888916157a94",
+    "r2l_runner_test": "d05d3dca501ec3a6fb586892d1269083a95072503a913a29b26977ee757a97e1",
+    "r2m_config_validator": "3754744ef04b6b3b2314340015fb84a9035a418af54dc74f04edc686d55aba87",
+    "r2m_finalizer": "1399083c11a71b81b59a147d8120c7d7426cf472b44b191cb6069ff28e7ac35a",
+    "seed_triplet_job": "97a6214442d6714867bc5e3876d1070c0e6659b6bac832a3e7f52a7b95e6e712",
+    "semantic_gate_job": "6f1c10aabe9c0369dbaf83a39a127b9262a46e1dce74c03fa06b4989b63d7c6d",
+    "trainer": "a5dbd927e6f23fd4a6a7e9c3491fb2aa1e6b64889a74228b5dbc8f5dd38be048",
+    "wrapper": "32e07f2664641ef198bd2ff2df57ce926e01234b017d97ae175bf999e6498220"
+  },
+  "firewall": {
+    "accuracy_before_formal_release": false,
+    "correctness_accessed": false,
+    "held_out_accessed": false,
+    "model_selection_accessed": false,
+    "r2k_retry_or_reinterpret": false,
+    "r2l_retry_or_reinterpret": false,
+    "same_revision_retry_after_immutable_output": false,
+    "training_authorized_before_full_gate_go": false,
+    "training_authorized_before_r2m_final_go": false
+  },
+  "geometry_source": {
+    "file_sha256": "d5d55ad310be50cf2a5dfb0a8cf6747a9dc98510fff668a542cf62b19efb1f62",
+    "geometry_projection_sha256": "221c5164c60ec4d27abe714a68cec2f6a1a630d031195e0f0e63818133a5c6a2",
+    "git_blob": "e993f8dc79207a439f5d029feb478307c2be34bb",
+    "json_pointer": "/resource_geometry/tinyllama_all_splits",
+    "path": "recipe/eval_recipe/fpct_gpu_r2k/immutable_v1_run_lock.json",
+    "row_count": 3
+  },
+  "image": {
+    "architecture": "amd64",
+    "config_sha256": "24a4215577927feb8c4098006830f9bc504d31061b0aee070e593f6b0620e0db",
+    "distinct_from_r2l_image": true,
+    "distribution": "run_uid_scoped_containerd_import",
+    "distribution_tar": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1/assets/fpct-gpu-r2m-66e4cdd.tar",
+    "distribution_tar_bytes": 3525808128,
+    "distribution_tar_sha256": "84e9e1a64d8e8711fa24d9e266a16d99201be89256d71fee2326511e9d780cb6",
+    "image_size_bytes": 3525783968,
+    "manifest_list_sha256": "a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a",
+    "parent_runtime_image": "docker.io/library/fpct-gpu-r2l:43b825b@sha256:e805c714f4a77be82fe89e36a100750ba25ad815b5af004d6f9ae4233f37492e",
+    "reference": "docker.io/library/fpct-gpu-r2m:66e4cdd@sha256:a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a",
+    "source_tree_sha256": "84b6a8b442dd44122be5cf3e94575f92e9bfededbb7905e39d0a567f0744aa2f"
+  },
+  "immutable_checker_commit": "43b825b34204326029590da7b9d51b67d7916208",
+  "immutable_gate": {
+    "balanced_active_canary": {
+      "block_count": 8,
+      "bootstrap_replicates": 50000,
+      "bootstrap_seed": 20260722,
+      "checkpoint_native_required": true,
+      "cuda_balanced_median_ratio_max": 1.35,
+      "cuda_block_bootstrap_one_sided_95_ucb_max": 1.5,
+      "forced_on_required": true,
+      "measurements_per_arm": 50,
+      "warmups_per_arm": 20
+    },
+    "failure_terminal": "GPU_ENGINEERING_BLOCKED_R2M",
+    "final_success_classification": "R2M_IMMUTABLE_GO",
+    "infrastructure_terminal": "INFRASTRUCTURE_INCONCLUSIVE_R2M",
+    "one_shot_after_scientific_output": true,
+    "original_compatibility_gate": {
+      "expansion_mean_max": 1.35,
+      "expansion_p95_max": 1.5,
+      "latency_max_over_legacy_p95_max": 1.75,
+      "latency_ratio_of_medians_max": 1.5,
+      "measurements": 7,
+      "operator_conditions_required": 16,
+      "peak_hbm_fraction_strict_max": 0.9,
+      "profiles_required": [
+        "P2_CPOST_OFF",
+        "P3_F_OFF",
+        "P4_F_REPLICATED",
+        "P5_F_M1",
+        "P6_F_FORCED"
+      ],
+      "required_checks": 23,
+      "synthetic_numerical_required": true,
+      "warmups": 1
+    },
+    "second_provenance_omission": "PAUSE_EXECUTION_CAMPAIGN_NO_AUTOMATIC_R2N",
+    "semantic_checks": {
+      "checkpoint_native_max_abs": 0.0,
+      "checkpoint_native_requires_tensor_byte_sha_equal": true,
+      "checkpoint_native_requires_torch_equal": true,
+      "checkpoint_native_ulp_max": 0,
+      "decode_steps": 4,
+      "dtypes": [
+        "float32",
+        "bfloat16"
+      ],
+      "qwen_layers": 28,
+      "required": [
+        "native_parent_map_complete",
+        "unknown_sidecar_fails_closed",
+        "mixed_memory_exact_null_bitwise",
+        "mixed_batch_exact_active_isolation",
+        "actual_qwen_decode4_exact_null",
+        "active_route_not_bypassed"
+      ]
+    },
+    "training_requires_all_checks": true
+  },
+  "kubernetes": {
+    "config_map": "fpct-r2m-lock-66e4cdd-v1",
+    "config_map_immutable": true,
+    "gpu_per_seed_pod": 2,
+    "immutable_gate_gpu_count": 1,
+    "maximum_parallel_seed_pods": 1,
+    "namespace": "c2c-research",
+    "node_name": "4090-48gx2",
+    "preflight_gpu_count": 0,
+    "retry": {
+      "post_output_same_revision": 0,
+      "pre_scientific_output_infrastructure_only": 1,
+      "selective_arm_retry": false,
+      "whole_triplet_infrastructure_only": 1
+    }
+  },
+  "normative": {
+    "confirmatory_manifest": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4",
+    "confirmatory_preregistration": "c97f7322ad6aa1123e09591570ee876d86bd7a4601c82d4b88f342f77ff4783c",
+    "content_group_split_manifest": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050",
+    "diagnostic_panel_manifest": "bed52891c5a82c05adf47fc463e684982d94447c31a6d43e2ae5af2ec1df15f7",
+    "gpu_numerical_protocol": "e8c7129400cff8eb82cbad61e9143af8ee8f68fb101899d38019ab3a10d1d844",
+    "metric_null_floor_spec": "3206b7cda8d478575fedc471fd322cd224e72e569d192220f732a8ef7e3204eb",
+    "r2l_allowlist": "4dd2c5284587d15d0632bf7de63f5830f0f4df6e8dbc648dc6a0cd28989a588c",
+    "r2l_decision_tree": "8134c2237b18674b92e6ad2b75f1be28745911d6c3d22032cc98e3cb1b7ae2fd",
+    "r2l_diagnostic_result_manifest": "0184b0a2573216923567fa98a76e3aed435ce2e8e454fd174781ba37b04041c8",
+    "r2l_semantic_protocol": "35f3711d8efa7e2f193783159bb0479ba39d9de5ca1324c4f96adea052482a07",
+    "r2l_truth_table": "f81e17dce1cd161432d6c3d3961242e04c0eb2e908ac1aa1c743a8833cdf1603"
+  },
+  "operator_repair_commit": "d71d21b1e315787e9af1cefb324abd310fd335f7",
+  "preflight": {
+    "classification": "CONFIG_PREFLIGHT_ONLY",
+    "requires_exact_git_configmap_mounted_container_bytes": true,
+    "requires_immutable_configmap": true,
+    "scientific_output": false,
+    "training_authorized": false
+  },
+  "protocol_id": "fpct_gpu_r2m_immutable_confirmatory_gate_v1",
+  "r2k_predecessor": {
+    "expected_native_null_bf16": 0.625,
+    "expected_native_null_fp32": 3.7909e-05,
+    "image_digest": "sha256:bc19b894c18eea266596011b748a4a22c73b80788e0fdd4a08b5f33059bf51ca",
+    "protocol_commit": "2a282a0",
+    "resource_median_ratio": 0.710337,
+    "resource_p95_ratio": 0.706328,
+    "retry_or_reinterpret": false,
+    "run_lock_sha256": "d5d55ad310be50cf2a5dfb0a8cf6747a9dc98510fff668a542cf62b19efb1f62",
+    "run_uid": "fpct-r2k-458b026-v1",
+    "scientific_code_commit": "458b0260fc5475c9ae578eb68b8dff2b2699e2f4",
+    "terminal": "GPU_ENGINEERING_BLOCKED_R2K"
+  },
+  "r2l_predecessor": {
+    "image_digest": "sha256:e805c714f4a77be82fe89e36a100750ba25ad815b5af004d6f9ae4233f37492e",
+    "immutable_checker_commit": "43b825b34204326029590da7b9d51b67d7916208",
+    "operator_repair_commit": "d71d21b1e315787e9af1cefb324abd310fd335f7",
+    "result": "21/23; expansion_mean/p95 failed because geometry was absent",
+    "retry_or_reinterpret": false,
+    "run_lock_sha256": "ed95ac14219c1c8cefe83f93a32667ddcf318f2a2df85b0725ec5217bdceea96",
+    "run_uid": "fpct-r2l-43b825b-v1",
+    "terminal": "GPU_ENGINEERING_BLOCKED_R2L"
+  },
+  "r2m_protocol_commit": "66e4cdd197370edfb988bf5ae98d6987a9e43993",
+  "resource_geometry": {
+    "tinyllama_all_splits": {
+      "source_sha256": "6d5f6221be15db5af030f9c1d7702b6d1e814bfe4e423e065353f3167c914284",
+      "tasks": {
+        "ai2-arc": {
+          "max": 1.4024390243902438,
+          "mean": 1.2374040678425364,
+          "p95": 1.2973320158102766
+        },
+        "mmlu-redux": {
+          "max": 1.4183673469387754,
+          "mean": 1.2259415516723047,
+          "p95": 1.3
+        },
+        "openbookqa": {
+          "max": 1.3142857142857143,
+          "mean": 1.2390702194565386,
+          "p95": 1.2818298368298369
+        }
+      }
+    }
+  },
+  "run_uid": "fpct-r2m-66e4cdd-v1",
+  "runtime": {
+    "accelerate": "1.9.0",
+    "attention_backend": "eager",
+    "cuda": "12.4",
+    "datasets": "4.0.0",
+    "prior_dtype": "float32",
+    "python": "3.11.11",
+    "scipy": "1.15.3",
+    "torch": "2.6.0+cu124",
+    "transformers": "4.52.4"
+  },
+  "schema_version": 1,
+  "scientific_code_branch": "research/fpct-factorized-transport",
+  "scientific_code_commit": "66e4cdd197370edfb988bf5ae98d6987a9e43993",
+  "scientific_code_upstream": "66e4cdd197370edfb988bf5ae98d6987a9e43993",
+  "status": "CONFIG_PREFLIGHT_CANDIDATE",
+  "storage": {
+    "container_run_root": "/fpct-run",
+    "dataset_host_root": "/netdisk/lijunsi/c2c-route1-identifiability/data/c2c",
+    "host_conda_mount": false,
+    "host_site_packages_mount": false,
+    "model_host_root": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+    "precreated_directories": [
+      "assets",
+      "attestations",
+      "jobs",
+      "preflight",
+      "results/gpu_gate",
+      "results/pretrained_matrix",
+      "results/semantic/synthetic",
+      "results/semantic/qwen_decode4",
+      "results/active_canary/blocks",
+      "results/matched_smoke",
+      "results/formal_training",
+      "wandb",
+      "wandb-cache",
+      "wandb-config",
+      "wandb-data"
+    ],
+    "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1",
+    "source_worktree_mount": false
+  }
+}

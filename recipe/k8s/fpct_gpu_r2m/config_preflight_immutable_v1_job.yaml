@@ -1,0 +1,69 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-r2m-preflight-66e4cdd
+  namespace: c2c-research
+  labels: &labels {project: fpct, study: confirmatory-r2m, git_sha: "66e4cdd1", seed: preflight, arm: config-preflight, run_uid: fpct-r2m-66e4cdd-v1}
+spec:
+  backoffLimit: 0
+  template:
+    metadata: {labels: *labels}
+    spec:
+      restartPolicy: Never
+      nodeName: 4090-48gx2
+      initContainers:
+      - name: mounted-lock-snapshot
+        image: docker.io/library/fpct-gpu-r2m:66e4cdd@sha256:a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a
+        imagePullPolicy: IfNotPresent
+        command: ["bash", "-lc", "set -euo pipefail; cp /opt/fpct-lock/immutable_v1_run_lock.json /preflight/init_lock.json; sha256sum /preflight/init_lock.json > /preflight/init_lock.sha256"]
+        env: [{name: CUDA_VISIBLE_DEVICES, value: ""}]
+        volumeMounts:
+        - {name: run-lock, mountPath: /opt/fpct-lock, readOnly: true}
+        - {name: preflight-work, mountPath: /preflight}
+      containers:
+      - name: config-preflight
+        image: docker.io/library/fpct-gpu-r2m:66e4cdd@sha256:a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a
+        imagePullPolicy: IfNotPresent
+        command: ["bash", "-lc"]
+        args:
+        - |
+          set -euo pipefail
+          cp /opt/fpct-lock/immutable_v1_run_lock.json /preflight/main_lock.json
+          expected=$(/opt/conda/bin/python3.11 -c 'import json; print(json.load(open("/opt/fpct-lock/preflight_binding_manifest.json"))["run_lock_raw_sha256"])')
+          /opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py \
+            --repo-root /opt/fpct \
+            --target /opt/fpct/script/analysis/fpct_gpu_r2m_config_validator.py \
+            --attestation-out /fpct-run/attestations/config_preflight.json \
+            -- preflight \
+            --repo /opt/fpct \
+            --lock /opt/fpct-lock/immutable_v1_run_lock.json \
+            --schema /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/run_lock.schema.json \
+            --canonical-geometry /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/canonical_resource_geometry.json \
+            --consumer-manifest /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/consumer_pointer_manifest.json \
+            --allowlist /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/implementation_allowlist.json \
+            --expected-run-uid fpct-r2m-66e4cdd-v1 \
+            --expected-root /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1 \
+            --expected-commit 66e4cdd197370edfb988bf5ae98d6987a9e43993 \
+            --expected-raw-sha256 "$expected" \
+            --configmap-object /fpct-run/preflight/configmap_object.json \
+            --mounted-lock /preflight/init_lock.json \
+            --container-lock /preflight/main_lock.json \
+            --output /fpct-run/preflight/config_preflight_result.json
+        env:
+        - {name: CUDA_VISIBLE_DEVICES, value: ""}
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TRANSFORMERS_OFFLINE, value: "1"}
+        resources:
+          requests: {cpu: "2", memory: 4Gi}
+          limits: {cpu: "4", memory: 8Gi}
+        volumeMounts:
+        - {name: run-lock, mountPath: /opt/fpct-lock, readOnly: true}
+        - {name: preflight-work, mountPath: /preflight}
+        - {name: fpct-run, mountPath: /fpct-run}
+      volumes:
+      - name: run-lock
+        configMap: {name: fpct-r2m-lock-66e4cdd-v1}
+      - name: preflight-work
+        emptyDir: {}
+      - name: fpct-run
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1, type: Directory}

@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-r2m-semantic-66e4cdd
+  namespace: c2c-research
+  labels: &labels {project: fpct, study: confirmatory-r2m, git_sha: "66e4cdd1", seed: diagnostic, arm: semantic-gate, run_uid: fpct-r2m-66e4cdd-v1}
+spec:
+  backoffLimit: 0
+  template:
+    metadata: {labels: *labels}
+    spec:
+      restartPolicy: Never
+      nodeName: 4090-48gx2
+      containers:
+      - name: semantic-gate
+        image: docker.io/library/fpct-gpu-r2m:66e4cdd@sha256:a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a
+        imagePullPolicy: IfNotPresent
+        command: ["bash", "-lc"]
+        args:
+        - |
+          set -euo pipefail
+          /opt/conda/bin/python3.11 -c 'import json; p=json.load(open("/fpct-run/results/pretrained_matrix/pretrained_r2_result.json")); assert p["status"] == "GO" and len(p["checks"]) == 23 and all(p["checks"].values())'
+          /opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_gpu_r2l_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/semantic_synthetic.json -- synthetic --output /fpct-run/results/semantic/synthetic/synthetic.json
+          /opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_gpu_r2l_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/qwen_decode4.json -- qwen-decode4 --output /fpct-run/results/semantic/qwen_decode4/qwen_decode4.json
+          /opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_gpu_r2l_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/semantic_aggregate.json -- semantic-aggregate --original-result /fpct-run/results/pretrained_matrix/pretrained_r2_result.json --conditions-root /fpct-run/results/pretrained_matrix --floors /fpct-run/results/gpu_gate/metric_null_floors.json --synthetic /fpct-run/results/semantic/synthetic/synthetic.json --qwen-decode4 /fpct-run/results/semantic/qwen_decode4/qwen_decode4.json --output /fpct-run/results/semantic/semantic_result.json
+        env:
+        - {name: C2C_MODEL_ROOT, value: /models/c2c}
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TRANSFORMERS_OFFLINE, value: "1"}
+        - {name: TOKENIZERS_PARALLELISM, value: "false"}
+        resources:
+          limits: {nvidia.com/gpu: "1"}
+          requests: {nvidia.com/gpu: "1", cpu: "8", memory: 64Gi}
+        volumeMounts:
+        - {name: run-lock, mountPath: /opt/fpct-lock, readOnly: true}
+        - {name: models, mountPath: /models/c2c, readOnly: true}
+        - {name: fpct-run, mountPath: /fpct-run}
+      volumes:
+      - name: run-lock
+        configMap: {name: fpct-r2m-lock-66e4cdd-v1}
+      - name: models
+        hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/models, type: Directory}
+      - name: fpct-run
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1, type: Directory}

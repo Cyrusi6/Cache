@@ -1,0 +1,46 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-r2m-smoke-66e4cdd
+  namespace: c2c-research
+  labels: &labels {project: fpct, study: confirmatory-r2m, git_sha: "66e4cdd1", seed: "104729", arm: matched-smoke, run_uid: fpct-r2m-66e4cdd-v1}
+spec:
+  backoffLimit: 0
+  template:
+    metadata: {labels: *labels}
+    spec:
+      restartPolicy: Never
+      nodeName: 4090-48gx2
+      containers:
+      - name: matched-smoke
+        image: docker.io/library/fpct-gpu-r2m:66e4cdd@sha256:a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a
+        imagePullPolicy: IfNotPresent
+        command: ["bash", "-lc"]
+        args:
+        - |
+          set -euo pipefail
+          /opt/conda/bin/python3.11 -c 'import json; p=json.load(open("/fpct-run/results/immutable_final.json")); assert p["classification"] == "R2M_IMMUTABLE_GO" and p["training_authorized"] is True'
+          /opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_confirmatory_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/matched_smoke.json -- matched-smoke --run-lock /opt/fpct-lock/immutable_v1_run_lock.json --output-root /fpct-run/results
+        env:
+        - {name: C2C_MODEL_ROOT, value: /models/c2c}
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TRANSFORMERS_OFFLINE, value: "1"}
+        - {name: WANDB_MODE, value: offline}
+        - {name: WANDB_DIR, value: /fpct-run/wandb}
+        - {name: WANDB_CACHE_DIR, value: /fpct-run/wandb-cache}
+        - {name: WANDB_CONFIG_DIR, value: /fpct-run/wandb-config}
+        - {name: WANDB_DATA_DIR, value: /fpct-run/wandb-data}
+        resources:
+          limits: {nvidia.com/gpu: "2"}
+          requests: {nvidia.com/gpu: "2", cpu: "8", memory: 64Gi}
+        volumeMounts:
+        - {name: run-lock, mountPath: /opt/fpct-lock, readOnly: true}
+        - {name: models, mountPath: /models/c2c, readOnly: true}
+        - {name: fpct-run, mountPath: /fpct-run}
+      volumes:
+      - name: run-lock
+        configMap: {name: fpct-r2m-lock-66e4cdd-v1}
+      - name: models
+        hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/models, type: Directory}
+      - name: fpct-run
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1, type: Directory}

@@ -277,6 +277,14 @@ def validate_production_blobs(repo: Path, allowlist: dict[str, Any]) -> dict[str
 
 
 def validate_changed_paths(repo: Path, allowlist: dict[str, Any]) -> list[str]:
+    if not (repo / ".git").exists():
+        provenance_path = repo / ".fpct_image_provenance.json"
+        if not provenance_path.is_file():
+            raise ConfigClosureError("image has neither Git metadata nor immutable provenance")
+        provenance = strict_load(provenance_path)
+        if provenance.get("branch") != "research/fpct-factorized-transport":
+            raise ConfigClosureError("immutable image branch provenance mismatch")
+        return [f"<immutable-image-tree:{provenance['tree_sha256']}>"]
     baseline = allowlist["baseline_commit"]
     output = subprocess.run(
         ["git", "diff", "--name-only", baseline, "--"], cwd=repo,
