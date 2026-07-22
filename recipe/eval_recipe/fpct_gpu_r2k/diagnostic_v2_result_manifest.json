@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2k_diagnostic_v2_result",
+  "status": "DIAGNOSTIC_QUALIFIED",
+  "classification": "DIAGNOSTIC_ONLY",
+  "may_produce_r2k_go": false,
+  "run_uid": "fpct-r2k-diag-458b026-v2",
+  "scientific_code_commit": "458b0260fc5475c9ae578eb68b8dff2b2699e2f4",
+  "image_digest": "sha256:3a4240bc26610b43737861f46cbee88de5d1552002d03de9f0f9407d71da32e5",
+  "run_lock_sha256": "3a283885bdb1ff2639f13d3cbe3875b2ab673c47d28a88741144b7dfafcb56f6",
+  "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v2",
+  "independent_verification": {
+    "verifier": "script/analysis/fpct_gpu_r2k_diagnostic_verify.py",
+    "verifier_sha256": "c1abf1f9a8a49f09c5d1e2d5baa0380869050c37523acd8f3609dab4a124d7ee",
+    "tracked_summary": "recipe/eval_recipe/fpct_gpu_r2k/diagnostic_v2_verified_summary.json",
+    "tracked_summary_sha256": "8935481c428ed5ec262d1b5876f9a6894c73838d597d1be7a0896a2a32c1afa1",
+    "raw_sample_contract_verified": "8 blocks x 2 canaries x 2 arms x 50 measurements",
+    "sealed_attestations_verified": true,
+    "order_and_seed_contract_verified": true,
+    "aggregate_and_bootstrap_recomputed": true,
+    "provenance_verified": true
+  },
+  "qualification": {
+    "checkpoint_native": {
+      "cuda_balanced_median_ratio": 1.0583290848080358,
+      "cuda_block_bootstrap_one_sided_95_ucb": 1.077335261026937,
+      "qualified": true
+    },
+    "forced_on": {
+      "cuda_balanced_median_ratio": 1.074972132769662,
+      "cuda_block_bootstrap_one_sided_95_ucb": 1.077734366294743,
+      "qualified": true
+    },
+    "frozen_thresholds": {
+      "balanced_median_ratio_max": 1.35,
+      "one_sided_block_bootstrap_95_ucb_max": 1.5
+    }
+  },
+  "resources": {
+    "peak_hbm_gib_max": 4.866596698760986,
+    "expansion_mean": 1.2268908023834229,
+    "expansion_p95": 1.2268908023834229,
+    "hot_path_host_sync_events": 0
+  },
+  "large_local_artifacts": [
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v2/results/diagnostic_aggregate.json",
+      "bytes": 1754,
+      "sha256": "d1c8dd03b4312f3231db2191a92091612927303219dfe3ba54512c3d31913066"
+    },
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v2/results/geometry/geometry.json",
+      "bytes": 69348,
+      "sha256": "abbbfa614666d9e720417f62a0da5f084c2d9d042b74e321328d9e3c50fb88cc"
+    },
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v2/results/traces/c_post.chrome.json",
+      "bytes": 105994653,
+      "sha256": "836aa3a7cf6324526852897040189a4ae59a0f13ded0b8bfe577b280591ca305"
+    },
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v2/results/traces/f.chrome.json",
+      "bytes": 113841027,
+      "sha256": "bc3abd6467ea325940da3fb0a56efa7cb04a7bf1f7f6c73c2dc6a371ba47488b"
+    },
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v2/results/traces/trace_manifest.json",
+      "bytes": 651,
+      "sha256": "3acbe6d636f44bd40e706312ddb9b538cf825193afeb1f624679f0017ad9071d"
+    }
+  ],
+  "firewall": {
+    "accuracy_or_correctness_accessed": false,
+    "training_started": false,
+    "checkpoint_created": false,
+    "model_selection_accessed": false,
+    "held_out_accessed": false,
+    "r2j_retried_or_reinterpreted": false
+  },
+  "decision": "Qualified only to freeze and execute a distinct one-shot immutable R2k gate. It is not an R2k GO and does not authorize training by itself."
+}

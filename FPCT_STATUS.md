@@ -376,3 +376,12 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - 8/8 latency blocks与geometry均sealed完成；aggregate前未读取ratio。
 - Trace attempt 1在任何trace pretrained forward前因预建空目录与runner `exist_ok=false`冲突停止；failure attestation已重命名保留。
 - Resume不改code/image/UID/root，不覆盖8个blocks或geometry；只移除确认空的trace目录并执行缺失trace+aggregate，属于infrastructure-only resume。
+
+### R2k diagnostic v2：DIAGNOSTIC_QUALIFIED
+
+- V2已完成8/8 sealed fresh-process blocks、geometry、独立trace与aggregate；独立verifier从全部raw samples重算order/seed、median、50,000次block-bootstrap UCB、resource、telemetry和provenance。
+- Checkpoint-native CUDA median ratio=`1.0583291`，one-sided 95% UCB=`1.0773353`；forced-on为`1.0749721`与`1.0777344`。两者均通过diagnostic-only冻结建议门槛`median<=1.35`、`UCB<=1.50`。
+- Peak HBM=`4.8666 GiB`，mean/p95 expansion=`1.2268908`；所有block为同一RTX 4090 UUID、P0、无throttle、无foreign compute process。FPCT hot scopes内host-sync事件为0。
+- Trace scientific-scope F/C_post=`1.09406`，summed-kernel ratio=`1.04985`。Pure geometry micro panel的`3.29--3.79`仅为descriptive shape stress，不是freeze endpoint。
+- 当前状态仅授权基于冻结science `458b0260...`创建全新image/UID/root/run-lock并执行一次`IMMUTABLE_CONFIRMATORY_GATE`。Diagnostic不能产生R2k GO，R2j仍永久为`GPU_ENGINEERING_BLOCKED_R2`。
+- Accuracy/correctness、training、checkpoint、model-selection与held-out均未读取或生成；immutable gate、matched smoke与formal training尚未完成。

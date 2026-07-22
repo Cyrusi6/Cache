@@ -1324,3 +1324,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 
 - V2已sealed完成8/8 latency blocks和geometry。Trace attempt 1在model setup/forward前因空的`results/traces`已存在而触发`FileExistsError`；尚无trace artifact或aggregate，ratio字段未读取。
 - 失败attestation以`trace_attempt1_failure.json`保留；确认空目录被安全移除。Resume Job使用相同code/image/UID/root，已有blocks/geometry按hash只读跳过，只运行缺失trace和aggregate；不构成科学重跑。
+
+### 2026-07-22 FPCT-GPU-R2k diagnostic v2 qualification
+
+- 研究目标：在不读取task correctness的条件下，前瞻判断equivalent flat-atom实现是否足以freeze到单次immutable compatibility gate。
+- 8/8 sealed ABBA blocks、checkpoint-native与forced-on两套20+50 canary全部完成。独立reduction得到CUDA median/UCB分别为`1.058329/1.077335`和`1.074972/1.077734`，均通过预注册diagnostic-only门槛`1.35/1.50`。
+- Telemetry固定同一RTX 4090 UUID、P0、2520--2745 MHz、34--53 C、无throttle/foreign process；peak HBM=`4.8666 GiB`，mean/p95 expansion=`1.22689`，hot scopes无host synchronization。
+- Trace中scientific-scope ratio=`1.09406`、summed-kernel ratio=`1.04985`；pure geometry panel的高micro ratio只作为descriptive shape evidence保留，不能替代正式原23-check resource gate。
+- 结论=`DIAGNOSTIC_QUALIFIED`且仍为`DIAGNOSTIC_ONLY`。它不救援R2j、不产生GO、不授权训练；下一步必须从science `458b0260...`构建全新immutable image/run-lock，并在读取正式ratio后禁止同revision修改重试。
