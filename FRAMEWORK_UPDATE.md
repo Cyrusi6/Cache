@@ -1332,3 +1332,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Telemetry固定同一RTX 4090 UUID、P0、2520--2745 MHz、34--53 C、无throttle/foreign process；peak HBM=`4.8666 GiB`，mean/p95 expansion=`1.22689`，hot scopes无host synchronization。
 - Trace中scientific-scope ratio=`1.09406`、summed-kernel ratio=`1.04985`；pure geometry panel的高micro ratio只作为descriptive shape evidence保留，不能替代正式原23-check resource gate。
 - 结论=`DIAGNOSTIC_QUALIFIED`且仍为`DIAGNOSTIC_ONLY`。它不救援R2j、不产生GO、不授权训练；下一步必须从science `458b0260...`构建全新immutable image/run-lock，并在读取正式ratio后禁止同revision修改重试。
+
+### 2026-07-22 FPCT-GPU-R2k immutable confirmatory gate lock
+
+- 从冻结science `458b0260...`的detached archive构建全新镜像`sha256:bc19b894...`；embedded tree仍为`50861304...`，但digest与diagnostic image明确不同。镜像tar SHA=`333424aa...`。
+- 新UID/root=`fpct-r2k-458b026-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-458b026-v1`，run-lock SHA=`d5d55ad3...`；训练sidecar只读复制后SHA保持`48caee80...`。
+- 原23-check compatibility gate、1+7 timing、1.50/1.75 latency ceiling、1.35/1.50 expansion和strict 90% HBM门槛未改；新增balanced checkpoint-native/forced-on canary使用8 blocks、20+50和1.35/1.50 median/UCB门槛。
+- 决策树冻结为：原gate先GO，再运行active canary；两者都GO才进入matched smoke。正式ratio读取后不得在同revision重试，任一失败为`GPU_ENGINEERING_BLOCKED_R2K`。
+- 本commit仍是pre-output lock：尚未submit K8s、未运行immutable pretrained output、未训练、未读accuracy/correctness/model-selection/held-out。

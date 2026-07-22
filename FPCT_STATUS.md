@@ -385,3 +385,11 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - Trace scientific-scope F/C_post=`1.09406`，summed-kernel ratio=`1.04985`。Pure geometry micro panel的`3.29--3.79`仅为descriptive shape stress，不是freeze endpoint。
 - 当前状态仅授权基于冻结science `458b0260...`创建全新image/UID/root/run-lock并执行一次`IMMUTABLE_CONFIRMATORY_GATE`。Diagnostic不能产生R2k GO，R2j仍永久为`GPU_ENGINEERING_BLOCKED_R2`。
 - Accuracy/correctness、training、checkpoint、model-selection与held-out均未读取或生成；immutable gate、matched smoke与formal training尚未完成。
+
+### R2k immutable v1：PRE-OUTPUT LOCKED
+
+- Frozen science/upstream=`458b0260...`；全新immutable image=`sha256:bc19b894...`，embedded tree=`50861304...`，与diagnostic image digest不同。
+- Run UID/root=`fpct-r2k-458b026-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-458b026-v1`；run-lock SHA=`d5d55ad310be50cf2a5dfb0a8cf6747a9dc98510fff668a542cf62b19efb1f62`。
+- 原complete synthetic gate、16 conditions、P2--P6、23/23 checks和1+7 resource thresholds全部保持不变；新增8-block checkpoint-native/forced-on balanced canary只能附加、不能替代原gate。
+- 读取正式ratio后同revision重试次数为0；任一正式失败终止为`GPU_ENGINEERING_BLOCKED_R2K`。只有两套gate均GO才授权seed-104729 matched smoke。
+- 当前仅完成lock与隔离资产准备；尚未submit image loader/gate，未读取accuracy/correctness，未训练或创建checkpoint。

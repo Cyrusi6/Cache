@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-r2k-gpu-458b026
+  namespace: c2c-research
+  labels: &labels
+    project: fpct
+    study: confirmatory-r2k
+    git_sha: "458b0260"
+    seed: diagnostic
+    arm: gpu-gate
+    run_uid: fpct-r2k-458b026-v1
+spec:
+  backoffLimit: 0
+  template:
+    metadata: {labels: *labels}
+    spec:
+      restartPolicy: Never
+      nodeName: 4090-48gx2
+      containers:
+      - name: gpu-gate
+        image: docker.io/library/fpct-gpu-r2k:458b026@sha256:bc19b894c18eea266596011b748a4a22c73b80788e0fdd4a08b5f33059bf51ca
+        imagePullPolicy: IfNotPresent
+        command: ["/opt/conda/bin/python3.11", "-I", "/opt/fpct/script/runtime/fpct_bootstrap.py"]
+        args: ["--repo-root", "/opt/fpct", "--target", "/opt/fpct/script/experiment/fpct_gpu_r2_runner.py", "--include-gpu-closure", "--attestation-out", "/fpct-run/attestations/gpu_gate.json", "--", "gpu-gate-sequence", "--run-lock", "/opt/fpct-lock/immutable_v1_run_lock.json", "--floor-spec", "/opt/fpct/recipe/eval_recipe/fpct_gpu_r2/metric_null_floor_spec.json", "--receiver-config", "/models/c2c/Qwen3-0.6B/config.json", "--output-root", "/fpct-run/results/gpu_gate"]
+        env:
+        - {name: C2C_MODEL_ROOT, value: /models/c2c}
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TRANSFORMERS_OFFLINE, value: "1"}
+        - {name: TOKENIZERS_PARALLELISM, value: "false"}
+        resources:
+          limits: {nvidia.com/gpu: "1"}
+          requests: {nvidia.com/gpu: "1", cpu: "8", memory: 48Gi}
+        volumeMounts:
+        - {name: run-lock, mountPath: /opt/fpct-lock, readOnly: true}
+        - {name: models, mountPath: /models/c2c, readOnly: true}
+        - {name: fpct-run, mountPath: /fpct-run}
+      volumes:
+      - name: run-lock
+        configMap: {name: fpct-r2k-lock-458b026-v1}
+      - name: models
+        hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/models, type: Directory}
+      - name: fpct-run
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/fpct-r2k-458b026-v1, type: Directory}

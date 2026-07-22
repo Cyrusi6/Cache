@@ -1,0 +1,73 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-r2k-active-458b026
+  namespace: c2c-research
+  labels: &labels
+    project: fpct
+    study: confirmatory-r2k
+    git_sha: "458b0260"
+    seed: diagnostic
+    arm: balanced-active-canary
+    run_uid: fpct-r2k-458b026-v1
+spec:
+  backoffLimit: 0
+  template:
+    metadata: {labels: *labels}
+    spec:
+      restartPolicy: Never
+      nodeName: 4090-48gx2
+      containers:
+      - name: active-canary
+        image: docker.io/library/fpct-gpu-r2k:458b026@sha256:bc19b894c18eea266596011b748a4a22c73b80788e0fdd4a08b5f33059bf51ca
+        imagePullPolicy: IfNotPresent
+        command: ["bash", "-lc"]
+        args:
+        - |
+          set -euo pipefail
+          for block in 0 1 2 3 4 5 6 7; do
+            output=$(printf '/fpct-run/results/active_canary/blocks/block_%02d.json' "$block")
+            attest=$(printf '/fpct-run/attestations/active_block_%02d.json' "$block")
+            /opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py \
+              --repo-root /opt/fpct \
+              --target /opt/fpct/script/experiment/fpct_gpu_r2k_latency.py \
+              --include-gpu-closure \
+              --attestation-out "$attest" \
+              -- block \
+              --run-lock /opt/fpct-lock/immutable_v1_run_lock.json \
+              --panel /opt/fpct/recipe/eval_recipe/fpct_gpu_r2/diagnostic_panel_manifest.json \
+              --data-root /datasets/c2c \
+              --block-index "$block" \
+              --output "$output"
+          done
+          /opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py \
+            --repo-root /opt/fpct \
+            --target /opt/fpct/script/experiment/fpct_gpu_r2k_latency.py \
+            --attestation-out /fpct-run/attestations/active_aggregate.json \
+            -- aggregate \
+            --root /fpct-run/results/active_canary/blocks \
+            --output /fpct-run/results/active_canary/aggregate.json
+        env:
+        - {name: C2C_MODEL_ROOT, value: /models/c2c}
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TRANSFORMERS_OFFLINE, value: "1"}
+        - {name: TOKENIZERS_PARALLELISM, value: "false"}
+        - {name: NODE_NAME, valueFrom: {fieldRef: {fieldPath: spec.nodeName}}}
+        - {name: POD_NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
+        resources:
+          limits: {nvidia.com/gpu: "1"}
+          requests: {nvidia.com/gpu: "1", cpu: "8", memory: 64Gi}
+        volumeMounts:
+        - {name: run-lock, mountPath: /opt/fpct-lock, readOnly: true}
+        - {name: models, mountPath: /models/c2c, readOnly: true}
+        - {name: datasets, mountPath: /datasets/c2c, readOnly: true}
+        - {name: fpct-run, mountPath: /fpct-run}
+      volumes:
+      - name: run-lock
+        configMap: {name: fpct-r2k-lock-458b026-v1}
+      - name: models
+        hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/models, type: Directory}
+      - name: datasets
+        hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/data/c2c, type: Directory}
+      - name: fpct-run
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/fpct-r2k-458b026-v1, type: Directory}
