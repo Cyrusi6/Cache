@@ -355,3 +355,11 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - 新 diagnostic runner 已冻结 raw CUDA+wall samples、8-block ABBA、20+50 timing、geometry panel、hardware telemetry 与 50,000 block bootstrap。
 - FPCT targeted=`190 passed`；CPU-safe full suite=`429 passed`；未放宽 tolerance。
 - 当前 R2k diagnostic=`NOT STARTED`；immutable gate/training/performance 仍=`NOT AUTHORIZED`。
+
+### R2k diagnostic v1 execution lock
+
+- Diagnostic scientific SHA=`458b0260fc5475c9ae578eb68b8dff2b2699e2f4`；local/upstream一致且worktree clean后构建。
+- Image=`docker.io/library/fpct-gpu-r2k-diag:458b026@sha256:3a4240bc26610b43737861f46cbee88de5d1552002d03de9f0f9407d71da32e5`；embedded tree SHA=`50861304...`。
+- Run UID/root=`fpct-r2k-diag-458b026-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v1`；image tar SHA=`d219ee83...`。
+- Diagnostic run-lock SHA=`24abf7d92a7a8a31852894d09ecc48ffbd280e4bfbe1f1b2774caef64c86b3c1`；classification=`DIAGNOSTIC_ONLY`，不能产生R2k GO或授权训练。
+- K8s templates只申请`4090-48gx2`的一张GPU，使用唯一run UID labels，不删除/修改其他资源；当前尚未submit。

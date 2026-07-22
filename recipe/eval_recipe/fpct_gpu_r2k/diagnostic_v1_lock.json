@@ -1,0 +1,180 @@
+{
+  "assets": {
+    "receiver": {
+      "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+      "id": "Qwen/Qwen3-0.6B",
+      "model_sha256": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b",
+      "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "root": "/models/c2c/Qwen3-0.6B",
+      "tokenizer_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"
+    },
+    "sender": {
+      "config_sha256": "486bedda3a6988332e60d9638a09ca4b260d34ebcf1b19e22cf3b140b63d8fe9",
+      "id": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "model_sha256": "6e6001da2106d4757498752a021df6c2bdc332c650aae4bae6b0c004dcf14933",
+      "revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "root": "/models/c2c/TinyLlama-1.1B-Chat-v1.0",
+      "tokenizer_sha256": "bcd04f0eadf90287bd26e1a183ac487d8a141b09b06aecb7725bbdd343640f2e"
+    },
+    "training_alignment_sidecar_2048": {
+      "bytes": 41023706,
+      "container_path": "/fpct-run/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "examples": 2048,
+      "host_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2j-efa02fb-v1/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990"
+    }
+  },
+  "diagnostic_protocol": {
+    "active_canary": true,
+    "block_count": 8,
+    "classification": "DIAGNOSTIC_ONLY",
+    "may_produce_r2k_go": false,
+    "measurements_per_arm": 50,
+    "timers": [
+      "cuda_event",
+      "synchronized_wall"
+    ],
+    "training_authorized": false,
+    "warmups_per_arm": 20
+  },
+  "execution_files": {
+    "bootstrap": "b41889cff41986e15563632a7c10a2d67097d3e009f7f4c636a1ac3936818a29",
+    "confirmatory_runner": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75",
+    "confirmatory_test": "090a8b8a22658e2c2401fb0194d71a4a841c10f012ff5cd5352d9b7cb44904bb",
+    "dataset_adapters": "125c22bd09b2eec0f021f75496ff2a74ef1f795d9b8c0336b70342e6eba08dc0",
+    "fpct_attention": "5b0de380d3694cc07dc402b8629946a5aeb3b49d9607714510195e49625efc6b",
+    "gpu_gate_job": "a71f7c44c871a1bbd37d127ccd72640cd499a3444f173178a5c5050bb255be08",
+    "image_loader_job": "350a2ab230667503149a04f241841cabc7d8f3d8cc419b55af16b97b85c1deb2",
+    "matched_smoke_job": "7996e177b0de17f2dc3b00fbc0eb9f755ef97d3e3e29a78caedbb1e705c48aac",
+    "pretrained_matrix_job": "b80f8e999d73ca7293792f7c25bb948cb6841402b22ba5cc31a64cd4131dc4b0",
+    "production_test": "90eb7e642c75d9cb967944f902424adf352a548a139732b031f0839b929aa9f7",
+    "projector": "c5e0cb7836d0a30659cec240169a1e2a58df58a65b71534ad9b83ec33480b7be",
+    "qwen_cpu_integration_test": "9ad635854cc00d5079a2c5f724508be4d50c7a6d71e093ab12b2cea21a31ff21",
+    "r2_controller": "9debef83c4dbc87991b270aaf1554a59fcabd6f4f8b744f24bef75f401d3e7fd",
+    "r2_k8s_renderer": "2cb2d8008b8c6dbd0df388fcc2b055c4ef78da222deb80bec1538787aceabb94",
+    "r2_runner": "61c423b8f6689e78c968bb7f5fbf50beff6fd338d3b447c758a19850b8ce925e",
+    "r2_runner_test": "d6ba85413246ed48d7e3a157fb6e268e23c55ce6f8a0c994fd5cf8ee040608b9",
+    "r2k_geometry_panel": "cd18ca52ad4f19d23922746e70b6997dde45c11559059a661991f17104ca0299",
+    "r2k_latency_manifest": "5efc7406c4077c4b2c9388b4e3e97587e37490c0663a9ccb398159e088528b5f",
+    "r2k_latency_runner": "2837a00be97f2dfd20031a88092e5d026918db362ca37fbe71119b7e16473d84",
+    "r2k_protocol": "eea5a72bc4ca741a6ae523ba261ff0f446a0f3d6b03cd328aaf2acff87a2e19b",
+    "sealed_import_test": "1baf2b6e1837e91b784139e8beb693aa421b5b6b3aecf722b097c03364c1996b",
+    "seed_triplet_job": "35af3c2865c61c0788ac4d12699fd190da3a246f8c96398c2711cf82023ef0da",
+    "trainer": "a5dbd927e6f23fd4a6a7e9c3491fb2aa1e6b64889a74228b5dbc8f5dd38be048",
+    "wrapper": "32e07f2664641ef198bd2ff2df57ce926e01234b017d97ae175bf999e6498220"
+  },
+  "firewall": {
+    "accuracy_before_formal_release": false,
+    "correctness_accessed": false,
+    "held_out_accessed": false,
+    "model_selection_accessed": false,
+    "r2j_retry_or_reinterpret": false,
+    "training_authorized": false
+  },
+  "image": {
+    "architecture": "amd64",
+    "config_sha256": "f246e03e6a64dda343ed9689e0665d801508133aeb6d165acfd2e15819aa7e86",
+    "distribution": "run_uid_scoped_containerd_import",
+    "distribution_tar": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v1/assets/fpct-gpu-r2k-diag-458b026.tar",
+    "distribution_tar_bytes": 3520440832,
+    "distribution_tar_sha256": "d219ee832d10e9232a7cbabddcbcdcbb978dfb63fdd3713ecdc2bf20780811d5",
+    "image_size_bytes": 3520420786,
+    "manifest_list_sha256": "3a4240bc26610b43737861f46cbee88de5d1552002d03de9f0f9407d71da32e5",
+    "parent_runtime_image": "docker.io/library/fpct-gpu-r2j:efa02fb@sha256:8eac5693511a3172547d80e4348b72bb4c57cbe0ad15ed47d607d19e0d5ccccf",
+    "reference": "docker.io/library/fpct-gpu-r2k-diag:458b026@sha256:3a4240bc26610b43737861f46cbee88de5d1552002d03de9f0f9407d71da32e5",
+    "source_tree_sha256": "50861304a574b29c86c13d9d1006338a5b948f849717ac396ac883ac1c97a034"
+  },
+  "immutable_predecessor": {
+    "accuracy_accessed": false,
+    "failure_manifest_sha256": "3863405a519a43f2fcd116c8760e63bd04115fb37c96b05f7ed8725a3f4effa2",
+    "gpu_sequence_sha256": "6c418bec38e4c6effe970ffe55412672b2aa7fb9ac13a2a7a6c361ab0aa54396",
+    "patch_or_resume": false,
+    "pretrained_result_sha256": "034baa1567613d21e5cfbf276c176ab68d9f2af908d7e3c9d317290a177fa2cc",
+    "retry_or_reinterpret": false,
+    "reuse_prior_evidence": false,
+    "run_lock_sha256": "51ce0a5e62906bb6388f9e0dbfd539fac120db3e70ef3259838e5f7289887c32",
+    "run_uid": "fpct-r2j-efa02fb-v1",
+    "terminal": "GPU_ENGINEERING_BLOCKED_R2"
+  },
+  "kubernetes": {
+    "config_map": "fpct-r2k-diag-lock-458b026",
+    "gpu_per_seed_pod": 1,
+    "maximum_parallel_seed_pods": 1,
+    "namespace": "c2c-research",
+    "node_name": "4090-48gx2",
+    "retry": {
+      "selective_arm_retry": false,
+      "whole_triplet_infrastructure_only": 1
+    }
+  },
+  "manifest_sha256": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4",
+  "normative": {
+    "confirmatory_manifest": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4",
+    "content_group_split_manifest": "aa40b696aa91cebb5c0c77774db170d4450a8d6d712087731d9b28cf23557050",
+    "diagnostic_panel_manifest": "bed52891c5a82c05adf47fc463e684982d94447c31a6d43e2ae5af2ec1df15f7",
+    "metric_null_floor_spec": "3206b7cda8d478575fedc471fd322cd224e72e569d192220f732a8ef7e3204eb",
+    "r2_numerical_protocol": "18621315928ccf2246bb879e602055534329da957fd445764a866d42e0a33b74",
+    "r2_profiling_protocol": "f9d126a82ee6d92f95a820ea67e0c423a81b609cbae9f4bc7b0cd966650adb5b",
+    "r2_root_cause_protocol": "5b36318548af7c3a6a0d181ca72479754451fa3031138dd9dff8653eb61abba5",
+    "r2i_gate_metadata_addendum": "f0e28b60c12964808f002805cb4111cea80fcb3759205081ce7ce35802a953e5",
+    "r2i_gate_metadata_manifest": "3c7b15b9ec4a745414939dcc0869ed879130b88d69d9b90e067a31b329f3ec39",
+    "r2j_training_integrity_addendum": "c8d913ab5c1c24949ba772e0fafd26fb5bbd6b013591187c6c914933cb30148e",
+    "r2j_training_integrity_manifest": "e61358e98028b3e222d82f26870b00359d5969ff5331d4f2e1dc0649f6c419f5"
+  },
+  "protocol_id": "fpct_gpu_r2k_diagnostic_execution_v1",
+  "resource_geometry": {
+    "tinyllama_all_splits": {
+      "source_sha256": "6d5f6221be15db5af030f9c1d7702b6d1e814bfe4e423e065353f3167c914284",
+      "tasks": {
+        "ai2-arc": {
+          "max": 1.4024390243902438,
+          "mean": 1.2374040678425364,
+          "p95": 1.2973320158102766
+        },
+        "mmlu-redux": {
+          "max": 1.4183673469387754,
+          "mean": 1.2259415516723047,
+          "p95": 1.3
+        },
+        "openbookqa": {
+          "max": 1.3142857142857143,
+          "mean": 1.2390702194565386,
+          "p95": 1.2818298368298369
+        }
+      }
+    }
+  },
+  "run_uid": "fpct-r2k-diag-458b026-v1",
+  "runtime": {
+    "accelerate": "1.9.0",
+    "attention_backend": "eager",
+    "cuda": "12.4",
+    "datasets": "4.0.0",
+    "prior_dtype": "float32",
+    "python": "3.11.11",
+    "scipy": "1.15.3",
+    "torch": "2.6.0+cu124",
+    "transformers": "4.52.4"
+  },
+  "schema_version": 1,
+  "scientific_code_branch": "research/fpct-factorized-transport",
+  "scientific_code_commit": "458b0260fc5475c9ae578eb68b8dff2b2699e2f4",
+  "scientific_code_upstream": "458b0260fc5475c9ae578eb68b8dff2b2699e2f4",
+  "status": "DIAGNOSTIC_ONLY_LOCKED",
+  "storage": {
+    "container_run_root": "/fpct-run",
+    "host_conda_mount": false,
+    "host_site_packages_mount": false,
+    "model_host_root": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+    "precreated_directories": [
+      "assets",
+      "attestations",
+      "jobs",
+      "results/blocks",
+      "results/geometry",
+      "results/traces"
+    ],
+    "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v1",
+    "source_worktree_mount": false
+  }
+}

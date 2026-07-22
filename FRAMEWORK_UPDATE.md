@@ -1306,3 +1306,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 新R2k diagnostic runner实现8 fresh-process ABBA pairs、20 warmups+50 measurements、CUDA-event/wall双计时、checkpoint-native与forced-on、prospective GPU/CPU telemetry、shape geometry panel与50,000次block bootstrap；aggregate永远标记`DIAGNOSTIC_ONLY`。
 - 验证：新等价kernel测试8 passed；FPCT targeted `190 passed, 3 warnings`；CPU-safe full suite `429 passed, 2 warnings`。Actual Qwen3 eager/DynamicCache/GQA/MQA、gradient、replicated/m≤1、state/config、precollapse identity与no-host-sync均保持通过。
 - 尚未启动R2k GPU/K8s/pretrained diagnostic、训练、checkpoint、accuracy、model-selection或held-out；下一步先commit/push diagnostic revision，再创建新image/UID/root。
+
+### 2026-07-22 FPCT-GPU-R2k diagnostic v1 lock
+
+- CPU/HF implementation SHA `458b0260...` 已推送并通过 machine-verifiable allowlist；基于clean checkout构建 diagnostic-only image `sha256:3a4240bc...`，embedded source tree `50861304...`，tar `d219ee83...`。
+- 新 run UID/root=`fpct-r2k-diag-458b026-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v1`；diagnostic lock SHA=`24abf7d9...`。R2j artifacts永久只读且不复用为结果。
+- K8s execution使用1 GPU、唯一labels和run-root；8个block各自由独立sealed Python process执行，block artifact存在时只恢复缺失block。Geometry、trace与aggregate分别sealed，latency与profiler不混跑。
+- 此lock只授权`DIAGNOSTIC_ONLY`，即使达到qualification也不能直接产生R2k GO；immutable gate仍需后续新two-lock。提交前仍未启动K8s/GPU/pretrained forward或读取correctness。
