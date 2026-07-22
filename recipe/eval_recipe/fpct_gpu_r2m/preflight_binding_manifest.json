@@ -1,15 +1,15 @@
 {
-  "config_map_name": "fpct-r2m-lock-66e4cdd-v1",
-  "image_digest": "a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a",
-  "image_tree_sha256": "84b6a8b442dd44122be5cf3e94575f92e9bfededbb7905e39d0a567f0744aa2f",
+  "config_map_name": "fpct-r2m-lock-80fb295-v1",
+  "image_digest": "0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+  "image_tree_sha256": "b2090b58362312384c330865b499080750eaf380eb071a2e44917e4ca28f6b51",
   "protocol_id": "fpct_gpu_r2m_preflight_binding_v1",
-  "run_lock_canonical_parsed_sha256": "3665d462d72b2aa586fcad4d1fb01bcc2dde5f00cab79340841ae58fc1bc9ca1",
+  "run_lock_canonical_parsed_sha256": "f731660f73bb4e8daa9163cce533648c972758d5cbc18e93bbafdf040a7cc072",
   "run_lock_path": "recipe/eval_recipe/fpct_gpu_r2m/immutable_v1_run_lock.json",
-  "run_lock_raw_sha256": "3e85670cda5e3895373b23a62b38b201e9191c259c1b7981ab8547e0280d1be9",
-  "run_uid": "fpct-r2m-66e4cdd-v1",
+  "run_lock_raw_sha256": "db67428e6778c07a4991d9a9675ace6883de3a785c1f317b15b2aac7bfa0deff",
+  "run_uid": "fpct-r2m-80fb295-v1",
   "schema_version": 1,
-  "scientific_code_commit": "66e4cdd197370edfb988bf5ae98d6987a9e43993",
+  "scientific_code_commit": "80fb295542ad298fae4cddb1273517b401bbcd17",
   "scientific_output": false,
-  "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1",
+  "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
   "training_authorized": false
 }

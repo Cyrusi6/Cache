@@ -1,9 +1,9 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: fpct-r2m-pretrain-66e4cdd
+  name: fpct-r2m-pretrain-80fb295
   namespace: c2c-research
-  labels: &labels {project: fpct, study: confirmatory-r2m, git_sha: "66e4cdd1", seed: "104729", arm: pretrained-matrix, run_uid: fpct-r2m-66e4cdd-v1}
+  labels: &labels {project: fpct, study: confirmatory-r2m, git_sha: "80fb2955", seed: "104729", arm: pretrained-matrix, run_uid: fpct-r2m-80fb295-v1}
 spec:
   backoffLimit: 0
   template:
@@ -13,7 +13,7 @@ spec:
       nodeName: 4090-48gx2
       containers:
       - name: pretrained-matrix
-        image: docker.io/library/fpct-gpu-r2m:66e4cdd@sha256:a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a
+        image: docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851
         imagePullPolicy: IfNotPresent
         command: ["/opt/conda/bin/python3.11", "-I", "/opt/fpct/script/runtime/fpct_bootstrap.py"]
         args: ["--repo-root", "/opt/fpct", "--target", "/opt/fpct/script/experiment/fpct_gpu_r2_runner.py", "--include-gpu-closure", "--attestation-out", "/fpct-run/attestations/pretrained_matrix.json", "--", "pretrained-matrix", "--run-lock", "/opt/fpct-lock/immutable_v1_run_lock.json", "--panel", "/opt/fpct/recipe/eval_recipe/fpct_gpu_r2/diagnostic_panel_manifest.json", "--data-root", "/datasets/c2c", "--floors", "/fpct-run/results/gpu_gate/metric_null_floors.json", "--gpu-gate", "/fpct-run/results/gpu_gate/gpu_numerical/gpu_numerical.json", "--runtime-provenance", "/fpct-run/results/gpu_gate/runtime_provenance.json", "--root", "/fpct-run/results/pretrained_matrix"]
@@ -32,10 +32,10 @@ spec:
         - {name: fpct-run, mountPath: /fpct-run}
       volumes:
       - name: run-lock
-        configMap: {name: fpct-r2m-lock-66e4cdd-v1}
+        configMap: {name: fpct-r2m-lock-80fb295-v1}
       - name: models
         hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/models, type: Directory}
       - name: datasets
         hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/data/c2c, type: Directory}
       - name: fpct-run
-        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1, type: Directory}
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1, type: Directory}

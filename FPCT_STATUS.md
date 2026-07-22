@@ -472,3 +472,11 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - CPU-only `CONFIG_PREFLIGHT_ONLY` Job 完成 `1/1`。Git、immutable ConfigMap、init-mounted 和 main-container lock 的 raw SHA 全部精确为 `3e85670c...`；schema 与 consumer closure 均 GO，`scientific_output=false`、`training_authorized=false`。
 - R2m config/finalizer targeted tests=`22 passed`。Production scientific blobs 与 R2l frozen allowlist byte-identical；未修改 operator/projector/prior/mask/certifier/training/statistics。
 - 当前仅授权按 frozen Job 顺序启动一次 immutable GPU gate。Matched smoke 仍要求 sealed finalizer 先写出 `R2M_IMMUTABLE_GO`；formal training 仍要求 matched smoke GO。Accuracy/correctness、model-selection、held-out 均未访问。
+
+### R2m clean-execution replacement lock：CONFIG_PREFLIGHT_GO
+
+- 首个 `66e4cdd` candidate preflight 只产生hash/schema输出；在任何scientific output前发现image embedded HEAD仍为protocol SHA，因此前瞻supersede，不能授权GPU gate或训练。
+- Final gate code/initial lock commit=`80fb295542ad298fae4cddb1273517b401bbcd17`已推送并作为clean execution SHA重新构建全新image。Operative image digest/tree=`sha256:0ea40657...`/`b2090b58...`。
+- 全新UID/root=`fpct-r2m-80fb295-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1`；image tar SHA=`e2038125...`；sidecar SHA保持`48caee80...`。
+- Replacement run-lock raw/canonical SHA=`db67428e...`/`f731660f...`。第二次CPU-only preflight中Git、immutable ConfigMap、init-mounted与main-container四份raw SHA全部精确等于`db67428e...`；schema/consumer closure均GO，仍为`scientific_output=false`、`training_authorized=false`。
+- 只有本replacement lock可用于后续one-shot immutable gate；旧UID/root与Jobs不复用。当前仍未运行R2m CUDA/model/dataset forward，未训练、未创建checkpoint、未读取accuracy/correctness/model-selection/held-out。

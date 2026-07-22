@@ -20,7 +20,7 @@
       "bytes": 41023706,
       "container_path": "/fpct-run/assets/mmlu_auxiliary_train_2048_certified.pt",
       "examples": 2048,
-      "host_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "host_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/assets/mmlu_auxiliary_train_2048_certified.pt",
       "sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990",
       "source_path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1/assets/mmlu_auxiliary_train_2048_certified.pt"
     }
@@ -62,7 +62,7 @@
     }
   },
   "config_closure": {
-    "canonical_parsed_sha256": "3665d462d72b2aa586fcad4d1fb01bcc2dde5f00cab79340841ae58fc1bc9ca1",
+    "canonical_parsed_sha256": "f731660f73bb4e8daa9163cce533648c972758d5cbc18e93bbafdf040a7cc072",
     "consumer_ast_sha256": "0b609e30112b0daf4ac51fec97e548d2b16b179fba7f7e6143e502a26526acec",
     "consumer_pointer_manifest_sha256": "db971da049e72871fabebfc6e040901086848649b6a5e405c29a7828aa56e036",
     "geometry_projection_sha256": "221c5164c60ec4d27abe714a68cec2f6a1a630d031195e0f0e63818133a5c6a2",
@@ -78,16 +78,16 @@
     "run_uid": "fpct-r2l-diag-d71d21b-v1"
   },
   "execution_files": {
-    "active_canary_job": "57c6b74e0b11f3edcc33d82cb90f5bb0290a21b61edf77edfb66ac0701113a5c",
+    "active_canary_job": "4e572b4caa0b4321bd76ace9deacfc0e8c15ac2f43ea8f187400b76668c0f7c0",
     "bootstrap": "b41889cff41986e15563632a7c10a2d67097d3e009f7f4c636a1ac3936818a29",
-    "config_preflight_job": "b4592d6662052b292356114ddf37ea4e9a2f8cdaa770ddc95d57cf6f2a951c8b",
+    "config_preflight_job": "341147f96c8d688ad42b2d8dad6137f0dd7a83d1ad7c909fdecca971e92cf740",
     "confirmatory_runner": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75",
     "dataset_adapters": "125c22bd09b2eec0f021f75496ff2a74ef1f795d9b8c0336b70342e6eba08dc0",
     "fpct_attention": "14b52d9969b340e6a847e687b6725aece79aad96d87897aade18221ec701e9a0",
-    "gpu_gate_job": "38d34a5b5af0578fedad0cd02900c6b15a26a056d8fabdd8c982e82e592439a4",
-    "image_loader_job": "2b762c40b6a6962c85d4ed19a3d500790d92ea0633beba0dc8ca01b65acea283",
-    "matched_smoke_job": "99bb9409874380d63983ad0adde7df090da97a4ac221f8d13f6ddb388c7ca58a",
-    "pretrained_matrix_job": "c920037c1a9515287459495bc6f5fa2b003f408370aaa0be03bae1d7cf9495ad",
+    "gpu_gate_job": "919712f66cd1b862e5778d748e5b8c880b2613e272ed384368da912eb01ccff8",
+    "image_loader_job": "064da6aa4f4db6254fa72514c1dd042cba7a83b98649d75896f64b4dbdf582da",
+    "matched_smoke_job": "1e2849accad19a890ab30d27338fe18fa54400af38fa84157efa4310b2e2faba",
+    "pretrained_matrix_job": "52a5d257743f3ee245026ced956a80dde86ca61e5a8ba40fd5edde77c7691a84",
     "projector": "c5e0cb7836d0a30659cec240169a1e2a58df58a65b71534ad9b83ec33480b7be",
     "r2_runner": "61c423b8f6689e78c968bb7f5fbf50beff6fd338d3b447c758a19850b8ce925e",
     "r2k_latency_runner": "2837a00be97f2dfd20031a88092e5d026918db362ca37fbe71119b7e16473d84",
@@ -96,8 +96,8 @@
     "r2l_runner_test": "d05d3dca501ec3a6fb586892d1269083a95072503a913a29b26977ee757a97e1",
     "r2m_config_validator": "3754744ef04b6b3b2314340015fb84a9035a418af54dc74f04edc686d55aba87",
     "r2m_finalizer": "1399083c11a71b81b59a147d8120c7d7426cf472b44b191cb6069ff28e7ac35a",
-    "seed_triplet_job": "97a6214442d6714867bc5e3876d1070c0e6659b6bac832a3e7f52a7b95e6e712",
-    "semantic_gate_job": "6f1c10aabe9c0369dbaf83a39a127b9262a46e1dce74c03fa06b4989b63d7c6d",
+    "seed_triplet_job": "9c9dbab0aa63051496a08143f5a41058783eae58ca68dde67e107c6078f24bd1",
+    "semantic_gate_job": "0b49951f5facb7e2ff77c14ae10bee4c64d17cfac2e4088b3bd1f2735e760de0",
     "trainer": "a5dbd927e6f23fd4a6a7e9c3491fb2aa1e6b64889a74228b5dbc8f5dd38be048",
     "wrapper": "32e07f2664641ef198bd2ff2df57ce926e01234b017d97ae175bf999e6498220"
   },
@@ -122,17 +122,17 @@
   },
   "image": {
     "architecture": "amd64",
-    "config_sha256": "24a4215577927feb8c4098006830f9bc504d31061b0aee070e593f6b0620e0db",
+    "config_sha256": "667e9151970a62bed3d9832c03812189ab955728baa90eca77f90080bd3b8d4d",
     "distinct_from_r2l_image": true,
     "distribution": "run_uid_scoped_containerd_import",
-    "distribution_tar": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1/assets/fpct-gpu-r2m-66e4cdd.tar",
-    "distribution_tar_bytes": 3525808128,
-    "distribution_tar_sha256": "84e9e1a64d8e8711fa24d9e266a16d99201be89256d71fee2326511e9d780cb6",
-    "image_size_bytes": 3525783968,
-    "manifest_list_sha256": "a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a",
+    "distribution_tar": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/assets/fpct-gpu-r2m-80fb295.tar",
+    "distribution_tar_bytes": 3525817344,
+    "distribution_tar_sha256": "e203812574cd2abd4fa024cee48e1aaab480ddfb550d00e6e951843f94a76d78",
+    "image_size_bytes": 3525793250,
+    "manifest_list_sha256": "0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
     "parent_runtime_image": "docker.io/library/fpct-gpu-r2l:43b825b@sha256:e805c714f4a77be82fe89e36a100750ba25ad815b5af004d6f9ae4233f37492e",
-    "reference": "docker.io/library/fpct-gpu-r2m:66e4cdd@sha256:a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a",
-    "source_tree_sha256": "84b6a8b442dd44122be5cf3e94575f92e9bfededbb7905e39d0a567f0744aa2f"
+    "reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+    "source_tree_sha256": "b2090b58362312384c330865b499080750eaf380eb071a2e44917e4ca28f6b51"
   },
   "immutable_checker_commit": "43b825b34204326029590da7b9d51b67d7916208",
   "immutable_gate": {
@@ -194,7 +194,7 @@
     "training_requires_all_checks": true
   },
   "kubernetes": {
-    "config_map": "fpct-r2m-lock-66e4cdd-v1",
+    "config_map": "fpct-r2m-lock-80fb295-v1",
     "config_map_immutable": true,
     "gpu_per_seed_pod": 2,
     "immutable_gate_gpu_count": 1,
@@ -277,7 +277,7 @@
       }
     }
   },
-  "run_uid": "fpct-r2m-66e4cdd-v1",
+  "run_uid": "fpct-r2m-80fb295-v1",
   "runtime": {
     "accelerate": "1.9.0",
     "attention_backend": "eager",
@@ -291,8 +291,8 @@
   },
   "schema_version": 1,
   "scientific_code_branch": "research/fpct-factorized-transport",
-  "scientific_code_commit": "66e4cdd197370edfb988bf5ae98d6987a9e43993",
-  "scientific_code_upstream": "66e4cdd197370edfb988bf5ae98d6987a9e43993",
+  "scientific_code_commit": "80fb295542ad298fae4cddb1273517b401bbcd17",
+  "scientific_code_upstream": "80fb295542ad298fae4cddb1273517b401bbcd17",
   "status": "CONFIG_PREFLIGHT_CANDIDATE",
   "storage": {
     "container_run_root": "/fpct-run",
@@ -317,7 +317,7 @@
       "wandb-config",
       "wandb-data"
     ],
-    "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1",
+    "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
     "source_worktree_mount": false
   }
 }

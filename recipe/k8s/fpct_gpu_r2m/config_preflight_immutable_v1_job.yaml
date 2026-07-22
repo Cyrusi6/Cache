@@ -1,9 +1,9 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: fpct-r2m-preflight-66e4cdd
+  name: fpct-r2m-preflight-80fb295
   namespace: c2c-research
-  labels: &labels {project: fpct, study: confirmatory-r2m, git_sha: "66e4cdd1", seed: preflight, arm: config-preflight, run_uid: fpct-r2m-66e4cdd-v1}
+  labels: &labels {project: fpct, study: confirmatory-r2m, git_sha: "80fb2955", seed: preflight, arm: config-preflight, run_uid: fpct-r2m-80fb295-v1}
 spec:
   backoffLimit: 0
   template:
@@ -13,7 +13,7 @@ spec:
       nodeName: 4090-48gx2
       initContainers:
       - name: mounted-lock-snapshot
-        image: docker.io/library/fpct-gpu-r2m:66e4cdd@sha256:a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a
+        image: docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851
         imagePullPolicy: IfNotPresent
         command: ["bash", "-lc", "set -euo pipefail; cp /opt/fpct-lock/immutable_v1_run_lock.json /preflight/init_lock.json; sha256sum /preflight/init_lock.json > /preflight/init_lock.sha256"]
         env: [{name: CUDA_VISIBLE_DEVICES, value: ""}]
@@ -22,7 +22,7 @@ spec:
         - {name: preflight-work, mountPath: /preflight}
       containers:
       - name: config-preflight
-        image: docker.io/library/fpct-gpu-r2m:66e4cdd@sha256:a374ca4c24bd25730d71b45346f5d9f64e2507f85e2bc4a7e86ffa520abfba1a
+        image: docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851
         imagePullPolicy: IfNotPresent
         command: ["bash", "-lc"]
         args:
@@ -41,9 +41,9 @@ spec:
             --canonical-geometry /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/canonical_resource_geometry.json \
             --consumer-manifest /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/consumer_pointer_manifest.json \
             --allowlist /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/implementation_allowlist.json \
-            --expected-run-uid fpct-r2m-66e4cdd-v1 \
-            --expected-root /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1 \
-            --expected-commit 66e4cdd197370edfb988bf5ae98d6987a9e43993 \
+            --expected-run-uid fpct-r2m-80fb295-v1 \
+            --expected-root /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1 \
+            --expected-commit 80fb295542ad298fae4cddb1273517b401bbcd17 \
             --expected-raw-sha256 "$expected" \
             --configmap-object /fpct-run/preflight/configmap_object.json \
             --mounted-lock /preflight/init_lock.json \
@@ -62,8 +62,8 @@ spec:
         - {name: fpct-run, mountPath: /fpct-run}
       volumes:
       - name: run-lock
-        configMap: {name: fpct-r2m-lock-66e4cdd-v1}
+        configMap: {name: fpct-r2m-lock-80fb295-v1}
       - name: preflight-work
         emptyDir: {}
       - name: fpct-run
-        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-66e4cdd-v1, type: Directory}
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1, type: Directory}

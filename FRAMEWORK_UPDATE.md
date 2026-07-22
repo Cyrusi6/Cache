@@ -1416,3 +1416,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - ConfigMap 由最终 lock 机械生成且 `immutable=true`。CPU-only K8s preflight 重新计算 Git、ConfigMap data、init-mounted 与 main-container 四份 raw SHA，四者均为 `3e85670c...`；schema、consumer closure、三 task 集合和 row count=3 全部通过。
 - Preflight 明确记录 `scientific_output=false` 与 `training_authorized=false`；没有加载模型或数据集，没有 CUDA/GPU forward，没有 task metric、checkpoint、accuracy/correctness、model-selection 或 held-out 访问。
 - Final gate additions只包含R2m validator/finalizer、immutable lock/ConfigMap绑定与run-UID-scoped K8s recipes；R2l production blobs保持byte-identical。下一步只能提交冻结的one-shot immutable GPU gate，不能直接训练。
+
+### 2026-07-22 FPCT-GPU-R2m clean execution image and replacement preflight
+
+- 初次preflight虽通过exact-byte closure，但候选image provenance的embedded HEAD为protocol commit `66e4cdd...`。在任何scientific output前按fail-closed规则将其supersede，不把该candidate UID/root用于GPU gate或训练。
+- 从clean且已推送的execution commit `80fb295...`重新构建全新immutable image；digest/config/tree=`0ea40657...`/`667e9151...`/`b2090b58...`，tar SHA=`e2038125...`。Production scientific blob allowlist保持与R2l完全相同。
+- 新UID/root=`fpct-r2m-80fb295-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1`；replacement lock raw/canonical SHA=`db67428e...`/`f731660f...`，ConfigMap重新机械生成并immutable。
+- Replacement `CONFIG_PREFLIGHT_ONLY`完成`1/1`：Git/ConfigMap/init-mounted/main-container raw SHA四者完全一致，schema与consumer closure GO，task set和3行geometry准确；没有模型、dataset、CUDA、metric或training authorization。
+- 下一步只允许提交本replacement lock后启动一次one-shot immutable gate。旧`66e4cdd` candidate仅作为pre-science provenance历史保留，不得被解释为R2m scientific attempt。
