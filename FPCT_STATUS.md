@@ -438,3 +438,11 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - 新增机械`semantic-aggregate`与`immutable-finalize`：原23 checks必须23/23 GO，六个R2l semantic checks全部GO，随后balanced checkpoint-native与forced-on均qualified，才能写出`training_authorized=true`。
 - 此改动只增加immutable gate检查代码与测试；`rosetta/model/fpct_attention.py`及所有operator/hot-path文件未改。完整FPCT CPU suite=`210 passed, 2 warnings`，protocol verifier=`GO`。
 - 尚未构建或启动R2l immutable image/Job，未运行新的immutable pretrained output，训练仍未授权。
+
+### R2l immutable v1：PRE-OUTPUT LOCKED
+
+- Frozen image/checker commit=`43b825b34204326029590da7b9d51b67d7916208`，operator repair commit=`d71d21b1...`；新image digest=`sha256:e805c714...`，embedded tree=`2381e0aa...`，与diagnostic image明确不同。
+- Run UID/root=`fpct-r2l-43b825b-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1`；image tar SHA=`37855f1c...`，sidecar SHA仍为`48caee80...`。
+- Gate顺序固定为complete synthetic → original 16 conditions/P2--P6/23 checks → 6 semantic checks（含actual Qwen decode4 bitwise）→ 8-block balanced native/forced-on → sealed finalizer。
+- 只有finalizer写出`R2L_IMMUTABLE_GO`才授权matched smoke；只有matched smoke GO才授权12个formal triplets。任一immutable failure为terminal `GPU_ENGINEERING_BLOCKED_R2L`。
+- 本lock提交前没有submit任何R2l immutable Job，没有immutable pretrained output、训练、checkpoint或accuracy/correctness访问。

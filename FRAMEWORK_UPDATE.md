@@ -1386,3 +1386,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 新增`semantic-aggregate`，要求原23项完整GO，并独立重算Cpost/F/replicated的bitwise pretrained identity、forced-on activation与pre-collapse identity；六个R2l semantic checks必须全部通过。
 - 新增`immutable-finalize`，只有semantic gate与8-block balanced checkpoint-native/forced-on canary同时qualified时才产生`R2L_IMMUTABLE_GO`和`training_authorized=true`。
 - 新增CPU actual-Qwen与gate aggregation tests；完整FPCT回归=`210 passed, 2 warnings`，R2l protocol verifier=`GO`，`math.md`与production scientific blobs未变。尚未产生immutable output。
+
+### 2026-07-22 FPCT-GPU-R2l immutable v1 two-lock
+
+- Frozen execution commit/upstream=`43b825b342...`，operator repair仍为`d71d21b1...`；离线新image digest=`sha256:e805c714...`，config/tree=`cc556f0f...`/`2381e0aa...`，明确不同于focused diagnostic image。
+- 新UID/root=`fpct-r2l-43b825b-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1`；image tar SHA=`37855f1c...`、sidecar SHA=`48caee80...`。Root在output前预建所有attestation/result/W&B父目录。
+- Immutable K8s顺序冻结：image import、complete synthetic、original 16 conditions与P2--P6、23/23 gate、fresh semantic synthetic、actual Qwen 28层FP32/BF16 decode4、direct bitwise condition reduction、8-block balanced canary、sealed finalizer。
+- Matched smoke与seed-triplet templates均以前置JSON hard guard阻止越级；原training/statistics/seed/checkpoint/retry合同不变。Lock前未submit K8s、未运行immutable pretrained output、未训练或读取accuracy。
