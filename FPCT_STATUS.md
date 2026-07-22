@@ -393,3 +393,11 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - 原complete synthetic gate、16 conditions、P2--P6、23/23 checks和1+7 resource thresholds全部保持不变；新增8-block checkpoint-native/forced-on balanced canary只能附加、不能替代原gate。
 - 读取正式ratio后同revision重试次数为0；任一正式失败终止为`GPU_ENGINEERING_BLOCKED_R2K`。只有两套gate均GO才授权seed-104729 matched smoke。
 - 当前仅完成lock与隔离资产准备；尚未submit image loader/gate，未读取accuracy/correctness，未训练或创建checkpoint。
+
+### R2k immutable v1：GPU_ENGINEERING_BLOCKED_R2K
+
+- Exact image import与sealed synthetic GPU gate完成，synthetic checks=`8/8 GO`。随后16/16 operator conditions与5/5 P2--P6 profiles完整执行，无restart或infrastructure retry。
+- 原23 checks通过22项；唯一失败=`expected_native_null`。28层key/value gate logits均精确0、precollapse identity通过，但real F相对replicated/C_post最大差为FP32 `3.7909e-5`、BF16 `0.625`，超过冻结`2e-5/2e-2`。
+- Resource门本身通过：median ratio=`0.710337`，p95 ratio=`0.706328`，peak HBM=`4.2175 GiB`，expansion与hot-path no-sync均通过。这不能覆盖correctness invariant失败。
+- Read-only code-path inference：semantic parent-equivalence map对非sidecar native parents默认false，导致mixed memory下`all_parent_equivalent`为false，checkpoint-native路径未返回已计算的exact parent output，而进入数值不同的flat packed reduction。
+- 按one-shot硬规则未运行immutable active canary，未进入matched smoke、formal training、checkpoint、accuracy/correctness、model-selection或held-out。同revision不重试；任何修复必须另建R2l。

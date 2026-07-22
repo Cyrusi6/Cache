@@ -1340,3 +1340,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 原23-check compatibility gate、1+7 timing、1.50/1.75 latency ceiling、1.35/1.50 expansion和strict 90% HBM门槛未改；新增balanced checkpoint-native/forced-on canary使用8 blocks、20+50和1.35/1.50 median/UCB门槛。
 - 决策树冻结为：原gate先GO，再运行active canary；两者都GO才进入matched smoke。正式ratio读取后不得在同revision重试，任一失败为`GPU_ENGINEERING_BLOCKED_R2K`。
 - 本commit仍是pre-output lock：尚未submit K8s、未运行immutable pretrained output、未训练、未读accuracy/correctness/model-selection/held-out。
+
+### 2026-07-22 FPCT-GPU-R2k immutable gate terminal
+
+- Exact image loader完成；sealed synthetic numerical gate `8/8 GO`。Pretrained matrix随后完整生成16 conditions与5 profiles，pod无restart/retry，aggregate与failure attestation均已封存。
+- 原resource recovery显著通过：P2 C_post median/p95=`0.618157/0.643173s`，P3 F=`0.439100/0.454291s`，ratio=`0.710337/0.706328`；peak HBM=`4.2175 GiB`，expansion和hot-path no-sync通过。
+- 23 checks仅`expected_native_null`失败。所有28层gate logits为0且precollapse candidate identity成立，但real F与replicated/C_post差为FP32 `3.7909e-5`、BF16 `0.625`，违反冻结exact-null tolerance。
+- 只读根因推断：新的semantic equivalence map只填sidecar ranges，普通native parents保留false，使mixed memory的`all_parent_equivalent` fast return失效；flat packed reduction的数值调用顺序差异在BF16深层累积。
+- 终局=`GPU_ENGINEERING_BLOCKED_R2K`。未提交immutable active canary，未训练、未创建checkpoint、未读accuracy/correctness/model-selection/held-out；同revision不重试，修复只能进入新R2l前瞻协议。

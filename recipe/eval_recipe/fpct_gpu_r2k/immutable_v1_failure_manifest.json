@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2k_immutable_confirmatory_gate_v1_failure",
+  "status": "GPU_ENGINEERING_BLOCKED_R2K",
+  "run_uid": "fpct-r2k-458b026-v1",
+  "scientific_code_commit": "458b0260fc5475c9ae578eb68b8dff2b2699e2f4",
+  "image_digest": "sha256:bc19b894c18eea266596011b748a4a22c73b80788e0fdd4a08b5f33059bf51ca",
+  "run_lock_sha256": "d5d55ad310be50cf2a5dfb0a8cf6747a9dc98510fff668a542cf62b19efb1f62",
+  "sealed_gpu_numerical": {
+    "status": "GO",
+    "check_count": 8,
+    "result_sha256": "85641e2766f3a91caafeab6e60386f3e51b1790d29f80e7900443b76c402a57b",
+    "sequence_sha256": "7ad0f4b1071340464cb50071751ccda808d5ea2212656f46a46e9b148a2e14d4",
+    "attestation_sha256": "7144703c9ea2d00ca8b57a99bd2263f1e2ca6b1144250ea0d51d3c9dd8df0d32"
+  },
+  "immutable_pretrained_gate": {
+    "runner_status": "GPU_ENGINEERING_BLOCKED_R2",
+    "terminal_interpretation": "GPU_ENGINEERING_BLOCKED_R2K",
+    "condition_manifest_count": 16,
+    "profile_manifest_count": 5,
+    "passed_check_count": 22,
+    "required_check_count": 23,
+    "failed_checks": [
+      "expected_native_null"
+    ],
+    "result_sha256": "afd27174948a1594a22255136ac3a9ba4ea9c0c8870bf76a99ef90cb488d770a",
+    "result_bytes": 7024,
+    "attestation_sha256": "41e4523524ff7eceb101859cae7d4ce3aee7ba0e78011c456e434b0727988793",
+    "attestation_target_exit_code": 1,
+    "sealed_fingerprint_sha256": "1fd1fbed17e6aa0ad6bc3d1f8f301465187dd2f0dd3d19c66b353b08ebaaeecc",
+    "checkpoint_native": {
+      "all_28_key_gate_logits_zero": true,
+      "all_28_value_gate_logits_zero": true,
+      "precollapse_candidate_identity": {
+        "fp32": true,
+        "bf16": true
+      },
+      "f_vs_replicated_max_abs": {
+        "fp32": 0.00003790855407714844,
+        "bf16": 0.625
+      },
+      "frozen_null_tolerance": {
+        "fp32": 0.00002,
+        "bf16": 0.02
+      }
+    },
+    "exact_controls": {
+      "collapse_bypass": true,
+      "replicated_atoms": true,
+      "replicated_local_numeric": true,
+      "m1_control": true,
+      "no_mask_leakage": true,
+      "canonical_prior": true,
+      "hot_path_no_sync": true
+    },
+    "resource": {
+      "cpost_median_seconds": 0.6181566580198705,
+      "f_median_seconds": 0.43909981613978744,
+      "latency_median_ratio": 0.7103374370282568,
+      "latency_median_ceiling": 1.5,
+      "latency_median_pass": true,
+      "cpost_p95_seconds": 0.6431730189360678,
+      "f_p95_seconds": 0.45429132925346494,
+      "latency_p95_ratio": 0.7063283375987233,
+      "latency_p95_ceiling": 1.75,
+      "latency_p95_pass": true,
+      "peak_hbm_gib": 4.217471599578857,
+      "hbm_pass": true,
+      "expansion_mean_pass": true,
+      "expansion_p95_pass": true
+    }
+  },
+  "balanced_active_canary": {
+    "immutable_execution_status": "NOT_RUN_HARD_STOP",
+    "reason": "The original 23-check gate failed before active-canary authorization.",
+    "diagnostic_only_prior": {
+      "checkpoint_native_median_ratio": 1.0583290848080358,
+      "checkpoint_native_ucb95": 1.077335261026937,
+      "forced_on_median_ratio": 1.074972132769662,
+      "forced_on_ucb95": 1.077734366294743
+    }
+  },
+  "root_cause_audit": {
+    "classification": "CODE_PATH_INFERENCE_NOT_A_RETRY",
+    "observations": [
+      "all checkpoint-native legacy gate logits are exactly zero",
+      "C_post and F pre-collapse candidate tensors are identical",
+      "replicated, bypass, and m=1 controls are exact",
+      "the real F checkpoint-native branch nevertheless differs from the replicated/C_post branch"
+    ],
+    "inference": "The R2k all-parent-equivalent fast-return predicate is false for mixed memory because the frozen semantic map initializes ordinary non-sidecar native parents to false and only fills sidecar ranges. The implementation therefore selects the flat-atom reduction rather than the already-computed exact parent output, exposing call-order/rounding differences that accumulate strongly in BF16.",
+    "scientific_code_modified_after_result": false,
+    "same_revision_retry": false,
+    "next_revision_required_for_any_fix": "R2l"
+  },
+  "kubernetes": {
+    "namespace": "c2c-research",
+    "node": "4090-48gx2",
+    "image_loader_job": "fpct-r2k-image-458b026",
+    "gpu_gate_job": "fpct-r2k-gpu-458b026",
+    "pretrained_gate_job": "fpct-r2k-pretrain-458b026",
+    "pretrained_pod": "fpct-r2k-pretrain-458b026-rzpnd",
+    "pretrained_pod_uid": "1956f0b2-aed1-4e3d-a45d-f2ac39bbcc16",
+    "image_id": "docker.io/library/fpct-gpu-r2k:458b026@sha256:bc19b894c18eea266596011b748a4a22c73b80788e0fdd4a08b5f33059bf51ca",
+    "pod_restart_count": 0,
+    "infrastructure_retry_count": 0
+  },
+  "large_local_artifacts": {
+    "root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-458b026-v1",
+    "runtime_provenance_sha256": "c9c95dcf4381866e383934b987bcec4f10f06ec888e239391ce73277b8007b41",
+    "metric_null_floors_sha256": "45f285b6dba41c599e141f3ce5a62e0890804bf702f779a05758d56d0d5fd440",
+    "p2_manifest_sha256": "b7d74affa08a5608332574960b90cd28a11bd6a5a0d0073c9d53ac73b86870a8",
+    "p3_manifest_sha256": "740eee9406fed093046a14d910f221b4a9ff728e2bc5fc05a9f43c9f56ab5c62",
+    "p4_manifest_sha256": "8ebe19e35195fa4688c9865c2178ec5877ac316088a0d99f680a39ad7cbe5bdf",
+    "p5_manifest_sha256": "a98dc20676f8317b36d0b80aa7a5ffa351ae31f081c26b31ba854384d6be5029",
+    "p6_manifest_sha256": "b58d1d290969047b837b9f0d8ff033df0dacef44d5db2f241b03219d6b81b129"
+  },
+  "training_firewall": {
+    "active_canary_started": false,
+    "matched_smoke_started": false,
+    "formal_training_started": false,
+    "checkpoint_created": false,
+    "accuracy_or_correctness_accessed": false,
+    "model_selection_released": false,
+    "held_out_released": false
+  },
+  "claim_boundary": "R2k demonstrates a substantial latency recovery under the frozen compatibility measurement, but it fails the exact checkpoint-native null invariant. It is therefore engineering-blocked and supplies no task-accuracy, matched-training, or query-time mechanism evidence. R2j remains unchanged."
+}
