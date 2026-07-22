@@ -401,3 +401,10 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - Resource门本身通过：median ratio=`0.710337`，p95 ratio=`0.706328`，peak HBM=`4.2175 GiB`，expansion与hot-path no-sync均通过。这不能覆盖correctness invariant失败。
 - Read-only code-path inference：semantic parent-equivalence map对非sidecar native parents默认false，导致mixed memory下`all_parent_equivalent`为false，checkpoint-native路径未返回已计算的exact parent output，而进入数值不同的flat packed reduction。
 - 按one-shot硬规则未运行immutable active canary，未进入matched smoke、formal training、checkpoint、accuracy/correctness、model-selection或held-out。同revision不重试；任何修复必须另建R2l。
+
+### R2l semantic-map repair：PRE-OUTPUT PROTOCOL LOCK
+
+- R2k永久保持`GPU_ENGINEERING_BLOCKED_R2K`；R2l不重试、不覆盖、不重新解释其immutable结果。
+- 根因与公式冻结为`E = NOT U OR (U AND E_sc)`：非sidecar native parents天然true；sidecar span先fail-closed为false，再按`parent_equivalent`或`parent_force_native`写入；metadata缺失保持false。
+- 唯一允许修改的既有scientific function是`rosetta/model/fpct_attention.py::bind_fpct_layout_layer_semantics`。Flat atom kernel、parent eager/logit reuse、wrapper/projector/gate/prior/mask/certifier/timing/threshold/data/seed/training/statistics全部冻结。
+- Diagnostic与immutable gate严格分离；本状态尚未运行任何新R2l GPU/pretrained forward、训练、checkpoint、accuracy/correctness、model-selection或held-out。

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2l_r2k_static_root_cause_audit_v1",
+  "classification": "READ_ONLY_STATIC_AUDIT",
+  "r2k_terminal": "GPU_ENGINEERING_BLOCKED_R2K",
+  "evidence": {
+    "all_28_key_gate_logits_zero": true,
+    "all_28_value_gate_logits_zero": true,
+    "precollapse_candidate_identity_fp32": true,
+    "precollapse_candidate_identity_bf16": true,
+    "replicated_exact": true,
+    "bypass_exact": true,
+    "m1_exact": true,
+    "f_native_vs_replicated_fp32_max_abs": 0.00003790855407714844,
+    "f_native_vs_replicated_bf16_max_abs": 0.625
+  },
+  "frozen_code_fact": "bind_fpct_layout_layer_semantics initializes semantic to zeros and writes only sidecar spans",
+  "root_cause": "ordinary native parents outside sidecar coverage remain false, so all_parent_equivalent is false in mixed memory and the exact parent-output selection is not taken",
+  "repair_formula": "E = not U or (U and E_sc)",
+  "r2k_retry_or_reinterpret": false,
+  "accuracy_or_correctness_accessed": false
+}

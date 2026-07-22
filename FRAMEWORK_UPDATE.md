@@ -1348,3 +1348,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 23 checks仅`expected_native_null`失败。所有28层gate logits为0且precollapse candidate identity成立，但real F与replicated/C_post差为FP32 `3.7909e-5`、BF16 `0.625`，违反冻结exact-null tolerance。
 - 只读根因推断：新的semantic equivalence map只填sidecar ranges，普通native parents保留false，使mixed memory的`all_parent_equivalent` fast return失效；flat packed reduction的数值调用顺序差异在BF16深层累积。
 - 终局=`GPU_ENGINEERING_BLOCKED_R2K`。未提交immutable active canary，未训练、未创建checkpoint、未读accuracy/correctness/model-selection/held-out；同revision不重试，修复只能进入新R2l前瞻协议。
+
+### 2026-07-22 FPCT-GPU-R2l mixed-memory semantic-map pre-output lock
+
+- 研究目标：只修复R2k mixed-memory semantic coverage truth map，使checkpoint-native再次bitwise选择已计算的parent output，同时保持active flat-atom数学、资源和训练语义不变。
+- 公式冻结为`E[l,b,i] = NOT U[b,i] OR (U[b,i] AND E_sc[l,b,i])`。实现必须ones初始化；每个sidecar span先置false，随后仅由离散`parent_equivalent`或`parent_force_native`认证，metadata缺失fail closed。
+- Function-level allowlist仅开放`bind_fpct_layout_layer_semantics`；机器verifier屏蔽该函数后要求`fpct_attention.py`其余字节与baseline `2091c109...`一致，并固定wrapper/projector/aligner/runner/training/prior/math等SHA。
+- 预注册red-green、mixed batch、28层Qwen bitwise exact-null、active-route、training gradient、focused diagnostic、一次性immutable 23+6 checks及后续条件式matched/formal决策树。
+- 本commit前没有新R2l GPU/pretrained output；accuracy/correctness、训练、checkpoint、model-selection、held-out均未访问。

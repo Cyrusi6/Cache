@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2l_implementation_allowlist_v1",
+  "baseline_commit": "2091c109191f30bdb660cea6c646d67df8562292",
+  "allowed_existing_scientific_functions": {
+    "rosetta/model/fpct_attention.py": [
+      "bind_fpct_layout_layer_semantics"
+    ]
+  },
+  "allowed_existing_non_scientific_files": [
+    "FPCT_STATUS.md",
+    "FRAMEWORK_UPDATE.md",
+    "EXPERIMENT.md",
+    "FPCT_CONFIRMATORY_RESULTS.md",
+    "FPCT_K8S_EXECUTION_REPORT.md"
+  ],
+  "allowed_new_prefixes": [
+    "FPCT_GPU_R2L_",
+    "recipe/eval_recipe/fpct_gpu_r2l/",
+    "recipe/k8s/fpct_gpu_r2l/",
+    "script/analysis/fpct_gpu_r2l_",
+    "script/experiment/fpct_gpu_r2l_",
+    "test/test_fpct_gpu_r2l_"
+  ],
+  "forbidden_file_sha256": {
+    "rosetta/model/wrapper.py": "32e07f2664641ef198bd2ff2df57ce926e01234b017d97ae175bf999e6498220",
+    "rosetta/model/projector.py": "c5e0cb7836d0a30659cec240169a1e2a58df58a65b71534ad9b83ec33480b7be",
+    "rosetta/model/aligner.py": "fe77d72fb7103ca103fe87fa602bed545e0caf6fc75b1741b8736b41e9daf7d8",
+    "rosetta/train/dataset_adapters.py": "125c22bd09b2eec0f021f75496ff2a74ef1f795d9b8c0336b70342e6eba08dc0",
+    "script/experiment/fpct_gpu_r2_runner.py": "61c423b8f6689e78c968bb7f5fbf50beff6fd338d3b447c758a19850b8ce925e",
+    "script/experiment/fpct_gpu_r2k_latency.py": "2837a00be97f2dfd20031a88092e5d026918db362ca37fbe71119b7e16473d84",
+    "script/experiment/fpct_confirmatory_runner.py": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75",
+    "script/train/SFT_train.py": "a5dbd927e6f23fd4a6a7e9c3491fb2aa1e6b64889a74228b5dbc8f5dd38be048",
+    "recipe/eval_recipe/fpct_gpu_r2/diagnostic_panel_manifest.json": "bed52891c5a82c05adf47fc463e684982d94447c31a6d43e2ae5af2ec1df15f7",
+    "recipe/eval_recipe/fpct_gpu_r2/metric_null_floor_spec.json": "3206b7cda8d478575fedc471fd322cd224e72e569d192220f732a8ef7e3204eb",
+    "math.md": "98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad"
+  },
+  "forbidden_semantics": [
+    "flat_atom_kernel_change",
+    "parent_eager_adapter_change",
+    "parent_logit_reuse_change",
+    "candidate_or_prior_change",
+    "projector_gate_or_initialization_change",
+    "mask_or_certifier_change",
+    "timing_or_resource_threshold_change",
+    "data_seed_training_or_statistics_change"
+  ]
+}

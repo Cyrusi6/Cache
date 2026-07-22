@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2l_machine_verifiable_protocol_diff_v1",
+  "baseline_commit": "2091c109191f30bdb660cea6c646d67df8562292",
+  "pre_output_protocol_commit_rule": "the Git commit containing this file is the authoritative pre-output protocol commit",
+  "r2k_terminal_unchanged": true,
+  "scientific_change_scope": {
+    "existing_file": "rosetta/model/fpct_attention.py",
+    "only_function": "bind_fpct_layout_layer_semantics",
+    "formula_change": "outside sidecar coverage defaults from false to true; each covered span is reset false before certified metadata is copied"
+  },
+  "explicit_non_changes": [
+    "fpct_qwen_hierarchical_attention_forward",
+    "fpct_qwen_eager_attention_forward",
+    "pack_fpct_memory",
+    "build_fpct_packed_layout",
+    "projector_and_gates",
+    "alignment_and_certifier",
+    "timing_and_thresholds",
+    "data_seeds_training_statistics"
+  ],
+  "new_output_before_protocol_commit": false,
+  "accuracy_or_correctness_accessed": false
+}

@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2l_diagnostic_vs_immutable_decision_tree_v1",
+  "initial_state": "PRE_OUTPUT_PROTOCOL_LOCKED",
+  "states": {
+    "FOCUSED_DIAGNOSTIC": {
+      "may_iterate_science": true,
+      "may_produce_r2l_go": false,
+      "accuracy_or_correctness_allowed": false,
+      "training_allowed": false,
+      "qualification_requires": [
+        "semantic_truth_table_complete",
+        "fp32_mixed_memory_final_max_abs_zero",
+        "bf16_mixed_memory_final_max_abs_zero",
+        "no_28_layer_first_divergence",
+        "forced_on_active",
+        "latency_resource_pass",
+        "hot_path_sync_zero",
+        "protocol_diff_clean"
+      ],
+      "on_qualified": "FREEZE_NEW_SCIENTIFIC_COMMIT",
+      "on_failure": "REPAIR_BEFORE_FREEZE_OR_DIAGNOSTIC_NO_GO"
+    },
+    "IMMUTABLE_CONFIRMATORY_GATE": {
+      "may_iterate_science": false,
+      "same_revision_retry_after_output": false,
+      "requires": [
+        "new_scientific_commit",
+        "new_image_digest",
+        "new_run_uid_root_lock",
+        "complete_synthetic_gpu_gate",
+        "operator_conditions_16_of_16",
+        "profiles_5_of_5",
+        "original_checks_23_of_23",
+        "semantic_checks_6_of_6",
+        "balanced_checkpoint_native_and_forced_on_resource_pass"
+      ],
+      "on_all_go": "MATCHED_SMOKE_AUTHORIZED",
+      "on_scientific_failure": "GPU_ENGINEERING_BLOCKED_R2L",
+      "on_pre_output_registered_infrastructure_failure": "INFRASTRUCTURE_INCONCLUSIVE_R2L"
+    },
+    "MATCHED_SMOKE": {
+      "requires": "IMMUTABLE_CONFIRMATORY_GATE_GO",
+      "on_go": "FORMAL_CONFIRMATORY_AUTHORIZED",
+      "on_failure": "MATCHED_SMOKE_INTEGRITY_FAILURE"
+    },
+    "FORMAL_CONFIRMATORY": {
+      "triplets_required": 12,
+      "runs_required": 36,
+      "performance_release_before_complete": false,
+      "held_out_release_before_model_selection_gate": false
+    }
+  },
+  "terminal_if_immutable_fails": "GPU_ENGINEERING_BLOCKED_R2L",
+  "next_scientific_revision_after_terminal": "R2m"
+}

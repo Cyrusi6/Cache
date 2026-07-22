@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2l_semantic_map_truth_table_v1",
+  "formula": "E[l,b,i] = (not U[b,i]) or (U[b,i] and E_sc[l,b,i])",
+  "dtype": "torch.bool",
+  "device_rule": "same device as FPCTPackedLayout.active",
+  "certification_order": [
+    "parent_equivalent",
+    "parent_force_native",
+    "missing_metadata_fails_closed"
+  ],
+  "forbidden_inference": [
+    "floating_point_tolerance",
+    "D_K_threshold",
+    "D_V_threshold",
+    "accidental_tensor_equality",
+    "CUDA_scalar_host_branch"
+  ],
+  "cases": [
+    {
+      "id": "native_outside_coverage",
+      "covered": false,
+      "sidecar_metadata": null,
+      "expected_equivalent": true
+    },
+    {
+      "id": "covered_explicit_true",
+      "covered": true,
+      "sidecar_metadata": {"parent_equivalent": true},
+      "expected_equivalent": true
+    },
+    {
+      "id": "covered_explicit_false",
+      "covered": true,
+      "sidecar_metadata": {"parent_equivalent": false},
+      "expected_equivalent": false
+    },
+    {
+      "id": "covered_force_native_true",
+      "covered": true,
+      "sidecar_metadata": {"parent_force_native": true},
+      "expected_equivalent": true
+    },
+    {
+      "id": "covered_force_native_false",
+      "covered": true,
+      "sidecar_metadata": {"parent_force_native": false},
+      "expected_equivalent": false
+    },
+    {
+      "id": "covered_metadata_missing",
+      "covered": true,
+      "sidecar_metadata": null,
+      "expected_equivalent": false
+    },
+    {
+      "id": "invalid_atom_native_semantics",
+      "covered": false,
+      "candidate_valid": false,
+      "expected_equivalent": true
+    }
+  ],
+  "sample_reduction": "all_parent_equivalent = parent_equivalent.all(dim=-1)",
+  "selection": "tensor-only torch.where; no per-query or per-head route"
+}
