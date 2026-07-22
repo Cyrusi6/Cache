@@ -422,3 +422,12 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - Run UID/root=`fpct-r2l-diag-d71d21b-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1`；run-lock SHA=`93513df3113a074d6e0542bf918864c5c4b274eee6f3872e769a1532aa67c31a`。
 - 只授权synthetic mixed-memory、一行冻结label-free panel的10个condition、block-0 checkpoint-native/forced-on 20+50 timing和独立trace；不能产生R2l GO或授权训练。
 - 提交前尚未submit loader/diagnostic Job，未产生新GPU/pretrained output，accuracy/correctness firewall保持false。
+
+### R2l focused diagnostic v1：DIAGNOSTIC_QUALIFIED
+
+- Image loader与focused Job均在`c2c-research`完成`1/1`，Pod restart为0；14份sealed attestation全部`target_exit_code=0`。
+- FP32/BF16 checkpoint-native满足`F=C_post=replicated`逐位相等：final logits SHA一致、`max_abs=0`、`ULP=0`，每个dtype的84个layer endpoint全部相等且无first divergence。
+- Synthetic truth map、unknown-sidecar fail-closed、mixed exact/active batch、GQA/MQA全部通过；actual Qwen3 eager 28层CPU/HF regression覆盖prefill+decode4并保持cache/residual/final-logit bitwise equality。
+- Forced-on仍激活，FP32/BF16 `Delta_fact=0.0550814/0.46875`；pre-collapse candidates相同，active样本未被semantic selection旁路。
+- Focused checkpoint-native median/p95 ratio=`1.06931/1.03412`，forced-on=`1.04409/1.08302`；peak HBM=`4.76606 GiB`，mean/p95 expansion=`1.22689`，hot-path sync=0。
+- 结论仅为`DIAGNOSTIC_QUALIFIED / DIAGNOSTIC_ONLY`。下一步必须使用新image、UID、root与run-lock执行一次性original 23 checks + 6 semantic checks + balanced native/forced-on immutable gate；仍未授权训练。

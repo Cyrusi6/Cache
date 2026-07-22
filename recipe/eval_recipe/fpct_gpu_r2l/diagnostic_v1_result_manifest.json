@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2l_focused_diagnostic_v1_result",
+  "status": "DIAGNOSTIC_QUALIFIED",
+  "classification": "DIAGNOSTIC_ONLY",
+  "may_produce_r2l_go": false,
+  "training_authorized": false,
+  "scientific_code_commit": "d71d21b1e315787e9af1cefb324abd310fd335f7",
+  "execution_lock_commit": "87277f5757ea2b0c0d7f2419d62595cc27860fc4",
+  "image_digest": "sha256:ef04b033a2038125166e10bd71699bf7222ce7e1b8217cb4e965b752eff194a7",
+  "run_uid": "fpct-r2l-diag-d71d21b-v1",
+  "shared_run_root": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1",
+  "run_lock_sha256": "93513df3113a074d6e0542bf918864c5c4b274eee6f3872e769a1532aa67c31a",
+  "kubernetes": {
+    "namespace": "c2c-research",
+    "node": "4090-48gx2",
+    "image_loader_job": "fpct-r2l-diag-image-d71d21b",
+    "focused_job": "fpct-r2l-diag-d71d21b",
+    "image_loader_completion": "1/1",
+    "focused_completion": "1/1",
+    "pod_restarts": 0
+  },
+  "checks": {
+    "native_parent_map_complete": true,
+    "unknown_sidecar_fails_closed": true,
+    "mixed_memory_exact_null_bitwise": true,
+    "mixed_batch_exact_active_isolation": true,
+    "actual_qwen_decode4_exact_null": true,
+    "active_route_not_bypassed": true,
+    "precollapse_candidate_identity": true,
+    "focused_resource_pass": true,
+    "hot_path_no_sync": true
+  },
+  "exact_null": {
+    "fp32": {
+      "final_logits_sha256": "9b5ff4b032942f3b26882c6a11239c213972ab6fe627bc2aa977c108dda71325",
+      "max_abs": 0.0,
+      "ulp_max": 0,
+      "layer_endpoint_comparisons": 84,
+      "first_divergence": null
+    },
+    "bf16": {
+      "final_logits_sha256": "852272cf1ae970b80d11ef2d7b731a515095e61f18b4440c805777b9911f49c5",
+      "max_abs": 0.0,
+      "ulp_max": 0,
+      "layer_endpoint_comparisons": 84,
+      "first_divergence": null
+    }
+  },
+  "forced_on": {
+    "fp32": {
+      "delta_fact_max_abs": 0.05508136749267578,
+      "candidate_logit_range": 0.2580564320087433,
+      "d_k": 2.4213292598724365,
+      "d_v": 1.7062296867370605,
+      "active": true
+    },
+    "bf16": {
+      "delta_fact_max_abs": 0.46875,
+      "candidate_logit_range": 0.24525441229343414,
+      "d_k": 4.374427795410156,
+      "d_v": 1.6295150518417358,
+      "active": true
+    }
+  },
+  "resources": {
+    "checkpoint_native_cuda_median_ratio": 1.0693121260915255,
+    "checkpoint_native_cuda_p95_ratio": 1.0341206584061977,
+    "forced_on_cuda_median_ratio": 1.0440914639697119,
+    "forced_on_cuda_p95_ratio": 1.083017902484803,
+    "peak_hbm_gib_max": 4.766059398651123,
+    "expansion_mean": 1.2268908023834229,
+    "expansion_p95": 1.2268908023834229,
+    "hot_path_host_sync_events": 0
+  },
+  "sealed_attestations": {
+    "count": 14,
+    "all_target_exit_code_zero": true,
+    "aggregate_attestation_sha256": "f56bd691cd868aa7e968ff4dbaac4751669f0ae22f704415efc3b25809a24c09"
+  },
+  "local_artifacts": [
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1/results/focused_aggregate.json",
+      "bytes": 113289,
+      "sha256": "275e24f031ae9f627b07eb91babe8847e192c9fa9891d102d8672d73a89d24ce"
+    },
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1/results/synthetic/synthetic.json",
+      "bytes": 2249,
+      "sha256": "8fb46ac019cf942cc3f239de0f059f19ef1540d21b2716eca71d4ff1dd91299a"
+    },
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1/results/latency/block_00.json",
+      "bytes": 56674,
+      "sha256": "bc4e8dfdc0792c9f85363ff5e479b7e9a1fddd411bee60d3856ecdf69163f82a"
+    },
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1/results/traces/trace_manifest.json",
+      "bytes": 651,
+      "sha256": "3c2cc96d685a39ce1475173449ebb834ff67a81d0d9641e6fe8af0847869e21c"
+    },
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1/results/traces/c_post.chrome.json",
+      "bytes": 107189202,
+      "sha256": "01d749f41135cef2c393816141041d965dadd41e60fdbcf64617e38980744c4f"
+    },
+    {
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1/results/traces/f.chrome.json",
+      "bytes": 115104353,
+      "sha256": "1eafadb16e0c02b15808b39331e02316cd87d91fb43eb0efc7cb6b355045f241"
+    }
+  ],
+  "firewall": {
+    "accuracy_or_correctness_accessed": false,
+    "training_started": false,
+    "checkpoint_created": false,
+    "model_selection_accessed": false,
+    "held_out_accessed": false,
+    "r2k_retried_or_reinterpreted": false
+  },
+  "decision": "Qualified only to freeze and execute a distinct one-shot immutable R2l gate. It is not R2l GO and does not authorize training by itself."
+}

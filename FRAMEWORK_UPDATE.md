@@ -1371,3 +1371,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 新UID/root=`fpct-r2l-diag-d71d21b-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1`，run-lock SHA=`93513df3...`。
 - Focused执行固定为synthetic FP32/BF16 mixed memory、单一预注册label-free ARC m2 row上的Cpost/F/F-replicated native与forced-on conditions、一个block-0双canary latency和独立no-sync trace。
 - Diagnostic仍不能产生GO、训练或task claim；提交本lock前没有新R2l GPU/pretrained output，accuracy/correctness未访问。
+
+### 2026-07-22 FPCT-GPU-R2l focused diagnostic v1 qualification
+
+- Image loader与focused diagnostic Job均完成`1/1`、无restart；14份sealed attestation全部exit 0。Aggregate SHA=`275e24f...`，run-lock SHA=`93513df3...`。
+- FP32/BF16 checkpoint-native的`F=C_post=replicated`在final logits与84个逐层endpoint上均bitwise exact，`max_abs=0`、`ULP=0`、无first divergence；mixed-memory truth map与unknown sidecar fail-closed同时通过。
+- Forced-on未被旁路：FP32/BF16 `Delta_fact=0.0550814/0.46875`，candidate-logit range、D_K、D_V均超过冻结null floor，C_post/F pre-collapse candidate identity保持成立。
+- Focused checkpoint-native median/p95 ratio为`1.06931/1.03412`，forced-on为`1.04409/1.08302`；peak HBM=`4.76606 GiB`，expansion=`1.22689`，独立trace hot-path sync=0。
+- 状态=`DIAGNOSTIC_QUALIFIED / DIAGNOSTIC_ONLY`。未读取accuracy/correctness、未训练、未创建checkpoint；只允许下一步创建全新one-shot immutable R2l gate，不能从本diagnostic直接进入matched smoke。
