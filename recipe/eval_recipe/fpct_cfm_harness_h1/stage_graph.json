@@ -1,0 +1,26 @@
+{
+  "edges": [
+    ["manifest", "execution_lock"], ["execution_lock", "config_preflight"],
+    ["config_preflight", "immutable_final"], ["immutable_final", "matched_smoke"],
+    ["matched_smoke", "formal_training"], ["formal_training", "formal_completion"],
+    ["formal_completion", "model_selection"], ["model_selection", "held_out"],
+    ["held_out", "statistics"], ["statistics", "terminal_result"]
+  ],
+  "nodes": [
+    {"id": "manifest", "side_effects_allowed": [], "authorization": "none"},
+    {"id": "execution_lock", "side_effects_allowed": ["write_config_artifact"], "authorization": "config_only"},
+    {"id": "config_preflight", "side_effects_allowed": ["write_hash_receipt"], "authorization": "no_scientific_output"},
+    {"id": "immutable_final", "side_effects_allowed": ["read_pretrained_unlabeled", "write_gate_artifact"], "authorization": "historical_r2m_only"},
+    {"id": "matched_smoke", "side_effects_allowed": ["training_if_separately_authorized"], "authorization": "blocked_in_h1"},
+    {"id": "formal_training", "side_effects_allowed": ["training_if_separately_authorized"], "authorization": "blocked_in_h1"},
+    {"id": "formal_completion", "side_effects_allowed": ["write_completion_receipt"], "authorization": "blocked_in_h1"},
+    {"id": "model_selection", "side_effects_allowed": ["performance_release_if_separately_authorized"], "authorization": "blocked_in_h1"},
+    {"id": "held_out", "side_effects_allowed": ["held_out_release_if_separately_authorized"], "authorization": "blocked_in_h1"},
+    {"id": "statistics", "side_effects_allowed": ["analysis_if_separately_authorized"], "authorization": "blocked_in_h1"},
+    {"id": "terminal_result", "side_effects_allowed": ["write_report"], "authorization": "blocked_in_h1"}
+  ],
+  "protocol_id": "fpct_cfm_harness_h1_stage_graph_v1",
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

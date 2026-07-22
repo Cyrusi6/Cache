@@ -1,0 +1,17 @@
+{
+  "consumers": [
+    {"id": "legacy_load_lock", "kind": "python_function", "path": "script/experiment/fpct_confirmatory_runner.py", "symbol": "load_lock", "declared_required_inputs": ["/image", "/manifest_sha256", "/run_uid", "/scientific_code_commit"]},
+    {"id": "train_config_builder", "kind": "python_function", "path": "script/experiment/fpct_confirmatory_runner.py", "symbol": "build_train_config", "declared_required_inputs": ["/assets/receiver/root", "/assets/sender/root", "/assets/training_alignment_sidecar_2048/container_path"]},
+    {"id": "matched_smoke", "kind": "python_function", "path": "script/experiment/fpct_confirmatory_runner.py", "symbol": "matched_smoke", "declared_required_inputs": ["/run_uid"]},
+    {"id": "formal_triplet", "kind": "python_function", "path": "script/experiment/fpct_confirmatory_runner.py", "symbol": "formal_triplet", "declared_required_inputs": ["/run_uid"]},
+    {"id": "r2_controller", "kind": "python_module", "path": "script/experiment/fpct_gpu_r2_controller.py", "declared_required_inputs": ["/run_uid", "/status"]},
+    {"id": "r2_k8s_renderer", "kind": "python_module", "path": "script/experiment/fpct_gpu_r2_k8s.py", "declared_required_inputs": ["/image/reference", "/kubernetes/config_map", "/kubernetes/node_name", "/run_uid", "/scientific_code_commit", "/status"]},
+    {"id": "trainer", "kind": "python_module", "path": "script/train/SFT_train.py", "declared_required_inputs": []},
+    {"id": "statistics", "kind": "python_module", "path": "script/analysis/fpct_confirmatory_statistics.py", "declared_required_inputs": []}
+  ],
+  "protocol_id": "fpct_cfm_harness_h1_consumer_registry_v1",
+  "registry_role": "prospective_declaration_to_compare_with_discovery",
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

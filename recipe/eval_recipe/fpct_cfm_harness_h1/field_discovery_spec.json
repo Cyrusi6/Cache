@@ -1,0 +1,15 @@
+{
+  "dynamic_access_policy": "explicit_annotation_required",
+  "patterns": [
+    "mapping_subscript_constant", "mapping_get_chain", "membership_test",
+    "required_issubset", "json_pointer_literal", "local_alias_flow",
+    "argparse_path_binding", "yaml_command_argument", "shell_inline_python_json",
+    "k8s_placeholder", "shell_guard"
+  ],
+  "protocol_id": "fpct_cfm_harness_h1_field_discovery_v1",
+  "required_equality": "discovered_required_inputs == declared_required_inputs",
+  "source_types": ["python_ast", "yaml", "bash", "json", "controller", "analysis"],
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

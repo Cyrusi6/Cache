@@ -1,0 +1,18 @@
+{
+  "producers": [
+    {"artifact": "confirmatory_manifest", "kind": "tracked_json", "path": "recipe/eval_recipe/fpct_confirmatory/confirmatory_manifest.json", "sha256": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4"},
+    {"artifact": "historical_training_lock", "kind": "tracked_json", "path": "recipe/eval_recipe/fpct_gpu_r2/fpct_gpu_r2j_run_lock.json", "sha256": "51ce0a5e62906bb6388f9e0dbfd539fac120db3e70ef3259838e5f7289887c32"},
+    {"artifact": "r2m_lock", "kind": "immutable_json", "path": "recipe/eval_recipe/fpct_gpu_r2m/immutable_v1_run_lock.json", "sha256": "db67428e6778c07a4991d9a9675ace6883de3a785c1f317b15b2aac7bfa0deff"},
+    {"artifact": "r2m_immutable_final", "kind": "immutable_local_json", "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/results/immutable_final.json", "sha256": "6c1ce4322cf7773e57abb6a0e1604c75947fb3de2927ffd4f8420aea60a9b306"},
+    {"artifact": "training_config", "kind": "python_function", "path": "script/experiment/fpct_confirmatory_runner.py", "symbol": "build_train_config", "source_sha256": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75"},
+    {"artifact": "arm_result", "kind": "python_function", "path": "script/experiment/fpct_confirmatory_runner.py", "symbol": "run_arm", "source_sha256": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75"},
+    {"artifact": "triplet_manifest", "kind": "python_function", "path": "script/experiment/fpct_confirmatory_runner.py", "symbol": "formal_triplet", "source_sha256": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75"},
+    {"artifact": "controller_state", "kind": "python_module", "path": "script/experiment/fpct_gpu_r2_controller.py", "source_sha256": "9debef83c4dbc87991b270aaf1554a59fcabd6f4f8b744f24bef75f401d3e7fd"},
+    {"artifact": "statistics_result", "kind": "python_module", "path": "script/analysis/fpct_confirmatory_statistics.py", "source_sha256": "23582a7078c8f19d893e6c6d59a9c0e22e583ce16b6b6c2dcb1aa103ff6b83c5"}
+  ],
+  "protocol_id": "fpct_cfm_harness_h1_producer_registry_v1",
+  "registry_role": "discovery_seed_not_authoritative_completion",
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

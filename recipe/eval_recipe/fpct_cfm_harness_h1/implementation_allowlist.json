@@ -1,0 +1,22 @@
+{
+  "allowed_existing_non_scientific_files": ["FPCT_STATUS.md", "FRAMEWORK_UPDATE.md"],
+  "allowed_new_prefixes": [
+    "FPCT_CFM_HARNESS_H1_", "recipe/eval_recipe/fpct_cfm_harness_h1/",
+    "recipe/k8s/fpct_cfm_harness_h1/", "script/analysis/fpct_cfm_harness_h1",
+    "test/test_fpct_cfm_harness_h1"
+  ],
+  "baseline_commit": "cf27780ca48e435cb0f3655daf3adcd9e25ece54",
+  "protocol_id": "fpct_cfm_harness_h1_implementation_allowlist_v1",
+  "read_only_blobs": {
+    "recipe/eval_recipe/fpct_gpu_r2m/immutable_v1_run_lock.json": "db67428e6778c07a4991d9a9675ace6883de3a785c1f317b15b2aac7bfa0deff",
+    "script/analysis/fpct_confirmatory_statistics.py": "23582a7078c8f19d893e6c6d59a9c0e22e583ce16b6b6c2dcb1aa103ff6b83c5",
+    "script/experiment/fpct_confirmatory_runner.py": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75",
+    "script/experiment/fpct_gpu_r2_controller.py": "9debef83c4dbc87991b270aaf1554a59fcabd6f4f8b744f24bef75f401d3e7fd",
+    "script/experiment/fpct_gpu_r2_k8s.py": "2cb2d8008b8c6dbd0df388fcc2b055c4ef78da222deb80bec1538787aceabb94",
+    "script/runtime/fpct_bootstrap.py": "b41889cff41986e15563632a7c10a2d67097d3e009f7f4c636a1ac3936818a29",
+    "script/train/SFT_train.py": "a5dbd927e6f23fd4a6a7e9c3491fb2aa1e6b64889a74228b5dbc8f5dd38be048"
+  },
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

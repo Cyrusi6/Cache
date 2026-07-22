@@ -489,3 +489,11 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - Seed-104729 matched smoke在进入任何arm或optimizer step前由frozen confirmatory runner拒绝：operative lock缺少其top-level required key `manifest_sha256`，错误=`GateError: incomplete confirmatory run lock`。Pod restart=0；0 optimizer step、0 checkpoint。
 - 该错误构成R2 campaign第二个run-lock/provenance omission。按R2m前瞻规则不重试smoke、不提交formal seed jobs、不自动建立R2n；campaign状态=`PAUSED_HARNESS_AUDIT_REQUIRED`。
 - Accuracy/correctness、model-selection、held-out仍全部未访问。R2m只能形成engineering-gate claim，不能形成训练、性能、机制或跨模型科学claim。
+
+### FPCT-CFM-HARNESS-H1：PROTOCOL LOCK CANDIDATE
+
+- H1仅审计完整producer-consumer contract、stage graph、schema/compiler/hash DAG、mutation closure与exact-image config-only dry-run；`scientific_output=false`、`training_authorized=false`。
+- R2m engineering classification、image、UID/root、lock、ConfigMap、immutable result和matched-smoke failure全部永久只读；不重试、不创建R2n、不加载模型/dataset/CUDA、不训练或读取performance。
+- 历史red fixtures冻结为R2l missing `/resource_geometry`与R2m missing `/manifest_sha256`；真实manifest SHA=`5e04fe7f...`，最后training-compatible R2j lock的top-level值一致。
+- Registry只是discovery seed；最终必须由真实Python AST、YAML/bash、argparse、inline JSON、placeholder和controller source机械发现字段，并满足discovered==declared。
+- 即使H1 GO也无执行授权；若需要修改R2m image内部runner/controller/finalizer，终局只能为`H1_REQUIRES_NEW_IMAGE_QUALIFICATION`并停止。

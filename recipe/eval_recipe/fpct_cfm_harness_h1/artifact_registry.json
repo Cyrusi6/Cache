@@ -1,0 +1,21 @@
+{
+  "artifacts": [
+    {"id": "confirmatory_manifest", "schema_required": true, "producer": "tracked_manifest"},
+    {"id": "execution_lock", "schema_required": true, "producer": "deterministic_compiler"},
+    {"id": "configmap", "schema_required": true, "producer": "deterministic_compiler"},
+    {"id": "critical_k8s_projection", "schema_required": true, "producer": "deterministic_compiler"},
+    {"id": "prerequisite_receipt", "schema_required": true, "producer": "deterministic_compiler"},
+    {"id": "smoke_result", "schema_required": true, "producer": "matched_smoke"},
+    {"id": "training_config", "schema_required": true, "producer": "confirmatory_runner"},
+    {"id": "arm_result", "schema_required": true, "producer": "confirmatory_runner"},
+    {"id": "triplet_manifest", "schema_required": true, "producer": "confirmatory_runner"},
+    {"id": "controller_state", "schema_required": true, "producer": "controller"},
+    {"id": "formal_completion", "schema_required": true, "producer": "controller"},
+    {"id": "release_receipt", "schema_required": true, "producer": "controller"},
+    {"id": "terminal_result", "schema_required": true, "producer": "statistics"}
+  ],
+  "protocol_id": "fpct_cfm_harness_h1_artifact_registry_v1",
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

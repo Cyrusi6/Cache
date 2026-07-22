@@ -1,0 +1,12 @@
+{
+  "branches": [
+    {"if": "audit_integrity_failure_or_incomplete_coverage", "status": "H1_AUDIT_BLOCKED"},
+    {"if": "closure_requires_change_to_r2m_image_internal_file", "status": "H1_REQUIRES_NEW_IMAGE_QUALIFICATION"},
+    {"if": "closure_complete_and_exact_image_reusable", "status": "H1_AUDIT_GO_NO_EXECUTION_AUTHORITY"}
+  ],
+  "common_stop": "human_review_required_no_execution_authority",
+  "protocol_id": "fpct_cfm_harness_h1_decision_tree_v1",
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

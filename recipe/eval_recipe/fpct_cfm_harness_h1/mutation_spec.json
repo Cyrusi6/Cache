@@ -1,0 +1,19 @@
+{
+  "cross_object_mutations": [
+    "stale_uid", "stale_root", "stale_commit", "stale_image",
+    "top_level_nested_manifest_mismatch", "sidecar_asset_mismatch",
+    "model_asset_mismatch", "wrong_seed", "wrong_arm", "wrong_arm_order",
+    "wrong_world_size", "wrong_gpu_count", "wrong_prerequisite_sha",
+    "wrong_prerequisite_classification", "leftover_placeholder",
+    "premature_controller_transition", "selective_arm_retry", "duplicate_release"
+  ],
+  "per_field_mutations": [
+    "delete", "null", "empty", "wrong_type", "malformed_sha", "wrong_sha",
+    "single_byte_mutation", "extra_field", "duplicate_key"
+  ],
+  "protocol_id": "fpct_cfm_harness_h1_mutation_spec_v1",
+  "required_outcome": "fail_closed_before_tripwire",
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

@@ -1,0 +1,15 @@
+{
+  "domain": "UTF-8 canonical JSON with sorted keys, separators comma/colon, allow_nan=false; raw-file hashes use exact bytes",
+  "edges": [
+    ["manifest_raw", "execution_lock_payload"], ["source_blobs", "execution_lock_payload"],
+    ["asset_hashes", "execution_lock_payload"], ["execution_lock_payload", "execution_lock_raw"],
+    ["execution_lock_raw", "configmap"], ["execution_lock_raw", "critical_k8s_projection"],
+    ["execution_lock_raw", "authorization_receipt"], ["prerequisite_artifacts", "authorization_receipt"]
+  ],
+  "forbidden": ["self_hash_field", "downstream_hash_in_upstream_payload", "manual_critical_field_copy"],
+  "nodes": ["manifest_raw", "source_blobs", "asset_hashes", "execution_lock_payload", "execution_lock_raw", "configmap", "critical_k8s_projection", "prerequisite_artifacts", "authorization_receipt"],
+  "protocol_id": "fpct_cfm_harness_h1_hash_dag_v1",
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

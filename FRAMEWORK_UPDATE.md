@@ -1432,3 +1432,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Balanced checkpoint-native median/UCB=`1.055691/1.071335`，forced-on=`1.062699/1.075348`，均通过冻结`1.35/1.50`门。Sealed finalizer产出`R2M_IMMUTABLE_GO`。
 - 条件式matched smoke随后在训练前fail closed：`fpct_confirmatory_runner.load_lock`要求top-level `manifest_sha256`，而R2m lock仅在`normative.confirmatory_manifest`保存相关hash，缺少required pointer。错误发生于output root创建和任何optimizer step之前。
 - 按“第二个run-lock/provenance omission则暂停campaign并全面审计harness”规则，不修lock、不重试、不提交12-seed formal jobs、不自动建立R2n。最终为engineering gate GO，但confirmatory campaign=`PAUSED_HARNESS_AUDIT_REQUIRED`；无accuracy/correctness或科学性能结论。
+
+### 2026-07-23 FPCT-CFM-HARNESS-H1 protocol lock
+
+- 研究目标：不恢复训练，仅对manifest→lock→preflight→immutable final→smoke→formal→release→statistics全链路执行source-derived producer-consumer双向闭包审计。
+- 冻结producer/consumer registry、stage graph、artifact registry、field discovery、mutation spec、hash DAG、implementation allowlist和decision tree。人工registry不能代替AST/YAML/bash/argparse/inline JSON机械发现。
+- 历史red fixtures固定为R2l geometry omission与R2m top-level `manifest_sha256` omission；真实confirmatory manifest SHA=`5e04fe7f...`，R2j training-compatible lock的top-level binding一致。
+- H1严格config-only：无模型、dataset、CUDA、optimizer、checkpoint、accuracy/correctness或新执行UID。任一需要修改R2m image内部文件的修复只能分类`H1_REQUIRES_NEW_IMAGE_QUALIFICATION`，本任务不实施恢复。
