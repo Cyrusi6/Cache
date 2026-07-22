@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2l_immutable_v1_terminal_failure",
+  "terminal_classification": "GPU_ENGINEERING_BLOCKED_R2L",
+  "run_uid": "fpct-r2l-43b825b-v1",
+  "run_lock_sha256": "ed95ac14219c1c8cefe83f93a32667ddcf318f2a2df85b0725ec5217bdceea96",
+  "scientific_code_commit": "43b825b34204326029590da7b9d51b67d7916208",
+  "operator_repair_commit": "d71d21b1e315787e9af1cefb324abd310fd335f7",
+  "image_digest": "sha256:e805c714f4a77be82fe89e36a100750ba25ad815b5af004d6f9ae4233f37492e",
+  "image_tree_sha256": "2381e0aa14d25ac7d72a964d03a2a784f5b95e66eaad0b0ad0a0d7fd241af5ca",
+  "kubernetes": {
+    "namespace": "c2c-research",
+    "node": "4090-48gx2",
+    "image_loader": {"job": "fpct-r2l-image-43b825b", "status": "Complete", "completions": "1/1", "restarts": 0},
+    "synthetic_gpu_gate": {"job": "fpct-r2l-gpu-43b825b", "status": "Complete", "completions": "1/1", "restarts": 0},
+    "pretrained_matrix": {"job": "fpct-r2l-pretrain-43b825b", "status": "Failed", "completions": "0/1", "restarts": 0, "reason": "BackoffLimitExceeded after sealed scientific target exit 1"},
+    "semantic_gate_submitted": false,
+    "balanced_active_canary_submitted": false,
+    "matched_smoke_submitted": false,
+    "formal_seed_jobs_submitted": 0
+  },
+  "synthetic_gpu_gate": {
+    "status": "GO",
+    "check_count": 8,
+    "passed_check_count": 8,
+    "sealed_target_exit_code": 0
+  },
+  "original_pretrained_gate": {
+    "runner_status": "GPU_ENGINEERING_BLOCKED_R2",
+    "r2l_terminal_mapping": "GPU_ENGINEERING_BLOCKED_R2L",
+    "required_check_count": 23,
+    "passed_check_count": 21,
+    "failed_checks": ["expansion_mean", "expansion_p95"],
+    "condition_count": 16,
+    "profile_count": 5,
+    "sealed_target_exit_code": 1,
+    "accuracy_or_correctness_accessed": false,
+    "exact_null": {
+      "fp32_delta_fact_checkpoint_native_max_abs": 0.0,
+      "bf16_delta_fact_checkpoint_native_max_abs": 0.0,
+      "expected_native_null_check": true
+    },
+    "active_path": {
+      "fp32_delta_fact_forced_max_abs": 0.24500489234924316,
+      "bf16_delta_fact_forced_max_abs": 0.96875,
+      "forced_on_dk": true,
+      "forced_on_dv": true,
+      "forced_on_logit_range": true,
+      "forced_on_query_activation": true,
+      "precollapse_candidate_identity": true
+    },
+    "resource": {
+      "latency_median_ratio": 0.943315925543565,
+      "latency_p95_ratio": 0.9571410444734657,
+      "peak_hbm_gib": 4.217471599578857,
+      "latency_median_pass": true,
+      "latency_p95_pass": true,
+      "hbm_pass": true,
+      "hot_path_no_sync": true,
+      "certified_geometry": {},
+      "expansion_mean_pass": false,
+      "expansion_p95_pass": false
+    }
+  },
+  "root_cause": {
+    "category": "immutable_run_lock_provenance_omission",
+    "description": "The frozen R2l immutable run lock omitted resource_geometry.tinyllama_all_splits. The unchanged runner therefore loaded an empty certified geometry object and intentionally failed expansion_mean and expansion_p95 through its bool(geometry_rows) fail-closed contract.",
+    "measured_expansion_overrun": false,
+    "scientific_operator_failure": false,
+    "provenance_integrity_failure": true,
+    "same_revision_retry_allowed": false,
+    "required_future_revision": "R2m or later prospective protocol"
+  },
+  "stage_release": {
+    "r2l_semantic_gate": "NOT RUN",
+    "balanced_active_canary": "NOT RUN",
+    "matched_smoke": "NOT RUN",
+    "formal_training": "NOT RUN",
+    "checkpoint_created": false,
+    "accuracy_or_correctness_accessed": false,
+    "model_selection_accessed": false,
+    "held_out_accessed": false
+  },
+  "local_artifacts": [
+    {"path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1/results/gpu_gate/gpu_gate_sequence.json", "bytes": 663, "sha256": "a77a25814ee5e3bf6fbd5a40e6f4124d3bf3dc4ea303f2de96937fab8a8464f3"},
+    {"path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1/results/gpu_gate/gpu_numerical/gpu_numerical.json", "bytes": 2938, "sha256": "767ece71338d9cc64ecc2c391315c91c5e9b0f2ad17d1421de850ab553199a78"},
+    {"path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1/results/gpu_gate/runtime_provenance.json", "bytes": 9571, "sha256": "08127efe29c8d39bc214efe925647113e87b63ef29e3521a39fa8fb75b70b9be"},
+    {"path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1/results/gpu_gate/metric_null_floors.json", "bytes": 2778, "sha256": "45f285b6dba41c599e141f3ce5a62e0890804bf702f779a05758d56d0d5fd440"},
+    {"path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1/results/pretrained_matrix/pretrained_r2_result.json", "bytes": 6464, "sha256": "0bc64347622382b0be3d603209fdc11337c84639d9b6bbb845d962a8bdc1fbf9"},
+    {"path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1/attestations/gpu_gate.json", "bytes": 42553, "sha256": "00ce8c131bffd8955901790bd889b3383b61b25d27f10e17256eda26c13f8a88"},
+    {"path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1/attestations/pretrained_matrix.json", "bytes": 43043, "sha256": "7d1e5359f5b3cf09142a818609f741eaefbcf108ea0e60d7ca8d5d06a76dc9f1"}
+  ],
+  "artifact_totals": {
+    "results_bytes": 1361525847,
+    "attestations_bytes": 85596
+  },
+  "claim_boundary": "R2l validates bitwise checkpoint-native recovery and preserves forced-on activation in the original matrix, but the immutable gate is terminal because the frozen lock omitted certified geometry provenance. It provides no training, task-performance, or formal query-time-mechanism result."
+}

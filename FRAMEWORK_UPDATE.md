@@ -1393,3 +1393,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 新UID/root=`fpct-r2l-43b825b-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-43b825b-v1`；image tar SHA=`37855f1c...`、sidecar SHA=`48caee80...`。Root在output前预建所有attestation/result/W&B父目录。
 - Immutable K8s顺序冻结：image import、complete synthetic、original 16 conditions与P2--P6、23/23 gate、fresh semantic synthetic、actual Qwen 28层FP32/BF16 decode4、direct bitwise condition reduction、8-block balanced canary、sealed finalizer。
 - Matched smoke与seed-triplet templates均以前置JSON hard guard阻止越级；原training/statistics/seed/checkpoint/retry合同不变。Lock前未submit K8s、未运行immutable pretrained output、未训练或读取accuracy。
+
+### 2026-07-22 FPCT-GPU-R2l immutable terminal
+
+- Exact image loader完成；complete synthetic GPU gate=`8/8 GO`。Pretrained matrix完整生成16 conditions与P2--P6，sealed target按backoffLimit=0终止，Pod无restart。
+- 21/23原checks通过。R2l headline engineering修复在原matrix中成立：checkpoint-native FP32/BF16 `Delta_fact=0/0`；forced-on为`0.245005/0.96875`；precollapse、bypass、replicated、m1、finite/mask/prior、no-sync、latency与HBM均通过。
+- 两个失败是`expansion_mean/p95`，因为immutable run-lock遗漏`resource_geometry.tinyllama_all_splits`，unchanged runner读取空geometry并按`bool(geometry_rows)` fail closed。它不是测得的expansion overrun，但属于output后不可修补的provenance/config integrity failure。
+- 终局=`GPU_ENGINEERING_BLOCKED_R2L`；未提交semantic/active/matched/formal Job，0 optimizer step、0 checkpoint、未读accuracy/correctness/model-selection/held-out。同revision不重跑，后续若继续必须新建前瞻R2m或更晚revision。

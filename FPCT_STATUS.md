@@ -446,3 +446,11 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - Gate顺序固定为complete synthetic → original 16 conditions/P2--P6/23 checks → 6 semantic checks（含actual Qwen decode4 bitwise）→ 8-block balanced native/forced-on → sealed finalizer。
 - 只有finalizer写出`R2L_IMMUTABLE_GO`才授权matched smoke；只有matched smoke GO才授权12个formal triplets。任一immutable failure为terminal `GPU_ENGINEERING_BLOCKED_R2L`。
 - 本lock提交前没有submit任何R2l immutable Job，没有immutable pretrained output、训练、checkpoint或accuracy/correctness访问。
+
+### R2l immutable v1：GPU_ENGINEERING_BLOCKED_R2L
+
+- Image loader与complete synthetic GPU gate分别完成`1/1`，synthetic=`8/8 GO`；pretrained matrix完成16/16 conditions与5/5 profiles后sealed target exit 1，Pod restart=0。
+- 原23项通过21项。Checkpoint-native exact-null已恢复：FP32/BF16 `Delta_fact=0/0`；forced-on activation、precollapse identity、bypass/replicated/m1、latency、HBM与no-sync均通过。
+- 唯一失败为`expansion_mean`与`expansion_p95`。根因是冻结的R2l run-lock遗漏`resource_geometry.tinyllama_all_splits`，runner按fail-closed合同得到`certified_geometry={}`；这不是观测到的expansion超限，但属于immutable provenance/config integrity failure。
+- 按one-shot规则不修改lock、不重跑同revision：semantic gate、balanced canary、matched smoke与formal training均未提交；0 optimizer step、0 checkpoint、未访问accuracy/correctness/model-selection/held-out。
+- R2l终局=`GPU_ENGINEERING_BLOCKED_R2L`。任何恢复必须进入新的前瞻R2m或更晚revision；R2k与R2l都保持不可变。
