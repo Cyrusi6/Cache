@@ -2,6 +2,7 @@
 The ensemble of multiple standard transformers LLM models, with automatic kv-cache projection. It shares the same interface as the standard transformers LLM models.
 """
 
+from contextlib import nullcontext
 from typing import Any, Dict, List, Optional, Union
 import torch
 from torch import nn
@@ -16,6 +17,7 @@ from rosetta.model.projector import Projector
 from rosetta.model.fpct_attention import (
     FPCTPackedLayout,
     FPCTSidecarSegment,
+    bind_fpct_layout_layer_semantics,
     build_fpct_packed_layout,
     fpct_eager_attention,
     fpct_mechanism_diagnostics,
@@ -28,6 +30,10 @@ from rosetta.model.fpct_attention import (
 )
 from rosetta.model.sampling import sample_token
 from transformers.utils import ModelOutput
+
+
+def _fpct_scope(enabled: bool, name: str):
+    return record_function(name) if enabled else nullcontext()
 
 try:
     from transformers.generation.utils import (
@@ -292,6 +298,7 @@ class RosettaModel(nn.Module):
         new_v_cache,
         fpct_sidecars: Optional[List[FPCTSidecarSegment]] = None,
         fpct_layout: Optional[FPCTPackedLayout] = None,
+        fpct_semantic_parent_equivalent: Optional[torch.Tensor] = None,
         fpct_replicated_collapse: bool = False,
         fpct_metric_sink: Optional[Dict[str, torch.Tensor]] = None,
         fpct_layer_metric_sink: Optional[Dict[int, Dict[str, torch.Tensor]]] = None,
@@ -389,7 +396,7 @@ class RosettaModel(nn.Module):
                 if collapse_to_parent:
                     fpct_layout.validate_runtime(base_key_states, fpct_sidecars)
                 else:
-                    with record_function("fpct.pack"):
+                    with _fpct_scope(fpct_profile_scopes, "fpct.pack"):
                         packed = pack_fpct_memory(
                             base_key_states,
                             base_value_states,
@@ -397,13 +404,18 @@ class RosettaModel(nn.Module):
                             fpct_sidecars,
                             query_length=query_states.shape[-2],
                             layout=fpct_layout,
+                            semantic_parent_equivalent=(
+                                fpct_semantic_parent_equivalent
+                            ),
                             replicated_collapse=fpct_replicated_collapse,
                             collapse_replicated_groups=(
                                 not fpct_replicated_collapse
                             ),
                         )
                     if fpct_replicated_collapse:
-                        with record_function("fpct.replicated_check"):
+                        with _fpct_scope(
+                            fpct_profile_scopes, "fpct.replicated_check"
+                        ):
                             replicated_delta, replicated_weights = (
                                 fpct_replicated_probability_mass_delta(
                                     self,
@@ -420,7 +432,7 @@ class RosettaModel(nn.Module):
                         hierarchical_parent_value = base_value_states
                         hierarchical_parent_mask = parent_attention_mask
                 if fpct_metric_sink is not None and packed is not None:
-                    with record_function("fpct.diagnostics"):
+                    with _fpct_scope(fpct_profile_scopes, "fpct.diagnostics"):
                         metrics = fpct_mechanism_diagnostics(query_states, packed)
                         replicated = pack_fpct_memory(
                             base_key_states,
@@ -429,6 +441,9 @@ class RosettaModel(nn.Module):
                             fpct_sidecars,
                             query_length=query_states.shape[-2],
                             layout=fpct_layout,
+                            semantic_parent_equivalent=(
+                                fpct_semantic_parent_equivalent
+                            ),
                             replicated_collapse=True,
                         )
                         factorized_output, _ = fpct_eager_attention(
@@ -485,8 +500,8 @@ class RosettaModel(nn.Module):
                 raise RuntimeError("FPCT R2 requires eager attention at runtime")
             attention_interface = fpct_qwen_eager_attention_forward
 
-            with record_function("receiver_attention"):
-                with record_function("fpct.attention"):
+            with _fpct_scope(fpct_profile_scopes, "receiver_attention"):
+                with _fpct_scope(fpct_profile_scopes, "fpct.attention"):
                     if hierarchical_packed is not None:
                         attn_output, attn_weights = (
                             fpct_qwen_hierarchical_attention_forward(
@@ -625,9 +640,12 @@ class RosettaModel(nn.Module):
             self._fpct_packed_layout is None
             or self._fpct_packed_layout.source_length != source_length
         ):
-            with record_function("fpct.layout_prepare"):
-                self._fpct_packed_layout = build_fpct_packed_layout(
+            with _fpct_scope(self.fpct_profile_scopes, "fpct.layout_prepare"):
+                structural_layout = build_fpct_packed_layout(
                     source_length, ordered[0][1]
+                )
+                self._fpct_packed_layout = bind_fpct_layout_layer_semantics(
+                    structural_layout, ordered
                 )
         handlers = []
         for layer_idx, segments in ordered:
@@ -640,6 +658,9 @@ class RosettaModel(nn.Module):
                 None,
                 fpct_sidecars=segments,
                 fpct_layout=self._fpct_packed_layout,
+                fpct_semantic_parent_equivalent=(
+                    self._fpct_packed_layout.semantic_parent_equivalent(layer_idx)
+                ),
                 fpct_replicated_collapse=self.fpct_replicated_collapse,
                 fpct_metric_sink=(
                     self._fpct_mechanism_metrics
@@ -1100,6 +1121,15 @@ class RosettaModel(nn.Module):
         has_support = legal.any(dim=-1)[:, None, :, None]
         collapsed_key = torch.where(has_support, collapsed_key, base_kv[0])
         collapsed_value = torch.where(has_support, collapsed_value, base_kv[1])
+        candidate_key_equal = (
+            fused_key == collapsed_key.unsqueeze(3)
+        ).all(dim=(1, 4))
+        candidate_value_equal = (
+            fused_value == collapsed_value.unsqueeze(3)
+        ).all(dim=(1, 4))
+        parent_equivalent = (
+            (~legal) | (candidate_key_equal & candidate_value_equal)
+        ).all(dim=-1) | parent_force_native
         if self.fpct_trace:
             if target_layer_idx is None:
                 raise ValueError("FPCT trace requires target_layer_idx")
@@ -1138,6 +1168,7 @@ class RosettaModel(nn.Module):
             parent_projected,
             nuisance,
             parent_force_native,
+            parent_equivalent,
         )
 
     def _store_fpct_sidecar(
@@ -1149,6 +1180,7 @@ class RosettaModel(nn.Module):
         prior: torch.Tensor,
         legal: torch.Tensor,
         parent_force_native: Optional[torch.Tensor] = None,
+        parent_equivalent: Optional[torch.Tensor] = None,
         prior_sha256: str = "",
         max_slots_hint: int = -1,
         source_length_hint: int = -1,
@@ -1194,6 +1226,7 @@ class RosettaModel(nn.Module):
             source_length_hint=canonical[4],
             certified=canonical[5],
             parent_force_native=parent_force_native,
+            parent_equivalent=parent_equivalent,
         )
         segment.validate()
         segments = self._fpct_sidecars.setdefault(target_layer_idx, [])
@@ -1546,8 +1579,9 @@ class RosettaModel(nn.Module):
                                         soft_section = soft_alignment[i]
                                         source_weights = soft_section["source_weights"]
                                         if self.fpct_operator in {"c_post", "f"}:
-                                            with record_function(
-                                                "fpct.project_candidates"
+                                            with _fpct_scope(
+                                                self.fpct_profile_scopes,
+                                                "fpct.project_candidates",
                                             ):
                                                 fpct_record = self._project_fpct_candidates(
                                                     projector=projector,
@@ -1700,6 +1734,7 @@ class RosettaModel(nn.Module):
                                         prior=fpct_record[4],
                                         legal=fpct_record[5],
                                         parent_force_native=fpct_record[8],
+                                        parent_equivalent=fpct_record[9],
                                         prior_sha256=soft_section.get(
                                             "fpct_prior_sha256", ""
                                         ),

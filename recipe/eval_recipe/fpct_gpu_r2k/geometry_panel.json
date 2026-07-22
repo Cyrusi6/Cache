@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2k_geometry_panel_v1",
+  "source": {
+    "distinct_samples": 7265,
+    "sealed_sample_support_root": "local/final_results/fpct_factorized_transport/fpct_3_7r_certified_support/rev_7aecf2370df8a544b553baa6a7a58b24191e02ef/shards/tinyllama__*__sample_support.csv",
+    "receiver_native_slots_p50": 141,
+    "receiver_native_slots_p95": 301,
+    "certified_expansion_p50": 1.2295082,
+    "certified_expansion_p95": 1.2981247,
+    "natural_audit_rerun": false
+  },
+  "dtype": "bfloat16",
+  "warmups": 20,
+  "measurements": 50,
+  "rows": [
+    {"panel_id": "G01_PREFILL_P50", "batch": 1, "query": 141, "parents": 141, "expanded_slots": 173, "heads": 16, "kv_heads": 8, "head_dim": 128, "decode_steps": 1, "cardinality": 2},
+    {"panel_id": "G02_PREFILL_P95", "batch": 1, "query": 301, "parents": 301, "expanded_slots": 391, "heads": 16, "kv_heads": 8, "head_dim": 128, "decode_steps": 1, "cardinality": 2},
+    {"panel_id": "G03_M1", "batch": 2, "query": 64, "parents": 64, "expanded_slots": 64, "heads": 16, "kv_heads": 8, "head_dim": 128, "decode_steps": 1, "cardinality": 1},
+    {"panel_id": "G04_M2", "batch": 2, "query": 64, "parents": 64, "expanded_slots": 65, "heads": 16, "kv_heads": 8, "head_dim": 128, "decode_steps": 1, "cardinality": 2},
+    {"panel_id": "G05_M3", "batch": 2, "query": 64, "parents": 64, "expanded_slots": 66, "heads": 16, "kv_heads": 8, "head_dim": 128, "decode_steps": 1, "cardinality": 3},
+    {"panel_id": "G06_M4", "batch": 2, "query": 64, "parents": 64, "expanded_slots": 67, "heads": 16, "kv_heads": 8, "head_dim": 128, "decode_steps": 1, "cardinality": 4},
+    {"panel_id": "G07_GQA", "batch": 2, "query": 64, "parents": 64, "expanded_slots": 80, "heads": 16, "kv_heads": 8, "head_dim": 128, "decode_steps": 1, "cardinality": 2},
+    {"panel_id": "G08_MQA", "batch": 2, "query": 64, "parents": 64, "expanded_slots": 80, "heads": 16, "kv_heads": 1, "head_dim": 128, "decode_steps": 1, "cardinality": 2},
+    {"panel_id": "G09_DECODE4", "batch": 2, "query": 1, "parents": 145, "expanded_slots": 178, "heads": 16, "kv_heads": 8, "head_dim": 128, "decode_steps": 4, "cardinality": 2}
+  ],
+  "accuracy_or_correctness_accessed": false
+}

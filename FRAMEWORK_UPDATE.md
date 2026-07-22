@@ -1296,3 +1296,13 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Hot-path blob audit：R2i science `8d21c72` 与 R2j science `efa02fb` 的 `fpct_attention.py`、`wrapper.py`、`fpct_gpu_r2_runner.py` Git blob 完全相同。
 - 计划实现：parent eager adapter 只算一次并复用 FP32 logits；equivalent parent 仅一个实际 active slot且 logA=0；non-equivalent atoms 一次 flat FP32 softmax + 一次 P×V；删除 `[B,H,Q,S,D] group_value`；instrumentation-off 不重建 beta/gamma；layout structural metadata 跨层复用；不得减慢 C_post。
 - 当前验证边界：只创建协议、manifest、历史只读 audit 和 protocol verifier；没有启动新 GPU/K8s、pretrained forward、训练、checkpoint、accuracy、model-selection 或 held-out。下一步必须先提交并推送 protocol lock。
+
+### 2026-07-22 FPCT-GPU-R2k equivalent flat-atom CPU/HF implementation
+
+- `fpct_qwen_hierarchical_attention_forward` 保留历史 API 名以兼容调用方，但生产计算已改为数学等价的 flat atom FP32 softmax。Parent eager adapter只调用一次并返回/reuse masked FP32 parent logits，non-equivalent atoms只做一次QK、一次softmax和一次P×V。
+- 删除生产路径 `[B,H,Q,S,D] group_value`、group max/sum、gamma scatter 与beta/group-value reduction。Equivalent parent只保留一个exact parent K/V active slot、logA=0；atom QK输入对该slot置零并回填parent logit，不重复计算parent QK。
+- Candidate projection在final fused/collapsed K/V上计算与旧定义相同的exact parent equivalence；跨层semantic maps在layout prepare时一次绑定。Layout新增safe parent/candidate maps与slot index，single segment不再cat，冗余cast跳过。
+- Wrapper所有FPCT timing scopes受`fpct_profile_scopes`控制；P2/P3 latency measurement关闭scopes，profiler trace单独开启，不通过减慢C_post改善ratio。
+- 新R2k diagnostic runner实现8 fresh-process ABBA pairs、20 warmups+50 measurements、CUDA-event/wall双计时、checkpoint-native与forced-on、prospective GPU/CPU telemetry、shape geometry panel与50,000次block bootstrap；aggregate永远标记`DIAGNOSTIC_ONLY`。
+- 验证：新等价kernel测试8 passed；FPCT targeted `190 passed, 3 warnings`；CPU-safe full suite `429 passed, 2 warnings`。Actual Qwen3 eager/DynamicCache/GQA/MQA、gradient、replicated/m≤1、state/config、precollapse identity与no-host-sync均保持通过。
+- 尚未启动R2k GPU/K8s/pretrained diagnostic、训练、checkpoint、accuracy、model-selection或held-out；下一步先commit/push diagnostic revision，再创建新image/UID/root。

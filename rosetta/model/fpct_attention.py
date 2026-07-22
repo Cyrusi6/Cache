@@ -2,7 +2,7 @@ from __future__ import annotations
 
 """Candidate sidecar and ambiguous-only packed attention for FPCT."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from math import sqrt
 from typing import Iterable, Optional, Sequence
 
@@ -35,6 +35,7 @@ class FPCTSidecarSegment:
     prior_sha256: Optional[str] = None
     certified: bool = False
     parent_force_native: Optional[Tensor] = None  # [B,N], semantic hard-gate identity
+    parent_equivalent: Optional[Tensor] = None  # [B,N], exact final parent identity
 
     def validate(self) -> None:
         if self.parent_start < 0:
@@ -64,6 +65,17 @@ class FPCTSidecarSegment:
                 raise ValueError(
                     "sidecar parent_force_native and candidate tensors must share a device"
                 )
+        if self.parent_equivalent is not None:
+            if self.parent_equivalent.shape != (
+                self.key.shape[0], self.key.shape[2]
+            ):
+                raise ValueError("sidecar parent_equivalent must be [B,N]")
+            if self.parent_equivalent.dtype != torch.bool:
+                raise ValueError("sidecar parent_equivalent must be boolean")
+            if self.parent_equivalent.device != self.key.device:
+                raise ValueError(
+                    "sidecar parent_equivalent and candidate tensors must share a device"
+                )
 
 
 @dataclass
@@ -92,15 +104,20 @@ class FPCTPackedLayout:
     top_k: int
     active: Tensor
     parent_index: Tensor
+    safe_parent: Tensor
     candidate_index: Tensor
     candidate_flat_index: Tensor
+    safe_candidate_flat_index: Tensor
     use_candidate: Tensor
     log_prior: Tensor
     row_offsets: Tensor
+    slot_index: Tensor
     expanded_slots: Tensor
     extra_slots: Tensor
     has_extra_slots: bool
     segment_specs: tuple[tuple[int, int, int, int], ...]
+    semantic_layer_indices: tuple[int, ...] = ()
+    semantic_parent_equivalent_by_layer: Optional[Tensor] = None
 
     def validate_runtime(
         self,
@@ -120,6 +137,65 @@ class FPCTPackedLayout:
             flat_offset += n * k
         if tuple(specs) != self.segment_specs:
             raise ValueError("FPCT sidecar structure differs from frozen layout")
+
+    def semantic_parent_equivalent(self, layer_index: int) -> Optional[Tensor]:
+        if self.semantic_parent_equivalent_by_layer is None:
+            return None
+        try:
+            position = self.semantic_layer_indices.index(int(layer_index))
+        except ValueError as error:
+            raise ValueError(
+                f"FPCT layout has no semantic metadata for layer {layer_index}"
+            ) from error
+        return self.semantic_parent_equivalent_by_layer[position]
+
+
+def bind_fpct_layout_layer_semantics(
+    layout: FPCTPackedLayout,
+    ordered_layer_segments: Sequence[tuple[int, Sequence[FPCTSidecarSegment]]],
+) -> FPCTPackedLayout:
+    """Attach current-forward semantic parent metadata once for all layers."""
+
+    layer_indices: list[int] = []
+    layer_maps: list[Tensor] = []
+    for layer_index, segments in ordered_layer_segments:
+        semantic = torch.zeros(
+            layout.batch_size,
+            layout.source_length,
+            device=layout.active.device,
+            dtype=torch.bool,
+        )
+        for segment in segments:
+            segment.validate()
+            parent_equivalent = (
+                segment.parent_equivalent
+                if segment.parent_equivalent is not None
+                else segment.parent_force_native
+            )
+            if parent_equivalent is None:
+                continue
+            parent_end = segment.parent_start + segment.key.shape[2]
+            semantic[:, segment.parent_start:parent_end] = (
+                parent_equivalent
+            )
+        layer_indices.append(int(layer_index))
+        layer_maps.append(semantic)
+    stacked = (
+        torch.stack(layer_maps, dim=0)
+        if layer_maps
+        else torch.empty(
+            0,
+            layout.batch_size,
+            layout.source_length,
+            device=layout.active.device,
+            dtype=torch.bool,
+        )
+    )
+    return replace(
+        layout,
+        semantic_layer_indices=tuple(layer_indices),
+        semantic_parent_equivalent_by_layer=stacked,
+    )
 
 
 def canonical_log_prior(prior: Tensor, valid: Tensor) -> tuple[Tensor, Tensor, Tensor]:
@@ -320,11 +396,16 @@ def build_fpct_packed_layout(
         top_k=top_k,
         active=active_storage[:, :max_slots],
         parent_index=parent_storage[:, :max_slots],
+        safe_parent=parent_storage[:, :max_slots].clamp_min(0),
         candidate_index=candidate_storage[:, :max_slots],
         candidate_flat_index=candidate_flat_storage[:, :max_slots],
+        safe_candidate_flat_index=candidate_flat_storage[:, :max_slots].clamp_min(0),
         use_candidate=use_candidate_storage[:, :max_slots],
         log_prior=log_prior_storage[:, :max_slots],
         row_offsets=row_offsets,
+        slot_index=torch.arange(
+            max_slots, device=device, dtype=torch.long
+        )[None, :].expand(batch_size, -1),
         expanded_slots=expanded_slots,
         extra_slots=extra_slots,
         has_extra_slots=max_slots > source_length,
@@ -365,6 +446,7 @@ def pack_fpct_memory(
     *,
     query_length: int,
     layout: Optional[FPCTPackedLayout] = None,
+    semantic_parent_equivalent: Optional[Tensor] = None,
     replicated_collapse: bool = False,
     collapse_replicated_groups: bool = True,
 ) -> FPCTPackedMemory:
@@ -391,7 +473,7 @@ def pack_fpct_memory(
             or segment.key.shape[-1] != d
         ):
             raise ValueError("sidecar/cache batch/head/dim mismatch")
-    safe_parent = layout.parent_index.clamp_min(0)
+    safe_parent = layout.safe_parent
     parent_gather = safe_parent[:, None, :, None].expand(
         b, hkv, layout.max_slots, d
     )
@@ -400,25 +482,34 @@ def pack_fpct_memory(
     packed_key = parent_key
     packed_value = parent_value
     if not replicated_collapse:
-        candidate_key = torch.cat(
-            [
-                segment.key.to(device=key.device, dtype=key.dtype).reshape(
-                    b, hkv, -1, d
-                )
-                for segment in segments
-            ],
-            dim=2,
+        candidate_keys = [
+            (
+                segment.key
+                if segment.key.device == key.device and segment.key.dtype == key.dtype
+                else segment.key.to(device=key.device, dtype=key.dtype)
+            ).reshape(b, hkv, -1, d)
+            for segment in segments
+        ]
+        candidate_values = [
+            (
+                segment.value
+                if segment.value.device == value.device
+                and segment.value.dtype == value.dtype
+                else segment.value.to(device=value.device, dtype=value.dtype)
+            ).reshape(b, hkv, -1, d)
+            for segment in segments
+        ]
+        candidate_key = (
+            candidate_keys[0]
+            if len(candidate_keys) == 1
+            else torch.cat(candidate_keys, dim=2)
         )
-        candidate_value = torch.cat(
-            [
-                segment.value.to(device=value.device, dtype=value.dtype).reshape(
-                    b, hkv, -1, d
-                )
-                for segment in segments
-            ],
-            dim=2,
+        candidate_value = (
+            candidate_values[0]
+            if len(candidate_values) == 1
+            else torch.cat(candidate_values, dim=2)
         )
-        safe_candidate = layout.candidate_flat_index.clamp_min(0)
+        safe_candidate = layout.safe_candidate_flat_index
         candidate_gather = safe_candidate[:, None, :, None].expand(
             b, hkv, layout.max_slots, d
         )
@@ -434,49 +525,53 @@ def pack_fpct_memory(
     active = layout.active
     log_prior = layout.log_prior
     candidate_slots = layout.use_candidate & active
-    key_equal = (packed_key == parent_key).all(dim=(1, 3))
-    value_equal = (packed_value == parent_value).all(dim=(1, 3))
-    slot_equal = (~candidate_slots) | (key_equal & value_equal)
-    safe_parent = layout.parent_index.clamp_min(0)
-    group_equal = torch.ones(
-        b,
-        source_length,
-        device=key.device,
-        dtype=torch.long,
-    )
-    group_equal.scatter_reduce_(
-        1,
-        safe_parent,
-        slot_equal.to(torch.long),
-        reduce="amin",
-        include_self=True,
-    )
-    semantic_parent_equivalent = torch.zeros(
-        b,
-        source_length,
-        device=key.device,
-        dtype=torch.bool,
-    )
-    for segment in segments:
-        if segment.parent_force_native is None:
-            continue
-        parent_end = segment.parent_start + segment.key.shape[2]
-        semantic_parent_equivalent[:, segment.parent_start:parent_end] = (
-            segment.parent_force_native
+    if semantic_parent_equivalent is None:
+        key_equal = (packed_key == parent_key).all(dim=(1, 3))
+        value_equal = (packed_value == parent_value).all(dim=(1, 3))
+        slot_equal = (~candidate_slots) | (key_equal & value_equal)
+        group_equal = torch.ones(
+            b,
+            source_length,
+            device=key.device,
+            dtype=torch.long,
         )
-    parent_equivalent = group_equal.to(torch.bool) | semantic_parent_equivalent
+        group_equal.scatter_reduce_(
+            1,
+            safe_parent,
+            slot_equal.to(torch.long),
+            reduce="amin",
+            include_self=True,
+        )
+        semantic_parent_equivalent = torch.zeros(
+            b,
+            source_length,
+            device=key.device,
+            dtype=torch.bool,
+        )
+        for segment in segments:
+            if segment.parent_force_native is None:
+                continue
+            parent_end = segment.parent_start + segment.key.shape[2]
+            semantic_parent_equivalent[:, segment.parent_start:parent_end] = (
+                segment.parent_force_native
+            )
+        parent_equivalent = group_equal.to(torch.bool) | semantic_parent_equivalent
+    elif semantic_parent_equivalent.shape != (b, source_length):
+        raise ValueError("semantic parent-equivalence map must be [B,S]")
+    else:
+        parent_equivalent = semantic_parent_equivalent
     if collapse_replicated_groups:
         replicated_group = candidate_slots & torch.gather(
             parent_equivalent, 1, safe_parent
         )
-        slot_index = torch.arange(
-            layout.max_slots, device=key.device, dtype=torch.long
-        )[None, :].expand(b, -1)
         first_slot = torch.gather(
             layout.row_offsets[:, :-1], 1, safe_parent
         )
-        replicated_first = replicated_group & (slot_index == first_slot)
+        replicated_first = replicated_group & (layout.slot_index == first_slot)
         active = active & (~replicated_group | replicated_first)
+        equivalent_slot = replicated_first[:, None, :, None]
+        packed_key = torch.where(equivalent_slot, parent_key, packed_key)
+        packed_value = torch.where(equivalent_slot, parent_value, packed_value)
         log_prior = torch.where(
             replicated_first,
             torch.zeros_like(log_prior),
@@ -619,8 +714,9 @@ def fpct_qwen_eager_attention_forward(
     attention_mask: Optional[Tensor],
     scaling: float,
     dropout: float = 0.0,
+    return_fp32_logits: bool = False,
     **_kwargs,
-) -> tuple[Tensor, Tensor]:
+) -> tuple[Tensor, Tensor] | tuple[Tensor, Tensor, Tensor]:
     """Shared C_post/F eager adapter with FP32 logits, mask and reduction."""
 
     groups = int(module.num_key_value_groups)
@@ -641,7 +737,10 @@ def fpct_qwen_eager_attention_forward(
         probability, p=dropout, training=module.training
     )
     output = torch.matmul(probability, value.float()).to(dtype=query.dtype)
-    return output.transpose(1, 2).contiguous(), probability.to(dtype=query.dtype)
+    result = output.transpose(1, 2).contiguous(), probability.to(dtype=query.dtype)
+    if return_fp32_logits:
+        return result[0], result[1], logits
+    return result
 
 
 def fpct_qwen_hierarchical_attention_forward(
@@ -655,14 +754,15 @@ def fpct_qwen_hierarchical_attention_forward(
     dropout: float = 0.0,
     **_kwargs,
 ) -> tuple[Tensor, Tensor]:
-    """Global-equivalent beta/gamma attention over parent-grouped atoms."""
+    """Global-equivalent flat-atom attention with exact parent reuse."""
 
     # Preserve the exact C_post numerical call order for the parent branch.
     # R2f established that candidate and collapsed K/V can be bit-identical to
     # native while a parent matmul executed after the grouped atom kernels can
     # still accumulate a deep FP32 deviation.  Compute the shared adapter first;
     # the tensor-only final selection remains valid for mixed batches.
-    parent_output, _parent_probability = fpct_qwen_eager_attention_forward(
+    parent_output, _parent_probability, parent_logits = (
+        fpct_qwen_eager_attention_forward(
         module,
         query,
         parent_key,
@@ -670,6 +770,8 @@ def fpct_qwen_hierarchical_attention_forward(
         parent_attention_mask,
         scaling=scaling,
         dropout=dropout,
+        return_fp32_logits=True,
+        )
     )
 
     groups = int(module.num_key_value_groups)
@@ -688,110 +790,65 @@ def fpct_qwen_hierarchical_attention_forward(
 
     atom_key = repeat_kv(packed.key)
     atom_value = repeat_kv(packed.value).float()
-    repeated_parent_key = repeat_kv(parent_key)
-    repeated_parent_value = repeat_kv(parent_value).float()
+    parent_index = packed.parent_index.clamp_min(0)[:, None, None, :].expand(
+        query.shape[0], query.shape[1], query.shape[2], -1
+    )
+    equivalent_slot = (
+        packed.active
+        & torch.gather(
+            packed.parent_equivalent,
+            1,
+            packed.parent_index.clamp_min(0),
+        )
+    )[:, None, None, :]
+    # Equivalent parents reuse the already-computed parent logits. Their keys
+    # are removed from the atom QK dataflow by replacing them with exact zero
+    # before the candidate matmul; the gathered parent logit is inserted below.
+    equivalent_key_slot = equivalent_slot[:, 0, 0, :][:, None, :, None]
+    matmul_key = torch.where(
+        equivalent_key_slot,
+        torch.zeros((), device=atom_key.device, dtype=atom_key.dtype),
+        atom_key,
+    )
     atom_logits = (
-        torch.matmul(query.float(), atom_key.float().transpose(2, 3))
+        torch.matmul(query.float(), matmul_key.float().transpose(2, 3))
         * float(scaling)
     )
     atom_logits = atom_logits + packed.attention_mask.float()
-    parent_logits = (
-        torch.matmul(query.float(), repeated_parent_key.float().transpose(2, 3))
-        * float(scaling)
-    )
-    if parent_attention_mask is not None:
-        parent_logits = parent_logits + parent_attention_mask[
-            :, :, :, : parent_key.shape[-2]
-        ].float()
-
-    b, hq, q_length, _ = atom_logits.shape
-    source_length = parent_key.shape[-2]
-    parent_index = packed.parent_index.clamp_min(0)[:, None, None, :].expand(
-        b, hq, q_length, -1
+    atom_logits = torch.where(
+        equivalent_slot,
+        torch.gather(parent_logits, 3, parent_index),
+        atom_logits,
     )
     atom_active = (
         packed.active[:, None, None, :]
         & torch.isfinite(packed.attention_mask[:, :, :, : packed.key.shape[-2]])
     )
-    negative_inf = torch.full(
-        (b, hq, q_length, source_length),
-        -torch.inf,
-        device=query.device,
+    masked_logits = torch.where(
+        atom_active, atom_logits, torch.full_like(atom_logits, -torch.inf)
+    )
+    any_active = atom_active.any(dim=-1, keepdim=True)
+    atom_probability = nn.functional.softmax(
+        torch.where(any_active, masked_logits, torch.zeros_like(masked_logits)),
+        dim=-1,
         dtype=torch.float32,
     )
-    group_max = negative_inf.scatter_reduce(
-        3,
-        parent_index,
-        torch.where(
-            atom_active, atom_logits, torch.full_like(atom_logits, -torch.inf)
-        ),
-        reduce="amax",
-        include_self=True,
+    atom_probability = torch.where(
+        atom_active, atom_probability, torch.zeros_like(atom_probability)
     )
-    gathered_max = torch.gather(group_max, 3, parent_index)
-    exp_shifted = torch.where(
-        atom_active,
-        torch.exp(atom_logits - gathered_max),
-        torch.zeros_like(atom_logits),
-    )
-    group_sum = torch.zeros_like(group_max)
-    group_sum.scatter_add_(3, parent_index, exp_shifted)
-    group_logits = torch.where(
-        group_sum > 0,
-        group_max + torch.log(
-            group_sum.clamp_min(torch.finfo(torch.float32).tiny)
-        ),
-        torch.full_like(group_sum, -torch.inf),
-    )
-    group_logits = torch.where(
-        packed.parent_equivalent[:, None, None, :],
-        parent_logits,
-        group_logits,
-    )
-    beta = nn.functional.softmax(group_logits, dim=-1, dtype=torch.float32)
-    gathered_group_sum = torch.gather(group_sum, 3, parent_index).clamp_min(
-        torch.finfo(torch.float32).tiny
-    )
-    gamma = torch.where(
-        atom_active,
-        exp_shifted / gathered_group_sum,
-        torch.zeros_like(atom_logits),
-    )
-    atom_probability = torch.gather(beta, 3, parent_index) * gamma
-    group_value = torch.zeros(
-        b,
-        hq,
-        q_length,
-        source_length,
-        atom_value.shape[-1],
-        device=query.device,
-        dtype=torch.float32,
-    )
-    group_value.scatter_add_(
-        3,
-        parent_index[..., None].expand(-1, -1, -1, -1, atom_value.shape[-1]),
-        gamma[..., None] * atom_value[:, :, None, :, :],
-    )
-    group_value = torch.where(
-        packed.parent_equivalent[:, None, None, :, None],
-        repeated_parent_value[:, :, None, :, :],
-        group_value,
-    )
-    hierarchical_output = (beta[..., None] * group_value).sum(dim=3)
     if module.training and dropout > 0:
         atom_probability = nn.functional.dropout(
             atom_probability, p=dropout, training=True
         )
-        hierarchical_output = (
-            atom_probability[..., None] * atom_value[:, :, None, :, :]
-        ).sum(dim=3)
-    hierarchical_output = hierarchical_output.to(query.dtype).transpose(
+    flat_output = torch.matmul(
+        atom_probability, atom_value
+    ).to(query.dtype).transpose(
         1, 2
     ).contiguous()
     output = torch.where(
         packed.all_parent_equivalent[:, None, None, None],
         parent_output,
-        hierarchical_output,
+        flat_output,
     )
     return output, atom_probability.to(query.dtype)
 

@@ -1007,6 +1007,7 @@ def profile_condition(
     device = torch.device("cuda:0")
     config = _model_config(lock, condition)
     config["fpct_trace"] = False
+    config["fpct_profile_scopes"] = False
     torch.manual_seed(104729)
     torch.cuda.manual_seed_all(104729)
     model, receiver_tokenizer, aligner, sender_tokenizer = sft.setup_models(
@@ -1033,16 +1034,15 @@ def profile_condition(
     repeats = 7 if profile_id in {"P2_CPOST_OFF", "P3_F_OFF"} else 1
     durations = []
     for _ in range(repeats):
-        with record_function("harness_sync"):
-            torch.cuda.synchronize()
+        torch.cuda.synchronize()
         started = time.perf_counter()
-        with torch.no_grad(), record_function("scientific_forward"):
+        with torch.no_grad():
             _forward(model, batch)
-        with record_function("harness_sync"):
-            torch.cuda.synchronize()
+        torch.cuda.synchronize()
         durations.append(time.perf_counter() - started)
 
     trace_path = output_dir / f"{profile_id}.chrome.json"
+    model.fpct_profile_scopes = True
     with record_function("profiler_lifecycle"):
         with torch.profiler.profile(
             activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],

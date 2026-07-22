@@ -346,3 +346,12 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - R2i science `8d21c72` 与 R2j science `efa02fb` 的 `fpct_attention.py`、`wrapper.py`、`fpct_gpu_r2_runner.py` Git blobs 完全相同。
 - 当前：protocol=`PRE-DIAGNOSTIC LOCK`；R2k diagnostic=`NOT STARTED`；immutable gate、matched smoke、formal training、model-selection、held-out=`NOT AUTHORIZED`。
 - 本阶段 accuracy/correctness accessed=`false`；尚未启动新的 GPU/Kubernetes/pretrained forward/training/checkpoint。
+
+### R2k equivalent-kernel CPU/HF implementation
+
+- Flat global softmax、single parent-logit computation/reuse、single P×V 和 5-D `group_value` 删除已实现。
+- Per-layer exact parent-equivalence metadata 在 candidate projection 后形成，并一次性绑定到 reusable layout；attention hot path 复用 safe indices/slot maps。
+- Production latency scopes 可真正关闭，trace scopes 单独开启；legacy 1+7 resource threshold 未修改。
+- 新 diagnostic runner 已冻结 raw CUDA+wall samples、8-block ABBA、20+50 timing、geometry panel、hardware telemetry 与 50,000 block bootstrap。
+- FPCT targeted=`190 passed`；CPU-safe full suite=`429 passed`；未放宽 tolerance。
+- 当前 R2k diagnostic=`NOT STARTED`；immutable gate/training/performance 仍=`NOT AUTHORIZED`。
