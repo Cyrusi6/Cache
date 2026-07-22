@@ -415,3 +415,10 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - 只修改获授权的`bind_fpct_layout_layer_semantics`：完整map ones初始化，每个sidecar span先置false，再复制离散metadata。Protocol verifier屏蔽该函数后确认其余`fpct_attention.py`字节与baseline一致。
 - Actual Qwen3 eager 28层FP32/BF16、GQA、padding、causal prefill+decode4在pre/post/residual/cache/final logits上均通过`torch.equal`、byte SHA、max_abs=0、ULP=0；active sample同batch保持非零差异。
 - FPCT targeted=`207 passed`；CPU-safe full suite=`446 passed`。尚未运行R2l focused GPU/pretrained diagnostic，science仍为diagnostic candidate而非immutable GO。
+
+### R2l focused diagnostic v1：PRE-OUTPUT LOCKED
+
+- Candidate science=`d71d21b1...`；diagnostic-only image=`sha256:ef04b033...`，embedded tree=`9fabb08e...`。
+- Run UID/root=`fpct-r2l-diag-d71d21b-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1`；run-lock SHA=`93513df3113a074d6e0542bf918864c5c4b274eee6f3872e769a1532aa67c31a`。
+- 只授权synthetic mixed-memory、一行冻结label-free panel的10个condition、block-0 checkpoint-native/forced-on 20+50 timing和独立trace；不能产生R2l GO或授权训练。
+- 提交前尚未submit loader/diagnostic Job，未产生新GPU/pretrained output，accuracy/correctness firewall保持false。

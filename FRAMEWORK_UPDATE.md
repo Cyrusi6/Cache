@@ -1364,3 +1364,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 新测试覆盖pre-bound map、多个span/gap、mixed exact/active batch、FP32/BF16、GQA/MQA、training fixed RNG/gradient，以及actual Qwen3 28层padding+prefill+decode4的逐层和final bitwise exact-null。
 - 验证：R2l focused `14 passed`；FPCT targeted `207 passed`；CPU-safe full suite按`local/tmp`契约重跑为`446 passed, 2 warnings`。Protocol diff verifier=`GO`，flat kernel/wrapper/projector/runner等冻结SHA未变。
 - 当前只形成focused diagnostic candidate；尚未运行新R2l GPU/pretrained output、训练、checkpoint或accuracy。
+
+### 2026-07-22 FPCT-GPU-R2l focused diagnostic v1 lock
+
+- 基于clean candidate commit `d71d21b1...`构建diagnostic-only image `sha256:ef04b033...`，embedded tree=`9fabb08e...`，tar SHA=`f3701858...`。
+- 新UID/root=`fpct-r2l-diag-d71d21b-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2l-diag-d71d21b-v1`，run-lock SHA=`93513df3...`。
+- Focused执行固定为synthetic FP32/BF16 mixed memory、单一预注册label-free ARC m2 row上的Cpost/F/F-replicated native与forced-on conditions、一个block-0双canary latency和独立no-sync trace。
+- Diagnostic仍不能产生GO、训练或task claim；提交本lock前没有新R2l GPU/pretrained output，accuracy/correctness未访问。
