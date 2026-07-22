@@ -1,0 +1,2629 @@
+{
+  "rows": [
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/run_uid",
+      "reason": "/run_uid string too short"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/scientific_code_commit",
+      "reason": "/ missing ['scientific_code_commit']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/scientific_code_commit",
+      "reason": "/scientific_code_commit expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/scientific_code_commit",
+      "reason": "/scientific_code_commit pattern mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/scientific_code_commit",
+      "reason": "/scientific_code_commit expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/image/reference",
+      "reason": "/image missing ['reference']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/image/reference",
+      "reason": "/image/reference expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/image/reference",
+      "reason": "/image/reference pattern mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/image/reference",
+      "reason": "/image/reference expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/image/source_tree_sha256",
+      "reason": "/image missing ['source_tree_sha256']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/image/source_tree_sha256",
+      "reason": "/image/source_tree_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/image/source_tree_sha256",
+      "reason": "/image/source_tree_sha256 pattern mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/image/source_tree_sha256",
+      "reason": "/image/source_tree_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/manifest_sha256",
+      "reason": "/ missing ['manifest_sha256']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/manifest_sha256",
+      "reason": "/manifest_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/manifest_sha256",
+      "reason": "/manifest_sha256 pattern mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/manifest_sha256",
+      "reason": "/manifest_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/nested_confirmatory_manifest_sha256",
+      "reason": "/ missing ['nested_confirmatory_manifest_sha256']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/nested_confirmatory_manifest_sha256",
+      "reason": "/nested_confirmatory_manifest_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/nested_confirmatory_manifest_sha256",
+      "reason": "/nested_confirmatory_manifest_sha256 pattern mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/nested_confirmatory_manifest_sha256",
+      "reason": "/nested_confirmatory_manifest_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/source_lock_sha256",
+      "reason": "/ missing ['source_lock_sha256']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/source_lock_sha256",
+      "reason": "/source_lock_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/source_lock_sha256",
+      "reason": "/source_lock_sha256 pattern mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/source_lock_sha256",
+      "reason": "/source_lock_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/shared_run_root",
+      "reason": "/ missing ['shared_run_root']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/shared_run_root",
+      "reason": "/shared_run_root expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/shared_run_root",
+      "reason": "/shared_run_root string too short"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/shared_run_root",
+      "reason": "/shared_run_root expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/assets/receiver_sha256",
+      "reason": "/assets missing ['receiver_sha256']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/assets/receiver_sha256",
+      "reason": "/assets/receiver_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/assets/receiver_sha256",
+      "reason": "/assets/receiver_sha256 pattern mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/assets/receiver_sha256",
+      "reason": "/assets/receiver_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/assets/sender_sha256",
+      "reason": "/assets missing ['sender_sha256']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/assets/sender_sha256",
+      "reason": "/assets/sender_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/assets/sender_sha256",
+      "reason": "/assets/sender_sha256 pattern mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/assets/sender_sha256",
+      "reason": "/assets/sender_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/assets/sidecar_sha256",
+      "reason": "/assets missing ['sidecar_sha256']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/assets/sidecar_sha256",
+      "reason": "/assets/sidecar_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/assets/sidecar_sha256",
+      "reason": "/assets/sidecar_sha256 pattern mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/assets/sidecar_sha256",
+      "reason": "/assets/sidecar_sha256 expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/training/seeds",
+      "reason": "/training missing ['seeds']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/training/seeds",
+      "reason": "/training/seeds expected array"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/training/seeds",
+      "reason": "/training/seeds too few items"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/training/seeds",
+      "reason": "/training/seeds too few items"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/training/arm_order",
+      "reason": "/training missing ['arm_order']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/training/arm_order",
+      "reason": "/training/arm_order expected object"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/training/arm_order",
+      "reason": "arm order mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/training/arm_order",
+      "reason": "/training/arm_order expected object"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/training/examples",
+      "reason": "/training missing ['examples']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/training/examples",
+      "reason": "/training/examples expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/training/examples",
+      "reason": "/training/examples expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/training/examples",
+      "reason": "/training/examples expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/training/optimizer_steps",
+      "reason": "/training missing ['optimizer_steps']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/training/optimizer_steps",
+      "reason": "/training/optimizer_steps expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/training/optimizer_steps",
+      "reason": "/training/optimizer_steps expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/training/optimizer_steps",
+      "reason": "/training/optimizer_steps expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/training/world_size",
+      "reason": "/training missing ['world_size']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/training/world_size",
+      "reason": "/training/world_size expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/training/world_size",
+      "reason": "/training/world_size expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/training/world_size",
+      "reason": "/training/world_size expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/kubernetes/namespace",
+      "reason": "/kubernetes missing ['namespace']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/kubernetes/namespace",
+      "reason": "/kubernetes/namespace expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/kubernetes/namespace",
+      "reason": "/kubernetes/namespace string too short"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/kubernetes/namespace",
+      "reason": "/kubernetes/namespace expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/kubernetes/config_map",
+      "reason": "/kubernetes missing ['config_map']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/kubernetes/config_map",
+      "reason": "/kubernetes/config_map expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/kubernetes/config_map",
+      "reason": "/kubernetes/config_map string too short"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/kubernetes/config_map",
+      "reason": "/kubernetes/config_map expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/kubernetes/node_name",
+      "reason": "/kubernetes missing ['node_name']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/kubernetes/node_name",
+      "reason": "/kubernetes/node_name expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/kubernetes/node_name",
+      "reason": "/kubernetes/node_name string too short"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/kubernetes/node_name",
+      "reason": "/kubernetes/node_name expected string"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/kubernetes/gpu_per_seed_pod",
+      "reason": "/kubernetes missing ['gpu_per_seed_pod']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/kubernetes/gpu_per_seed_pod",
+      "reason": "/kubernetes/gpu_per_seed_pod expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/kubernetes/gpu_per_seed_pod",
+      "reason": "/kubernetes/gpu_per_seed_pod expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/kubernetes/gpu_per_seed_pod",
+      "reason": "/kubernetes/gpu_per_seed_pod expected integer"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/scientific_output",
+      "reason": "/ missing ['scientific_output']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/scientific_output",
+      "reason": "/scientific_output const mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/scientific_output",
+      "reason": "/scientific_output const mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/scientific_output",
+      "reason": "/scientific_output const mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/training_authorized",
+      "reason": "/ missing ['training_authorized']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/training_authorized",
+      "reason": "/training_authorized const mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "empty",
+      "pointer": "/training_authorized",
+      "reason": "/training_authorized const mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/training_authorized",
+      "reason": "/training_authorized const mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "stale_uid",
+      "pointer": "/run_uid",
+      "reason": "H1 sentinel identity mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "stale_root",
+      "pointer": "/shared_run_root",
+      "reason": "H1 sentinel identity mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "stale_commit",
+      "pointer": "/scientific_code_commit",
+      "reason": "scientific commit mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "stale_image",
+      "pointer": "/image/reference",
+      "reason": "image digest mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "manifest_mismatch",
+      "pointer": "/nested_confirmatory_manifest_sha256",
+      "reason": "manifest top-level/nested/raw mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "sidecar_mismatch",
+      "pointer": "/assets/sidecar_sha256",
+      "reason": "model/sidecar asset identity mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "model_mismatch",
+      "pointer": "/assets/receiver_sha256",
+      "reason": "model/sidecar asset identity mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_seed",
+      "pointer": "/training/seeds",
+      "reason": "/training/seeds/0 below minimum"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_arm_order",
+      "pointer": "/training/arm_order",
+      "reason": "arm order mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_world_size",
+      "pointer": "/training/world_size",
+      "reason": "/training/world_size const mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "wrong_gpu_count",
+      "pointer": "/kubernetes/gpu_per_seed_pod",
+      "reason": "/kubernetes/gpu_per_seed_pod const mismatch"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['extra']"
+    },
+    {
+      "fail_closed": true,
+      "mutation": "duplicate_key",
+      "pointer": "/schema_version",
+      "reason": "duplicate JSON key: schema_version"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/schema_version",
+      "reason": "/ missing ['schema_version']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/protocol_id",
+      "reason": "/ missing ['protocol_id']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/protocol_id",
+      "reason": "/protocol_id const mismatch"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/protocol_id",
+      "reason": "/protocol_id const mismatch"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/status",
+      "reason": "/ missing ['status']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/status",
+      "reason": "/status const mismatch"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/status",
+      "reason": "/status const mismatch"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/scientific_code_commit",
+      "reason": "/ missing ['scientific_code_commit']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/scientific_code_commit",
+      "reason": "/scientific_code_commit expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/scientific_code_commit",
+      "reason": "/scientific_code_commit expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/image",
+      "reason": "/ missing ['image']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/image",
+      "reason": "/image expected object"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/image",
+      "reason": "/image expected object"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/manifest_sha256",
+      "reason": "/ missing ['manifest_sha256']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/manifest_sha256",
+      "reason": "/manifest_sha256 expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/manifest_sha256",
+      "reason": "/manifest_sha256 expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/nested_confirmatory_manifest_sha256",
+      "reason": "/ missing ['nested_confirmatory_manifest_sha256']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/nested_confirmatory_manifest_sha256",
+      "reason": "/nested_confirmatory_manifest_sha256 expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/nested_confirmatory_manifest_sha256",
+      "reason": "/nested_confirmatory_manifest_sha256 expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/source_lock_sha256",
+      "reason": "/ missing ['source_lock_sha256']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/source_lock_sha256",
+      "reason": "/source_lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/source_lock_sha256",
+      "reason": "/source_lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/shared_run_root",
+      "reason": "/ missing ['shared_run_root']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/shared_run_root",
+      "reason": "/shared_run_root expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/shared_run_root",
+      "reason": "/shared_run_root expected string"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/assets",
+      "reason": "/ missing ['assets']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/assets",
+      "reason": "/assets expected object"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/assets",
+      "reason": "/assets expected object"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/training",
+      "reason": "/ missing ['training']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/training",
+      "reason": "/training expected object"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/training",
+      "reason": "/training expected object"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/kubernetes",
+      "reason": "/ missing ['kubernetes']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/kubernetes",
+      "reason": "/kubernetes expected object"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/kubernetes",
+      "reason": "/kubernetes expected object"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/scientific_output",
+      "reason": "/ missing ['scientific_output']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/scientific_output",
+      "reason": "/scientific_output const mismatch"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/scientific_output",
+      "reason": "/scientific_output const mismatch"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/training_authorized",
+      "reason": "/ missing ['training_authorized']"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/training_authorized",
+      "reason": "/training_authorized const mismatch"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/training_authorized",
+      "reason": "/training_authorized const mismatch"
+    },
+    {
+      "artifact_schema": "execution_lock.schema.json",
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['unexpected']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/schema_version",
+      "reason": "/ missing ['schema_version']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/protocol_id",
+      "reason": "/ missing ['protocol_id']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/protocol_id",
+      "reason": "/protocol_id const mismatch"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/protocol_id",
+      "reason": "/protocol_id const mismatch"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/lock_sha256",
+      "reason": "/ missing ['lock_sha256']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/image_digest",
+      "reason": "/ missing ['image_digest']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/image_digest",
+      "reason": "/image_digest expected string"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/image_digest",
+      "reason": "/image_digest expected string"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/artifact_sha256",
+      "reason": "/ missing ['artifact_sha256']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/artifact_sha256",
+      "reason": "/artifact_sha256 expected string"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/artifact_sha256",
+      "reason": "/artifact_sha256 expected string"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/classification",
+      "reason": "/ missing ['classification']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/classification",
+      "reason": "/classification expected string"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/classification",
+      "reason": "/classification expected string"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/scientific_output",
+      "reason": "/ missing ['scientific_output']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/scientific_output",
+      "reason": "/scientific_output const mismatch"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/scientific_output",
+      "reason": "/scientific_output const mismatch"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/training_authorized",
+      "reason": "/ missing ['training_authorized']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/training_authorized",
+      "reason": "/training_authorized const mismatch"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/training_authorized",
+      "reason": "/training_authorized const mismatch"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['unexpected']"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/schema_version",
+      "reason": "/ missing ['schema_version']"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/protocol_id",
+      "reason": "/ missing ['protocol_id']"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/protocol_id",
+      "reason": "/protocol_id const mismatch"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/protocol_id",
+      "reason": "/protocol_id const mismatch"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/lock_sha256",
+      "reason": "/ missing ['lock_sha256']"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/image_digest",
+      "reason": "/ missing ['image_digest']"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/image_digest",
+      "reason": "/image_digest expected string"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/image_digest",
+      "reason": "/image_digest expected string"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/prerequisite_sha256",
+      "reason": "/ missing ['prerequisite_sha256']"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/prerequisite_sha256",
+      "reason": "/prerequisite_sha256 expected string"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/prerequisite_sha256",
+      "reason": "/prerequisite_sha256 expected string"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/seed",
+      "reason": "/ missing ['seed']"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/seed",
+      "reason": "/seed expected integer"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/seed",
+      "reason": "/seed expected integer"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/arms",
+      "reason": "/ missing ['arms']"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/arms",
+      "reason": "/arms expected array"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/arms",
+      "reason": "/arms expected array"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/status",
+      "reason": "/ missing ['status']"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/status",
+      "reason": "/status enum mismatch"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/status",
+      "reason": "/status enum mismatch"
+    },
+    {
+      "artifact_schema": "smoke_result.schema.json",
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['unexpected']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/schema_version",
+      "reason": "/ missing ['schema_version']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/seed",
+      "reason": "/ missing ['seed']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/seed",
+      "reason": "/seed expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/seed",
+      "reason": "/seed expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/arm",
+      "reason": "/ missing ['arm']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/arm",
+      "reason": "/arm enum mismatch"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/arm",
+      "reason": "/arm enum mismatch"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/examples",
+      "reason": "/ missing ['examples']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/examples",
+      "reason": "/examples expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/examples",
+      "reason": "/examples expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/optimizer_steps",
+      "reason": "/ missing ['optimizer_steps']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/optimizer_steps",
+      "reason": "/optimizer_steps expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/optimizer_steps",
+      "reason": "/optimizer_steps expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/world_size",
+      "reason": "/ missing ['world_size']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/world_size",
+      "reason": "/world_size expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/world_size",
+      "reason": "/world_size expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/per_device_batch_size",
+      "reason": "/ missing ['per_device_batch_size']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/per_device_batch_size",
+      "reason": "/per_device_batch_size expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/per_device_batch_size",
+      "reason": "/per_device_batch_size expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/gradient_accumulation_steps",
+      "reason": "/ missing ['gradient_accumulation_steps']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/gradient_accumulation_steps",
+      "reason": "/gradient_accumulation_steps expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/gradient_accumulation_steps",
+      "reason": "/gradient_accumulation_steps expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/learning_rate",
+      "reason": "/ missing ['learning_rate']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/learning_rate",
+      "reason": "/learning_rate expected finite number"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/learning_rate",
+      "reason": "/learning_rate expected finite number"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/weight_decay",
+      "reason": "/ missing ['weight_decay']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/weight_decay",
+      "reason": "/weight_decay expected finite number"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/weight_decay",
+      "reason": "/weight_decay expected finite number"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/max_length",
+      "reason": "/ missing ['max_length']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/max_length",
+      "reason": "/max_length expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/max_length",
+      "reason": "/max_length expected integer"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/precision",
+      "reason": "/ missing ['precision']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/precision",
+      "reason": "/precision const mismatch"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/precision",
+      "reason": "/precision const mismatch"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/sidecar_sha256",
+      "reason": "/ missing ['sidecar_sha256']"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/sidecar_sha256",
+      "reason": "/sidecar_sha256 expected string"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/sidecar_sha256",
+      "reason": "/sidecar_sha256 expected string"
+    },
+    {
+      "artifact_schema": "training_config.schema.json",
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['unexpected']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/schema_version",
+      "reason": "/ missing ['schema_version']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/lock_sha256",
+      "reason": "/ missing ['lock_sha256']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/image_digest",
+      "reason": "/ missing ['image_digest']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/image_digest",
+      "reason": "/image_digest expected string"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/image_digest",
+      "reason": "/image_digest expected string"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/seed",
+      "reason": "/ missing ['seed']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/seed",
+      "reason": "/seed expected integer"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/seed",
+      "reason": "/seed expected integer"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/arm",
+      "reason": "/ missing ['arm']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/arm",
+      "reason": "/arm enum mismatch"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/arm",
+      "reason": "/arm enum mismatch"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/config_sha256",
+      "reason": "/ missing ['config_sha256']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/config_sha256",
+      "reason": "/config_sha256 expected string"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/config_sha256",
+      "reason": "/config_sha256 expected string"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/checkpoint_sha256",
+      "reason": "/ missing ['checkpoint_sha256']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/checkpoint_sha256",
+      "reason": "/checkpoint_sha256 expected string"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/checkpoint_sha256",
+      "reason": "/checkpoint_sha256 expected string"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/optimizer_steps",
+      "reason": "/ missing ['optimizer_steps']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/optimizer_steps",
+      "reason": "/optimizer_steps expected integer"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/optimizer_steps",
+      "reason": "/optimizer_steps expected integer"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/status",
+      "reason": "/ missing ['status']"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/status",
+      "reason": "/status enum mismatch"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/status",
+      "reason": "/status enum mismatch"
+    },
+    {
+      "artifact_schema": "arm_result.schema.json",
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['unexpected']"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/schema_version",
+      "reason": "/ missing ['schema_version']"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/lock_sha256",
+      "reason": "/ missing ['lock_sha256']"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/image_digest",
+      "reason": "/ missing ['image_digest']"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/image_digest",
+      "reason": "/image_digest expected string"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/image_digest",
+      "reason": "/image_digest expected string"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/seed",
+      "reason": "/ missing ['seed']"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/seed",
+      "reason": "/seed expected integer"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/seed",
+      "reason": "/seed expected integer"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/arm_order",
+      "reason": "/ missing ['arm_order']"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/arm_order",
+      "reason": "/arm_order expected array"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/arm_order",
+      "reason": "/arm_order expected array"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/arm_result_sha256",
+      "reason": "/ missing ['arm_result_sha256']"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/arm_result_sha256",
+      "reason": "/arm_result_sha256 expected object"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/arm_result_sha256",
+      "reason": "/arm_result_sha256 expected object"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/status",
+      "reason": "/ missing ['status']"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/status",
+      "reason": "/status enum mismatch"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/status",
+      "reason": "/status enum mismatch"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['unexpected']"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/schema_version",
+      "reason": "/ missing ['schema_version']"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/lock_sha256",
+      "reason": "/ missing ['lock_sha256']"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/stage",
+      "reason": "/ missing ['stage']"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/stage",
+      "reason": "/stage enum mismatch"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/stage",
+      "reason": "/stage enum mismatch"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/completed_triplets",
+      "reason": "/ missing ['completed_triplets']"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/completed_triplets",
+      "reason": "/completed_triplets expected array"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/completed_triplets",
+      "reason": "/completed_triplets expected array"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/model_selection_release_count",
+      "reason": "/ missing ['model_selection_release_count']"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/model_selection_release_count",
+      "reason": "/model_selection_release_count expected integer"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/model_selection_release_count",
+      "reason": "/model_selection_release_count expected integer"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/held_out_release_count",
+      "reason": "/ missing ['held_out_release_count']"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/held_out_release_count",
+      "reason": "/held_out_release_count expected integer"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/held_out_release_count",
+      "reason": "/held_out_release_count expected integer"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['unexpected']"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/schema_version",
+      "reason": "/ missing ['schema_version']"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/lock_sha256",
+      "reason": "/ missing ['lock_sha256']"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/image_digest",
+      "reason": "/ missing ['image_digest']"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/image_digest",
+      "reason": "/image_digest expected string"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/image_digest",
+      "reason": "/image_digest expected string"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/triplet_sha256",
+      "reason": "/ missing ['triplet_sha256']"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/triplet_sha256",
+      "reason": "/triplet_sha256 expected object"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/triplet_sha256",
+      "reason": "/triplet_sha256 expected object"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/status",
+      "reason": "/ missing ['status']"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/status",
+      "reason": "/status const mismatch"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/status",
+      "reason": "/status const mismatch"
+    },
+    {
+      "artifact_schema": "formal_completion.schema.json",
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['unexpected']"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/schema_version",
+      "reason": "/ missing ['schema_version']"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/lock_sha256",
+      "reason": "/ missing ['lock_sha256']"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/release",
+      "reason": "/ missing ['release']"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/release",
+      "reason": "/release enum mismatch"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/release",
+      "reason": "/release enum mismatch"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/release_count",
+      "reason": "/ missing ['release_count']"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/release_count",
+      "reason": "/release_count expected integer"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/release_count",
+      "reason": "/release_count expected integer"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/input_artifact_sha256",
+      "reason": "/ missing ['input_artifact_sha256']"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/input_artifact_sha256",
+      "reason": "/input_artifact_sha256 expected string"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/input_artifact_sha256",
+      "reason": "/input_artifact_sha256 expected string"
+    },
+    {
+      "artifact_schema": "release_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['unexpected']"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/schema_version",
+      "reason": "/ missing ['schema_version']"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/schema_version",
+      "reason": "/schema_version const mismatch"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/run_uid",
+      "reason": "/ missing ['run_uid']"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/run_uid",
+      "reason": "/run_uid expected string"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/lock_sha256",
+      "reason": "/ missing ['lock_sha256']"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/lock_sha256",
+      "reason": "/lock_sha256 expected string"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/held_out_sha256",
+      "reason": "/ missing ['held_out_sha256']"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/held_out_sha256",
+      "reason": "/held_out_sha256 expected string"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/held_out_sha256",
+      "reason": "/held_out_sha256 expected string"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/statistics_code_sha256",
+      "reason": "/ missing ['statistics_code_sha256']"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/statistics_code_sha256",
+      "reason": "/statistics_code_sha256 expected string"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/statistics_code_sha256",
+      "reason": "/statistics_code_sha256 expected string"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "delete",
+      "pointer": "/classification",
+      "reason": "/ missing ['classification']"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "null",
+      "pointer": "/classification",
+      "reason": "/classification enum mismatch"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_type",
+      "pointer": "/classification",
+      "reason": "/classification enum mismatch"
+    },
+    {
+      "artifact_schema": "terminal_result.schema.json",
+      "fail_closed": true,
+      "mutation": "extra_field",
+      "pointer": "/",
+      "reason": "/ extra properties ['unexpected']"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_prerequisite_sha",
+      "pointer": "/artifact_sha256",
+      "reason": "receipt prerequisite identity mismatch"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_prerequisite_classification",
+      "pointer": "/classification",
+      "reason": "receipt classification mismatch"
+    },
+    {
+      "artifact_schema": "prerequisite_receipt.schema.json",
+      "fail_closed": true,
+      "mutation": "wrong_receipt_lock_sha",
+      "pointer": "/lock_sha256",
+      "reason": "receipt lock identity mismatch"
+    },
+    {
+      "artifact_schema": "triplet_manifest.schema.json",
+      "fail_closed": true,
+      "mutation": "selective_arm_retry_or_missing_arm",
+      "pointer": "/arm_result_sha256/c_post",
+      "reason": "/arm_result_sha256 missing ['c_post']"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "duplicate_held_out_release",
+      "pointer": "/stage",
+      "reason": "exact-image controller simulation"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "duplicate_model_selection_release",
+      "pointer": "/stage",
+      "reason": "exact-image controller simulation"
+    },
+    {
+      "artifact_schema": "controller_state.schema.json",
+      "fail_closed": true,
+      "mutation": "premature_formal_completion",
+      "pointer": "/stage",
+      "reason": "exact-image controller simulation"
+    },
+    {
+      "artifact_schema": "k8s_critical_projection",
+      "fail_closed": true,
+      "mutation": "leftover_template_placeholder",
+      "pointer": "/container/image",
+      "reason": "unresolved K8s placeholder"
+    }
+  ],
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

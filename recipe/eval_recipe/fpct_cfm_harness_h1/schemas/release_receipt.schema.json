@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "additionalProperties": false,
+  "properties": {"input_artifact_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "lock_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "release": {"enum": ["model-selection", "held-out"]}, "release_count": {"const": 1, "type": "integer"}, "run_uid": {"minLength": 1, "type": "string"}, "schema_version": {"const": 1}},
+  "required": ["schema_version", "run_uid", "lock_sha256", "release", "release_count", "input_artifact_sha256"], "type": "object"
+}

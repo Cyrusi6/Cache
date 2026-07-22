@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "additionalProperties": false,
+  "properties": {"arm_order": {"items": {"enum": ["c_pre", "c_post", "f"]}, "maxItems": 3, "minItems": 3, "type": "array"}, "arm_result_sha256": {"additionalProperties": false, "properties": {"c_post": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "c_pre": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "f": {"pattern": "^[0-9a-f]{64}$", "type": "string"}}, "required": ["c_pre", "c_post", "f"], "type": "object"}, "image_digest": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"}, "lock_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "run_uid": {"minLength": 1, "type": "string"}, "schema_version": {"const": 1}, "seed": {"maximum": 56, "minimum": 45, "type": "integer"}, "status": {"enum": ["COMPLETE", "INTEGRITY_FAILURE"]}},
+  "required": ["schema_version", "run_uid", "lock_sha256", "image_digest", "seed", "arm_order", "arm_result_sha256", "status"], "type": "object"
+}

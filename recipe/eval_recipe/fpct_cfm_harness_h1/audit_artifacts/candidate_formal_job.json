@@ -1,0 +1,99 @@
+{
+  "apiVersion": "batch/v1",
+  "kind": "Job",
+  "metadata": {
+    "annotations": {
+      "fpct.cache/scientific-output": "false",
+      "fpct.cache/training-authorized": "false"
+    },
+    "labels": {
+      "project": "fpct",
+      "study": "h1-config-only"
+    },
+    "name": "fpct-h1-formal-dry-run",
+    "namespace": "c2c-research"
+  },
+  "spec": {
+    "backoffLimit": 0,
+    "template": {
+      "metadata": {
+        "annotations": {
+          "fpct.cache/scientific-output": "false",
+          "fpct.cache/training-authorized": "false"
+        },
+        "labels": {
+          "project": "fpct",
+          "study": "h1-config-only"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "args": [
+              "--repo-root",
+              "/opt/fpct",
+              "--target",
+              "/opt/fpct/script/experiment/fpct_confirmatory_runner.py",
+              "--",
+              "train-triplet",
+              "--run-lock",
+              "/opt/fpct-h1/candidate_lock_projection.json",
+              "--seed",
+              "45",
+              "--output-root",
+              "/h1-must-not-exist"
+            ],
+            "command": [
+              "/opt/conda/bin/python3.11",
+              "-I",
+              "/opt/fpct/script/runtime/fpct_bootstrap.py"
+            ],
+            "env": [
+              {
+                "name": "CUDA_VISIBLE_DEVICES",
+                "value": ""
+              },
+              {
+                "name": "HF_HUB_OFFLINE",
+                "value": "1"
+              },
+              {
+                "name": "TRANSFORMERS_OFFLINE",
+                "value": "1"
+              }
+            ],
+            "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+            "name": "h1-dry-run",
+            "resources": {
+              "limits": {
+                "nvidia.com/gpu": "2"
+              },
+              "requests": {
+                "cpu": "1",
+                "memory": "1Gi",
+                "nvidia.com/gpu": "2"
+              }
+            },
+            "volumeMounts": [
+              {
+                "mountPath": "/opt/fpct-h1",
+                "name": "lock",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "nodeName": "4090-48gx2",
+        "restartPolicy": "Never",
+        "volumes": [
+          {
+            "configMap": {
+              "name": "fpct-h1-dry-run-not-applied"
+            },
+            "name": "lock"
+          }
+        ]
+      }
+    }
+  }
+}

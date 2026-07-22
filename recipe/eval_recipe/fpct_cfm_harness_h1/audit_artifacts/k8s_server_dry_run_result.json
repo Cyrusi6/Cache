@@ -1,0 +1,25 @@
+{
+  "authority_annotations_exact": true,
+  "configmap_data_exact": true,
+  "configmap_immutable": true,
+  "formal_gpu_count": "2",
+  "formal_job_name": "fpct-h1-formal-dry-run",
+  "no_resources_created": true,
+  "protocol_id": "fpct_cfm_harness_h1_k8s_server_dry_run_v1",
+  "schema_version": 1,
+  "scientific_output": false,
+  "server_objects": {
+    "configmap": {
+      "sha256": "2b9d53458335969fc500ef6ddb870b34ea1048bd0e1f3109074ae1375536cf04"
+    },
+    "formal": {
+      "sha256": "bc01b89228624206609196d506a22fa724f2b74987d70b7bf35c8a061e810a81"
+    },
+    "smoke": {
+      "sha256": "623f2e3372898964bc2d08fb248bd53d5948e454662066febbe350482334b757"
+    }
+  },
+  "smoke_job_name": "fpct-h1-smoke-dry-run",
+  "status": "GO",
+  "training_authorized": false
+}

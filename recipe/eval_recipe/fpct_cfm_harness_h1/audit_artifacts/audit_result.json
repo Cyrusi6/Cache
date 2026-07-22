@@ -1,0 +1,2707 @@
+{
+  "arm_order_exact": true,
+  "checks": {
+    "arm_order_exact": true,
+    "compiler_valid": true,
+    "controller_negative_tests": true,
+    "exact_byte_identity": true,
+    "graph_acyclic": true,
+    "historical_reds": true,
+    "image_dry_run_complete": true,
+    "k8s_authority_annotations": true,
+    "k8s_server_dry_run_complete": true,
+    "load_lock_discovery": true,
+    "mutation_coverage": true,
+    "no_cluster_resources_created": true,
+    "no_unannotated_dynamic_access": true,
+    "schemas_strict": true,
+    "training_config_matrix_complete": true
+  },
+  "classification": "H1_REQUIRES_NEW_IMAGE_QUALIFICATION",
+  "compiler": {
+    "candidate_lock_path": "/home/lijunsi/projects/Cache-fpct-factorized-transport/local/final_results/fpct_cfm_harness_h1/rev_0fd69e0/candidate_lock_projection.json",
+    "candidate_lock_sha256": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683",
+    "configmap_path": "/home/lijunsi/projects/Cache-fpct-factorized-transport/local/final_results/fpct_cfm_harness_h1/rev_0fd69e0/candidate_configmap.json",
+    "configmap_sha256": "2252cd4f6799f8f385d0a9c65016c5517603a5d290023cf8d046d7a8aef498d0",
+    "jobs": {
+      "formal": {
+        "path": "/home/lijunsi/projects/Cache-fpct-factorized-transport/local/final_results/fpct_cfm_harness_h1/rev_0fd69e0/candidate_formal_job.json",
+        "sha256": "ddfd35dc2ba949464068f68f5cdfcab5810bca209c9f660e6b83369d6d7ed4fc"
+      },
+      "smoke": {
+        "path": "/home/lijunsi/projects/Cache-fpct-factorized-transport/local/final_results/fpct_cfm_harness_h1/rev_0fd69e0/candidate_smoke_job.json",
+        "sha256": "210e114aba2689b7a2787cedc75f1c12d86aa94879ac5bdd05465fe692d47e5a"
+      }
+    },
+    "receipt_path": "/home/lijunsi/projects/Cache-fpct-factorized-transport/local/final_results/fpct_cfm_harness_h1/rev_0fd69e0/candidate_authorization_receipt.json",
+    "receipt_sha256": "6258a226082e04d6a7319c2dd7f0893c707aa8e792eb9b26f2c0ed8ce3b23195"
+  },
+  "declared_discovered_closure": {
+    "formal_triplet": {
+      "declared": [
+        "/run_uid"
+      ],
+      "discovered": [
+        "/image",
+        "/manifest_sha256",
+        "/run_uid",
+        "/scientific_code_commit"
+      ],
+      "equal": false
+    },
+    "legacy_load_lock": {
+      "declared": [
+        "/image",
+        "/manifest_sha256",
+        "/run_uid",
+        "/scientific_code_commit"
+      ],
+      "discovered": [
+        "/image",
+        "/manifest_sha256",
+        "/run_uid",
+        "/scientific_code_commit"
+      ],
+      "equal": true
+    },
+    "matched_smoke": {
+      "declared": [
+        "/run_uid"
+      ],
+      "discovered": [
+        "/image",
+        "/manifest_sha256",
+        "/run_uid",
+        "/scientific_code_commit"
+      ],
+      "equal": false
+    },
+    "r2_controller": {
+      "declared": [
+        "/run_uid",
+        "/status"
+      ],
+      "discovered": [
+        "/run_uid",
+        "/status"
+      ],
+      "equal": true
+    },
+    "r2_k8s_renderer": {
+      "declared": [
+        "/image/reference",
+        "/kubernetes/config_map",
+        "/kubernetes/node_name",
+        "/run_uid",
+        "/scientific_code_commit",
+        "/status"
+      ],
+      "discovered": [
+        "/image",
+        "/image/reference",
+        "/kubernetes",
+        "/kubernetes/config_map",
+        "/kubernetes/node_name",
+        "/run_uid",
+        "/scientific_code_commit",
+        "/status"
+      ],
+      "equal": false
+    },
+    "r2m_finalizer": {
+      "declared": [],
+      "discovered": [
+        "/accuracy_or_correctness_accessed",
+        "/canaries",
+        "/canaries/checkpoint_native",
+        "/canaries/checkpoint_native/qualified",
+        "/canaries/forced_on",
+        "/canaries/forced_on/qualified",
+        "/checks",
+        "/status"
+      ],
+      "equal": false
+    },
+    "statistics": {
+      "declared": [],
+      "discovered": [
+        "/columns/cell",
+        "/columns/content_group_hash",
+        "/columns/correct",
+        "/columns/seed",
+        "/columns/task"
+      ],
+      "equal": false
+    },
+    "train_config_builder": {
+      "declared": [
+        "/assets/receiver/root",
+        "/assets/sender/root",
+        "/assets/training_alignment_sidecar_2048/container_path"
+      ],
+      "discovered": [
+        "/assets",
+        "/assets/training_alignment_sidecar_2048",
+        "/assets/training_alignment_sidecar_2048/container_path",
+        "/run_uid"
+      ],
+      "equal": false
+    },
+    "trainer": {
+      "declared": [],
+      "discovered": [
+        "/model_config/alignment_strategy",
+        "/model_config/attn_implementation",
+        "/model_config/fpct_operator",
+        "/model_config/fpct_r2_enforce_eager",
+        "/model_config/fpct_trace",
+        "/model_config/include_response",
+        "/model_config/is_do_alignment",
+        "/model_config/projector_checkpoint_dir",
+        "/model_config/projector_checkpoint_strict",
+        "/model_config/projector_init_seed",
+        "/model_config/soft_alignment_top_k",
+        "/training_config/answer_margin_routing",
+        "/training_config/answer_prior_regularization",
+        "/training_config/candidate_replay_alignment",
+        "/training_config/device",
+        "/training_config/expected_optimizer_steps",
+        "/training_config/fpct_expected_training_examples",
+        "/training_config/fpct_formal_run",
+        "/training_config/fpct_r2_matched_smoke",
+        "/training_config/freeze",
+        "/training_config/gradient_accumulation_steps",
+        "/training_config/lora",
+        "/training_config/max_length",
+        "/training_config/pad_to_multiple_of",
+        "/training_config/partial_training"
+      ],
+      "equal": false
+    }
+  },
+  "discovery": {
+    "candidate_compiler": [
+      "/assets",
+      "/assets/receiver",
+      "/assets/receiver/model_sha256",
+      "/assets/sender",
+      "/assets/sender/model_sha256",
+      "/assets/training_alignment_sidecar_2048",
+      "/assets/training_alignment_sidecar_2048/sha256",
+      "/formal_training",
+      "/formal_training/arm_order",
+      "/formal_training/optimizer_steps",
+      "/formal_training/processes",
+      "/formal_training/seeds",
+      "/formal_training/training_examples",
+      "/image",
+      "/image/reference",
+      "/image/source_tree_sha256",
+      "/kubernetes",
+      "/kubernetes/gpu_per_seed_pod",
+      "/kubernetes/namespace",
+      "/kubernetes/node_name",
+      "/normative",
+      "/normative/confirmatory_manifest",
+      "/scientific_code_commit"
+    ],
+    "formal_triplet": [
+      "/image",
+      "/manifest_sha256",
+      "/run_uid",
+      "/scientific_code_commit"
+    ],
+    "legacy_load_lock": [
+      "/image",
+      "/manifest_sha256",
+      "/run_uid",
+      "/scientific_code_commit"
+    ],
+    "matched_smoke": [
+      "/image",
+      "/manifest_sha256",
+      "/run_uid",
+      "/scientific_code_commit"
+    ],
+    "matched_smoke_direct": [
+      "/run_uid"
+    ],
+    "r2_controller": [
+      "/run_uid",
+      "/status"
+    ],
+    "r2_controller_evidence": [
+      "/status"
+    ],
+    "r2_controller_initialize": [
+      "/run_uid",
+      "/status"
+    ],
+    "r2_controller_triplet": [
+      "/status"
+    ],
+    "r2_k8s_renderer": [
+      "/image",
+      "/image/reference",
+      "/kubernetes",
+      "/kubernetes/config_map",
+      "/kubernetes/node_name",
+      "/run_uid",
+      "/scientific_code_commit",
+      "/status"
+    ],
+    "r2m_finalizer": [
+      "/accuracy_or_correctness_accessed",
+      "/canaries",
+      "/canaries/checkpoint_native",
+      "/canaries/checkpoint_native/qualified",
+      "/canaries/forced_on",
+      "/canaries/forced_on/qualified",
+      "/checks",
+      "/status"
+    ],
+    "statistics": [
+      "/columns/cell",
+      "/columns/content_group_hash",
+      "/columns/correct",
+      "/columns/seed",
+      "/columns/task"
+    ],
+    "statistics_required_columns": [
+      "cell",
+      "content_group_hash",
+      "correct",
+      "seed",
+      "task"
+    ],
+    "train_config_builder": [
+      "/assets",
+      "/assets/training_alignment_sidecar_2048",
+      "/assets/training_alignment_sidecar_2048/container_path",
+      "/run_uid"
+    ],
+    "train_triplet_direct": [
+      "/run_uid"
+    ],
+    "trainer": [
+      "/model_config/alignment_strategy",
+      "/model_config/attn_implementation",
+      "/model_config/fpct_operator",
+      "/model_config/fpct_r2_enforce_eager",
+      "/model_config/fpct_trace",
+      "/model_config/include_response",
+      "/model_config/is_do_alignment",
+      "/model_config/projector_checkpoint_dir",
+      "/model_config/projector_checkpoint_strict",
+      "/model_config/projector_init_seed",
+      "/model_config/soft_alignment_top_k",
+      "/training_config/answer_margin_routing",
+      "/training_config/answer_prior_regularization",
+      "/training_config/candidate_replay_alignment",
+      "/training_config/device",
+      "/training_config/expected_optimizer_steps",
+      "/training_config/fpct_expected_training_examples",
+      "/training_config/fpct_formal_run",
+      "/training_config/fpct_r2_matched_smoke",
+      "/training_config/freeze",
+      "/training_config/gradient_accumulation_steps",
+      "/training_config/lora",
+      "/training_config/max_length",
+      "/training_config/pad_to_multiple_of",
+      "/training_config/partial_training"
+    ],
+    "trainer_config_get_keys": [
+      "/model_config/alignment_strategy",
+      "/model_config/attn_implementation",
+      "/model_config/fpct_operator",
+      "/model_config/fpct_r2_enforce_eager",
+      "/model_config/fpct_trace",
+      "/model_config/include_response",
+      "/model_config/is_do_alignment",
+      "/model_config/projector_checkpoint_dir",
+      "/model_config/projector_checkpoint_strict",
+      "/model_config/projector_init_seed",
+      "/model_config/soft_alignment_top_k",
+      "/training_config/answer_margin_routing",
+      "/training_config/answer_prior_regularization",
+      "/training_config/candidate_replay_alignment",
+      "/training_config/device",
+      "/training_config/expected_optimizer_steps",
+      "/training_config/fpct_expected_training_examples",
+      "/training_config/fpct_formal_run",
+      "/training_config/fpct_r2_matched_smoke",
+      "/training_config/freeze",
+      "/training_config/gradient_accumulation_steps",
+      "/training_config/lora",
+      "/training_config/max_length",
+      "/training_config/pad_to_multiple_of",
+      "/training_config/partial_training"
+    ]
+  },
+  "historical_red_fixtures": {
+    "actual_manifest_sha": true,
+    "last_training_lock_manifest": true,
+    "old_consumer_manifest_incomplete": true,
+    "r2l_geometry_missing": true,
+    "r2m_manifest_missing": true
+  },
+  "image_dry_run": {
+    "candidate_probe_exit": 0,
+    "candidate_probe_sealed": true,
+    "controller_final_stage": "HELD_OUT_RELEASED",
+    "controller_negative_checks": {
+      "duplicate_held_out_release": true,
+      "duplicate_model_selection_release": true,
+      "premature_formal_completion": true
+    },
+    "exact_byte_all_equal": true,
+    "exact_bytes": {
+      "configmap_data": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683",
+      "host_or_git_candidate": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683",
+      "main_container": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683",
+      "mounted": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683"
+    },
+    "image_probe_sha256": "4be0b55eff6c0e81ee2c3190339e134631a3bb56deaa229c7c7004a889c0e3c7",
+    "image_provenance": {
+      "branch": "research/fpct-factorized-transport",
+      "head": "80fb295542ad298fae4cddb1273517b401bbcd17",
+      "schema_version": 1,
+      "tree_sha256": "b2090b58362312384c330865b499080750eaf380eb071a2e44917e4ca28f6b51",
+      "upstream": "80fb295542ad298fae4cddb1273517b401bbcd17"
+    },
+    "legacy_r2m_error_contains_missing_lock": true,
+    "legacy_r2m_probe_exit": 1,
+    "no_training_output_directory_created": true,
+    "protocol_id": "fpct_cfm_harness_h1_exact_image_dry_run_v1",
+    "schema_version": 1,
+    "scientific_output": false,
+    "status": "GO",
+    "training_authorized": false,
+    "training_configs_schema_validated": 39,
+    "tripwires": {
+      "checkpoint": 0,
+      "cuda": 0,
+      "dataset": 0,
+      "model": 0,
+      "optimizer": 0,
+      "subprocess": 0
+    }
+  },
+  "image_internal_binding_gaps": {
+    "controller_state": {
+      "complete": false,
+      "missing": [
+        "image_digest",
+        "prerequisite_sha256"
+      ],
+      "present": [
+        "completed_triplets",
+        "event",
+        "failed_triplets",
+        "held_out_release_count",
+        "model_selection_release_count",
+        "run_lock",
+        "run_lock_sha256",
+        "run_uid",
+        "schema_version",
+        "stage",
+        "unix",
+        "updated_unix"
+      ],
+      "required": [
+        "image_digest",
+        "lock_sha256",
+        "prerequisite_sha256",
+        "run_uid"
+      ],
+      "semantic_present": [
+        "completed_triplets",
+        "event",
+        "failed_triplets",
+        "held_out_release_count",
+        "lock_sha256",
+        "model_selection_release_count",
+        "run_lock",
+        "run_lock_sha256",
+        "run_uid",
+        "schema_version",
+        "stage",
+        "unix",
+        "updated_unix"
+      ]
+    },
+    "formal_triplet": {
+      "complete": false,
+      "missing": [
+        "image_digest",
+        "lock_sha256",
+        "prerequisite_sha256"
+      ],
+      "present": [
+        "arm_order",
+        "arms",
+        "checkpoint_reload",
+        "checks",
+        "data_order_identity",
+        "eager_identity",
+        "optimizer_state",
+        "rng_identity",
+        "run_uid",
+        "scheduler_steps",
+        "schema_version",
+        "seed",
+        "status",
+        "step0_identity",
+        "trainable_keys_identity"
+      ],
+      "required": [
+        "image_digest",
+        "lock_sha256",
+        "prerequisite_sha256",
+        "run_uid"
+      ],
+      "semantic_present": [
+        "arm_order",
+        "arms",
+        "checkpoint_reload",
+        "checks",
+        "data_order_identity",
+        "eager_identity",
+        "optimizer_state",
+        "rng_identity",
+        "run_uid",
+        "scheduler_steps",
+        "schema_version",
+        "seed",
+        "status",
+        "step0_identity",
+        "trainable_keys_identity"
+      ]
+    },
+    "matched_smoke": {
+      "complete": false,
+      "missing": [
+        "image_digest",
+        "lock_sha256",
+        "prerequisite_sha256"
+      ],
+      "present": [
+        "arms",
+        "candidate_sensitive_gradient",
+        "checkpoint_reload",
+        "checks",
+        "data_order",
+        "eager_all_arms",
+        "four_steps",
+        "gumbel_non_degenerate",
+        "no_mask_leakage",
+        "optimizer_state",
+        "parent_nuisance_identity",
+        "precollapse_candidate_identity",
+        "rng_identity",
+        "run_uid",
+        "scheduler_steps",
+        "schema_version",
+        "seed",
+        "status",
+        "step0_identity",
+        "trainable_keys"
+      ],
+      "required": [
+        "image_digest",
+        "lock_sha256",
+        "prerequisite_sha256",
+        "run_uid"
+      ],
+      "semantic_present": [
+        "arms",
+        "candidate_sensitive_gradient",
+        "checkpoint_reload",
+        "checks",
+        "data_order",
+        "eager_all_arms",
+        "four_steps",
+        "gumbel_non_degenerate",
+        "no_mask_leakage",
+        "optimizer_state",
+        "parent_nuisance_identity",
+        "precollapse_candidate_identity",
+        "rng_identity",
+        "run_uid",
+        "scheduler_steps",
+        "schema_version",
+        "seed",
+        "status",
+        "step0_identity",
+        "trainable_keys"
+      ]
+    },
+    "r2m_finalizer": {
+      "complete": false,
+      "missing": [
+        "image_digest",
+        "lock_sha256",
+        "prerequisite_sha256",
+        "run_uid"
+      ],
+      "present": [
+        "accuracy_firewall",
+        "accuracy_or_correctness_accessed",
+        "balanced_active_canary",
+        "balanced_checkpoint_native",
+        "balanced_forced_on",
+        "checks",
+        "classification",
+        "original_23_checks",
+        "original_result",
+        "protocol_id",
+        "schema_version",
+        "semantic_checks",
+        "semantic_result",
+        "status",
+        "training_authorized"
+      ],
+      "required": [
+        "image_digest",
+        "lock_sha256",
+        "prerequisite_sha256",
+        "run_uid"
+      ],
+      "semantic_present": [
+        "accuracy_firewall",
+        "accuracy_or_correctness_accessed",
+        "balanced_active_canary",
+        "balanced_checkpoint_native",
+        "balanced_forced_on",
+        "checks",
+        "classification",
+        "original_23_checks",
+        "original_result",
+        "protocol_id",
+        "schema_version",
+        "semantic_checks",
+        "semantic_result",
+        "status",
+        "training_authorized"
+      ]
+    }
+  },
+  "k8s_server_dry_run": {
+    "authority_annotations_exact": true,
+    "configmap_data_exact": true,
+    "configmap_immutable": true,
+    "formal_gpu_count": "2",
+    "formal_job_name": "fpct-h1-formal-dry-run",
+    "no_resources_created": true,
+    "protocol_id": "fpct_cfm_harness_h1_k8s_server_dry_run_v1",
+    "schema_version": 1,
+    "scientific_output": false,
+    "server_objects": {
+      "configmap": {
+        "sha256": "2b9d53458335969fc500ef6ddb870b34ea1048bd0e1f3109074ae1375536cf04"
+      },
+      "formal": {
+        "sha256": "bc01b89228624206609196d506a22fa724f2b74987d70b7bf35c8a061e810a81"
+      },
+      "smoke": {
+        "sha256": "623f2e3372898964bc2d08fb248bd53d5948e454662066febbe350482334b757"
+      }
+    },
+    "smoke_job_name": "fpct-h1-smoke-dry-run",
+    "status": "GO",
+    "training_authorized": false
+  },
+  "mutation_summary": {
+    "all_fail_closed": true,
+    "row_count": 389
+  },
+  "protocol_id": "fpct_cfm_harness_h1_audit_result_v1",
+  "requires_image_changes": [
+    "controller_state",
+    "formal_triplet",
+    "matched_smoke",
+    "r2m_finalizer"
+  ],
+  "schema_results": {
+    "arm_result.schema.json": {
+      "sha256": "b6eb0ad2fd77587a03f002ae5b213675216d34313c4c8551e84470e3742b05b0",
+      "strict_top_level": true
+    },
+    "controller_state.schema.json": {
+      "sha256": "a651ea00f49fd6fb4ddefc9cbb67be736e325343d5d39d51edd6e32c6ac03056",
+      "strict_top_level": true
+    },
+    "execution_lock.schema.json": {
+      "sha256": "18908dbec75fa5aa4c3caf4ec370b0697698f88c969f95911f3882f79966110d",
+      "strict_top_level": true
+    },
+    "formal_completion.schema.json": {
+      "sha256": "f8ce1c1664c9b1c17ce5db44acdc2eb482563be435162eeac3424c77de672dee",
+      "strict_top_level": true
+    },
+    "prerequisite_receipt.schema.json": {
+      "sha256": "1ffc7c258c2037ec25010c4bcae1953e1aff3dfec79cc6e2a8d8af32a74d3bcd",
+      "strict_top_level": true
+    },
+    "release_receipt.schema.json": {
+      "sha256": "fa2a07954a5db752f5e80f7e79c846a3a87de70a52244eaa7ed4cdf6e3bd8d86",
+      "strict_top_level": true
+    },
+    "smoke_result.schema.json": {
+      "sha256": "664a962b36adff5d7281debe6202f259e1a0891cddde2d9b78dd74e24e5233d4",
+      "strict_top_level": true
+    },
+    "terminal_result.schema.json": {
+      "sha256": "ccbbee87ff02b09cd5738ff929bee02470dce5d67b14dc5945c7a4fe74053e87",
+      "strict_top_level": true
+    },
+    "training_config.schema.json": {
+      "sha256": "925b490e78b39ade6f7339fe4fd3a5a730a821b7017d9e79c5e98d3c27ceffe5",
+      "strict_top_level": true
+    },
+    "triplet_manifest.schema.json": {
+      "sha256": "244a6c04cd9c2f3a54bc0816ebf678e72186a928e84fa6af98031a9a9a2ce66f",
+      "strict_top_level": true
+    }
+  },
+  "schema_version": 1,
+  "scientific_output": false,
+  "stage_details": [
+    {
+      "allowed_side_effects": [],
+      "cli_contract": null,
+      "cli_env_path_volume_image_identity_required": false,
+      "discovered_json_pointers": [],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [],
+      "k8s_contract": null,
+      "next_stage_authorization": "none",
+      "output_schema": "confirmatory_manifest",
+      "prerequisites": [],
+      "producer": "recipe/eval_recipe/fpct_confirmatory/confirmatory_manifest.json",
+      "producer_sha256": "5e04fe7ffa2f5df6ed0159b67be88a1c9547f0cd11886d461166e1ce7ba455e4",
+      "stage": "manifest"
+    },
+    {
+      "allowed_side_effects": [
+        "write_config_artifact"
+      ],
+      "cli_contract": {
+        "arguments": [
+          {
+            "flags": [
+              "--image-result"
+            ],
+            "keywords": {
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--k8s-result"
+            ],
+            "keywords": {
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--repo"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--repo"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          }
+        ],
+        "subcommands": [
+          "audit",
+          "compile"
+        ]
+      },
+      "cli_env_path_volume_image_identity_required": true,
+      "discovered_json_pointers": [
+        "/assets",
+        "/assets/receiver",
+        "/assets/receiver/model_sha256",
+        "/assets/sender",
+        "/assets/sender/model_sha256",
+        "/assets/training_alignment_sidecar_2048",
+        "/assets/training_alignment_sidecar_2048/sha256",
+        "/formal_training",
+        "/formal_training/arm_order",
+        "/formal_training/optimizer_steps",
+        "/formal_training/processes",
+        "/formal_training/seeds",
+        "/formal_training/training_examples",
+        "/image",
+        "/image/reference",
+        "/image/source_tree_sha256",
+        "/kubernetes",
+        "/kubernetes/gpu_per_seed_pod",
+        "/kubernetes/namespace",
+        "/kubernetes/node_name",
+        "/normative",
+        "/normative/confirmatory_manifest",
+        "/scientific_code_commit"
+      ],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [
+        "confirmatory_manifest",
+        "source_blobs",
+        "asset_hashes"
+      ],
+      "k8s_contract": null,
+      "next_stage_authorization": "config_only",
+      "output_schema": "execution_lock.schema.json",
+      "prerequisites": [
+        "confirmatory_manifest",
+        "source_blobs",
+        "asset_hashes"
+      ],
+      "producer": "deterministic:H1 compiler",
+      "producer_sha256": null,
+      "stage": "execution_lock"
+    },
+    {
+      "allowed_side_effects": [
+        "write_hash_receipt"
+      ],
+      "cli_contract": {
+        "arguments": [
+          {
+            "flags": [
+              "--image-result"
+            ],
+            "keywords": {
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--k8s-result"
+            ],
+            "keywords": {
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--repo"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--repo"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          }
+        ],
+        "subcommands": [
+          "audit",
+          "compile"
+        ]
+      },
+      "cli_env_path_volume_image_identity_required": true,
+      "discovered_json_pointers": [
+        "/assets",
+        "/assets/receiver",
+        "/assets/receiver/model_sha256",
+        "/assets/sender",
+        "/assets/sender/model_sha256",
+        "/assets/training_alignment_sidecar_2048",
+        "/assets/training_alignment_sidecar_2048/sha256",
+        "/formal_training",
+        "/formal_training/arm_order",
+        "/formal_training/optimizer_steps",
+        "/formal_training/processes",
+        "/formal_training/seeds",
+        "/formal_training/training_examples",
+        "/image",
+        "/image/reference",
+        "/image/source_tree_sha256",
+        "/kubernetes",
+        "/kubernetes/gpu_per_seed_pod",
+        "/kubernetes/namespace",
+        "/kubernetes/node_name",
+        "/normative",
+        "/normative/confirmatory_manifest",
+        "/scientific_code_commit"
+      ],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [
+        "execution_lock"
+      ],
+      "k8s_contract": null,
+      "next_stage_authorization": "no_scientific_output",
+      "output_schema": "prerequisite_receipt.schema.json",
+      "prerequisites": [
+        "execution_lock"
+      ],
+      "producer": "script/analysis/fpct_cfm_harness_h1_audit.py",
+      "producer_sha256": "f11ce1592d9294ed932c22d2f8ec28f91b6154f1e803bf2bb52ea24a7c460321",
+      "stage": "config_preflight"
+    },
+    {
+      "allowed_side_effects": [
+        "historical_read_only"
+      ],
+      "cli_contract": {
+        "arguments": [
+          {
+            "flags": [
+              "--active-aggregate"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--original-result"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--semantic-result"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          }
+        ],
+        "subcommands": []
+      },
+      "cli_env_path_volume_image_identity_required": true,
+      "discovered_json_pointers": [
+        "/accuracy_or_correctness_accessed",
+        "/canaries",
+        "/canaries/checkpoint_native",
+        "/canaries/checkpoint_native/qualified",
+        "/canaries/forced_on",
+        "/canaries/forced_on/qualified",
+        "/checks",
+        "/status"
+      ],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [
+        "original_result",
+        "semantic_result",
+        "active_aggregate"
+      ],
+      "k8s_contract": null,
+      "next_stage_authorization": "historical_only",
+      "output_schema": "historical_r2m_final",
+      "prerequisites": [
+        "original_result",
+        "semantic_result",
+        "active_aggregate"
+      ],
+      "producer": "script/analysis/fpct_gpu_r2m_finalize.py",
+      "producer_sha256": "1399083c11a71b81b59a147d8120c7d7426cf472b44b191cb6069ff28e7ac35a",
+      "stage": "immutable_final"
+    },
+    {
+      "allowed_side_effects": [
+        "training_subprocess"
+      ],
+      "cli_contract": {
+        "arguments": [
+          {
+            "flags": [
+              "--gpu-gate"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output-root"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output-root"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--seed"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "int"
+            }
+          }
+        ],
+        "subcommands": [
+          "gpu-numerical",
+          "matched-smoke",
+          "pretrained-smoke",
+          "probe",
+          "train-triplet"
+        ]
+      },
+      "cli_env_path_volume_image_identity_required": true,
+      "discovered_json_pointers": [
+        "/image",
+        "/manifest_sha256",
+        "/run_uid",
+        "/scientific_code_commit"
+      ],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [
+        "execution_lock",
+        "immutable_final"
+      ],
+      "k8s_contract": {
+        "args": [
+          "set -euo pipefail\n/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/immutable_final.json\")); assert p[\"classification\"] == \"R2M_IMMUTABLE_GO\" and p[\"training_authorized\"] is True'\n/opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_confirmatory_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/matched_smoke.json -- matched-smoke --run-lock /opt/fpct-lock/immutable_v1_run_lock.json --output-root /fpct-run/results\n"
+        ],
+        "backoff_limit": 0,
+        "command": [
+          "bash",
+          "-lc"
+        ],
+        "env": {
+          "C2C_MODEL_ROOT": "/models/c2c",
+          "HF_HUB_OFFLINE": "1",
+          "TRANSFORMERS_OFFLINE": "1",
+          "WANDB_CACHE_DIR": "/fpct-run/wandb-cache",
+          "WANDB_CONFIG_DIR": "/fpct-run/wandb-config",
+          "WANDB_DATA_DIR": "/fpct-run/wandb-data",
+          "WANDB_DIR": "/fpct-run/wandb",
+          "WANDB_MODE": "offline"
+        },
+        "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "metadata": {
+          "labels": {
+            "arm": "matched-smoke",
+            "git_sha": "80fb2955",
+            "project": "fpct",
+            "run_uid": "fpct-r2m-80fb295-v1",
+            "seed": "104729",
+            "study": "confirmatory-r2m"
+          },
+          "name": "fpct-r2m-smoke-80fb295",
+          "namespace": "c2c-research"
+        },
+        "node_name": "4090-48gx2",
+        "placeholders": [],
+        "pointers": [
+          "/classification",
+          "/training_authorized"
+        ],
+        "resources": {
+          "limits": {
+            "nvidia.com/gpu": "2"
+          },
+          "requests": {
+            "cpu": "8",
+            "memory": "64Gi",
+            "nvidia.com/gpu": "2"
+          }
+        },
+        "restart_policy": "Never",
+        "sha256": "1e2849accad19a890ab30d27338fe18fa54400af38fa84157efa4310b2e2faba",
+        "shell_guards": [
+          "/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/immutable_final.json\")); assert p[\"classification\"] == \"R2M_IMMUTABLE_GO\" and p[\"training_authorized\"] is True'"
+        ],
+        "volume_mounts": [
+          {
+            "mountPath": "/opt/fpct-lock",
+            "name": "run-lock",
+            "readOnly": true
+          },
+          {
+            "mountPath": "/models/c2c",
+            "name": "models",
+            "readOnly": true
+          },
+          {
+            "mountPath": "/fpct-run",
+            "name": "fpct-run"
+          }
+        ],
+        "volumes": [
+          {
+            "configMap": {
+              "name": "fpct-r2m-lock-80fb295-v1"
+            },
+            "name": "run-lock"
+          },
+          {
+            "hostPath": {
+              "path": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+              "type": "Directory"
+            },
+            "name": "models"
+          },
+          {
+            "hostPath": {
+              "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
+              "type": "Directory"
+            },
+            "name": "fpct-run"
+          }
+        ]
+      },
+      "next_stage_authorization": "blocked_in_h1",
+      "output_schema": "smoke_result.schema.json",
+      "prerequisites": [
+        "execution_lock",
+        "immutable_final"
+      ],
+      "producer": "script/experiment/fpct_confirmatory_runner.py",
+      "producer_sha256": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75",
+      "stage": "matched_smoke"
+    },
+    {
+      "allowed_side_effects": [
+        "training_subprocess",
+        "checkpoint_write"
+      ],
+      "cli_contract": {
+        "arguments": [
+          {
+            "flags": [
+              "--gpu-gate"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output-root"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output-root"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--seed"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "int"
+            }
+          }
+        ],
+        "subcommands": [
+          "gpu-numerical",
+          "matched-smoke",
+          "pretrained-smoke",
+          "probe",
+          "train-triplet"
+        ]
+      },
+      "cli_env_path_volume_image_identity_required": true,
+      "discovered_json_pointers": [
+        "/image",
+        "/manifest_sha256",
+        "/run_uid",
+        "/scientific_code_commit"
+      ],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [
+        "execution_lock",
+        "smoke_result"
+      ],
+      "k8s_contract": {
+        "args": [
+          "set -euo pipefail\n/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/immutable_final.json\")); s=json.load(open(\"/fpct-run/results/diagnostic_seed_104729/matched_smoke_manifest.json\")); assert p[\"classification\"] == \"R2M_IMMUTABLE_GO\" and p[\"training_authorized\"] is True and s[\"status\"] == \"GO\"'\n/opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_confirmatory_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/seed___SEED__.json -- train-triplet --run-lock /opt/fpct-lock/immutable_v1_run_lock.json --seed __SEED__ --output-root /fpct-run/results\n"
+        ],
+        "backoff_limit": 0,
+        "command": [
+          "bash",
+          "-lc"
+        ],
+        "env": {
+          "C2C_MODEL_ROOT": "/models/c2c",
+          "HF_HUB_OFFLINE": "1",
+          "TRANSFORMERS_OFFLINE": "1",
+          "WANDB_CACHE_DIR": "/fpct-run/wandb-cache",
+          "WANDB_CONFIG_DIR": "/fpct-run/wandb-config",
+          "WANDB_DATA_DIR": "/fpct-run/wandb-data",
+          "WANDB_DIR": "/fpct-run/wandb",
+          "WANDB_MODE": "offline"
+        },
+        "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "metadata": {
+          "labels": {
+            "arm": "triplet",
+            "git_sha": "80fb2955",
+            "project": "fpct",
+            "run_uid": "fpct-r2m-80fb295-v1",
+            "seed": "__SEED__",
+            "study": "confirmatory-r2m"
+          },
+          "name": "__JOB_NAME__",
+          "namespace": "c2c-research"
+        },
+        "node_name": "4090-48gx2",
+        "placeholders": [
+          "__JOB_NAME__",
+          "__SEED__",
+          "___SEED__"
+        ],
+        "pointers": [
+          "/classification",
+          "/status",
+          "/training_authorized"
+        ],
+        "resources": {
+          "limits": {
+            "nvidia.com/gpu": "2"
+          },
+          "requests": {
+            "cpu": "8",
+            "memory": "64Gi",
+            "nvidia.com/gpu": "2"
+          }
+        },
+        "restart_policy": "Never",
+        "sha256": "9c9dbab0aa63051496a08143f5a41058783eae58ca68dde67e107c6078f24bd1",
+        "shell_guards": [
+          "/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/immutable_final.json\")); s=json.load(open(\"/fpct-run/results/diagnostic_seed_104729/matched_smoke_manifest.json\")); assert p[\"classification\"] == \"R2M_IMMUTABLE_GO\" and p[\"training_authorized\"] is True and s[\"status\"] == \"GO\"'"
+        ],
+        "volume_mounts": [
+          {
+            "mountPath": "/opt/fpct-lock",
+            "name": "run-lock",
+            "readOnly": true
+          },
+          {
+            "mountPath": "/models/c2c",
+            "name": "models",
+            "readOnly": true
+          },
+          {
+            "mountPath": "/fpct-run",
+            "name": "fpct-run"
+          }
+        ],
+        "volumes": [
+          {
+            "configMap": {
+              "name": "fpct-r2m-lock-80fb295-v1"
+            },
+            "name": "run-lock"
+          },
+          {
+            "hostPath": {
+              "path": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+              "type": "Directory"
+            },
+            "name": "models"
+          },
+          {
+            "hostPath": {
+              "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
+              "type": "Directory"
+            },
+            "name": "fpct-run"
+          }
+        ]
+      },
+      "next_stage_authorization": "blocked_in_h1",
+      "output_schema": "triplet_manifest.schema.json",
+      "prerequisites": [
+        "execution_lock",
+        "smoke_result"
+      ],
+      "producer": "script/experiment/fpct_confirmatory_runner.py",
+      "producer_sha256": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75",
+      "stage": "formal_training"
+    },
+    {
+      "allowed_side_effects": [
+        "write_completion_receipt"
+      ],
+      "cli_contract": {
+        "arguments": [
+          {
+            "flags": [
+              "--evidence"
+            ],
+            "keywords": {
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--manifest"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--root"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--seed"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "int"
+            }
+          },
+          {
+            "flags": [
+              "stage"
+            ],
+            "keywords": {}
+          }
+        ],
+        "subcommands": [
+          "init",
+          "record-triplet",
+          "status",
+          "transition"
+        ]
+      },
+      "cli_env_path_volume_image_identity_required": true,
+      "discovered_json_pointers": [
+        "/run_uid",
+        "/status"
+      ],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [
+        "12_triplet_manifests"
+      ],
+      "k8s_contract": null,
+      "next_stage_authorization": "blocked_in_h1",
+      "output_schema": "formal_completion.schema.json",
+      "prerequisites": [
+        "12_triplet_manifests"
+      ],
+      "producer": "script/experiment/fpct_gpu_r2_controller.py",
+      "producer_sha256": "9debef83c4dbc87991b270aaf1554a59fcabd6f4f8b744f24bef75f401d3e7fd",
+      "stage": "formal_completion"
+    },
+    {
+      "allowed_side_effects": [
+        "performance_release"
+      ],
+      "cli_contract": {
+        "arguments": [
+          {
+            "flags": [
+              "--evidence"
+            ],
+            "keywords": {
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--manifest"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--root"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--seed"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "int"
+            }
+          },
+          {
+            "flags": [
+              "stage"
+            ],
+            "keywords": {}
+          }
+        ],
+        "subcommands": [
+          "init",
+          "record-triplet",
+          "status",
+          "transition"
+        ]
+      },
+      "cli_env_path_volume_image_identity_required": true,
+      "discovered_json_pointers": [
+        "/run_uid",
+        "/status"
+      ],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [
+        "formal_completion"
+      ],
+      "k8s_contract": null,
+      "next_stage_authorization": "blocked_in_h1",
+      "output_schema": "release_receipt.schema.json",
+      "prerequisites": [
+        "formal_completion"
+      ],
+      "producer": "script/experiment/fpct_gpu_r2_controller.py",
+      "producer_sha256": "9debef83c4dbc87991b270aaf1554a59fcabd6f4f8b744f24bef75f401d3e7fd",
+      "stage": "model_selection"
+    },
+    {
+      "allowed_side_effects": [
+        "held_out_release"
+      ],
+      "cli_contract": {
+        "arguments": [
+          {
+            "flags": [
+              "--evidence"
+            ],
+            "keywords": {
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--manifest"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--root"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--run-lock"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--seed"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "int"
+            }
+          },
+          {
+            "flags": [
+              "stage"
+            ],
+            "keywords": {}
+          }
+        ],
+        "subcommands": [
+          "init",
+          "record-triplet",
+          "status",
+          "transition"
+        ]
+      },
+      "cli_env_path_volume_image_identity_required": true,
+      "discovered_json_pointers": [
+        "/run_uid",
+        "/status"
+      ],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [
+        "model_selection_complete"
+      ],
+      "k8s_contract": null,
+      "next_stage_authorization": "blocked_in_h1",
+      "output_schema": "release_receipt.schema.json",
+      "prerequisites": [
+        "model_selection_complete"
+      ],
+      "producer": "script/experiment/fpct_gpu_r2_controller.py",
+      "producer_sha256": "9debef83c4dbc87991b270aaf1554a59fcabd6f4f8b744f24bef75f401d3e7fd",
+      "stage": "held_out"
+    },
+    {
+      "allowed_side_effects": [
+        "performance_analysis"
+      ],
+      "cli_contract": {
+        "arguments": [
+          {
+            "flags": [
+              "--input"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--replicates"
+            ],
+            "keywords": {
+              "default": "BOOTSTRAP_REPLICATES",
+              "type": "int"
+            }
+          }
+        ],
+        "subcommands": []
+      },
+      "cli_env_path_volume_image_identity_required": true,
+      "discovered_json_pointers": [
+        "/columns/cell",
+        "/columns/content_group_hash",
+        "/columns/correct",
+        "/columns/seed",
+        "/columns/task"
+      ],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [
+        "held_out_cells"
+      ],
+      "k8s_contract": null,
+      "next_stage_authorization": "blocked_in_h1",
+      "output_schema": "terminal_result.schema.json",
+      "prerequisites": [
+        "held_out_cells"
+      ],
+      "producer": "script/analysis/fpct_confirmatory_statistics.py",
+      "producer_sha256": "23582a7078c8f19d893e6c6d59a9c0e22e583ce16b6b6c2dcb1aa103ff6b83c5",
+      "stage": "statistics"
+    },
+    {
+      "allowed_side_effects": [
+        "write_report"
+      ],
+      "cli_contract": {
+        "arguments": [
+          {
+            "flags": [
+              "--input"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--output"
+            ],
+            "keywords": {
+              "required": true,
+              "type": "Path"
+            }
+          },
+          {
+            "flags": [
+              "--replicates"
+            ],
+            "keywords": {
+              "default": "BOOTSTRAP_REPLICATES",
+              "type": "int"
+            }
+          }
+        ],
+        "subcommands": []
+      },
+      "cli_env_path_volume_image_identity_required": false,
+      "discovered_json_pointers": [
+        "/columns/cell",
+        "/columns/content_group_hash",
+        "/columns/correct",
+        "/columns/seed",
+        "/columns/task"
+      ],
+      "forbidden_side_effects_in_h1": [
+        "model_load",
+        "dataset_load",
+        "cuda",
+        "optimizer",
+        "checkpoint",
+        "accuracy_read"
+      ],
+      "identity_contract": {
+        "candidate_only": true,
+        "image_reference": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+        "lock_sha256": "9f6378d091619da399ff5b8f7a3749ffc09e1bf62fba7867819164ea384e3c4c",
+        "run_uid": "h1-config-only-not-an-execution-uid",
+        "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT"
+      },
+      "input_artifacts": [
+        "statistics"
+      ],
+      "k8s_contract": null,
+      "next_stage_authorization": "blocked_in_h1",
+      "output_schema": "terminal_result.schema.json",
+      "prerequisites": [
+        "statistics"
+      ],
+      "producer": "script/analysis/fpct_confirmatory_statistics.py",
+      "producer_sha256": "23582a7078c8f19d893e6c6d59a9c0e22e583ce16b6b6c2dcb1aa103ff6b83c5",
+      "stage": "terminal_result"
+    }
+  ],
+  "stage_graph": {
+    "acyclic": true,
+    "edge_count": 10,
+    "node_count": 11
+  },
+  "status": "COMPLETE",
+  "training_authorized": false,
+  "unresolved_dynamic_accesses": {},
+  "yaml_contracts": {
+    "active_canary_immutable_v1_job.yaml": {
+      "args": [
+        "set -euo pipefail\n/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/semantic/semantic_result.json\")); assert p[\"status\"] == \"GO\" and all(p[\"checks\"].values())'\nfor block in 0 1 2 3 4 5 6 7; do\n  output=$(printf '/fpct-run/results/active_canary/blocks/block_%02d.json' \"$block\")\n  attest=$(printf '/fpct-run/attestations/active_block_%02d.json' \"$block\")\n  /opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_gpu_r2k_latency.py --include-gpu-closure --attestation-out \"$attest\" -- block --run-lock /opt/fpct-lock/immutable_v1_run_lock.json --panel /opt/fpct/recipe/eval_recipe/fpct_gpu_r2/diagnostic_panel_manifest.json --data-root /datasets/c2c --block-index \"$block\" --output \"$output\"\ndone\n/opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_gpu_r2k_latency.py --include-gpu-closure --attestation-out /fpct-run/attestations/active_aggregate.json -- aggregate --root /fpct-run/results/active_canary/blocks --output /fpct-run/results/active_canary/aggregate.json\n/opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/analysis/fpct_gpu_r2m_finalize.py --include-gpu-closure --attestation-out /fpct-run/attestations/immutable_final.json -- --original-result /fpct-run/results/pretrained_matrix/pretrained_r2_result.json --semantic-result /fpct-run/results/semantic/semantic_result.json --active-aggregate /fpct-run/results/active_canary/aggregate.json --output /fpct-run/results/immutable_final.json\n"
+      ],
+      "backoff_limit": 0,
+      "command": [
+        "bash",
+        "-lc"
+      ],
+      "env": {
+        "C2C_MODEL_ROOT": "/models/c2c",
+        "HF_HUB_OFFLINE": "1",
+        "NODE_NAME": null,
+        "POD_NAME": null,
+        "TOKENIZERS_PARALLELISM": "false",
+        "TRANSFORMERS_OFFLINE": "1"
+      },
+      "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+      "metadata": {
+        "labels": {
+          "arm": "balanced-active-canary",
+          "git_sha": "80fb2955",
+          "project": "fpct",
+          "run_uid": "fpct-r2m-80fb295-v1",
+          "seed": "diagnostic",
+          "study": "confirmatory-r2m"
+        },
+        "name": "fpct-r2m-active-80fb295",
+        "namespace": "c2c-research"
+      },
+      "node_name": "4090-48gx2",
+      "placeholders": [],
+      "pointers": [
+        "/checks",
+        "/status"
+      ],
+      "resources": {
+        "limits": {
+          "nvidia.com/gpu": "1"
+        },
+        "requests": {
+          "cpu": "8",
+          "memory": "64Gi",
+          "nvidia.com/gpu": "1"
+        }
+      },
+      "restart_policy": "Never",
+      "sha256": "4e572b4caa0b4321bd76ace9deacfc0e8c15ac2f43ea8f187400b76668c0f7c0",
+      "shell_guards": [
+        "/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/semantic/semantic_result.json\")); assert p[\"status\"] == \"GO\" and all(p[\"checks\"].values())'"
+      ],
+      "volume_mounts": [
+        {
+          "mountPath": "/opt/fpct-lock",
+          "name": "run-lock",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/models/c2c",
+          "name": "models",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/datasets/c2c",
+          "name": "datasets",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/fpct-run",
+          "name": "fpct-run"
+        }
+      ],
+      "volumes": [
+        {
+          "configMap": {
+            "name": "fpct-r2m-lock-80fb295-v1"
+          },
+          "name": "run-lock"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+            "type": "Directory"
+          },
+          "name": "models"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/c2c-route1-identifiability/data/c2c",
+            "type": "Directory"
+          },
+          "name": "datasets"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
+            "type": "Directory"
+          },
+          "name": "fpct-run"
+        }
+      ]
+    },
+    "config_preflight_immutable_v1_job.yaml": {
+      "args": [
+        "set -euo pipefail\ncp /opt/fpct-lock/immutable_v1_run_lock.json /preflight/main_lock.json\nexpected=$(/opt/conda/bin/python3.11 -c 'import json; print(json.load(open(\"/opt/fpct-lock/preflight_binding_manifest.json\"))[\"run_lock_raw_sha256\"])')\n/opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py \\\n  --repo-root /opt/fpct \\\n  --target /opt/fpct/script/analysis/fpct_gpu_r2m_config_validator.py \\\n  --attestation-out /fpct-run/attestations/config_preflight.json \\\n  -- preflight \\\n  --repo /opt/fpct \\\n  --lock /opt/fpct-lock/immutable_v1_run_lock.json \\\n  --schema /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/run_lock.schema.json \\\n  --canonical-geometry /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/canonical_resource_geometry.json \\\n  --consumer-manifest /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/consumer_pointer_manifest.json \\\n  --allowlist /opt/fpct/recipe/eval_recipe/fpct_gpu_r2m/implementation_allowlist.json \\\n  --expected-run-uid fpct-r2m-80fb295-v1 \\\n  --expected-root /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1 \\\n  --expected-commit 80fb295542ad298fae4cddb1273517b401bbcd17 \\\n  --expected-raw-sha256 \"$expected\" \\\n  --configmap-object /fpct-run/preflight/configmap_object.json \\\n  --mounted-lock /preflight/init_lock.json \\\n  --container-lock /preflight/main_lock.json \\\n  --output /fpct-run/preflight/config_preflight_result.json\n"
+      ],
+      "backoff_limit": 0,
+      "command": [
+        "bash",
+        "-lc"
+      ],
+      "env": {
+        "CUDA_VISIBLE_DEVICES": "",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1"
+      },
+      "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+      "metadata": {
+        "labels": {
+          "arm": "config-preflight",
+          "git_sha": "80fb2955",
+          "project": "fpct",
+          "run_uid": "fpct-r2m-80fb295-v1",
+          "seed": "preflight",
+          "study": "confirmatory-r2m"
+        },
+        "name": "fpct-r2m-preflight-80fb295",
+        "namespace": "c2c-research"
+      },
+      "node_name": "4090-48gx2",
+      "placeholders": [],
+      "pointers": [],
+      "resources": {
+        "limits": {
+          "cpu": "4",
+          "memory": "8Gi"
+        },
+        "requests": {
+          "cpu": "2",
+          "memory": "4Gi"
+        }
+      },
+      "restart_policy": "Never",
+      "sha256": "341147f96c8d688ad42b2d8dad6137f0dd7a83d1ad7c909fdecca971e92cf740",
+      "shell_guards": [],
+      "volume_mounts": [
+        {
+          "mountPath": "/opt/fpct-lock",
+          "name": "run-lock",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/preflight",
+          "name": "preflight-work"
+        },
+        {
+          "mountPath": "/fpct-run",
+          "name": "fpct-run"
+        }
+      ],
+      "volumes": [
+        {
+          "configMap": {
+            "name": "fpct-r2m-lock-80fb295-v1"
+          },
+          "name": "run-lock"
+        },
+        {
+          "emptyDir": {},
+          "name": "preflight-work"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
+            "type": "Directory"
+          },
+          "name": "fpct-run"
+        }
+      ]
+    },
+    "gpu_gate_immutable_v1_job.yaml": {
+      "args": [
+        "--repo-root",
+        "/opt/fpct",
+        "--target",
+        "/opt/fpct/script/experiment/fpct_gpu_r2_runner.py",
+        "--include-gpu-closure",
+        "--attestation-out",
+        "/fpct-run/attestations/gpu_gate.json",
+        "--",
+        "gpu-gate-sequence",
+        "--run-lock",
+        "/opt/fpct-lock/immutable_v1_run_lock.json",
+        "--floor-spec",
+        "/opt/fpct/recipe/eval_recipe/fpct_gpu_r2/metric_null_floor_spec.json",
+        "--receiver-config",
+        "/models/c2c/Qwen3-0.6B/config.json",
+        "--output-root",
+        "/fpct-run/results/gpu_gate"
+      ],
+      "backoff_limit": 0,
+      "command": [
+        "/opt/conda/bin/python3.11",
+        "-I",
+        "/opt/fpct/script/runtime/fpct_bootstrap.py"
+      ],
+      "env": {
+        "C2C_MODEL_ROOT": "/models/c2c",
+        "HF_HUB_OFFLINE": "1",
+        "TOKENIZERS_PARALLELISM": "false",
+        "TRANSFORMERS_OFFLINE": "1"
+      },
+      "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+      "metadata": {
+        "labels": {
+          "arm": "gpu-gate",
+          "git_sha": "80fb2955",
+          "project": "fpct",
+          "run_uid": "fpct-r2m-80fb295-v1",
+          "seed": "diagnostic",
+          "study": "confirmatory-r2m"
+        },
+        "name": "fpct-r2m-gpu-80fb295",
+        "namespace": "c2c-research"
+      },
+      "node_name": "4090-48gx2",
+      "placeholders": [],
+      "pointers": [],
+      "resources": {
+        "limits": {
+          "nvidia.com/gpu": "1"
+        },
+        "requests": {
+          "cpu": "8",
+          "memory": "48Gi",
+          "nvidia.com/gpu": "1"
+        }
+      },
+      "restart_policy": "Never",
+      "sha256": "919712f66cd1b862e5778d748e5b8c880b2613e272ed384368da912eb01ccff8",
+      "shell_guards": [],
+      "volume_mounts": [
+        {
+          "mountPath": "/opt/fpct-lock",
+          "name": "run-lock",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/models/c2c",
+          "name": "models",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/fpct-run",
+          "name": "fpct-run"
+        }
+      ],
+      "volumes": [
+        {
+          "configMap": {
+            "name": "fpct-r2m-lock-80fb295-v1"
+          },
+          "name": "run-lock"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+            "type": "Directory"
+          },
+          "name": "models"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
+            "type": "Directory"
+          },
+          "name": "fpct-run"
+        }
+      ]
+    },
+    "image_loader_immutable_v1_job.yaml": {
+      "args": [],
+      "backoff_limit": 0,
+      "command": [
+        "sh",
+        "-c",
+        "/host/k3s ctr --address /run/k3s/containerd/containerd.sock --namespace k8s.io images import /fpct-run/assets/fpct-gpu-r2m-80fb295.tar && /host/k3s ctr --address /run/k3s/containerd/containerd.sock --namespace k8s.io images tag docker.io/library/fpct-gpu-r2m:80fb295-final docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851 && /host/k3s ctr --address /run/k3s/containerd/containerd.sock --namespace k8s.io images tag docker.io/library/fpct-gpu-r2m:80fb295-final docker.io/library/fpct-gpu-r2m@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851"
+      ],
+      "env": {},
+      "image": "busybox:1.36.1",
+      "metadata": {
+        "labels": {
+          "arm": "image-loader",
+          "git_sha": "80fb2955",
+          "project": "fpct",
+          "run_uid": "fpct-r2m-80fb295-v1",
+          "seed": "infrastructure",
+          "study": "confirmatory-r2m"
+        },
+        "name": "fpct-r2m-image-80fb295",
+        "namespace": "c2c-research"
+      },
+      "node_name": "4090-48gx2",
+      "placeholders": [],
+      "pointers": [],
+      "resources": {},
+      "restart_policy": "Never",
+      "sha256": "064da6aa4f4db6254fa72514c1dd042cba7a83b98649d75896f64b4dbdf582da",
+      "shell_guards": [],
+      "volume_mounts": [
+        {
+          "mountPath": "/fpct-run",
+          "name": "fpct-run",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/host/k3s",
+          "name": "k3s-bin",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/run/k3s/containerd/containerd.sock",
+          "name": "containerd-sock"
+        }
+      ],
+      "volumes": [
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
+            "type": "Directory"
+          },
+          "name": "fpct-run"
+        },
+        {
+          "hostPath": {
+            "path": "/usr/local/bin/k3s",
+            "type": "File"
+          },
+          "name": "k3s-bin"
+        },
+        {
+          "hostPath": {
+            "path": "/run/k3s/containerd/containerd.sock",
+            "type": "Socket"
+          },
+          "name": "containerd-sock"
+        }
+      ]
+    },
+    "matched_smoke_immutable_v1_job.yaml": {
+      "args": [
+        "set -euo pipefail\n/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/immutable_final.json\")); assert p[\"classification\"] == \"R2M_IMMUTABLE_GO\" and p[\"training_authorized\"] is True'\n/opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_confirmatory_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/matched_smoke.json -- matched-smoke --run-lock /opt/fpct-lock/immutable_v1_run_lock.json --output-root /fpct-run/results\n"
+      ],
+      "backoff_limit": 0,
+      "command": [
+        "bash",
+        "-lc"
+      ],
+      "env": {
+        "C2C_MODEL_ROOT": "/models/c2c",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1",
+        "WANDB_CACHE_DIR": "/fpct-run/wandb-cache",
+        "WANDB_CONFIG_DIR": "/fpct-run/wandb-config",
+        "WANDB_DATA_DIR": "/fpct-run/wandb-data",
+        "WANDB_DIR": "/fpct-run/wandb",
+        "WANDB_MODE": "offline"
+      },
+      "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+      "metadata": {
+        "labels": {
+          "arm": "matched-smoke",
+          "git_sha": "80fb2955",
+          "project": "fpct",
+          "run_uid": "fpct-r2m-80fb295-v1",
+          "seed": "104729",
+          "study": "confirmatory-r2m"
+        },
+        "name": "fpct-r2m-smoke-80fb295",
+        "namespace": "c2c-research"
+      },
+      "node_name": "4090-48gx2",
+      "placeholders": [],
+      "pointers": [
+        "/classification",
+        "/training_authorized"
+      ],
+      "resources": {
+        "limits": {
+          "nvidia.com/gpu": "2"
+        },
+        "requests": {
+          "cpu": "8",
+          "memory": "64Gi",
+          "nvidia.com/gpu": "2"
+        }
+      },
+      "restart_policy": "Never",
+      "sha256": "1e2849accad19a890ab30d27338fe18fa54400af38fa84157efa4310b2e2faba",
+      "shell_guards": [
+        "/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/immutable_final.json\")); assert p[\"classification\"] == \"R2M_IMMUTABLE_GO\" and p[\"training_authorized\"] is True'"
+      ],
+      "volume_mounts": [
+        {
+          "mountPath": "/opt/fpct-lock",
+          "name": "run-lock",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/models/c2c",
+          "name": "models",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/fpct-run",
+          "name": "fpct-run"
+        }
+      ],
+      "volumes": [
+        {
+          "configMap": {
+            "name": "fpct-r2m-lock-80fb295-v1"
+          },
+          "name": "run-lock"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+            "type": "Directory"
+          },
+          "name": "models"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
+            "type": "Directory"
+          },
+          "name": "fpct-run"
+        }
+      ]
+    },
+    "pretrained_matrix_immutable_v1_job.yaml": {
+      "args": [
+        "--repo-root",
+        "/opt/fpct",
+        "--target",
+        "/opt/fpct/script/experiment/fpct_gpu_r2_runner.py",
+        "--include-gpu-closure",
+        "--attestation-out",
+        "/fpct-run/attestations/pretrained_matrix.json",
+        "--",
+        "pretrained-matrix",
+        "--run-lock",
+        "/opt/fpct-lock/immutable_v1_run_lock.json",
+        "--panel",
+        "/opt/fpct/recipe/eval_recipe/fpct_gpu_r2/diagnostic_panel_manifest.json",
+        "--data-root",
+        "/datasets/c2c",
+        "--floors",
+        "/fpct-run/results/gpu_gate/metric_null_floors.json",
+        "--gpu-gate",
+        "/fpct-run/results/gpu_gate/gpu_numerical/gpu_numerical.json",
+        "--runtime-provenance",
+        "/fpct-run/results/gpu_gate/runtime_provenance.json",
+        "--root",
+        "/fpct-run/results/pretrained_matrix"
+      ],
+      "backoff_limit": 0,
+      "command": [
+        "/opt/conda/bin/python3.11",
+        "-I",
+        "/opt/fpct/script/runtime/fpct_bootstrap.py"
+      ],
+      "env": {
+        "C2C_MODEL_ROOT": "/models/c2c",
+        "HF_HUB_OFFLINE": "1",
+        "TOKENIZERS_PARALLELISM": "false",
+        "TRANSFORMERS_OFFLINE": "1"
+      },
+      "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+      "metadata": {
+        "labels": {
+          "arm": "pretrained-matrix",
+          "git_sha": "80fb2955",
+          "project": "fpct",
+          "run_uid": "fpct-r2m-80fb295-v1",
+          "seed": "104729",
+          "study": "confirmatory-r2m"
+        },
+        "name": "fpct-r2m-pretrain-80fb295",
+        "namespace": "c2c-research"
+      },
+      "node_name": "4090-48gx2",
+      "placeholders": [],
+      "pointers": [],
+      "resources": {
+        "limits": {
+          "nvidia.com/gpu": "1"
+        },
+        "requests": {
+          "cpu": "8",
+          "memory": "64Gi",
+          "nvidia.com/gpu": "1"
+        }
+      },
+      "restart_policy": "Never",
+      "sha256": "52a5d257743f3ee245026ced956a80dde86ca61e5a8ba40fd5edde77c7691a84",
+      "shell_guards": [],
+      "volume_mounts": [
+        {
+          "mountPath": "/opt/fpct-lock",
+          "name": "run-lock",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/models/c2c",
+          "name": "models",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/datasets/c2c",
+          "name": "datasets",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/fpct-run",
+          "name": "fpct-run"
+        }
+      ],
+      "volumes": [
+        {
+          "configMap": {
+            "name": "fpct-r2m-lock-80fb295-v1"
+          },
+          "name": "run-lock"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+            "type": "Directory"
+          },
+          "name": "models"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/c2c-route1-identifiability/data/c2c",
+            "type": "Directory"
+          },
+          "name": "datasets"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
+            "type": "Directory"
+          },
+          "name": "fpct-run"
+        }
+      ]
+    },
+    "seed_triplet_immutable_v1_job.yaml": {
+      "args": [
+        "set -euo pipefail\n/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/immutable_final.json\")); s=json.load(open(\"/fpct-run/results/diagnostic_seed_104729/matched_smoke_manifest.json\")); assert p[\"classification\"] == \"R2M_IMMUTABLE_GO\" and p[\"training_authorized\"] is True and s[\"status\"] == \"GO\"'\n/opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_confirmatory_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/seed___SEED__.json -- train-triplet --run-lock /opt/fpct-lock/immutable_v1_run_lock.json --seed __SEED__ --output-root /fpct-run/results\n"
+      ],
+      "backoff_limit": 0,
+      "command": [
+        "bash",
+        "-lc"
+      ],
+      "env": {
+        "C2C_MODEL_ROOT": "/models/c2c",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1",
+        "WANDB_CACHE_DIR": "/fpct-run/wandb-cache",
+        "WANDB_CONFIG_DIR": "/fpct-run/wandb-config",
+        "WANDB_DATA_DIR": "/fpct-run/wandb-data",
+        "WANDB_DIR": "/fpct-run/wandb",
+        "WANDB_MODE": "offline"
+      },
+      "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+      "metadata": {
+        "labels": {
+          "arm": "triplet",
+          "git_sha": "80fb2955",
+          "project": "fpct",
+          "run_uid": "fpct-r2m-80fb295-v1",
+          "seed": "__SEED__",
+          "study": "confirmatory-r2m"
+        },
+        "name": "__JOB_NAME__",
+        "namespace": "c2c-research"
+      },
+      "node_name": "4090-48gx2",
+      "placeholders": [
+        "__JOB_NAME__",
+        "__SEED__",
+        "___SEED__"
+      ],
+      "pointers": [
+        "/classification",
+        "/status",
+        "/training_authorized"
+      ],
+      "resources": {
+        "limits": {
+          "nvidia.com/gpu": "2"
+        },
+        "requests": {
+          "cpu": "8",
+          "memory": "64Gi",
+          "nvidia.com/gpu": "2"
+        }
+      },
+      "restart_policy": "Never",
+      "sha256": "9c9dbab0aa63051496a08143f5a41058783eae58ca68dde67e107c6078f24bd1",
+      "shell_guards": [
+        "/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/immutable_final.json\")); s=json.load(open(\"/fpct-run/results/diagnostic_seed_104729/matched_smoke_manifest.json\")); assert p[\"classification\"] == \"R2M_IMMUTABLE_GO\" and p[\"training_authorized\"] is True and s[\"status\"] == \"GO\"'"
+      ],
+      "volume_mounts": [
+        {
+          "mountPath": "/opt/fpct-lock",
+          "name": "run-lock",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/models/c2c",
+          "name": "models",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/fpct-run",
+          "name": "fpct-run"
+        }
+      ],
+      "volumes": [
+        {
+          "configMap": {
+            "name": "fpct-r2m-lock-80fb295-v1"
+          },
+          "name": "run-lock"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+            "type": "Directory"
+          },
+          "name": "models"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
+            "type": "Directory"
+          },
+          "name": "fpct-run"
+        }
+      ]
+    },
+    "semantic_gate_immutable_v1_job.yaml": {
+      "args": [
+        "set -euo pipefail\n/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/pretrained_matrix/pretrained_r2_result.json\")); assert p[\"status\"] == \"GO\" and len(p[\"checks\"]) == 23 and all(p[\"checks\"].values())'\n/opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_gpu_r2l_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/semantic_synthetic.json -- synthetic --output /fpct-run/results/semantic/synthetic/synthetic.json\n/opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_gpu_r2l_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/qwen_decode4.json -- qwen-decode4 --output /fpct-run/results/semantic/qwen_decode4/qwen_decode4.json\n/opt/conda/bin/python3.11 -I /opt/fpct/script/runtime/fpct_bootstrap.py --repo-root /opt/fpct --target /opt/fpct/script/experiment/fpct_gpu_r2l_runner.py --include-gpu-closure --attestation-out /fpct-run/attestations/semantic_aggregate.json -- semantic-aggregate --original-result /fpct-run/results/pretrained_matrix/pretrained_r2_result.json --conditions-root /fpct-run/results/pretrained_matrix --floors /fpct-run/results/gpu_gate/metric_null_floors.json --synthetic /fpct-run/results/semantic/synthetic/synthetic.json --qwen-decode4 /fpct-run/results/semantic/qwen_decode4/qwen_decode4.json --output /fpct-run/results/semantic/semantic_result.json\n"
+      ],
+      "backoff_limit": 0,
+      "command": [
+        "bash",
+        "-lc"
+      ],
+      "env": {
+        "C2C_MODEL_ROOT": "/models/c2c",
+        "HF_HUB_OFFLINE": "1",
+        "TOKENIZERS_PARALLELISM": "false",
+        "TRANSFORMERS_OFFLINE": "1"
+      },
+      "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+      "metadata": {
+        "labels": {
+          "arm": "semantic-gate",
+          "git_sha": "80fb2955",
+          "project": "fpct",
+          "run_uid": "fpct-r2m-80fb295-v1",
+          "seed": "diagnostic",
+          "study": "confirmatory-r2m"
+        },
+        "name": "fpct-r2m-semantic-80fb295",
+        "namespace": "c2c-research"
+      },
+      "node_name": "4090-48gx2",
+      "placeholders": [],
+      "pointers": [
+        "/checks",
+        "/status"
+      ],
+      "resources": {
+        "limits": {
+          "nvidia.com/gpu": "1"
+        },
+        "requests": {
+          "cpu": "8",
+          "memory": "64Gi",
+          "nvidia.com/gpu": "1"
+        }
+      },
+      "restart_policy": "Never",
+      "sha256": "0b49951f5facb7e2ff77c14ae10bee4c64d17cfac2e4088b3bd1f2735e760de0",
+      "shell_guards": [
+        "/opt/conda/bin/python3.11 -c 'import json; p=json.load(open(\"/fpct-run/results/pretrained_matrix/pretrained_r2_result.json\")); assert p[\"status\"] == \"GO\" and len(p[\"checks\"]) == 23 and all(p[\"checks\"].values())'"
+      ],
+      "volume_mounts": [
+        {
+          "mountPath": "/opt/fpct-lock",
+          "name": "run-lock",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/models/c2c",
+          "name": "models",
+          "readOnly": true
+        },
+        {
+          "mountPath": "/fpct-run",
+          "name": "fpct-run"
+        }
+      ],
+      "volumes": [
+        {
+          "configMap": {
+            "name": "fpct-r2m-lock-80fb295-v1"
+          },
+          "name": "run-lock"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/c2c-route1-identifiability/models",
+            "type": "Directory"
+          },
+          "name": "models"
+        },
+        {
+          "hostPath": {
+            "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1",
+            "type": "Directory"
+          },
+          "name": "fpct-run"
+        }
+      ]
+    }
+  }
+}

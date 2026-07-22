@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "additionalProperties": false,
+  "properties": {"completed_triplets": {"items": {"maximum": 56, "minimum": 45, "type": "integer"}, "type": "array"}, "held_out_release_count": {"maximum": 1, "minimum": 0, "type": "integer"}, "lock_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "model_selection_release_count": {"maximum": 1, "minimum": 0, "type": "integer"}, "run_uid": {"minLength": 1, "type": "string"}, "schema_version": {"const": 1}, "stage": {"enum": ["RUN_LOCKED", "GPU_NUMERICAL_GO", "PRETRAINED_SMOKE_GO", "MATCHED_SMOKE_GO", "FORMAL_TRAINING_SUBMITTED", "FORMAL_TRAINING_COMPLETE", "MODEL_SELECTION_RELEASED", "MODEL_SELECTION_COMPLETE", "HELD_OUT_RELEASED", "TERMINAL"]}},
+  "required": ["schema_version", "run_uid", "lock_sha256", "stage", "completed_triplets", "model_selection_release_count", "held_out_release_count"], "type": "object"
+}

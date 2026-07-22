@@ -1,0 +1,270 @@
+{
+  "contracts": {
+    "candidate_compiler": {
+      "pointers": [
+        "/assets",
+        "/assets/receiver",
+        "/assets/receiver/model_sha256",
+        "/assets/sender",
+        "/assets/sender/model_sha256",
+        "/assets/training_alignment_sidecar_2048",
+        "/assets/training_alignment_sidecar_2048/sha256",
+        "/formal_training",
+        "/formal_training/arm_order",
+        "/formal_training/optimizer_steps",
+        "/formal_training/processes",
+        "/formal_training/seeds",
+        "/formal_training/training_examples",
+        "/image",
+        "/image/reference",
+        "/image/source_tree_sha256",
+        "/kubernetes",
+        "/kubernetes/gpu_per_seed_pod",
+        "/kubernetes/namespace",
+        "/kubernetes/node_name",
+        "/normative",
+        "/normative/confirmatory_manifest",
+        "/scientific_code_commit"
+      ],
+      "unresolved": []
+    },
+    "legacy_load_lock": {
+      "pointers": [
+        "/image",
+        "/manifest_sha256",
+        "/run_uid",
+        "/scientific_code_commit"
+      ],
+      "unresolved": []
+    },
+    "matched_smoke_direct": {
+      "pointers": [
+        "/run_uid"
+      ],
+      "unresolved": []
+    },
+    "r2_controller_evidence": {
+      "pointers": [
+        "/status"
+      ],
+      "unresolved": []
+    },
+    "r2_controller_initialize": {
+      "pointers": [
+        "/run_uid",
+        "/status"
+      ],
+      "unresolved": []
+    },
+    "r2_controller_triplet": {
+      "pointers": [
+        "/status"
+      ],
+      "unresolved": []
+    },
+    "r2_k8s_renderer": {
+      "pointers": [
+        "/image",
+        "/image/reference",
+        "/kubernetes",
+        "/kubernetes/config_map",
+        "/kubernetes/node_name",
+        "/run_uid",
+        "/scientific_code_commit",
+        "/status"
+      ],
+      "unresolved": []
+    },
+    "r2m_finalizer": {
+      "pointers": [
+        "/accuracy_or_correctness_accessed",
+        "/canaries",
+        "/canaries/checkpoint_native",
+        "/canaries/checkpoint_native/qualified",
+        "/canaries/forced_on",
+        "/canaries/forced_on/qualified",
+        "/checks",
+        "/status"
+      ],
+      "unresolved": []
+    },
+    "train_config_builder": {
+      "pointers": [
+        "/assets",
+        "/assets/training_alignment_sidecar_2048",
+        "/assets/training_alignment_sidecar_2048/container_path",
+        "/run_uid"
+      ],
+      "unresolved": []
+    },
+    "train_triplet_direct": {
+      "pointers": [
+        "/run_uid"
+      ],
+      "unresolved": []
+    }
+  },
+  "derived": {
+    "candidate_compiler": [
+      "/assets",
+      "/assets/receiver",
+      "/assets/receiver/model_sha256",
+      "/assets/sender",
+      "/assets/sender/model_sha256",
+      "/assets/training_alignment_sidecar_2048",
+      "/assets/training_alignment_sidecar_2048/sha256",
+      "/formal_training",
+      "/formal_training/arm_order",
+      "/formal_training/optimizer_steps",
+      "/formal_training/processes",
+      "/formal_training/seeds",
+      "/formal_training/training_examples",
+      "/image",
+      "/image/reference",
+      "/image/source_tree_sha256",
+      "/kubernetes",
+      "/kubernetes/gpu_per_seed_pod",
+      "/kubernetes/namespace",
+      "/kubernetes/node_name",
+      "/normative",
+      "/normative/confirmatory_manifest",
+      "/scientific_code_commit"
+    ],
+    "formal_triplet": [
+      "/image",
+      "/manifest_sha256",
+      "/run_uid",
+      "/scientific_code_commit"
+    ],
+    "legacy_load_lock": [
+      "/image",
+      "/manifest_sha256",
+      "/run_uid",
+      "/scientific_code_commit"
+    ],
+    "matched_smoke": [
+      "/image",
+      "/manifest_sha256",
+      "/run_uid",
+      "/scientific_code_commit"
+    ],
+    "matched_smoke_direct": [
+      "/run_uid"
+    ],
+    "r2_controller": [
+      "/run_uid",
+      "/status"
+    ],
+    "r2_controller_evidence": [
+      "/status"
+    ],
+    "r2_controller_initialize": [
+      "/run_uid",
+      "/status"
+    ],
+    "r2_controller_triplet": [
+      "/status"
+    ],
+    "r2_k8s_renderer": [
+      "/image",
+      "/image/reference",
+      "/kubernetes",
+      "/kubernetes/config_map",
+      "/kubernetes/node_name",
+      "/run_uid",
+      "/scientific_code_commit",
+      "/status"
+    ],
+    "r2m_finalizer": [
+      "/accuracy_or_correctness_accessed",
+      "/canaries",
+      "/canaries/checkpoint_native",
+      "/canaries/checkpoint_native/qualified",
+      "/canaries/forced_on",
+      "/canaries/forced_on/qualified",
+      "/checks",
+      "/status"
+    ],
+    "statistics": [
+      "/columns/cell",
+      "/columns/content_group_hash",
+      "/columns/correct",
+      "/columns/seed",
+      "/columns/task"
+    ],
+    "statistics_required_columns": [
+      "cell",
+      "content_group_hash",
+      "correct",
+      "seed",
+      "task"
+    ],
+    "train_config_builder": [
+      "/assets",
+      "/assets/training_alignment_sidecar_2048",
+      "/assets/training_alignment_sidecar_2048/container_path",
+      "/run_uid"
+    ],
+    "train_triplet_direct": [
+      "/run_uid"
+    ],
+    "trainer": [
+      "/model_config/alignment_strategy",
+      "/model_config/attn_implementation",
+      "/model_config/fpct_operator",
+      "/model_config/fpct_r2_enforce_eager",
+      "/model_config/fpct_trace",
+      "/model_config/include_response",
+      "/model_config/is_do_alignment",
+      "/model_config/projector_checkpoint_dir",
+      "/model_config/projector_checkpoint_strict",
+      "/model_config/projector_init_seed",
+      "/model_config/soft_alignment_top_k",
+      "/training_config/answer_margin_routing",
+      "/training_config/answer_prior_regularization",
+      "/training_config/candidate_replay_alignment",
+      "/training_config/device",
+      "/training_config/expected_optimizer_steps",
+      "/training_config/fpct_expected_training_examples",
+      "/training_config/fpct_formal_run",
+      "/training_config/fpct_r2_matched_smoke",
+      "/training_config/freeze",
+      "/training_config/gradient_accumulation_steps",
+      "/training_config/lora",
+      "/training_config/max_length",
+      "/training_config/pad_to_multiple_of",
+      "/training_config/partial_training"
+    ],
+    "trainer_config_get_keys": [
+      "/model_config/alignment_strategy",
+      "/model_config/attn_implementation",
+      "/model_config/fpct_operator",
+      "/model_config/fpct_r2_enforce_eager",
+      "/model_config/fpct_trace",
+      "/model_config/include_response",
+      "/model_config/is_do_alignment",
+      "/model_config/projector_checkpoint_dir",
+      "/model_config/projector_checkpoint_strict",
+      "/model_config/projector_init_seed",
+      "/model_config/soft_alignment_top_k",
+      "/training_config/answer_margin_routing",
+      "/training_config/answer_prior_regularization",
+      "/training_config/candidate_replay_alignment",
+      "/training_config/device",
+      "/training_config/expected_optimizer_steps",
+      "/training_config/fpct_expected_training_examples",
+      "/training_config/fpct_formal_run",
+      "/training_config/fpct_r2_matched_smoke",
+      "/training_config/freeze",
+      "/training_config/gradient_accumulation_steps",
+      "/training_config/lora",
+      "/training_config/max_length",
+      "/training_config/pad_to_multiple_of",
+      "/training_config/partial_training"
+    ]
+  },
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false,
+  "unresolved_dynamic_accesses": {}
+}

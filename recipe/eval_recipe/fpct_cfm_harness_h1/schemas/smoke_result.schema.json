@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "additionalProperties": false,
+  "properties": {"arms": {"items": {"enum": ["c_pre", "c_post", "f"]}, "maxItems": 3, "minItems": 3, "type": "array"}, "image_digest": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"}, "lock_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "prerequisite_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "protocol_id": {"const": "fpct_h1_smoke_result_v1"}, "run_uid": {"minLength": 1, "type": "string"}, "schema_version": {"const": 1}, "seed": {"const": 104729, "type": "integer"}, "status": {"enum": ["GO", "INTEGRITY_FAILURE"]}},
+  "required": ["schema_version", "protocol_id", "run_uid", "lock_sha256", "image_digest", "prerequisite_sha256", "seed", "arms", "status"], "type": "object"
+}

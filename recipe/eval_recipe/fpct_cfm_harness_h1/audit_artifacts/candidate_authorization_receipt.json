@@ -1,0 +1,11 @@
+{
+  "artifact_sha256": "6c1ce4322cf7773e57abb6a0e1604c75947fb3de2927ffd4f8420aea60a9b306",
+  "classification": "H1_CONFIG_ONLY_NO_AUTHORITY",
+  "image_digest": "sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+  "lock_sha256": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683",
+  "protocol_id": "fpct_h1_prerequisite_receipt_v1",
+  "run_uid": "h1-config-only-not-an-execution-uid",
+  "schema_version": 1,
+  "scientific_output": false,
+  "training_authorized": false
+}

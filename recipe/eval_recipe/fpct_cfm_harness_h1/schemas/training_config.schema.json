@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "additionalProperties": false,
+  "properties": {"arm": {"enum": ["c_pre", "c_post", "f"]}, "examples": {"enum": [128, 2048], "type": "integer"}, "gradient_accumulation_steps": {"const": 16, "type": "integer"}, "learning_rate": {"const": 0.0001, "type": "number"}, "max_length": {"const": 1024, "type": "integer"}, "optimizer_steps": {"enum": [4, 64], "type": "integer"}, "per_device_batch_size": {"const": 1, "type": "integer"}, "precision": {"const": "bf16"}, "run_uid": {"minLength": 1, "type": "string"}, "schema_version": {"const": 1}, "seed": {"type": "integer"}, "sidecar_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "weight_decay": {"const": 0.01, "type": "number"}, "world_size": {"const": 2, "type": "integer"}},
+  "required": ["schema_version", "run_uid", "seed", "arm", "examples", "optimizer_steps", "world_size", "per_device_batch_size", "gradient_accumulation_steps", "learning_rate", "weight_decay", "max_length", "precision", "sidecar_sha256"], "type": "object"
+}

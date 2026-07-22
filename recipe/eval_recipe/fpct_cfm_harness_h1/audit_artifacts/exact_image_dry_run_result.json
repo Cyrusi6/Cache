@@ -1,0 +1,42 @@
+{
+  "candidate_probe_exit": 0,
+  "candidate_probe_sealed": true,
+  "controller_final_stage": "HELD_OUT_RELEASED",
+  "controller_negative_checks": {
+    "duplicate_held_out_release": true,
+    "duplicate_model_selection_release": true,
+    "premature_formal_completion": true
+  },
+  "exact_byte_all_equal": true,
+  "exact_bytes": {
+    "configmap_data": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683",
+    "host_or_git_candidate": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683",
+    "main_container": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683",
+    "mounted": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683"
+  },
+  "image_probe_sha256": "4be0b55eff6c0e81ee2c3190339e134631a3bb56deaa229c7c7004a889c0e3c7",
+  "image_provenance": {
+    "branch": "research/fpct-factorized-transport",
+    "head": "80fb295542ad298fae4cddb1273517b401bbcd17",
+    "schema_version": 1,
+    "tree_sha256": "b2090b58362312384c330865b499080750eaf380eb071a2e44917e4ca28f6b51",
+    "upstream": "80fb295542ad298fae4cddb1273517b401bbcd17"
+  },
+  "legacy_r2m_error_contains_missing_lock": true,
+  "legacy_r2m_probe_exit": 1,
+  "no_training_output_directory_created": true,
+  "protocol_id": "fpct_cfm_harness_h1_exact_image_dry_run_v1",
+  "schema_version": 1,
+  "scientific_output": false,
+  "status": "GO",
+  "training_authorized": false,
+  "training_configs_schema_validated": 39,
+  "tripwires": {
+    "checkpoint": 0,
+    "cuda": 0,
+    "dataset": 0,
+    "model": 0,
+    "optimizer": 0,
+    "subprocess": 0
+  }
+}

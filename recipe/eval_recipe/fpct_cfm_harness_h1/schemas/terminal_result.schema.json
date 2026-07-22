@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "additionalProperties": false,
+  "properties": {"classification": {"enum": ["MECHANISM_SUPPORTED_GO", "PERFORMANCE_GO_MECHANISM_UNRESOLVED", "FUTILITY_NO_GO", "HARM_NO_GO", "INCONCLUSIVE"]}, "held_out_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "lock_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "run_uid": {"minLength": 1, "type": "string"}, "schema_version": {"const": 1}, "statistics_code_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}},
+  "required": ["schema_version", "run_uid", "lock_sha256", "held_out_sha256", "statistics_code_sha256", "classification"], "type": "object"
+}

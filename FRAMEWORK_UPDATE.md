@@ -1439,3 +1439,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 冻结producer/consumer registry、stage graph、artifact registry、field discovery、mutation spec、hash DAG、implementation allowlist和decision tree。人工registry不能代替AST/YAML/bash/argparse/inline JSON机械发现。
 - 历史red fixtures固定为R2l geometry omission与R2m top-level `manifest_sha256` omission；真实confirmatory manifest SHA=`5e04fe7f...`，R2j training-compatible lock的top-level binding一致。
 - H1严格config-only：无模型、dataset、CUDA、optimizer、checkpoint、accuracy/correctness或新执行UID。任一需要修改R2m image内部文件的修复只能分类`H1_REQUIRES_NEW_IMAGE_QUALIFICATION`，本任务不实施恢复。
+
+### 2026-07-23 FPCT-CFM-HARNESS-H1 full contract audit
+
+- 研究目标：在不恢复R2m execution的前提下，机械完成manifest到terminal result的producer-consumer DAG、字段闭包、strict schema、compiler/hash DAG、mutation regression与exact-image no-model dry-run。
+- 核心改动：新增H1 AST/argparse/K8s contract auditor、exact-image tripwire probe、10个strict schemas、deterministic candidate compiler、14项CPU tests以及可提交的discovered registry/stage graph/mutation/result artifacts。现有R2m runner、controller、finalizer、trainer、bootstrap、operator与K8s执行文件保持只读。
+- 审计配置：protocol commit=`0fd69e0`；exact image=`sha256:0ea40657...`；candidate使用不可执行UID/root sentinel；CUDA为空、网络禁用、无模型/数据卷。K8s只运行`create --dry-run=server`，未apply资源。
+- 验证结果：11-stage graph无环；未注释动态访问=0；真实`load_lock`发现精确四pointer；10 schemas strict；ARM_ORDER与manifest一致；389 mutations全部fail closed；tests=`14 passed`。Exact image验证39个training configs、完整controller DAG和三个release negative controls，所有model/dataset/optimizer/subprocess/checkpoint/CUDA tripwire为0。Git/ConfigMap/mount/main bytes均为candidate SHA `7c0bfbb1...`。
+- 结论：当前finalizer不绑定UID/lock/image/prerequisite，smoke/triplet只绑定UID，controller虽绑定UID与run-lock SHA但不绑定image/prerequisite；多个declaration也与source discovery不闭合。修复涉及sealed image内producer/controller，因此终局=`H1_REQUIRES_NEW_IMAGE_QUALIFICATION`，audit result SHA=`35ac8d72...`。R2m保持immutable GO但campaign继续暂停；本任务无训练、checkpoint、accuracy/correctness、model-selection或held-out输出，也不创建R2n。

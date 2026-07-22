@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "additionalProperties": false,
+  "properties": {"artifact_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "classification": {"minLength": 1, "type": "string"}, "image_digest": {"pattern": "^sha256:[0-9a-f]{64}$", "type": "string"}, "lock_sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"}, "protocol_id": {"const": "fpct_h1_prerequisite_receipt_v1"}, "run_uid": {"minLength": 1, "type": "string"}, "schema_version": {"const": 1}, "scientific_output": {"const": false}, "training_authorized": {"const": false}},
+  "required": ["schema_version", "protocol_id", "run_uid", "lock_sha256", "image_digest", "artifact_sha256", "classification", "scientific_output", "training_authorized"], "type": "object"
+}

@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_cfm_harness_h1_result_manifest_v1",
+  "baseline_commit": "cf27780ca48e435cb0f3655daf3adcd9e25ece54",
+  "protocol_commit": "0fd69e0",
+  "classification": "H1_REQUIRES_NEW_IMAGE_QUALIFICATION",
+  "status": "COMPLETE",
+  "scientific_output": false,
+  "training_authorized": false,
+  "candidate_identity": {
+    "run_uid": "h1-config-only-not-an-execution-uid",
+    "shared_run_root": "H1_CONFIG_ONLY_NO_EXECUTION_ROOT",
+    "execution_authority": false
+  },
+  "frozen_r2m_identity": {
+    "scientific_commit": "80fb295542ad298fae4cddb1273517b401bbcd17",
+    "image_digest": "sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+    "run_uid": "fpct-r2m-80fb295-v1",
+    "operative_lock_raw_sha256": "db67428e6778c07a4991d9a9675ace6883de3a785c1f317b15b2aac7bfa0deff",
+    "immutable_final_sha256": "6c1ce4322cf7773e57abb6a0e1604c75947fb3de2927ffd4f8420aea60a9b306"
+  },
+  "summary": {
+    "mutation_rows": 389,
+    "all_mutations_fail_closed": true,
+    "unannotated_dynamic_access_count": 0,
+    "strict_schema_count": 10,
+    "exact_image_training_configs_validated": 39,
+    "cluster_resources_created": 0,
+    "requires_image_changes": [
+      "controller_state",
+      "formal_triplet",
+      "matched_smoke",
+      "r2m_finalizer"
+    ]
+  },
+  "artifacts": {
+    "audit_result.json": {
+      "sha256": "35ac8d723ab27a153ee5875519ee909395d066b9d8459d2bd74922dd57945998",
+      "bytes": 83272
+    },
+    "candidate_authorization_receipt.json": {
+      "sha256": "6258a226082e04d6a7319c2dd7f0893c707aa8e792eb9b26f2c0ed8ce3b23195",
+      "bytes": 510
+    },
+    "candidate_configmap.json": {
+      "sha256": "2252cd4f6799f8f385d0a9c65016c5517603a5d290023cf8d046d7a8aef498d0",
+      "bytes": 3177
+    },
+    "candidate_formal_job.json": {
+      "sha256": "ddfd35dc2ba949464068f68f5cdfcab5810bca209c9f660e6b83369d6d7ed4fc",
+      "bytes": 2579
+    },
+    "candidate_lock_projection.json": {
+      "sha256": "7c0bfbb15600b62d91f54e85e576a8d8fea455f2f6cdfff43f2b0f29bfef2683",
+      "bytes": 2456
+    },
+    "candidate_smoke_job.json": {
+      "sha256": "210e114aba2689b7a2787cedc75f1c12d86aa94879ac5bdd05465fe692d47e5a",
+      "bytes": 2367
+    },
+    "discovered_consumer_registry.json": {
+      "sha256": "07a55f7da523fb7b45afcb5a35a05745d453ca99f9b8d75fca8665c27008806a",
+      "bytes": 7430
+    },
+    "discovered_stage_graph.json": {
+      "sha256": "3316aec41ce19d84a63b0aa466dc9533a46a9c399dea62f98c7d7c5565160f35",
+      "bytes": 36891
+    },
+    "exact_image_dry_run_result.json": {
+      "sha256": "fb7e2dab94a570b3b17d08ed74715662eef520dc62bdfef6b87dbecbb3d3ad21",
+      "bytes": 1565
+    },
+    "k8s_server_dry_run_result.json": {
+      "sha256": "4f56971c50e11caa0ba4fbdc25da5047b819398547095b077cd8f8263f5b2762",
+      "bytes": 767
+    },
+    "mutation_coverage_matrix.json": {
+      "sha256": "e33e9162da7e0de15128681099e90adbb84348c60e49fd9d3f1480cde55c5e23",
+      "bytes": 76127
+    }
+  }
+}
