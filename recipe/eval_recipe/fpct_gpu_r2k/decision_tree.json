@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2k_decision_tree_v1",
+  "nodes": [
+    {"id": "protocol_lock", "if_false": "STOP_BEFORE_GPU", "if_true": "diagnostic"},
+    {"id": "diagnostic", "classification": "DIAGNOSTIC_ONLY", "if_qualified": "freeze", "if_not_qualified": "NEW_DIAGNOSTIC_UID_OR_STOP"},
+    {"id": "freeze", "requires": ["new_scientific_commit", "push", "new_image", "new_run_uid", "new_run_lock", "sealed_attestation"], "next": "immutable_gate"},
+    {"id": "immutable_gate", "run_count": 1, "if_preregistered_infrastructure_failure_before_ratio": "INCONCLUSIVE", "if_any_formal_failure": "GPU_ENGINEERING_BLOCKED_R2K", "if_all_pass": "R2K_GPU_GATE_GO"},
+    {"id": "matched_smoke", "requires": "R2K_GPU_GATE_GO", "if_integrity_failure": "STOP_BEFORE_FORMAL", "if_go": "formal_36_runs"},
+    {"id": "formal_36_runs", "performance_release_before_36_of_36": false, "next": "existing_confirmatory_release_protocol"}
+  ],
+  "r2j_terminal_immutable": true,
+  "accuracy_or_correctness_accessed": false
+}

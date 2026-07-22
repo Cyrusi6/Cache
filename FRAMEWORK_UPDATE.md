@@ -1286,3 +1286,13 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 唯一失败为冻结resource hard gate：F/C_post median latency ratio `1.6885509 > 1.50`。P95 ratio `1.3455029 <= 1.75`、peak HBM `4.2455 GiB`、mean/p95 expansion均通过。
 - 该失败不能通过重跑、放宽threshold或继续matched smoke绕过。Controller terminal `GPU_ENGINEERING_BLOCKED_R2`；0 matched smoke、formal training、checkpoint、accuracy/correctness、model-selection或held-out release。
 - R2j证明integrity repairs在CPU测试中成立，并保持R2i exact-native/forced-on engineering结果；不提供task performance或正式mechanism证据。
+
+### 2026-07-22 FPCT-GPU-R2k 前瞻等价 kernel latency recovery 锁定
+
+- 研究目标：不改变 FPCT 数学、candidate/prior/mask/certifier/训练与统计合同，只通过严格等价的 flat-atom eager kernel 降低 F 的 host dispatch、重复 parent QK 和 grouped scatter/reduction 开销。
+- R2j 永久保持 `GPU_ENGINEERING_BLOCKED_R2`：science `efa02fb...`、image `sha256:8eac5693...`、run-lock `51ce0a5e...`、median ratio `1.6885509 > 1.50`；R2k 不补跑、不覆盖、不重新解释。
+- 协议分离 `DIAGNOSTIC_ONLY` 和单次 `IMMUTABLE_CONFIRMATORY_GATE`。Diagnostic 固定 8 fresh-process paired blocks，ABBA 顺序，20 warmups + 50 measurements，CUDA-event 与 synchronized wall 双计时；profiling 与 latency 分离，checkpoint-native/forced-on 均须达到 median≤1.35、block-bootstrap UCB≤1.50 才可 freeze。
+- 历史 P2/P3 只读审计：R2h/R2i-v1/R2i-v2/R2j median ratios 为 `1.0793/1.1540/1.0809/1.6886`，对应 trace summed-kernel ratios 为 `1.0937/1.0966/1.0939/1.0954`。R2j 大 ratio 主要来自 C_post host wall time异常降低；旧 traces 没有 UUID、clock、temperature、power、P-state、throttle、foreign-process 或 CPU scheduler 证据，因此不能归因 infrastructure、也不能救援 R2j。
+- Hot-path blob audit：R2i science `8d21c72` 与 R2j science `efa02fb` 的 `fpct_attention.py`、`wrapper.py`、`fpct_gpu_r2_runner.py` Git blob 完全相同。
+- 计划实现：parent eager adapter 只算一次并复用 FP32 logits；equivalent parent 仅一个实际 active slot且 logA=0；non-equivalent atoms 一次 flat FP32 softmax + 一次 P×V；删除 `[B,H,Q,S,D] group_value`；instrumentation-off 不重建 beta/gamma；layout structural metadata 跨层复用；不得减慢 C_post。
+- 当前验证边界：只创建协议、manifest、历史只读 audit 和 protocol verifier；没有启动新 GPU/K8s、pretrained forward、训练、checkpoint、accuracy、model-selection 或 held-out。下一步必须先提交并推送 protocol lock。

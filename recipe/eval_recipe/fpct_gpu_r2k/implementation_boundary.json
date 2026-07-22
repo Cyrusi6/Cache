@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2k_implementation_boundary_v1",
+  "baseline_scientific_commit": "efa02fba98adff2a891445c4908a8dc9ac8c7fff",
+  "allowlist": {
+    "scientific_hot_path": [
+      "rosetta/model/fpct_attention.py",
+      "rosetta/model/wrapper.py",
+      "script/experiment/fpct_gpu_r2_runner.py"
+    ],
+    "new_r2k_execution": [
+      "script/experiment/fpct_gpu_r2k_latency.py",
+      "script/analysis/fpct_gpu_r2k_timing_audit.py",
+      "script/analysis/fpct_gpu_r2k_protocol_verify.py",
+      "recipe/eval_recipe/fpct_gpu_r2k/",
+      "recipe/k8s/fpct_gpu_r2k/",
+      "test/test_fpct_gpu_r2k_*.py",
+      "FPCT_GPU_R2K_*.md",
+      "FPCT_STATUS.md",
+      "FRAMEWORK_UPDATE.md",
+      "EXPERIMENT.md"
+    ]
+  },
+  "forbidden": {
+    "scientific_semantics": [
+      "candidate set",
+      "candidate order",
+      "top_k",
+      "canonical FP32 A/logA",
+      "attention masks",
+      "certified_slot0_v1",
+      "parent-equivalence definition",
+      "eager attention backend",
+      "trainable parameters",
+      "thresholds",
+      "panel data",
+      "training seeds",
+      "training recipe",
+      "confirmatory statistics"
+    ],
+    "paths": [
+      "math.md",
+      "rosetta/model/aligner.py",
+      "rosetta/model/projector.py",
+      "script/train/SFT_train.py",
+      "script/analysis/fpct_3_5_alignment_correctness.py",
+      "script/analysis/fpct_3_7_certified_support_audit.py",
+      "script/analysis/fpct_3_7r_certified_support_audit.py",
+      "recipe/eval_recipe/fpct_3_5/",
+      "recipe/eval_recipe/fpct_3_7/",
+      "recipe/eval_recipe/fpct_gpu_r2/",
+      "PHASE2A*",
+      "phase2a*"
+    ],
+    "operations": [
+      "read task correctness before formal release",
+      "slow C_post to improve a ratio",
+      "gate-zero-only fast exit",
+      "same-revision immutable retry after ratio access",
+      "merge",
+      "rebase",
+      "force push"
+    ]
+  }
+}

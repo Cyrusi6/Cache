@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2k_machine_verifiable_diff_v1",
+  "baseline_scientific_commit": "efa02fba98adff2a891445c4908a8dc9ac8c7fff",
+  "protocol_parent_commit": "4e06f0b970057ee374dd6ff9d02d1ca6cb133aa6",
+  "r2i_scientific_commit": "8d21c72",
+  "r2i_r2j_hot_path_blob_identity": {
+    "rosetta/model/fpct_attention.py": "be395083cacfcfddf635b823e34a1020c1286659",
+    "rosetta/model/wrapper.py": "5890df52d2c882d37467fa54f977102b9e12c282",
+    "script/experiment/fpct_gpu_r2_runner.py": "41dc22dd08d5b49f78340ef25b4f65051f9ee234"
+  },
+  "baseline_sha256": {
+    "math.md": "98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad",
+    "rosetta/model/fpct_attention.py": "e3eb717403adfd683f201c358538688c2329df74ee9157e2565468f529200ae3",
+    "rosetta/model/wrapper.py": "756a7e28b59fd12219bb00310a5c049bf718fbe37aa3b671d2fedb06b95626d6",
+    "script/experiment/fpct_gpu_r2_runner.py": "09c7fc7f3cf9a208e2dd4064c7c44457916dc9b9c22242b12371660fe1306c99",
+    "rosetta/model/aligner.py": "fe77d72fb7103ca103fe87fa602bed545e0caf6fc75b1741b8736b41e9daf7d8",
+    "rosetta/model/projector.py": "c5e0cb7836d0a30659cec240169a1e2a58df58a65b71534ad9b83ec33480b7be",
+    "script/train/SFT_train.py": "a5dbd927e6f23fd4a6a7e9c3491fb2aa1e6b64889a74228b5dbc8f5dd38be048",
+    "script/analysis/fpct_3_5_alignment_correctness.py": "da6fe984b28e654fe8578cf91a3f229e4c913c812ae15e3ecefe1d23a9ccc86a",
+    "script/analysis/fpct_3_7r_certified_support_audit.py": "855c06cfe844ed22b0390500a681b84584ad04d8a3afc6a056ae361689a6a68a",
+    "recipe/eval_recipe/fpct_3_5/alignment_correctness_manifest.json": "826985ed52a05e3f95a26994d7a849450ce6d52592c7f476630919b296d93407",
+    "recipe/eval_recipe/fpct_3_5/alignment_correctness_result_manifest.json": "3103f13c7c9cbf925c8ea8d4a5baf45b38f8130d74ebd5e5f4dd830fcbae17b3",
+    "recipe/eval_recipe/fpct_3_7/certified_support_manifest.json": "acdb6afa35af3df8f47a72a8f33743cb893ff50b008cf21aa4bbadd6c1119478"
+  },
+  "parent_since_scientific_commit_changed_paths": [
+    "EXPERIMENT.md",
+    "FPCT_GPU_R2_RUN_LOCK_REPORT.md",
+    "FPCT_STATUS.md",
+    "FRAMEWORK_UPDATE.md",
+    "recipe/eval_recipe/fpct_gpu_r2/fpct_gpu_r2j_failure_manifest.json",
+    "recipe/eval_recipe/fpct_gpu_r2/fpct_gpu_r2j_run_lock.json",
+    "recipe/k8s/fpct_gpu_r2/image_loader_r2j_job.yaml"
+  ],
+  "certifier_sidecar_projection_must_remain_identical": true,
+  "natural_alignment_audit_rerun_authorized": false,
+  "accuracy_or_correctness_accessed": false
+}

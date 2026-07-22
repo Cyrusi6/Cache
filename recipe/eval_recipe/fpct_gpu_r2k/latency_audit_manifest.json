@@ -1,0 +1,139 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2k_equivalent_kernel_latency_v1",
+  "status": "PRE_DIAGNOSTIC_LOCK",
+  "branch": "research/fpct-factorized-transport",
+  "parent_head": "4e06f0b970057ee374dd6ff9d02d1ca6cb133aa6",
+  "protocol_lock_commit": "git_commit_containing_this_manifest",
+  "accuracy_or_correctness_accessed": false,
+  "immutable_predecessor": {
+    "run_uid": "fpct-r2j-efa02fb-v1",
+    "terminal": "GPU_ENGINEERING_BLOCKED_R2",
+    "scientific_commit": "efa02fba98adff2a891445c4908a8dc9ac8c7fff",
+    "image_digest": "sha256:8eac5693511a3172547d80e4348b72bb4c57cbe0ad15ed47d607d19e0d5ccccf",
+    "run_lock_sha256": "51ce0a5e62906bb6388f9e0dbfd539fac120db3e70ef3259838e5f7289887c32",
+    "latency_median_ratio": 1.6885509119773743,
+    "latency_median_ceiling": 1.5,
+    "retry_or_reinterpret": false
+  },
+  "phases": {
+    "diagnostic_only": {
+      "may_iterate": true,
+      "may_produce_go": false,
+      "new_uid_and_root_per_revision": true,
+      "training_authorized": false,
+      "correctness_access_authorized": false,
+      "block_order": [
+        "c_post_then_f",
+        "f_then_c_post",
+        "f_then_c_post",
+        "c_post_then_f",
+        "c_post_then_f",
+        "f_then_c_post",
+        "f_then_c_post",
+        "c_post_then_f"
+      ],
+      "process_seeds": [104729, 104730, 104731, 104732, 104733, 104734, 104735, 104736],
+      "warmups_per_arm": 20,
+      "measured_forwards_per_arm": 50,
+      "timers": ["cuda_event", "synchronized_wall"],
+      "latency_scopes": false,
+      "separate_trace_scopes": true,
+      "raw_samples_required": true,
+      "bootstrap": {
+        "unit": "fresh_process_paired_block",
+        "replicates": 50000,
+        "seed": 20260722,
+        "upper_confidence": 0.95
+      },
+      "freeze_qualification": {
+        "checkpoint_native_balanced_median_ratio_max": 1.35,
+        "checkpoint_native_block_bootstrap_ucb_max": 1.5,
+        "forced_on_balanced_median_ratio_max": 1.35,
+        "forced_on_block_bootstrap_ucb_max": 1.5
+      }
+    },
+    "immutable_confirmatory_gate": {
+      "single_complete_execution": true,
+      "same_revision_retry_after_ratio_access": false,
+      "next_revision_on_failure": "R2l",
+      "required_original_checks": 23,
+      "required_operator_conditions": 16,
+      "required_profiles": ["P2_CPOST_OFF", "P3_F_OFF", "P4_F_REPLICATED", "P5_F_ON", "P6_DECODE4"],
+      "legacy_resource_gate": {
+        "warmups": 1,
+        "measurements": 7,
+        "ratio_of_medians_max": 1.5,
+        "max_ratio_max": 1.75,
+        "certified_mean_expansion_max": 1.35,
+        "certified_p95_expansion_max": 1.5,
+        "peak_hbm_fraction_lt": 0.9
+      },
+      "balanced_and_forced_on_gate_also_required": true,
+      "formal_failure_terminal": "GPU_ENGINEERING_BLOCKED_R2K"
+    }
+  },
+  "panel": {
+    "label_free": true,
+    "canonical_r2_row": true,
+    "geometry": [
+      "sequence_length_p50",
+      "sequence_length_p95",
+      "certified_expansion_p50",
+      "certified_expansion_p95",
+      "m1",
+      "m2",
+      "m3",
+      "m4",
+      "gqa",
+      "mqa",
+      "prefill",
+      "decode4"
+    ],
+    "active_canaries": ["c_post_forced_on", "f_forced_on"],
+    "forced_on_scientific_role": "parameter_free_engineering_diagnostic_only"
+  },
+  "timing_telemetry_required": [
+    "raw_cuda_event_samples",
+    "raw_synchronized_wall_samples",
+    "gpu_uuid",
+    "sm_clock_mhz",
+    "memory_clock_mhz",
+    "temperature_c",
+    "power_w",
+    "p_state",
+    "clocks_throttle_reasons",
+    "foreign_gpu_processes",
+    "node_pod_inventory",
+    "cpu_affinity",
+    "cpu_scheduler",
+    "warmup_order",
+    "measurement_order"
+  ],
+  "kernel_contract": {
+    "accumulation_dtype": "float32",
+    "flat_global_softmax": true,
+    "parent_eager_adapter_calls": 1,
+    "reuse_parent_logits": true,
+    "equivalent_parent_active_slots": 1,
+    "equivalent_parent_log_prior": 0.0,
+    "non_equivalent_atom_matmuls": 1,
+    "probability_value_reductions": 1,
+    "group_value_5d_allocation_forbidden": true,
+    "beta_gamma_only_with_instrumentation": true,
+    "cuda_scalar_extraction_forbidden": true,
+    "host_tensor_branch_forbidden": true,
+    "prior_application_count": 1
+  },
+  "conditional_resumption": {
+    "requires_r2k_gpu_gate_go": true,
+    "matched_smoke_seed": 104729,
+    "matched_smoke_examples": 128,
+    "matched_smoke_optimizer_steps": 4,
+    "formal_seed_count": 12,
+    "formal_arm_count": 3,
+    "performance_release_requires_complete_runs": 36,
+    "statistics_unchanged": ["T", "O", "I", "N"]
+  },
+  "claim_boundary": "equivalent-kernel numerical correctness and resource readiness only until the already frozen confirmatory release protocol is satisfied"
+}

@@ -335,3 +335,14 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - `/home/lijunsi/projects/Cache-phase2a2-equivalence-debug` 保持 `research/phase2a2-equivalence-debug`，复查时 HEAD `f1059dee343969661bb9492f0231d9bb58261706` 且 clean；FPCT 未在其中执行写操作、切换分支或读取结果文件。
 - 当前 diff 不包含 `PHASE2A_*`/`phase2a_*` 文件；v1 protocol、v1/v2 manifest、approval addendum 与 `math.md` 均无 diff。
 - `math.md` SHA256 仍为 `98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad`；operative v2 manifest SHA256 仍为 `f7c8bd7fbc456484d1a40ca88d32dc8da3104c422a5addd89f7d033b12c82511`。
+
+## 10. FPCT-GPU-R2k：PRE-DIAGNOSTIC LOCK
+
+- R2j 永久保持 `GPU_ENGINEERING_BLOCKED_R2`；不得重试、覆盖或重新解释。
+- R2k protocol 将 `DIAGNOSTIC_ONLY` 与单次 `IMMUTABLE_CONFIRMATORY_GATE` 分开。Diagnostic 可使用新 UID/root 迭代等价优化，但不能产生 GO、授权训练或读取 accuracy/correctness。
+- Diagnostic 固定 8 个 fresh-process paired blocks，ABBA 平衡为 4 个 C_post→F 与 4 个 F→C_post；每臂 20 warmups + 50 measurements，同时记录 CUDA-event 和 synchronized wall time。
+- Freeze qualification 对 checkpoint-native 和 forced-on 均要求 balanced median ratio≤1.35、block-bootstrap one-sided 95% UCB≤1.50；它不是正式 gate 的替代。
+- 历史只读 audit：R2h/R2i-v1/R2i-v2/R2j wall median ratios=`1.0793/1.1540/1.0809/1.6886`，trace summed-kernel ratios=`1.0937/1.0966/1.0939/1.0954`。旧 artifact 缺少 UUID/clock/temperature/power/interference/CPU scheduling，不能据此改判 R2j。
+- R2i science `8d21c72` 与 R2j science `efa02fb` 的 `fpct_attention.py`、`wrapper.py`、`fpct_gpu_r2_runner.py` Git blobs 完全相同。
+- 当前：protocol=`PRE-DIAGNOSTIC LOCK`；R2k diagnostic=`NOT STARTED`；immutable gate、matched smoke、formal training、model-selection、held-out=`NOT AUTHORIZED`。
+- 本阶段 accuracy/correctness accessed=`false`；尚未启动新的 GPU/Kubernetes/pretrained forward/training/checkpoint。
