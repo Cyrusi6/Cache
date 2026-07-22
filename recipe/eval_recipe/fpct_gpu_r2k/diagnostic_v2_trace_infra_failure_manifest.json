@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2k_diagnostic_v2_trace_infra_failure",
+  "status": "DIAGNOSTIC_INFRA_FAILURE_RESUMABLE",
+  "run_uid": "fpct-r2k-diag-458b026-v2",
+  "scientific_code_commit": "458b0260fc5475c9ae578eb68b8dff2b2699e2f4",
+  "image_digest": "sha256:3a4240bc26610b43737861f46cbee88de5d1552002d03de9f0f9407d71da32e5",
+  "run_lock_sha256": "3a283885bdb1ff2639f13d3cbe3875b2ab673c47d28a88741144b7dfafcb56f6",
+  "completed_sealed_inputs": {
+    "latency_blocks": 8,
+    "block_attestations": 8,
+    "geometry": {
+      "sha256": "abbbfa614666d9e720417f62a0da5f084c2d9d042b74e321328d9e3c50fb88cc"
+    },
+    "reuse_on_resume": true
+  },
+  "failure": {
+    "stage": "trace_output_directory_initialization",
+    "reason": "the precreated empty trace directory conflicted with runner exist_ok=false",
+    "pretrained_trace_forward_started": false,
+    "trace_artifact_created": false,
+    "aggregate_created": false,
+    "ratio_fields_read": false,
+    "infrastructure_only": true
+  },
+  "failed_attestation": {
+    "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v2/attestations/trace_attempt1_failure.json",
+    "sha256": "8714a547bbc92638320c973361acc70cc514f082366202c4ae8cd390eaf92565",
+    "bytes": 42479
+  },
+  "resume_contract": {
+    "same_uid_root_image_and_code": true,
+    "completed_block_or_geometry_overwrite": false,
+    "remove_only_confirmed_empty_trace_directory": true,
+    "run_only_missing_trace_and_aggregate": true,
+    "scientific_retry": false
+  },
+  "accuracy_or_correctness_accessed": false
+}

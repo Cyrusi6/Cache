@@ -1319,3 +1319,8 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - V1 image import成功；首个block target运行完成后，bootstrap在写sealed attestation前发现run root未预建`attestations/`，Job按backoffLimit=0 terminal。失败发生在post-target sealing，属于执行基础设施错误。
 - 未sealed `block_00.json` SHA=`92ea815a...`、bytes=56690；未打开ratio字段，artifact明确invalid且v2不复用。未训练、未读accuracy/correctness、未改变R2j。
 - V2不改scientific code/image/threshold/panel/order，使用新UID/root `fpct-r2k-diag-458b026-v2`、lock SHA `3a283885...`并在submit前显式创建全部输出父目录。V1/V2边界由failure manifest和新lock前瞻记录。
+
+### 2026-07-22 FPCT-GPU-R2k v2 trace-only infrastructure resume
+
+- V2已sealed完成8/8 latency blocks和geometry。Trace attempt 1在model setup/forward前因空的`results/traces`已存在而触发`FileExistsError`；尚无trace artifact或aggregate，ratio字段未读取。
+- 失败attestation以`trace_attempt1_failure.json`保留；确认空目录被安全移除。Resume Job使用相同code/image/UID/root，已有blocks/geometry按hash只读跳过，只运行缺失trace和aggregate；不构成科学重跑。

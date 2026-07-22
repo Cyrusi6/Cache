@@ -370,3 +370,9 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - V1产生的未sealed block_00只记录SHA/size；ratio字段未读取，不参与qualification，也不在v2复用。
 - V2保持science `458b0260...`和image `3a4240bc...`完全不变，但使用全新UID/root `fpct-r2k-diag-458b026-v2`、lock SHA `3a283885...`，并在submit前预建attestations/jobs/results全部父目录。
 - V2仍为`DIAGNOSTIC_ONLY`；immutable gate/training/performance均未授权。
+
+### R2k diagnostic v2 trace infrastructure resume
+
+- 8/8 latency blocks与geometry均sealed完成；aggregate前未读取ratio。
+- Trace attempt 1在任何trace pretrained forward前因预建空目录与runner `exist_ok=false`冲突停止；failure attestation已重命名保留。
+- Resume不改code/image/UID/root，不覆盖8个blocks或geometry；只移除确认空的trace目录并执行缺失trace+aggregate，属于infrastructure-only resume。
