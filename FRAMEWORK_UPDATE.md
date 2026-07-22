@@ -1424,3 +1424,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 新UID/root=`fpct-r2m-80fb295-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1`；replacement lock raw/canonical SHA=`db67428e...`/`f731660f...`，ConfigMap重新机械生成并immutable。
 - Replacement `CONFIG_PREFLIGHT_ONLY`完成`1/1`：Git/ConfigMap/init-mounted/main-container raw SHA四者完全一致，schema与consumer closure GO，task set和3行geometry准确；没有模型、dataset、CUDA、metric或training authorization。
 - 下一步只允许提交本replacement lock后启动一次one-shot immutable gate。旧`66e4cdd` candidate仅作为pre-science provenance历史保留，不得被解释为R2m scientific attempt。
+
+### 2026-07-22 FPCT-GPU-R2m immutable GO and confirmatory harness pause
+
+- One-shot immutable gate按固定顺序完整执行：synthetic=`8/8`，original operator conditions=`16/16`，P2--P6=`5/5`，compatibility checks=`23/23`，六项semantic checks全部GO，actual Qwen3 28层FP32/BF16 decode4 bitwise exact。
+- Original resource结果：median/p95 latency ratio=`0.674918/0.651486`，peak HBM=`4.21747 GiB`，hot-path sync=0；canonical geometry恢复后expansion mean/p95均通过。
+- Balanced checkpoint-native median/UCB=`1.055691/1.071335`，forced-on=`1.062699/1.075348`，均通过冻结`1.35/1.50`门。Sealed finalizer产出`R2M_IMMUTABLE_GO`。
+- 条件式matched smoke随后在训练前fail closed：`fpct_confirmatory_runner.load_lock`要求top-level `manifest_sha256`，而R2m lock仅在`normative.confirmatory_manifest`保存相关hash，缺少required pointer。错误发生于output root创建和任何optimizer step之前。
+- 按“第二个run-lock/provenance omission则暂停campaign并全面审计harness”规则，不修lock、不重试、不提交12-seed formal jobs、不自动建立R2n。最终为engineering gate GO，但confirmatory campaign=`PAUSED_HARNESS_AUDIT_REQUIRED`；无accuracy/correctness或科学性能结论。

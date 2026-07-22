@@ -480,3 +480,12 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - 全新UID/root=`fpct-r2m-80fb295-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1`；image tar SHA=`e2038125...`；sidecar SHA保持`48caee80...`。
 - Replacement run-lock raw/canonical SHA=`db67428e...`/`f731660f...`。第二次CPU-only preflight中Git、immutable ConfigMap、init-mounted与main-container四份raw SHA全部精确等于`db67428e...`；schema/consumer closure均GO，仍为`scientific_output=false`、`training_authorized=false`。
 - 只有本replacement lock可用于后续one-shot immutable gate；旧UID/root与Jobs不复用。当前仍未运行R2m CUDA/model/dataset forward，未训练、未创建checkpoint、未读取accuracy/correctness/model-selection/held-out。
+
+### R2m immutable gate：R2M_IMMUTABLE_GO；confirmatory campaign PAUSED
+
+- Synthetic GPU gate=`8/8 GO`；original matrix=`16/16 conditions`、`5/5 P2--P6`、`23/23 checks GO`。Median/p95 latency ratio=`0.674918/0.651486`，peak HBM=`4.21747 GiB`，hot-path sync=0，canonical expansion mean/p95全部通过。
+- 六项semantic checks全部GO；actual Qwen3 28层FP32/BF16 prefill+decode4在cache、layer endpoints和logits上bitwise exact，forced-on route保持激活。
+- 8-block balanced canary：checkpoint-native median/UCB=`1.055691/1.071335`，forced-on=`1.062699/1.075348`，两者均qualified。Sealed finalizer=`R2M_IMMUTABLE_GO`，training authorization只在此后产生。
+- Seed-104729 matched smoke在进入任何arm或optimizer step前由frozen confirmatory runner拒绝：operative lock缺少其top-level required key `manifest_sha256`，错误=`GateError: incomplete confirmatory run lock`。Pod restart=0；0 optimizer step、0 checkpoint。
+- 该错误构成R2 campaign第二个run-lock/provenance omission。按R2m前瞻规则不重试smoke、不提交formal seed jobs、不自动建立R2n；campaign状态=`PAUSED_HARNESS_AUDIT_REQUIRED`。
+- Accuracy/correctness、model-selection、held-out仍全部未访问。R2m只能形成engineering-gate claim，不能形成训练、性能、机制或跨模型科学claim。

@@ -1,0 +1,74 @@
+{
+  "accuracy_or_correctness_accessed": false,
+  "artifacts": {
+    "active_canary_aggregate": {
+      "bytes": 1760,
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/results/active_canary/aggregate.json",
+      "sha256": "423817bee05eda27a40d4ebc7017725751b6f97371efd1d2af1b6ac0f0b524cb"
+    },
+    "config_preflight_result": {
+      "bytes": 929,
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/preflight/config_preflight_result.json",
+      "sha256": "bc89fb484d73220a1862fecb15ef58cd23497b26500bcabde5dee83cf5b1689f"
+    },
+    "gpu_numerical": {
+      "bytes": 2937,
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/results/gpu_gate/gpu_numerical/gpu_numerical.json",
+      "sha256": "99f2380704e6dd59119254592329e837aaa0fa9f52dd03dfcc29d6ccd3abe9ca"
+    },
+    "immutable_final": {
+      "bytes": 21751,
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/results/immutable_final.json",
+      "sha256": "6c1ce4322cf7773e57abb6a0e1604c75947fb3de2927ffd4f8420aea60a9b306"
+    },
+    "matched_smoke_attestation": {
+      "bytes": 42259,
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/attestations/matched_smoke.json",
+      "sha256": "512a414e882de758c1728a3840f1e700184d971d4a3a97331a1511c06674d4aa"
+    },
+    "original_23_check_result": {
+      "bytes": 6979,
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/results/pretrained_matrix/pretrained_r2_result.json",
+      "sha256": "fe05e69899fbc439f3bb4e19946cb5cf2d1bbbd592ca3a67577e1f5cadb04169"
+    },
+    "semantic_result": {
+      "bytes": 11319,
+      "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/results/semantic/semantic_result.json",
+      "sha256": "36aad76365306d6be982ed6693f3f0c62ae1ff61aba6532ccf23620ccf61c1fd"
+    }
+  },
+  "campaign_status": "PAUSED_HARNESS_AUDIT_REQUIRED",
+  "formal_training": {
+    "checkpoints": 0,
+    "optimizer_steps": 0,
+    "runs_submitted": 0,
+    "triplets_submitted": 0
+  },
+  "image": {
+    "digest": "sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+    "source_tree_sha256": "b2090b58362312384c330865b499080750eaf380eb071a2e44917e4ca28f6b51"
+  },
+  "immutable_gate": {
+    "balanced_checkpoint_native_qualified": true,
+    "balanced_forced_on_qualified": true,
+    "classification": "R2M_IMMUTABLE_GO",
+    "original_checks_passed": 23,
+    "original_checks_required": 23,
+    "semantic_required_checks_passed": 6,
+    "semantic_required_checks_required": 6,
+    "synthetic_checks_passed": 8,
+    "synthetic_checks_required": 8
+  },
+  "matched_smoke": {
+    "classification": "BLOCKED_BEFORE_STEP_1",
+    "error": "GateError: incomplete confirmatory run lock",
+    "missing_required_lock_keys": [
+      "manifest_sha256"
+    ],
+    "retry_performed": false
+  },
+  "operative_lock_sha256": "db67428e6778c07a4991d9a9675ace6883de3a785c1f317b15b2aac7bfa0deff",
+  "protocol_id": "fpct_gpu_r2m_result_manifest_v1",
+  "run_uid": "fpct-r2m-80fb295-v1",
+  "schema_version": 1
+}
