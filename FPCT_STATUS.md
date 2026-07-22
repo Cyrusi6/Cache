@@ -431,3 +431,10 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - Forced-on仍激活，FP32/BF16 `Delta_fact=0.0550814/0.46875`；pre-collapse candidates相同，active样本未被semantic selection旁路。
 - Focused checkpoint-native median/p95 ratio=`1.06931/1.03412`，forced-on=`1.04409/1.08302`；peak HBM=`4.76606 GiB`，mean/p95 expansion=`1.22689`，hot-path sync=0。
 - 结论仅为`DIAGNOSTIC_QUALIFIED / DIAGNOSTIC_ONLY`。下一步必须使用新image、UID、root与run-lock执行一次性original 23 checks + 6 semantic checks + balanced native/forced-on immutable gate；仍未授权训练。
+
+### R2l immutable checker：CPU/HF VERIFIED, PRE-LOCK
+
+- 新增immutable-only actual Qwen3 eager checker：28层、FP32/BF16、padding、causal prefill后绑定与parent cache逐位相同的mixed-memory sidecar，再执行4步decode并逐层验证pre/post-o-proj、residual、cache与final logits。
+- 新增机械`semantic-aggregate`与`immutable-finalize`：原23 checks必须23/23 GO，六个R2l semantic checks全部GO，随后balanced checkpoint-native与forced-on均qualified，才能写出`training_authorized=true`。
+- 此改动只增加immutable gate检查代码与测试；`rosetta/model/fpct_attention.py`及所有operator/hot-path文件未改。完整FPCT CPU suite=`210 passed, 2 warnings`，protocol verifier=`GO`。
+- 尚未构建或启动R2l immutable image/Job，未运行新的immutable pretrained output，训练仍未授权。

@@ -1379,3 +1379,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Forced-on未被旁路：FP32/BF16 `Delta_fact=0.0550814/0.46875`，candidate-logit range、D_K、D_V均超过冻结null floor，C_post/F pre-collapse candidate identity保持成立。
 - Focused checkpoint-native median/p95 ratio为`1.06931/1.03412`，forced-on为`1.04409/1.08302`；peak HBM=`4.76606 GiB`，expansion=`1.22689`，独立trace hot-path sync=0。
 - 状态=`DIAGNOSTIC_QUALIFIED / DIAGNOSTIC_ONLY`。未读取accuracy/correctness、未训练、未创建checkpoint；只允许下一步创建全新one-shot immutable R2l gate，不能从本diagnostic直接进入matched smoke。
+
+### 2026-07-22 FPCT-GPU-R2l immutable semantic checker hardening
+
+- 在不修改operator/hot path的前提下新增actual Qwen3 eager 28层GPU checker：prefill后从parent cache逐位复制candidate K/V形成partial sidecar，FP32/BF16各执行4步decode并用`torch.equal`、tensor-byte SHA、`max_abs=0`与`ULP=0`检查layer endpoints、cache和logits。
+- 新增`semantic-aggregate`，要求原23项完整GO，并独立重算Cpost/F/replicated的bitwise pretrained identity、forced-on activation与pre-collapse identity；六个R2l semantic checks必须全部通过。
+- 新增`immutable-finalize`，只有semantic gate与8-block balanced checkpoint-native/forced-on canary同时qualified时才产生`R2L_IMMUTABLE_GO`和`training_authorized=true`。
+- 新增CPU actual-Qwen与gate aggregation tests；完整FPCT回归=`210 passed, 2 warnings`，R2l protocol verifier=`GO`，`math.md`与production scientific blobs未变。尚未产生immutable output。

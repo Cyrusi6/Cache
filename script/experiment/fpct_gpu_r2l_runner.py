@@ -14,6 +14,8 @@ from types import SimpleNamespace
 from typing import Any
 
 import torch
+from transformers import Qwen3Config, Qwen3ForCausalLM
+from transformers.cache_utils import DynamicCache
 
 from rosetta.model.fpct_attention import (
     FPCTSidecarSegment,
@@ -23,6 +25,7 @@ from rosetta.model.fpct_attention import (
     fpct_qwen_hierarchical_attention_forward,
     pack_fpct_memory,
 )
+from rosetta.model.wrapper import RosettaModel
 from script.analysis.fpct_gpu_r2k_diagnostic_verify import trace_summary
 from script.experiment import fpct_gpu_r2_runner as r2
 
@@ -239,6 +242,293 @@ def synthetic(args: argparse.Namespace) -> dict[str, Any]:
     return payload
 
 
+def _qwen_config(*, layers: int, kv_heads: int) -> Qwen3Config:
+    config = Qwen3Config(
+        vocab_size=48,
+        hidden_size=32,
+        intermediate_size=48,
+        num_hidden_layers=layers,
+        num_attention_heads=4,
+        num_key_value_heads=kv_heads,
+        head_dim=8,
+        max_position_embeddings=64,
+        attention_dropout=0.0,
+        use_cache=True,
+    )
+    config._attn_implementation = "eager"
+    return config
+
+
+def _qwen_model(
+    *,
+    layers: int,
+    kv_heads: int,
+    dtype: torch.dtype,
+    device: torch.device,
+    state: dict[str, torch.Tensor] | None = None,
+) -> Qwen3ForCausalLM:
+    torch.manual_seed(20260722)
+    model = Qwen3ForCausalLM(_qwen_config(layers=layers, kv_heads=kv_heads))
+    if state is not None:
+        model.load_state_dict(state)
+    return model.to(device=device, dtype=dtype).eval()
+
+
+def _base_forward(
+    wrapper: RosettaModel,
+    input_ids: torch.Tensor,
+    attention_mask: torch.Tensor,
+    cache: DynamicCache | None,
+):
+    return wrapper._base_model_forward_with_fpct(
+        input_ids=input_ids,
+        attention_mask=attention_mask,
+        past_key_values=cache or DynamicCache(),
+        use_cache=True,
+        return_dict=True,
+    )
+
+
+def _capture_hidden(wrapper: RosettaModel) -> tuple[dict[int, list[torch.Tensor]], list[Any]]:
+    hidden: dict[int, list[torch.Tensor]] = {}
+    handles = []
+    for index, layer in enumerate(wrapper.model_list[0].model.layers):
+        def hook(_module, _inputs, output, *, layer_index=index):
+            value = output[0] if isinstance(output, tuple) else output
+            hidden.setdefault(layer_index, []).append(value.detach().clone())
+
+        handles.append(layer.register_forward_hook(hook))
+    return hidden, handles
+
+
+def _cache_exact(left: DynamicCache, right: DynamicCache) -> dict[str, Any]:
+    if len(left.key_cache) != len(right.key_cache):
+        return {"equal": False, "layer_count": 0, "first_divergence": "layer_count"}
+    comparisons = 0
+    first = None
+    for layer, (left_key, right_key, left_value, right_value) in enumerate(
+        zip(left.key_cache, right.key_cache, left.value_cache, right.value_cache)
+    ):
+        for name, left_tensor, right_tensor in (
+            ("key", left_key, right_key),
+            ("value", left_value, right_value),
+        ):
+            report = exact_report(left_tensor, right_tensor)
+            comparisons += 1
+            if first is None and not (
+                report["equal"] and report["max_abs"] == 0 and report["ulp_max"] == 0
+            ):
+                first = {"layer": layer, "field": name, **report}
+    return {
+        "equal": first is None,
+        "layer_count": len(left.key_cache),
+        "comparison_count": comparisons,
+        "first_divergence": first,
+    }
+
+
+def _store_cache_exact_sidecars(
+    wrapper: RosettaModel,
+    cache: DynamicCache,
+    *,
+    layers: int,
+    batch: int,
+    dtype: torch.dtype,
+) -> dict[str, Any]:
+    prior = torch.full((batch, 3, 2), 0.5, device=cache.key_cache[0].device, dtype=torch.float32)
+    valid = torch.ones_like(prior, dtype=torch.bool)
+    equivalent = torch.ones(batch, 3, device=prior.device, dtype=torch.bool)
+    candidate_checks = []
+    for layer in range(layers):
+        parent_key = cache.key_cache[layer]
+        parent_value = cache.value_cache[layer]
+        key = parent_key[:, :, 2:5, None, :].expand(-1, -1, -1, 2, -1).clone()
+        value = parent_value[:, :, 2:5, None, :].expand(-1, -1, -1, 2, -1).clone()
+        expected_key = parent_key[:, :, 2:5, None, :].expand_as(key)
+        expected_value = parent_value[:, :, 2:5, None, :].expand_as(value)
+        candidate_checks.append(
+            exact_report(key, expected_key)["equal"]
+            and exact_report(value, expected_value)["equal"]
+        )
+        wrapper._store_fpct_sidecar(
+            layer,
+            2,
+            key.to(dtype=dtype),
+            value.to(dtype=dtype),
+            prior,
+            valid,
+            parent_equivalent=equivalent,
+            prior_sha256="r2l-immutable-qwen-canonical-prior",
+            max_slots_hint=9,
+            source_length_hint=6,
+            certified=True,
+        )
+    return {
+        "candidate_kv_parent_bitwise": all(candidate_checks),
+        "layer_count": layers,
+    }
+
+
+@torch.no_grad()
+def run_actual_qwen_decode4_case(
+    *,
+    device: torch.device,
+    dtype: torch.dtype,
+    layers: int = 28,
+    kv_heads: int = 2,
+    decode_steps: int = 4,
+) -> dict[str, Any]:
+    batch = 2
+    base = _qwen_model(
+        layers=layers, kv_heads=kv_heads, dtype=dtype, device=torch.device("cpu")
+    )
+    state = {name: value.detach().cpu().clone() for name, value in base.state_dict().items()}
+    del base
+    cpost = RosettaModel(
+        [_qwen_model(layers=layers, kv_heads=kv_heads, dtype=dtype, device=device, state=state)],
+        fpct_operator="c_post",
+        fpct_trace=True,
+    )
+    factorized = RosettaModel(
+        [_qwen_model(layers=layers, kv_heads=kv_heads, dtype=dtype, device=device, state=state)],
+        fpct_operator="f",
+        fpct_trace=True,
+    )
+    if set(cpost.state_dict()) != set(factorized.state_dict()):
+        raise R2lGateError("C_post/F Qwen parameter keys differ")
+    cpost_hidden, cpost_handles = _capture_hidden(cpost)
+    factorized_hidden, factorized_handles = _capture_hidden(factorized)
+    step_rows = []
+    semantic_complete = True
+    candidate_identity = None
+    try:
+        input_ids = torch.tensor(
+            [[4, 5, 6, 7, 8, 9], [0, 0, 10, 11, 12, 13]], device=device
+        )
+        attention_mask = torch.tensor(
+            [[1, 1, 1, 1, 1, 1], [0, 0, 1, 1, 1, 1]],
+            device=device,
+            dtype=torch.long,
+        )
+        cpost_output = _base_forward(cpost, input_ids, attention_mask, None)
+        factorized_output = _base_forward(factorized, input_ids, attention_mask, None)
+        prefill_logits = exact_report(cpost_output.logits, factorized_output.logits)
+        prefill_cache = _cache_exact(
+            cpost_output.past_key_values, factorized_output.past_key_values
+        )
+        if not prefill_logits["equal"] or not prefill_cache["equal"]:
+            raise R2lGateError("Qwen prefill baseline diverged before sidecar binding")
+        candidate_identity = _store_cache_exact_sidecars(
+            factorized,
+            factorized_output.past_key_values,
+            layers=layers,
+            batch=batch,
+            dtype=dtype,
+        )
+        cpost_cache = cpost_output.past_key_values
+        factorized_cache = factorized_output.past_key_values
+        for step in range(decode_steps):
+            input_ids = torch.tensor([[14 + step], [19 + step]], device=device)
+            attention_mask = torch.cat(
+                (attention_mask, torch.ones(batch, 1, device=device, dtype=torch.long)), dim=1
+            )
+            cpost_output = _base_forward(cpost, input_ids, attention_mask, cpost_cache)
+            factorized_output = _base_forward(
+                factorized, input_ids, attention_mask, factorized_cache
+            )
+            logits = exact_report(cpost_output.logits, factorized_output.logits)
+            cache = _cache_exact(
+                cpost_output.past_key_values, factorized_output.past_key_values
+            )
+            layer_comparisons = []
+            first_divergence = None
+            if factorized._fpct_packed_layout is None:
+                raise R2lGateError("Qwen factorized layout missing during decode")
+            for layer in range(layers):
+                semantic = factorized._fpct_packed_layout.semantic_parent_equivalent(layer)
+                semantic_complete = semantic_complete and semantic is not None and bool(semantic.all())
+                cpost_trace = cpost._fpct_attention_trace_tensors[layer][-1]
+                factorized_trace = factorized._fpct_attention_trace_tensors[layer][-1]
+                for field, left, right in (
+                    ("pre_o_proj", cpost_trace["pre_o_proj"], factorized_trace["pre_o_proj"]),
+                    ("post_o_proj", cpost_trace["post_o_proj"], factorized_trace["post_o_proj"]),
+                    ("residual_hidden", cpost_hidden[layer][-1], factorized_hidden[layer][-1]),
+                ):
+                    report = exact_report(left, right)
+                    row = {"layer": layer, "field": field, **report}
+                    layer_comparisons.append(row)
+                    if first_divergence is None and not (
+                        report["equal"] and report["max_abs"] == 0 and report["ulp_max"] == 0
+                    ):
+                        first_divergence = row
+            step_rows.append(
+                {
+                    "decode_step": step + 1,
+                    "logits": logits,
+                    "cache": cache,
+                    "layer_endpoint_comparison_count": len(layer_comparisons),
+                    "layer_endpoint_records_sha256": hashlib.sha256(
+                        json.dumps(layer_comparisons, sort_keys=True, separators=(",", ":")).encode()
+                    ).hexdigest(),
+                    "first_divergence": first_divergence,
+                }
+            )
+            cpost_cache = cpost_output.past_key_values
+            factorized_cache = factorized_output.past_key_values
+    finally:
+        for handle in cpost_handles + factorized_handles:
+            handle.remove()
+    exact = (
+        semantic_complete
+        and candidate_identity is not None
+        and candidate_identity["candidate_kv_parent_bitwise"]
+        and all(
+            row["logits"]["equal"]
+            and row["logits"]["max_abs"] == 0
+            and row["logits"]["ulp_max"] == 0
+            and row["cache"]["equal"]
+            and row["first_divergence"] is None
+            for row in step_rows
+        )
+    )
+    return {
+        "dtype": str(dtype),
+        "layers": layers,
+        "kv_heads": kv_heads,
+        "decode_steps": decode_steps,
+        "prefill_logits": prefill_logits,
+        "prefill_cache": prefill_cache,
+        "candidate_identity": candidate_identity,
+        "semantic_parent_map_complete": semantic_complete,
+        "steps": step_rows,
+        "exact": exact,
+    }
+
+
+def qwen_decode4(args: argparse.Namespace) -> dict[str, Any]:
+    if not torch.cuda.is_available():
+        raise R2lGateError("CUDA unavailable")
+    output = Path(args.output)
+    if output.exists():
+        raise R2lGateError("refusing to overwrite Qwen decode4 output")
+    rows = [
+        run_actual_qwen_decode4_case(device=torch.device("cuda:0"), dtype=dtype)
+        for dtype in (torch.float32, torch.bfloat16)
+    ]
+    payload = {
+        "schema_version": 1,
+        "protocol_id": "fpct_gpu_r2l_actual_qwen_decode4_exact_null_v1",
+        "status": "GO" if all(row["exact"] for row in rows) else "GPU_ENGINEERING_BLOCKED_R2L",
+        "rows": rows,
+        "device": torch.cuda.get_device_name(0),
+        "accuracy_or_correctness_accessed": False,
+    }
+    atomic_json(output, payload)
+    if payload["status"] != "GO":
+        raise R2lGateError("actual Qwen decode4 exact-null check failed")
+    return payload
+
+
 def _compact_exact(
     left_rows: list[dict[str, Any]], right_rows: list[dict[str, Any]]
 ) -> dict[str, Any]:
@@ -400,11 +690,188 @@ def aggregate(args: argparse.Namespace) -> dict[str, Any]:
     return payload
 
 
+def _immutable_pretrained_semantics(
+    conditions_root: Path, floors_path: Path
+) -> dict[str, Any]:
+    floors = r2.load_json(floors_path)
+    tau = {key: float(value["tau"]) for key, value in floors["floors"].items()}
+    exact_by_dtype = {}
+    forced_by_dtype = {}
+    precollapse = {}
+    for dtype_name in ("fp32", "bf16"):
+        loaded = {
+            condition: r2._load_condition(conditions_root, dtype_name, condition)
+            for condition in (
+                "OP01_CPOST_NATIVE",
+                "OP02_F_NATIVE",
+                "OP03_F_REP_NATIVE",
+                "OP04_F_FORCED",
+                "OP05_F_REP_FORCED",
+            )
+        }
+        cpost, native, replicated = (
+            loaded["OP01_CPOST_NATIVE"],
+            loaded["OP02_F_NATIVE"],
+            loaded["OP03_F_REP_NATIVE"],
+        )
+        exact_by_dtype[dtype_name] = {
+            "cpost_vs_f_logits": exact_report(cpost[1], native[1]),
+            "f_vs_replicated_logits": exact_report(native[1], replicated[1]),
+            "cpost_vs_f_layers": _compact_exact(cpost[3], native[3]),
+            "f_vs_replicated_layers": _compact_exact(native[3], replicated[3]),
+        }
+        precollapse[dtype_name] = r2._precollapse_identity(cpost[3], native[3])
+        forced = loaded["OP04_F_FORCED"]
+        forced_rep = loaded["OP05_F_REP_FORCED"]
+        metrics = {
+            name: r2._metric_from_trace(forced[2], name)
+            for name in ("d_k", "d_v", "candidate_logit_range")
+        }
+        delta = r2._max_abs(forced[1], forced_rep[1])
+        metric_max = {
+            name: max((value for _layer, value in rows), default=0.0)
+            for name, rows in metrics.items()
+        }
+        forced_by_dtype[dtype_name] = {
+            "delta_fact_max_abs": delta,
+            "metrics": metric_max,
+            "active": delta > tau["delta_fact_max_abs"]
+            and all(metric_max[name] > tau[name] for name in metric_max),
+        }
+    exact_ok = all(
+        row["cpost_vs_f_logits"]["equal"]
+        and row["cpost_vs_f_logits"]["max_abs"] == 0
+        and row["cpost_vs_f_logits"]["ulp_max"] == 0
+        and row["f_vs_replicated_logits"]["equal"]
+        and row["f_vs_replicated_logits"]["max_abs"] == 0
+        and row["f_vs_replicated_logits"]["ulp_max"] == 0
+        and row["cpost_vs_f_layers"]["all_equal"]
+        and row["cpost_vs_f_layers"]["first_divergence"] is None
+        and row["f_vs_replicated_layers"]["all_equal"]
+        and row["f_vs_replicated_layers"]["first_divergence"] is None
+        for row in exact_by_dtype.values()
+    )
+    return {
+        "exact_by_dtype": exact_by_dtype,
+        "forced_by_dtype": forced_by_dtype,
+        "precollapse_candidate_identity": precollapse,
+        "exact_ok": exact_ok,
+        "active_ok": all(row["active"] for row in forced_by_dtype.values()),
+        "precollapse_ok": all(precollapse.values()),
+    }
+
+
+def semantic_aggregate(args: argparse.Namespace) -> dict[str, Any]:
+    output = Path(args.output)
+    if output.exists():
+        raise R2lGateError("refusing to overwrite immutable semantic aggregate")
+    original = r2.load_json(Path(args.original_result))
+    synthetic_result = r2.load_json(Path(args.synthetic))
+    qwen_result = r2.load_json(Path(args.qwen_decode4))
+    pretrained = _immutable_pretrained_semantics(
+        Path(args.conditions_root), Path(args.floors)
+    )
+    original_checks = original.get("checks", {})
+    original_23 = (
+        len(original_checks) == 23
+        and all(bool(value) for value in original_checks.values())
+        and original.get("status") == "GO"
+    )
+    checks = {
+        "original_23_checks": original_23,
+        "native_parent_map_complete": bool(
+            synthetic_result["checks"]["native_parent_map_complete"]
+        ),
+        "unknown_sidecar_fails_closed": bool(
+            synthetic_result["checks"]["unknown_sidecar_fails_closed"]
+        ),
+        "mixed_memory_exact_null_bitwise": bool(
+            synthetic_result["checks"]["mixed_memory_exact_null_bitwise"]
+        )
+        and pretrained["exact_ok"],
+        "mixed_batch_exact_active_isolation": bool(
+            synthetic_result["checks"]["mixed_batch_exact_active_isolation"]
+        ),
+        "actual_qwen_decode4_exact_null": qwen_result.get("status") == "GO"
+        and all(bool(row.get("exact")) for row in qwen_result.get("rows", [])),
+        "active_route_not_bypassed": pretrained["active_ok"],
+        "precollapse_candidate_identity": pretrained["precollapse_ok"],
+        "original_hot_path_no_sync": bool(original_checks.get("hot_path_no_sync")),
+        "original_resource_gate": all(
+            bool(original_checks.get(name))
+            for name in ("latency_median", "latency_p95", "expansion_mean", "expansion_p95", "hbm")
+        ),
+    }
+    payload = {
+        "schema_version": 1,
+        "protocol_id": "fpct_gpu_r2l_immutable_semantic_aggregate_v1",
+        "classification": "IMMUTABLE_CONFIRMATORY_GATE",
+        "status": "GO" if all(checks.values()) else "GPU_ENGINEERING_BLOCKED_R2L",
+        "checks": checks,
+        "original_result_status": original.get("status"),
+        "original_check_count": len(original_checks),
+        "exact_by_dtype": pretrained["exact_by_dtype"],
+        "forced_by_dtype": pretrained["forced_by_dtype"],
+        "precollapse_candidate_identity": pretrained["precollapse_candidate_identity"],
+        "qwen_decode4": qwen_result,
+        "accuracy_or_correctness_accessed": False,
+        "training_authorized": False,
+    }
+    atomic_json(output, payload)
+    if payload["status"] != "GO":
+        raise R2lGateError(f"immutable semantic gate failed: {checks}")
+    return payload
+
+
+def immutable_finalize(args: argparse.Namespace) -> dict[str, Any]:
+    output = Path(args.output)
+    if output.exists():
+        raise R2lGateError("refusing to overwrite immutable final result")
+    original = r2.load_json(Path(args.original_result))
+    semantic = r2.load_json(Path(args.semantic_result))
+    active = r2.load_json(Path(args.active_aggregate))
+    checks = {
+        "original_23_checks": original.get("status") == "GO"
+        and len(original.get("checks", {})) == 23
+        and all(bool(value) for value in original.get("checks", {}).values()),
+        "semantic_checks": semantic.get("status") == "GO"
+        and all(bool(value) for value in semantic.get("checks", {}).values()),
+        "balanced_checkpoint_native": bool(
+            active.get("canaries", {}).get("checkpoint_native", {}).get("qualified")
+        ),
+        "balanced_forced_on": bool(
+            active.get("canaries", {}).get("forced_on", {}).get("qualified")
+        ),
+        "accuracy_firewall": not bool(original.get("accuracy_or_correctness_accessed"))
+        and not bool(semantic.get("accuracy_or_correctness_accessed"))
+        and not bool(active.get("accuracy_or_correctness_accessed")),
+    }
+    go = all(checks.values())
+    payload = {
+        "schema_version": 1,
+        "protocol_id": "fpct_gpu_r2l_immutable_final_v1",
+        "classification": "R2L_IMMUTABLE_GO" if go else "GPU_ENGINEERING_BLOCKED_R2L",
+        "status": "GO" if go else "GPU_ENGINEERING_BLOCKED_R2L",
+        "checks": checks,
+        "original_result": original,
+        "semantic_result": semantic,
+        "balanced_active_canary": active,
+        "training_authorized": go,
+        "accuracy_or_correctness_accessed": False,
+    }
+    atomic_json(output, payload)
+    if not go:
+        raise R2lGateError(f"immutable final gate failed: {checks}")
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest="command", required=True)
     synthetic_parser = commands.add_parser("synthetic")
     synthetic_parser.add_argument("--output", required=True)
+    qwen_parser = commands.add_parser("qwen-decode4")
+    qwen_parser.add_argument("--output", required=True)
     aggregate_parser = commands.add_parser("aggregate")
     aggregate_parser.add_argument("--conditions-root", required=True)
     aggregate_parser.add_argument("--floors", required=True)
@@ -412,8 +879,29 @@ def main() -> int:
     aggregate_parser.add_argument("--latency-block", required=True)
     aggregate_parser.add_argument("--trace-root", required=True)
     aggregate_parser.add_argument("--output", required=True)
+    semantic_parser = commands.add_parser("semantic-aggregate")
+    semantic_parser.add_argument("--original-result", required=True)
+    semantic_parser.add_argument("--conditions-root", required=True)
+    semantic_parser.add_argument("--floors", required=True)
+    semantic_parser.add_argument("--synthetic", required=True)
+    semantic_parser.add_argument("--qwen-decode4", required=True)
+    semantic_parser.add_argument("--output", required=True)
+    finalize_parser = commands.add_parser("immutable-finalize")
+    finalize_parser.add_argument("--original-result", required=True)
+    finalize_parser.add_argument("--semantic-result", required=True)
+    finalize_parser.add_argument("--active-aggregate", required=True)
+    finalize_parser.add_argument("--output", required=True)
     args = parser.parse_args()
-    payload = synthetic(args) if args.command == "synthetic" else aggregate(args)
+    if args.command == "synthetic":
+        payload = synthetic(args)
+    elif args.command == "qwen-decode4":
+        payload = qwen_decode4(args)
+    elif args.command == "aggregate":
+        payload = aggregate(args)
+    elif args.command == "semantic-aggregate":
+        payload = semantic_aggregate(args)
+    else:
+        payload = immutable_finalize(args)
     print(json.dumps({"status": payload["status"], "classification": payload.get("classification")}))
     return 0
 
