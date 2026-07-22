@@ -1400,3 +1400,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 21/23原checks通过。R2l headline engineering修复在原matrix中成立：checkpoint-native FP32/BF16 `Delta_fact=0/0`；forced-on为`0.245005/0.96875`；precollapse、bypass、replicated、m1、finite/mask/prior、no-sync、latency与HBM均通过。
 - 两个失败是`expansion_mean/p95`，因为immutable run-lock遗漏`resource_geometry.tinyllama_all_splits`，unchanged runner读取空geometry并按`bool(geometry_rows)` fail closed。它不是测得的expansion overrun，但属于output后不可修补的provenance/config integrity failure。
 - 终局=`GPU_ENGINEERING_BLOCKED_R2L`；未提交semantic/active/matched/formal Job，0 optimizer step、0 checkpoint、未读accuracy/correctness/model-selection/held-out。同revision不重跑，后续若继续必须新建前瞻R2m或更晚revision。
+
+### 2026-07-22 FPCT-GPU-R2m config-closure pre-output protocol
+
+- 研究目标：不改变任何production scientific blob，只以前瞻schema/validator/immutable ConfigMap byte proof修复R2l遗漏的certified geometry闭包；R2l terminal与artifacts永久不动。
+- Canonical geometry从R2k lock机械提取，不重新统计：source SHA=`6d5f6221...`，source file/blob=`d5d55ad3...`/`e993f8dc...`，task集合=`ai2-arc,mmlu-redux,openbookqa`，row count=3，canonical projection SHA=`221c5164...`。
+- 新schema对critical geometry subtree关闭additional properties，强制精确task集合、finite number、source/projection hash；consumer manifest枚举run-lock到原R2 aggregate、latency、semantic finalizer和training consumers的JSON pointers。
+- Validator使用原`aggregate_pretrained` AST中的geometry/geometry_rows及expansion expressions执行固定CPU fixture，避免重写近似消费逻辑；结果certified geometry精确相等，mean/p95 checks均true。
+- 21项config negative/full-closure tests全部通过，包括R2l missing pointer、空/缺/额外task、错误SHA/数值/类型、nonfinite、stale identity、ConfigMap/Git bytes和consumer blob mismatch。尚未产生R2m forward或scientific output。

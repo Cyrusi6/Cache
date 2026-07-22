@@ -454,3 +454,12 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - 唯一失败为`expansion_mean`与`expansion_p95`。根因是冻结的R2l run-lock遗漏`resource_geometry.tinyllama_all_splits`，runner按fail-closed合同得到`certified_geometry={}`；这不是观测到的expansion超限，但属于immutable provenance/config integrity failure。
 - 按one-shot规则不修改lock、不重跑同revision：semantic gate、balanced canary、matched smoke与formal training均未提交；0 optimizer step、0 checkpoint、未访问accuracy/correctness/model-selection/held-out。
 - R2l终局=`GPU_ENGINEERING_BLOCKED_R2L`。任何恢复必须进入新的前瞻R2m或更晚revision；R2k与R2l都保持不可变。
+
+### R2m config-closure protocol：PRE-OUTPUT LOCK CANDIDATE
+
+- R2l永久保持`GPU_ENGINEERING_BLOCKED_R2L`，其UID/root/image/lock/result不补写、不重跑、不恢复。R2m仅允许config/provenance恢复，production scientific blobs全部byte-frozen。
+- 从R2k immutable lock的`/resource_geometry/tinyllama_all_splits`机械提取canonical geometry；source SHA=`6d5f6221...`，file SHA=`d5d55ad3...`，Git blob=`e993f8dc...`，3个task，projection SHA=`221c5164...`。
+- 新schema要求geometry/tinyllama对象、精确task集合、finite numeric mean/p95/max、critical subtree `additionalProperties=false`，并校验source/projection SHA。
+- Consumer closure枚举原R2 runner、balanced canary、semantic finalizer、confirmatory runner与validator实际JSON pointers，并锁定runner blob及原aggregate geometry AST SHA=`0b609e30...`。
+- Config validator与negative suite=`21 passed`；R2l lock因缺失`/resource_geometry`被明确拒绝，R2k geometry与R2m fixture通过，原aggregate AST fixture得到canonical geometry且expansion mean/p95均true。
+- 当前尚未创建R2m candidate/final lock、image、ConfigMap或Pod，未运行CUDA/model/dataset forward，未读取accuracy/correctness。

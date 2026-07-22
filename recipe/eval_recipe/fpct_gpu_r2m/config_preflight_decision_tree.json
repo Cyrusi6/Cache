@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2m_config_preflight_decision_tree_v1",
+  "before_scientific_output": {
+    "all_schema_geometry_consumer_blob_and_byte_checks_pass": "CONFIG_PREFLIGHT_GO",
+    "any_check_fails": "REPAIR_ALLOWED_ONLY_BEFORE_SCIENTIFIC_OUTPUT_AND_REISSUE_LOCK_SHA"
+  },
+  "after_first_scientific_output": {
+    "all_immutable_checks_pass": "CONDITIONAL_MATCHED_SMOKE",
+    "any_correctness_semantic_active_resource_hbm_sync_or_provenance_failure": "GPU_ENGINEERING_BLOCKED_R2M",
+    "second_run_lock_or_provenance_omission": "PAUSE_EXECUTION_CAMPAIGN_FOR_HARNESS_AUDIT_NO_AUTOMATIC_R2N"
+  },
+  "preflight_output_contract": {
+    "scientific_output": false,
+    "training_authorized": false,
+    "allowed_fields": ["hashes", "schema_status", "task_names", "row_count", "consumer_closure_status"]
+  },
+  "accuracy_or_correctness_accessed": false
+}

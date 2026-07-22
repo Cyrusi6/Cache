@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2m_protocol_diff_v1",
+  "baseline_commit": "aafbe536dea0dfb385b4314cff54c4bf0ad7c198",
+  "allowed_change_class": "config_provenance_only",
+  "closure_artifacts": {
+    "canonical_resource_geometry_sha256": "176ac92289fd831d6792cd4449bfdcacffda6f5e9a98ec549ea4570b3369956d",
+    "run_lock_schema_sha256": "ac662953139ca58a2f98ed81e3a08edeb154f0d6ac944c640d8cca5db5f73b6a",
+    "consumer_pointer_manifest_sha256": "4cc61f1f4e7ee88d3e2d258de91f5d18a3a82d4420a3d4c31aad0ecdfc7a3f3a",
+    "implementation_allowlist_sha256": "651fe57c93806133b0690fc41aabaf1577fd1ed97ca504894dae6e82663f28f6",
+    "validator_sha256": "673f3116c885528817a5d73ef15acf97bc9067aeb5a75379a0f42ccbaa48293f",
+    "aggregate_geometry_consumer_ast_sha256": "0b609e30112b0daf4ac51fec97e548d2b16b179fba7f7e6143e502a26526acec"
+  },
+  "production_scientific_blob_changes": false,
+  "r2l_terminal_immutable": true,
+  "r2l_run_uid_reused": false,
+  "new_scientific_output_before_protocol_lock": false,
+  "accuracy_or_correctness_accessed": false
+}

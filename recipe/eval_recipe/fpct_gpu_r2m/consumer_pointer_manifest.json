@@ -1,0 +1,65 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2m_consumer_pointer_closure_v1",
+  "consumers": [
+    {
+      "path": "script/experiment/fpct_gpu_r2_runner.py",
+      "sha256": "61c423b8f6689e78c968bb7f5fbf50beff6fd338d3b447c758a19850b8ce925e",
+      "function": "aggregate_pretrained",
+      "run_lock_pointers": [
+        {"pointer": "/run_uid", "type": "string", "required": true, "source": "R2m run lock"},
+        {"pointer": "/assets/receiver/root", "type": "string", "required": true, "source": "frozen model asset"},
+        {"pointer": "/assets/sender/root", "type": "string", "required": true, "source": "frozen model asset"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits", "type": "object", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/source_sha256", "type": "string", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/tasks", "type": "object", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/tasks/ai2-arc/mean", "type": "number", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/tasks/ai2-arc/p95", "type": "number", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/tasks/ai2-arc/max", "type": "number", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/tasks/mmlu-redux/mean", "type": "number", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/tasks/mmlu-redux/p95", "type": "number", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/tasks/mmlu-redux/max", "type": "number", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/tasks/openbookqa/mean", "type": "number", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/tasks/openbookqa/p95", "type": "number", "required": true, "source": "canonical R2k geometry"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits/tasks/openbookqa/max", "type": "number", "required": true, "source": "canonical R2k geometry"}
+      ]
+    },
+    {
+      "path": "script/experiment/fpct_gpu_r2k_latency.py",
+      "sha256": "2837a00be97f2dfd20031a88092e5d026918db362ca37fbe71119b7e16473d84",
+      "function": "run_block",
+      "run_lock_pointers": [
+        {"pointer": "/run_uid", "type": "string", "required": true, "source": "R2m run lock"},
+        {"pointer": "/assets/receiver/root", "type": "string", "required": true, "source": "transitive frozen R2 model config"},
+        {"pointer": "/assets/sender/root", "type": "string", "required": true, "source": "transitive frozen R2 model config"}
+      ]
+    },
+    {
+      "path": "script/experiment/fpct_gpu_r2l_runner.py",
+      "sha256": "e621829457014a1f31277f3f399ccf5ebcdcb6432361426550dd888916157a94",
+      "function": "semantic_aggregate/immutable_finalize",
+      "run_lock_pointers": [],
+      "result_input_pointers": ["/status", "/checks", "/canaries/checkpoint_native/qualified", "/canaries/forced_on/qualified"]
+    },
+    {
+      "path": "script/experiment/fpct_confirmatory_runner.py",
+      "sha256": "2ad923e1d6d32ed16d7f17e4b44552ca7a2a34b3e7c9036135887b7096992d75",
+      "function": "training_config/matched_smoke/train_triplet",
+      "run_lock_pointers": [
+        {"pointer": "/run_uid", "type": "string", "required": true, "source": "R2m run lock"},
+        {"pointer": "/assets/training_alignment_sidecar_2048/container_path", "type": "string", "required": true, "source": "frozen certified sidecar"}
+      ]
+    },
+    {
+      "path": "script/analysis/fpct_gpu_r2m_config_validator.py",
+      "sha256": "673f3116c885528817a5d73ef15acf97bc9067aeb5a75379a0f42ccbaa48293f",
+      "function": "validate_run_lock/config_preflight",
+      "run_lock_pointers": [
+        {"pointer": "/config_closure", "type": "object", "required": true, "source": "R2m closure"},
+        {"pointer": "/resource_geometry/tinyllama_all_splits", "type": "object", "required": true, "source": "canonical R2k geometry"}
+      ]
+    }
+  ],
+  "aggregate_geometry_consumer_ast_sha256": "0b609e30112b0daf4ac51fec97e548d2b16b179fba7f7e6143e502a26526acec",
+  "accuracy_or_correctness_accessed": false
+}

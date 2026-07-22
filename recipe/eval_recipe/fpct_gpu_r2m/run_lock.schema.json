@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "fpct_gpu_r2m_run_lock_v1",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "protocol_id",
+    "status",
+    "classification",
+    "run_uid",
+    "scientific_code_commit",
+    "scientific_code_upstream",
+    "image",
+    "storage",
+    "resource_geometry",
+    "config_closure"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "protocol_id": {"type": "string", "pattern": "^fpct_gpu_r2m_"},
+    "status": {"type": "string"},
+    "classification": {"const": "IMMUTABLE_CONFIRMATORY_GATE"},
+    "run_uid": {"type": "string", "pattern": "^fpct-r2m-[0-9a-f]{7}-v1$"},
+    "scientific_code_commit": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "scientific_code_upstream": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "image": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["reference", "manifest_list_sha256", "source_tree_sha256"],
+      "properties": {
+        "reference": {"type": "string"},
+        "manifest_list_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_tree_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    },
+    "storage": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["shared_run_root", "container_run_root"],
+      "properties": {
+        "shared_run_root": {"type": "string", "pattern": "^/netdisk/lijunsi/fpct-confirmatory/fpct-r2m-[0-9a-f]{7}-v1$"},
+        "container_run_root": {"const": "/fpct-run"}
+      }
+    },
+    "resource_geometry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tinyllama_all_splits"],
+      "properties": {
+        "tinyllama_all_splits": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["source_sha256", "tasks"],
+          "properties": {
+            "source_sha256": {"const": "6d5f6221be15db5af030f9c1d7702b6d1e814bfe4e423e065353f3167c914284"},
+            "tasks": {
+              "type": "object",
+              "additionalProperties": false,
+              "minProperties": 3,
+              "maxProperties": 3,
+              "required": ["ai2-arc", "mmlu-redux", "openbookqa"],
+              "properties": {
+                "ai2-arc": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["mean", "p95", "max"],
+                  "properties": {"mean": {"type": "number"}, "p95": {"type": "number"}, "max": {"type": "number"}}
+                },
+                "mmlu-redux": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["mean", "p95", "max"],
+                  "properties": {"mean": {"type": "number"}, "p95": {"type": "number"}, "max": {"type": "number"}}
+                },
+                "openbookqa": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["mean", "p95", "max"],
+                  "properties": {"mean": {"type": "number"}, "p95": {"type": "number"}, "max": {"type": "number"}}
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "config_closure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "geometry_projection_sha256",
+        "schema_sha256",
+        "consumer_pointer_manifest_sha256",
+        "implementation_allowlist_sha256",
+        "consumer_ast_sha256",
+        "canonical_parsed_sha256"
+      ],
+      "properties": {
+        "geometry_projection_sha256": {"const": "221c5164c60ec4d27abe714a68cec2f6a1a630d031195e0f0e63818133a5c6a2"},
+        "schema_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "consumer_pointer_manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "implementation_allowlist_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "consumer_ast_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "canonical_parsed_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}
