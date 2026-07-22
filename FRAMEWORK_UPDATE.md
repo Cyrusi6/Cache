@@ -1313,3 +1313,9 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 新 run UID/root=`fpct-r2k-diag-458b026-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v1`；diagnostic lock SHA=`24abf7d9...`。R2j artifacts永久只读且不复用为结果。
 - K8s execution使用1 GPU、唯一labels和run-root；8个block各自由独立sealed Python process执行，block artifact存在时只恢复缺失block。Geometry、trace与aggregate分别sealed，latency与profiler不混跑。
 - 此lock只授权`DIAGNOSTIC_ONLY`，即使达到qualification也不能直接产生R2k GO；immutable gate仍需后续新two-lock。提交前仍未启动K8s/GPU/pretrained forward或读取correctness。
+
+### 2026-07-22 FPCT-GPU-R2k diagnostic v1 infra failure 与 v2 replacement
+
+- V1 image import成功；首个block target运行完成后，bootstrap在写sealed attestation前发现run root未预建`attestations/`，Job按backoffLimit=0 terminal。失败发生在post-target sealing，属于执行基础设施错误。
+- 未sealed `block_00.json` SHA=`92ea815a...`、bytes=56690；未打开ratio字段，artifact明确invalid且v2不复用。未训练、未读accuracy/correctness、未改变R2j。
+- V2不改scientific code/image/threshold/panel/order，使用新UID/root `fpct-r2k-diag-458b026-v2`、lock SHA `3a283885...`并在submit前显式创建全部输出父目录。V1/V2边界由failure manifest和新lock前瞻记录。

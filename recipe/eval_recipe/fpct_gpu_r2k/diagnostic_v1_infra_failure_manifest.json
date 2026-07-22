@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_gpu_r2k_diagnostic_v1_infra_failure",
+  "status": "DIAGNOSTIC_INFRA_FAILURE",
+  "run_uid": "fpct-r2k-diag-458b026-v1",
+  "scientific_code_commit": "458b0260fc5475c9ae578eb68b8dff2b2699e2f4",
+  "image_digest": "sha256:3a4240bc26610b43737861f46cbee88de5d1552002d03de9f0f9407d71da32e5",
+  "run_lock_sha256": "24abf7d92a7a8a31852894d09ecc48ffbd280e4bfbe1f1b2774caef64c86b3c1",
+  "failure": {
+    "stage": "post_target_sealed_attestation",
+    "reason": "attestation parent directory /fpct-run/attestations was not precreated",
+    "pod_uid": "90164972-9963-47a8-9c6d-b3f44fd1d44c",
+    "node": "4090-48gx2",
+    "job_terminal": "Failed",
+    "infrastructure_only": true
+  },
+  "invalid_artifact": {
+    "path": "/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v1/results/blocks/block_00.json",
+    "sha256": "92ea815a103dd1a4429145af469e1784f53641f57c837075ca4cb73ba59bc438",
+    "bytes": 56690,
+    "sealed_attestation_present": false,
+    "ratio_fields_read": false,
+    "eligible_for_qualification": false,
+    "reuse_in_v2": false
+  },
+  "firewall": {
+    "accuracy_or_correctness_accessed": false,
+    "training_started": false,
+    "checkpoint_created": false,
+    "r2j_retried_or_reinterpreted": false
+  },
+  "replacement_rule": "new diagnostic UID/root; same unchanged scientific image; precreate all sealed-output parents"
+}

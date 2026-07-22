@@ -363,3 +363,10 @@ Pre-audit lock 正常生成，但 TinyLlama/ARC 与 Llama3.2/ARC 的首次调用
 - Run UID/root=`fpct-r2k-diag-458b026-v1` / `/netdisk/lijunsi/fpct-confirmatory/fpct-r2k-diag-458b026-v1`；image tar SHA=`d219ee83...`。
 - Diagnostic run-lock SHA=`24abf7d92a7a8a31852894d09ecc48ffbd280e4bfbe1f1b2774caef64c86b3c1`；classification=`DIAGNOSTIC_ONLY`，不能产生R2k GO或授权训练。
 - K8s templates只申请`4090-48gx2`的一张GPU，使用唯一run UID labels，不删除/修改其他资源；当前尚未submit。
+
+### R2k diagnostic v1 infrastructure terminal / v2 replacement
+
+- V1 block target完成后，sealed bootstrap因`/fpct-run/attestations`父目录未预建而失败；v1 Job terminal `DIAGNOSTIC_INFRA_FAILURE`。
+- V1产生的未sealed block_00只记录SHA/size；ratio字段未读取，不参与qualification，也不在v2复用。
+- V2保持science `458b0260...`和image `3a4240bc...`完全不变，但使用全新UID/root `fpct-r2k-diag-458b026-v2`、lock SHA `3a283885...`，并在submit前预建attestations/jobs/results全部父目录。
+- V2仍为`DIAGNOSTIC_ONLY`；immutable gate/training/performance均未授权。
