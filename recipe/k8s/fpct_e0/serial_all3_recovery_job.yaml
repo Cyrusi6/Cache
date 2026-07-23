@@ -1,0 +1,73 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-e0-serial-all3-recovery
+  namespace: c2c-research
+  labels: &labels
+    project: fpct
+    study: fpct-e0
+    exploratory: "true"
+    confirmatory: "false"
+    eligible-for-formal-statistics: "false"
+    run-uid: fpct-e0-20260722-v1
+    purpose: runtime-recovery
+    execution-sha: __EXECUTION_SHORT__
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      nodeName: 4090-48gx2
+      restartPolicy: Never
+      containers:
+      - name: serial-all3
+        image: docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851
+        imagePullPolicy: IfNotPresent
+        command: ["/bin/bash", "-lc"]
+        args:
+        - |
+          set -euo pipefail
+          /opt/conda/bin/python3.11 /opt/fpct-e0/fpct_e0_runner.py run-seed --seed 2026072201 --attempt 3
+          /opt/conda/bin/python3.11 /opt/fpct-e0/fpct_e0_runner.py run-seed --seed 2026072202 --attempt 2
+          /opt/conda/bin/python3.11 /opt/fpct-e0/fpct_e0_runner.py run-seed --seed 2026072203 --attempt 2
+        env:
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TRANSFORMERS_OFFLINE, value: "1"}
+        - {name: C2C_MODEL_ROOT, value: /models/c2c}
+        - {name: C2C_DATA_ROOT, value: /datasets/c2c}
+        - {name: C2C_PRESERVE_CUDA_VISIBLE_DEVICES, value: "1"}
+        - {name: PYTHONPATH, value: /opt/fpct}
+        - {name: E0_POD_NAME, valueFrom: {fieldRef: {fieldPath: metadata.name}}}
+        - {name: E0_NODE_NAME, valueFrom: {fieldRef: {fieldPath: spec.nodeName}}}
+        - {name: WANDB_MODE, value: offline}
+        - {name: WANDB_DIR, value: /fpct-e0/wandb}
+        - {name: WANDB_CACHE_DIR, value: /fpct-e0/wandb-cache}
+        - {name: WANDB_CONFIG_DIR, value: /fpct-e0/wandb-config}
+        - {name: WANDB_DATA_DIR, value: /fpct-e0/wandb-data}
+        - {name: HF_HOME, value: /fpct-e0/hf-cache}
+        - {name: HF_DATASETS_CACHE, value: /fpct-e0/hf-datasets-cache}
+        - {name: XDG_CACHE_HOME, value: /fpct-e0/cache}
+        - {name: TORCH_EXTENSIONS_DIR, value: /fpct-e0/torch-extensions}
+        - {name: TMPDIR, value: /fpct-e0/tmp}
+        - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+        resources:
+          limits: {nvidia.com/gpu: "2"}
+          requests: {nvidia.com/gpu: "2", cpu: "8", memory: 64Gi}
+        volumeMounts:
+        - {name: models, mountPath: /models/c2c, readOnly: true}
+        - {name: datasets, mountPath: /datasets/c2c, readOnly: true}
+        - {name: fpct-assets, mountPath: /fpct-assets, readOnly: true}
+        - {name: e0-results, mountPath: /fpct-e0}
+        - {name: e0-config, mountPath: /opt/fpct-e0, readOnly: true}
+      volumes:
+      - name: models
+        hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/models, type: Directory}
+      - name: datasets
+        hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/data/c2c, type: Directory}
+      - name: fpct-assets
+        hostPath: {path: /netdisk/lijunsi/fpct-confirmatory/fpct-r2m-80fb295-v1/assets, type: Directory}
+      - name: e0-results
+        hostPath: {path: /netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1, type: Directory}
+      - name: e0-config
+        configMap: {name: fpct-e0-ce99abc-v1}

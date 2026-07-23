@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-e0-runtime-write-preflight
+  namespace: c2c-research
+  labels: &labels
+    project: fpct
+    study: fpct-e0
+    exploratory: "true"
+    confirmatory: "false"
+    eligible-for-formal-statistics: "false"
+    run-uid: fpct-e0-20260722-v1
+    purpose: runtime-write-preflight
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      nodeName: 4090-48gx2
+      restartPolicy: Never
+      containers:
+      - name: preflight
+        image: docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851
+        imagePullPolicy: IfNotPresent
+        command: ["/opt/conda/bin/python3.11", "/opt/fpct-e0-recovery/fpct_e0_runtime_write_preflight.py"]
+        args: ["--output", "/fpct-e0/provenance/runtime_write_preflight.json"]
+        env: &runtime_env
+        - {name: WANDB_MODE, value: offline}
+        - {name: WANDB_DIR, value: /fpct-e0/wandb}
+        - {name: WANDB_CACHE_DIR, value: /fpct-e0/wandb-cache}
+        - {name: WANDB_CONFIG_DIR, value: /fpct-e0/wandb-config}
+        - {name: WANDB_DATA_DIR, value: /fpct-e0/wandb-data}
+        - {name: HF_HOME, value: /fpct-e0/hf-cache}
+        - {name: HF_DATASETS_CACHE, value: /fpct-e0/hf-datasets-cache}
+        - {name: XDG_CACHE_HOME, value: /fpct-e0/cache}
+        - {name: TORCH_EXTENSIONS_DIR, value: /fpct-e0/torch-extensions}
+        - {name: TMPDIR, value: /fpct-e0/tmp}
+        - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+        resources:
+          requests: {cpu: "2", memory: 4Gi}
+        volumeMounts:
+        - {name: recovery-code, mountPath: /opt/fpct-e0-recovery, readOnly: true}
+        - {name: e0-results, mountPath: /fpct-e0}
+      volumes:
+      - name: recovery-code
+        configMap: {name: __RECOVERY_CONFIGMAP__}
+      - name: e0-results
+        hostPath: {path: /netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1, type: Directory}

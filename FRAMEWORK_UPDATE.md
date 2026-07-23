@@ -1454,3 +1454,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 资源证据：活动训练观测显存至少`26,533 MiB`，附加4090节点实测每卡`24,564 MiB`，因此不把正式seed迁移到24GB节点。当前seed 2026072201 attempt 2保持原样运行，已产生step-32 checkpoint但尚未读取accuracy。
 - 调度改动：新增初始`suspend=true`的continuation Job，使用同一exact image、immutable ConfigMap、2 processes/2 GPUs和原冻结configs；CPU-only K8s controller使用最小RBAC，只读取seed-complete marker和Job phase，2201完整结束后解锁continuation Pod，依次运行2202和2203，各自为独立Python process。
 - 科学边界：不改operator、seed、arm order、2048 examples、64 steps、RNG/data order、checkpoint、四cell evaluation、threshold或claim boundary；continuation不依赖首seed结果。修订发生在任何E0 accuracy读取前。
+
+### 2026-07-23 FPCT-E0 runtime-write recovery
+
+- Seed 2026072201 attempt 2完成C_post 64 steps并写入checkpoint/final，但sealed bootstrap在post-target attestation发现`/opt/fpct` source-tree SHA变化；rank0随后被终止，正式integrity未封口，F与accuracy evaluation均未开始。
+- 根因为offline W&B/runtime cache沿`cwd=/opt/fpct`写入immutable image源码树，分类为orchestration runtime-write failure，不是数值、operator、mask、prior、OOM或性能结论。Attempt 2完整保留但不进入正式证据。
+- 恢复只重定向runtime write paths到`/fpct-e0`并设置`PYTHONDONTWRITEBYTECODE=1`；exact-image CPU preflight必须验证W&B/import前后source-tree SHA不变。
+- Matched恢复从step 0重跑整个seed 2026072201 attempt 3，随后同Pod依次运行2202/2203 attempt 2；不复用C_post checkpoint，不改scientific config、seed、data order、预算、evaluation或decision rule，且尚未读取E0 accuracy。

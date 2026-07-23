@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e0_runtime_write_recovery_v1",
+  "run_uid": "fpct-e0-20260722-v1",
+  "authorized_by_user": true,
+  "accuracy_read_before_recovery": false,
+  "failure": {
+    "seed": 2026072201,
+    "attempt": 2,
+    "completed_arm_steps": {"c_post": 64, "f": 0},
+    "official_arm_accepted": false,
+    "error": "immutable image source tree hash mismatch during sealed post-target attestation",
+    "classification": "ORCHESTRATION_RUNTIME_WRITE_FAILURE",
+    "attempt_quarantined": true
+  },
+  "recovery": {
+    "preflight_required": true,
+    "source_tree_expected_sha256": "b2090b58362312384c330865b499080750eaf380eb071a2e44917e4ca28f6b51",
+    "runtime_write_root": "/fpct-e0",
+    "python_dont_write_bytecode": true,
+    "restart_from_step_zero": true,
+    "checkpoint_reuse": false,
+    "serial_runs": [
+      {"seed": 2026072201, "attempt": 3},
+      {"seed": 2026072202, "attempt": 2},
+      {"seed": 2026072203, "attempt": 2}
+    ],
+    "node": "4090-48gx2",
+    "gpu_count": 2
+  },
+  "scientific_contract_changed": false,
+  "unchanged": [
+    "exact image and immutable scientific ConfigMap",
+    "operator definitions and F-C_post headline contrast",
+    "seeds and within-seed arm order",
+    "initialization, RNG and data order",
+    "2048 examples and 64 optimizer steps",
+    "optimizer, scheduler, precision and checkpoint rule",
+    "evaluation cells, aggregation, thresholds and claim boundary"
+  ],
+  "hashes": {
+    "addendum_sha256": "796ed32ea1186edbbe780d7fc5cf646e9f0f261e3aa5a640c150a26a6655b8ef",
+    "preflight_script_sha256": "1ae6c00faaad383beb63dd5cd1d6128c8a0c7e5d6426c05a819a47c171627305",
+    "preflight_job_sha256": "77531083354d634f2f3c845c70b3bea72c4f0115c4b9cfce8fdfb317e496d9c9",
+    "recovery_job_sha256": "cdb44c2226aaacec5424a68a273a060edcfa0e4fe46875eb89e5bf837e5ce1d5"
+  }
+}
