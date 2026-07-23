@@ -35,9 +35,10 @@
     "additional_nodes_eligible_for_formal_training": false
   },
   "hashes": {
-    "amendment_document_sha256": "0ec969a711e08e29fae06425fa5e11a7c914cbde0eb5c15375a06d30293c48f9",
-    "release_controller_sha256": "ad07912360082a5aae751402d54a77b166a9cb46f5ef993252e7bbabbb34e36f",
-    "serial_job_template_sha256": "d16c9d0d79b0bed79681339de9cb097f4535acd6b6e2f0c99406522ac5babe5a"
+    "amendment_document_sha256": "36e298a21ea1dc2da0d926a22cc135df98d67cd6a0864125da21eed4d69249aa",
+    "release_controller_sha256": "16be5fd20dedae0f3961d600301932360cbcb5731ad246d06ab48beb092809a1",
+    "serial_job_template_sha256": "d16c9d0d79b0bed79681339de9cb097f4535acd6b6e2f0c99406522ac5babe5a",
+    "controller_job_template_sha256": "74229936daf11f8a601560b0c186e593d314cc35000e2c6103453f1627a812a7"
   },
   "time_estimates_are_nonbinding": true
 }

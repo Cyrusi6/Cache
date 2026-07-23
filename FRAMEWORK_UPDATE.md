@@ -1452,5 +1452,5 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 
 - 研究目标：在不改变FPCT-E0 scientific contract的前提下，让三个exploratory seeds在唯一安全的`4090-48gx2`节点自动串行完成；24小时从硬停止规则改为非约束预计时间。
 - 资源证据：活动训练观测显存至少`26,533 MiB`，附加4090节点实测每卡`24,564 MiB`，因此不把正式seed迁移到24GB节点。当前seed 2026072201 attempt 2保持原样运行，已产生step-32 checkpoint但尚未读取accuracy。
-- 调度改动：新增初始`suspend=true`的continuation Job，使用同一exact image、immutable ConfigMap、2 processes/2 GPUs和原冻结configs；host-side controller只读取seed-complete marker和Job phase，2201完整结束后解锁continuation Pod，依次运行2202和2203，各自为独立Python process。
+- 调度改动：新增初始`suspend=true`的continuation Job，使用同一exact image、immutable ConfigMap、2 processes/2 GPUs和原冻结configs；CPU-only K8s controller使用最小RBAC，只读取seed-complete marker和Job phase，2201完整结束后解锁continuation Pod，依次运行2202和2203，各自为独立Python process。
 - 科学边界：不改operator、seed、arm order、2048 examples、64 steps、RNG/data order、checkpoint、四cell evaluation、threshold或claim boundary；continuation不依赖首seed结果。修订发生在任何E0 accuracy读取前。

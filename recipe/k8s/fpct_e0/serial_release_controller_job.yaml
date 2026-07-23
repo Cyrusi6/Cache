@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fpct-e0-serial-release
+  namespace: c2c-research
+  labels:
+    project: fpct
+    study: fpct-e0
+    exploratory: "true"
+    confirmatory: "false"
+    eligible-for-formal-statistics: "false"
+    run-uid: fpct-e0-20260722-v1
+    purpose: serial-release-controller
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: fpct-e0-serial-release
+  namespace: c2c-research
+  labels:
+    project: fpct
+    study: fpct-e0
+    exploratory: "true"
+    confirmatory: "false"
+    eligible-for-formal-statistics: "false"
+    run-uid: fpct-e0-20260722-v1
+    purpose: serial-release-controller
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  resourceNames: ["fpct-e0-seed-2026072201-a2"]
+  verbs: ["get"]
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  resourceNames: ["fpct-e0-serial-2202-2203-a2"]
+  verbs: ["get", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: fpct-e0-serial-release
+  namespace: c2c-research
+  labels:
+    project: fpct
+    study: fpct-e0
+    exploratory: "true"
+    confirmatory: "false"
+    eligible-for-formal-statistics: "false"
+    run-uid: fpct-e0-20260722-v1
+    purpose: serial-release-controller
+subjects:
+- kind: ServiceAccount
+  name: fpct-e0-serial-release
+  namespace: c2c-research
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: fpct-e0-serial-release
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-e0-serial-release-controller
+  namespace: c2c-research
+  labels:
+    project: fpct
+    study: fpct-e0
+    exploratory: "true"
+    confirmatory: "false"
+    eligible-for-formal-statistics: "false"
+    run-uid: fpct-e0-20260722-v1
+    purpose: serial-release-controller
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        project: fpct
+        study: fpct-e0
+        exploratory: "true"
+        confirmatory: "false"
+        eligible-for-formal-statistics: "false"
+        run-uid: fpct-e0-20260722-v1
+        purpose: serial-release-controller
+    spec:
+      serviceAccountName: fpct-e0-serial-release
+      nodeName: 4090-24gx4
+      restartPolicy: Never
+      containers:
+      - name: controller
+        image: swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/pytorch/pytorch:2.6.0-cuda12.4-cudnn9-runtime
+        imagePullPolicy: IfNotPresent
+        command: ["/opt/conda/bin/python", "/opt/fpct-e0-controller/fpct_e0_serial_release.py"]
+        args:
+        - --run-root
+        - /fpct-e0
+        - --source-job
+        - fpct-e0-seed-2026072201-a2
+        - --continuation-job
+        - fpct-e0-serial-2202-2203-a2
+        - --namespace
+        - c2c-research
+        - --poll-seconds
+        - "60"
+        - --in-cluster
+        resources:
+          requests: {cpu: 250m, memory: 256Mi}
+          limits: {cpu: "1", memory: 512Mi}
+        volumeMounts:
+        - {name: controller-code, mountPath: /opt/fpct-e0-controller, readOnly: true}
+        - {name: e0-results, mountPath: /fpct-e0}
+      volumes:
+      - name: controller-code
+        configMap: {name: __CONTROLLER_CONFIGMAP__}
+      - name: e0-results
+        hostPath: {path: /netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1, type: Directory}
