@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e0_serial_completion_operational_amendment_v1",
+  "run_uid": "fpct-e0-20260722-v1",
+  "human_authorized": true,
+  "authorized_at_local": "2026-07-23T15:26:35+08:00",
+  "authorization": "complete all three seeds serially on the same 48GB dual-GPU node; completion times are estimates and not a hard stopping rule",
+  "accuracy_read_before_amendment": false,
+  "scientific_contract_changed": false,
+  "operative_scientific_manifest_sha256": "cacbb8d3b6e0a8b53aae3cf31d1e2b538ee335656e81ecce086878aa57feec09",
+  "execution": {
+    "node": "4090-48gx2",
+    "gpu_per_seed": 2,
+    "source_job": "fpct-e0-seed-2026072201-a2",
+    "continuation_job": "fpct-e0-serial-2202-2203-a2",
+    "continuation_initially_suspended": true,
+    "release_condition": "seed 2026072201 seed_complete.json status equals COMPLETE",
+    "continuation_order": [2026072202, 2026072203],
+    "result_dependent_release": false,
+    "hard_24_hour_stop_removed": true
+  },
+  "unchanged": [
+    "exact image and immutable ConfigMap",
+    "operators and headline contrast",
+    "seeds and within-seed arm order",
+    "2048 examples and 64 optimizer steps",
+    "two processes and two GPUs",
+    "optimizer, scheduler, precision and checkpoint rule",
+    "four evaluation cells and aggregation",
+    "decision thresholds and claim boundary"
+  ],
+  "resource_observation": {
+    "active_training_peak_memory_mib_lower_bound": 26533,
+    "additional_node_gpu_memory_mib": 24564,
+    "additional_nodes_eligible_for_formal_training": false
+  },
+  "hashes": {
+    "amendment_document_sha256": "0ec969a711e08e29fae06425fa5e11a7c914cbde0eb5c15375a06d30293c48f9",
+    "release_controller_sha256": "ad07912360082a5aae751402d54a77b166a9cb46f5ef993252e7bbabbb34e36f",
+    "serial_job_template_sha256": "d16c9d0d79b0bed79681339de9cb097f4535acd6b6e2f0c99406522ac5babe5a"
+  },
+  "time_estimates_are_nonbinding": true
+}

@@ -1447,3 +1447,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 审计配置：protocol commit=`0fd69e0`；exact image=`sha256:0ea40657...`；candidate使用不可执行UID/root sentinel；CUDA为空、网络禁用、无模型/数据卷。K8s只运行`create --dry-run=server`，未apply资源。
 - 验证结果：11-stage graph无环；未注释动态访问=0；真实`load_lock`发现精确四pointer；10 schemas strict；ARM_ORDER与manifest一致；389 mutations全部fail closed；tests=`14 passed`。Exact image验证39个training configs、完整controller DAG和三个release negative controls，所有model/dataset/optimizer/subprocess/checkpoint/CUDA tripwire为0。Git/ConfigMap/mount/main bytes均为candidate SHA `7c0bfbb1...`。
 - 结论：当前finalizer不绑定UID/lock/image/prerequisite，smoke/triplet只绑定UID，controller虽绑定UID与run-lock SHA但不绑定image/prerequisite；多个declaration也与source discovery不闭合。修复涉及sealed image内producer/controller，因此终局=`H1_REQUIRES_NEW_IMAGE_QUALIFICATION`，audit result SHA=`35ac8d72...`。R2m保持immutable GO但campaign继续暂停；本任务无训练、checkpoint、accuracy/correctness、model-selection或held-out输出，也不创建R2n。
+
+### 2026-07-23 FPCT-E0 serial completion operational amendment
+
+- 研究目标：在不改变FPCT-E0 scientific contract的前提下，让三个exploratory seeds在唯一安全的`4090-48gx2`节点自动串行完成；24小时从硬停止规则改为非约束预计时间。
+- 资源证据：活动训练观测显存至少`26,533 MiB`，附加4090节点实测每卡`24,564 MiB`，因此不把正式seed迁移到24GB节点。当前seed 2026072201 attempt 2保持原样运行，已产生step-32 checkpoint但尚未读取accuracy。
+- 调度改动：新增初始`suspend=true`的continuation Job，使用同一exact image、immutable ConfigMap、2 processes/2 GPUs和原冻结configs；host-side controller只读取seed-complete marker和Job phase，2201完整结束后解锁continuation Pod，依次运行2202和2203，各自为独立Python process。
+- 科学边界：不改operator、seed、arm order、2048 examples、64 steps、RNG/data order、checkpoint、四cell evaluation、threshold或claim boundary；continuation不依赖首seed结果。修订发生在任何E0 accuracy读取前。
