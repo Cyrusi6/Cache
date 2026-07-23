@@ -38,7 +38,7 @@
     "amendment_document_sha256": "36e298a21ea1dc2da0d926a22cc135df98d67cd6a0864125da21eed4d69249aa",
     "release_controller_sha256": "16be5fd20dedae0f3961d600301932360cbcb5731ad246d06ab48beb092809a1",
     "serial_job_template_sha256": "d16c9d0d79b0bed79681339de9cb097f4535acd6b6e2f0c99406522ac5babe5a",
-    "controller_job_template_sha256": "74229936daf11f8a601560b0c186e593d314cc35000e2c6103453f1627a812a7"
+    "controller_job_template_sha256": "cef1bf9f98f067b958ad6a57cd4efe2b4458c98629c2e3ed2fddf25949c0b2b8"
   },
   "time_estimates_are_nonbinding": true
 }

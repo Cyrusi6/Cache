@@ -84,7 +84,7 @@ spec:
         purpose: serial-release-controller
     spec:
       serviceAccountName: fpct-e0-serial-release
-      nodeName: 4090-24gx4
+      nodeName: 4090-48gx2
       restartPolicy: Never
       containers:
       - name: controller
