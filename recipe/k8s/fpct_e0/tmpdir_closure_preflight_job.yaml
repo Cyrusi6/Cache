@@ -25,7 +25,7 @@ spec:
         image: docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851
         imagePullPolicy: IfNotPresent
         command: ["/opt/conda/bin/python3.11", "-I", "/opt/fpct-e0-recovery/fpct_e0_tmpdir_closure_preflight.py"]
-        args: ["--output", "/fpct-e0/provenance/tmpdir_closure_preflight_v2.json"]
+        args: ["--output", "/fpct-e0/provenance/tmpdir_closure_preflight_v3.json"]
         env:
         - {name: WANDB_MODE, value: offline}
         - {name: WANDB_DIR, value: /fpct-e0/wandb}

@@ -19,6 +19,7 @@
     "exact_image_unchanged": true,
     "scientific_config_changed": false,
     "preflight_required": true,
+    "preseal_wandb_import_finder": true,
     "restart_from_step_zero": true,
     "checkpoint_reuse": false,
     "serial_runs": [
@@ -38,9 +39,11 @@
     "W&B offline mode"
   ],
   "hashes": {
-    "addendum_sha256": "eef077815de72257e765b9f040a98bb0de82c615fead67336804cfb77b69451d",
-    "preflight_script_sha256": "cd0cb760513e56c79ca6b38a397b90b20f03330a45d3510b4432c2b43dd9a6cf",
-    "preflight_job_sha256": "0a92ce25025047e6c8869f573f0099910597d1ff738ae31868fa3ce6ce1fd07c",
-    "recovery_job_sha256": "8f2466b3ada2c1e787bab16063c7f899b6cb77aab35ee52fca95e5592baefcec"
+    "addendum_sha256": "cf736116e4a70b8461882bac6be8dfb38fb8106a5a44f67011d36f7c3d13451a",
+    "preflight_script_sha256": "446b36acd584b59a608c1b68f88c7c2f5432518d14af2f036e52b54599a2d0ee",
+    "preflight_job_sha256": "3af01a53ad4385c11d73570033a006263442b9382774a5cde68714a98fb16287",
+    "recovery_job_sha256": "fe365421a0c2299e9c8fec9ebb9d7c3d42eb5ffd0bd0a10ed8f7c6a5e3e2f507",
+    "bootstrap_launcher_sha256": "38adc4b9224529cf8adaefa8062af28951d37f2725495ff6e28be8b0c12fbfa7",
+    "presealed_runner_sha256": "ba8f16beff176814c3930b19431d4f1fb1388b554d381e6d72ebe609ff64e7a3"
   }
 }

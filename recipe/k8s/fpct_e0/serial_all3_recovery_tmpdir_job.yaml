@@ -28,9 +28,9 @@ spec:
         args:
         - |
           set -euo pipefail
-          /opt/conda/bin/python3.11 /opt/fpct-e0/fpct_e0_runner.py run-seed --seed 2026072201 --attempt 4
-          /opt/conda/bin/python3.11 /opt/fpct-e0/fpct_e0_runner.py run-seed --seed 2026072202 --attempt 2
-          /opt/conda/bin/python3.11 /opt/fpct-e0/fpct_e0_runner.py run-seed --seed 2026072203 --attempt 2
+          /opt/conda/bin/python3.11 /opt/fpct-e0-recovery/fpct_e0_presealed_runner.py --seed 2026072201 --attempt 4
+          /opt/conda/bin/python3.11 /opt/fpct-e0-recovery/fpct_e0_presealed_runner.py --seed 2026072202 --attempt 2
+          /opt/conda/bin/python3.11 /opt/fpct-e0-recovery/fpct_e0_presealed_runner.py --seed 2026072203 --attempt 2
         env:
         - {name: HF_HUB_OFFLINE, value: "1"}
         - {name: TRANSFORMERS_OFFLINE, value: "1"}
@@ -60,6 +60,7 @@ spec:
         - {name: fpct-assets, mountPath: /fpct-assets, readOnly: true}
         - {name: e0-results, mountPath: /fpct-e0}
         - {name: e0-config, mountPath: /opt/fpct-e0, readOnly: true}
+        - {name: recovery-code, mountPath: /opt/fpct-e0-recovery, readOnly: true}
       volumes:
       - name: models
         hostPath: {path: /netdisk/lijunsi/c2c-route1-identifiability/models, type: Directory}
@@ -71,3 +72,5 @@ spec:
         hostPath: {path: /netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1, type: Directory}
       - name: e0-config
         configMap: {name: fpct-e0-ce99abc-v1}
+      - name: recovery-code
+        configMap: {name: __RECOVERY_CONFIGMAP__}

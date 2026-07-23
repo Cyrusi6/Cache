@@ -1470,3 +1470,4 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 前瞻修复只将`TMPDIR`恢复为容器`/tmp`；W&B/HF/XDG/Torch extension缓存继续隔离在`/fpct-e0`。Exact image、W&B offline mode和全部scientific config不变。
 - 新CPU-only closure preflight必须验证W&B offline lifecycle前后stable fingerprint、canonical torch marker与source-tree SHA一致；仅GO后从seed 2201 attempt 4 step 0重跑，再串行2202/2203。
 - 首次TMPDIR preflight确认canonical torch marker、stable sys.path和source tree均一致，但完整fingerprint仍有其他stable-projection字段变化，因此按合同`BLOCKED`且未启动GPU；replacement preflight增加递归projection diff以定位最后的编排差异。
+- Projection diff精确为W&B offline初始化新增`wandb.sdk.lib.import_hooks.ImportHookFinder`。新launcher在bootstrap预封存前注册并立即注销never-imported空hook，只预安装同一个finder；正式W&B会复用它，训练target仍是immutable `SFT_train.py`，W&B mode和scientific config不变。

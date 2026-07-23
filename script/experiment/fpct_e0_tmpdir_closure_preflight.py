@@ -70,6 +70,17 @@ def main() -> int:
     fpct_bootstrap._LOADED_BY_KEY["formal_target"] = (
         fpct_bootstrap._load_script_module("formal_target", target)
     )
+    launcher_path = Path(
+        "/opt/fpct-e0-recovery/fpct_e0_bootstrap_launcher.py"
+    )
+    spec = fpct_bootstrap.importlib.util.spec_from_file_location(
+        "fpct_e0_preflight_launcher", launcher_path
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"cannot load {launcher_path}")
+    launcher = fpct_bootstrap.importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(launcher)
+    launcher.preseal_wandb_import_finder()
     before = fpct_bootstrap._attest(repo, target, True)
     fpct_bootstrap._PRE_ATTESTATION = before
 
@@ -125,6 +136,7 @@ def main() -> int:
         "stable_projection_differences": projection_diff,
         "tmpdir": os.environ["TMPDIR"],
         "wandb_mode": "offline",
+        "presealed_wandb_import_finder": True,
         "model_forward": False,
         "training": False,
         "checkpoint_access": False,

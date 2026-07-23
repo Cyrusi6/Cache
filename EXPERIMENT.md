@@ -6,6 +6,7 @@
 - Provenance comparison identified an orchestration-only mismatch: moving `TMPDIR` under `/fpct-e0` disabled the immutable bootstrap's `/tmp` content-SHA normalization for PyTorch's generated remote module.
 - The prospective recovery restores only `TMPDIR=/tmp`, keeps all persistent runtime caches outside `/opt/fpct`, requires an exact-image CPU closure preflight, and then restarts the full matched seed from step 0 before continuing the remaining two seeds.
 - The first CPU preflight remained `BLOCKED`: torch-path canonicalization and source-tree invariance passed, while another stable-projection field changed. No GPU job was released; a replacement diagnostic preflight now records the exact recursive projection diff.
+- The remaining difference was solely W&B's `ImportHookFinder` added to `sys.meta_path`. A presealed launcher now installs that same finder before fingerprinting, without changing the immutable SFT target or any training/evaluation setting; a third CPU preflight is required before GPU release.
 
 ## 2026-07-16：Kubernetes C2C Route-1 v2.2 Smoke
 
