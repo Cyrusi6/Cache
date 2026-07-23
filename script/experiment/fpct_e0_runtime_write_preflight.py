@@ -22,6 +22,7 @@ def main() -> int:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     repo = Path("/opt/fpct").resolve()
+    sys.path.insert(0, str(repo))
     sys.path.insert(0, str(repo / "script/runtime"))
     import fpct_bootstrap
 

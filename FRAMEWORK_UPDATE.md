@@ -1461,3 +1461,4 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 根因为offline W&B/runtime cache沿`cwd=/opt/fpct`写入immutable image源码树，分类为orchestration runtime-write failure，不是数值、operator、mask、prior、OOM或性能结论。Attempt 2完整保留但不进入正式证据。
 - 恢复只重定向runtime write paths到`/fpct-e0`并设置`PYTHONDONTWRITEBYTECODE=1`；exact-image CPU preflight必须验证W&B/import前后source-tree SHA不变。
 - Matched恢复从step 0重跑整个seed 2026072201 attempt 3，随后同Pod依次运行2202/2203 attempt 2；不复用C_post checkpoint，不改scientific config、seed、data order、预算、evaluation或decision rule，且尚未读取E0 accuracy。
+- 首次CPU preflight在任何模型/GPU访问前因未将image repo root加入`sys.path`而失败；该纯编排缺口已前瞻修正，并同步更新preflight脚本SHA。旧failed Job保留为历史，只有replacement immutable preflight通过才会释放恢复训练。

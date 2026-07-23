@@ -40,7 +40,7 @@
   ],
   "hashes": {
     "addendum_sha256": "796ed32ea1186edbbe780d7fc5cf646e9f0f261e3aa5a640c150a26a6655b8ef",
-    "preflight_script_sha256": "1ae6c00faaad383beb63dd5cd1d6128c8a0c7e5d6426c05a819a47c171627305",
+    "preflight_script_sha256": "482ddc4eaea7fb3618392c25e411581520b9ef558c181577ad66022e2e325468",
     "preflight_job_sha256": "77531083354d634f2f3c845c70b3bea72c4f0115c4b9cfce8fdfb317e496d9c9",
     "recovery_job_sha256": "cdb44c2226aaacec5424a68a273a060edcfa0e4fe46875eb89e5bf837e5ce1d5"
   }
