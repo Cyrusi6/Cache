@@ -1,0 +1,342 @@
+{
+  "alignment_sidecar_sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990",
+  "bundle_sha256": "021f09404666e05effe780d32f7b3956e145d440a565ead8c4790ac80a181391",
+  "prompt_labels_all_minus_100": true,
+  "protocol_id": "fpct_e0_rendered_config_index_v1",
+  "record_count": 42,
+  "records": [
+    {
+      "arm": "c_post",
+      "filename": "train_2026072201_c_post.json",
+      "kind": "training",
+      "seed": 2026072201,
+      "sha256": "1c0089c7f4866d90b2a6b85ccae0e55ca96231d483c4f4df5d22a3eeb367ba1d"
+    },
+    {
+      "arm": "f",
+      "filename": "train_2026072201_f.json",
+      "kind": "training",
+      "seed": 2026072201,
+      "sha256": "a3943b267d273d2bed15516a97e25f44f823904a5d53949ad7e6c2495de18d89"
+    },
+    {
+      "cell": "Y_CC",
+      "filename": "eval_2026072201_Y_CC_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "da0300cf20397e187e491926fe139b4909dbc6ead5bd6ec5ea91eaea5f025d8f",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_CC",
+      "filename": "eval_2026072201_Y_CC_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "bd015eb7e90c9064089abaddc90b1b325395022aa33067ea38a01e26e0657bc9",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_CC",
+      "filename": "eval_2026072201_Y_CC_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "b6d26df4b27a41bcea373027707629343f19491e9fb87ddcabea30262edb57bb",
+      "task": "mmlu-redux"
+    },
+    {
+      "cell": "Y_CF",
+      "filename": "eval_2026072201_Y_CF_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "286cf57ef35f097045cfdd8bcecf3a8b2366ac4a27a9b768da8951a049968cdd",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_CF",
+      "filename": "eval_2026072201_Y_CF_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "4e5e60948091e648d3085cfb65b1bac5fa2f8417855ed54dc47570fbc2f73802",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_CF",
+      "filename": "eval_2026072201_Y_CF_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "9e99e3aa0d2c5583730eca6b52103b446756c009735c2575dbc38be160e49a21",
+      "task": "mmlu-redux"
+    },
+    {
+      "cell": "Y_FC",
+      "filename": "eval_2026072201_Y_FC_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "7e4dcca76d2b0cba2cc6d882fa3b6c03a51405d792be0257d66997d213b5fc85",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_FC",
+      "filename": "eval_2026072201_Y_FC_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "059aad39dc651ca9970a87e865397f83ee9ab5df39df5215e4be41b671eb5b81",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_FC",
+      "filename": "eval_2026072201_Y_FC_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "8ec34ac867d447a91a7bec47b4d6c3b23466c184f75b84d5278046f0092432d5",
+      "task": "mmlu-redux"
+    },
+    {
+      "cell": "Y_FF",
+      "filename": "eval_2026072201_Y_FF_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "8f4be58e3e66d6202aa935a4b573f6986b6acea37542350ac0aed530c304ea5b",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_FF",
+      "filename": "eval_2026072201_Y_FF_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "e1e40a4d40b7d1ed448baa5ca3130f946dda068392b34a6c66d54a25f13f5c49",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_FF",
+      "filename": "eval_2026072201_Y_FF_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072201,
+      "sha256": "4f970ab63e0fc849974071aee2a6f31f851447270a0244df188738ca5dcb79c4",
+      "task": "mmlu-redux"
+    },
+    {
+      "arm": "f",
+      "filename": "train_2026072202_f.json",
+      "kind": "training",
+      "seed": 2026072202,
+      "sha256": "ee1501034e3edc78869c8794a8704717d2ee9f6cdf3c71fe7554ec6ca6d3190f"
+    },
+    {
+      "arm": "c_post",
+      "filename": "train_2026072202_c_post.json",
+      "kind": "training",
+      "seed": 2026072202,
+      "sha256": "77fbcccad9f240efc64a680216f2bffb242db549eb94dc86b7f20a5662be5108"
+    },
+    {
+      "cell": "Y_CC",
+      "filename": "eval_2026072202_Y_CC_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "67e0393f71b72745b17920b776575ec36e6b4a3523f3a39056693caac939b3f0",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_CC",
+      "filename": "eval_2026072202_Y_CC_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "ec0a7f108c73e76ccb7779a9a7dd0c72253fad3d89115c9504acfd497c00c9d9",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_CC",
+      "filename": "eval_2026072202_Y_CC_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "f11a3be3e192d51d35f607c2cecfbd0060417052e918ce6c9c4adad02c0ee9e1",
+      "task": "mmlu-redux"
+    },
+    {
+      "cell": "Y_CF",
+      "filename": "eval_2026072202_Y_CF_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "7fcbe8f08afe7e27b38983272c303a54151d62863ab20743c2c2b9d9f9dc83e5",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_CF",
+      "filename": "eval_2026072202_Y_CF_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "77a2b2a01b82a91c12fd6a814444dbe5a67ec87641f2185890b6d94900966af8",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_CF",
+      "filename": "eval_2026072202_Y_CF_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "f40db1a86d19cdc558dbd148933c2b191ece3af359e4d79a6e950e164c741bbb",
+      "task": "mmlu-redux"
+    },
+    {
+      "cell": "Y_FC",
+      "filename": "eval_2026072202_Y_FC_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "9568aa04c2be0f0c784d0be3961e0bd7a6384a9f8afa7ad8bdbc269cd50849e1",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_FC",
+      "filename": "eval_2026072202_Y_FC_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "236b48268fc6460528c45fbdaacad25e2b6b9e97b5fe7fd7d34030b5697168f0",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_FC",
+      "filename": "eval_2026072202_Y_FC_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "6a4223b3f999aa367d483fbd3830824784e69732c53250314eaea6e493840afe",
+      "task": "mmlu-redux"
+    },
+    {
+      "cell": "Y_FF",
+      "filename": "eval_2026072202_Y_FF_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "30b60d42d76b12babee6525ccb7790da98b550f962fa038a172b2de70755f57f",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_FF",
+      "filename": "eval_2026072202_Y_FF_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "b785e2ab85c8db48012a8986102b6cb5047b52c662e39cafa697ffb8463a6d40",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_FF",
+      "filename": "eval_2026072202_Y_FF_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072202,
+      "sha256": "fc4d0458e5bdecba8fbda6625a9488a67c4400530236efececdc072344360cdd",
+      "task": "mmlu-redux"
+    },
+    {
+      "arm": "c_post",
+      "filename": "train_2026072203_c_post.json",
+      "kind": "training",
+      "seed": 2026072203,
+      "sha256": "5ba7bed34836ab99aa57e56264feec8a152cffa2fa28a8e5b37d65c56ebaa7a9"
+    },
+    {
+      "arm": "f",
+      "filename": "train_2026072203_f.json",
+      "kind": "training",
+      "seed": 2026072203,
+      "sha256": "a8e5d82711b6902b7b7c11efeeacdd33551a463125bcb76a0cc1b48f9f7e8dce"
+    },
+    {
+      "cell": "Y_CC",
+      "filename": "eval_2026072203_Y_CC_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "87b6e7c002b08cedfd6c09a55c370210d32d5d347eb06354fa183bed2e3cd803",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_CC",
+      "filename": "eval_2026072203_Y_CC_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "022bcbdd746309e9a6faa1c9cc78c34aa88d0e9b135292f2ea93d360cf1647fd",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_CC",
+      "filename": "eval_2026072203_Y_CC_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "f0edd6ff077b534125058a41a7cd12e9dcdf54fb710687409c82e73efe167967",
+      "task": "mmlu-redux"
+    },
+    {
+      "cell": "Y_CF",
+      "filename": "eval_2026072203_Y_CF_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "78754f1d0da2bd877412a8ff8b102299fb5f1c4d944347df13dfcb41e6ac7f59",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_CF",
+      "filename": "eval_2026072203_Y_CF_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "eeafa551f801f725a6c06ddaa224c8ad30bd380b75a5b4e052895124960b9dfb",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_CF",
+      "filename": "eval_2026072203_Y_CF_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "174954326a971082b04faaef37b2f9f9183c930d3b25cb4c1ed17dddc9f05eb5",
+      "task": "mmlu-redux"
+    },
+    {
+      "cell": "Y_FC",
+      "filename": "eval_2026072203_Y_FC_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "15dd0fc0010175ace9ed37c44237bb0bcd5e1de8fdbba8fd47cb0f7595841254",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_FC",
+      "filename": "eval_2026072203_Y_FC_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "dbad1bb339543cab6fc6569bb42ce9aa175621825ad98341e2834c748f4f8ec8",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_FC",
+      "filename": "eval_2026072203_Y_FC_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "8841f42c3d7551a90729bc91e240671d37a99a194da8dccabf720d30924f6a72",
+      "task": "mmlu-redux"
+    },
+    {
+      "cell": "Y_FF",
+      "filename": "eval_2026072203_Y_FF_ai2-arc.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "b8b3a2fe01830487b07c7d548f73389b2c151474a98fccccd32b7d1959f38be5",
+      "task": "ai2-arc"
+    },
+    {
+      "cell": "Y_FF",
+      "filename": "eval_2026072203_Y_FF_openbookqa.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "cac7c2bb58c5ec22fb1bd0d9ef601819b40a8be1e056b83e2acc63804aa775cd",
+      "task": "openbookqa"
+    },
+    {
+      "cell": "Y_FF",
+      "filename": "eval_2026072203_Y_FF_mmlu-redux.yaml",
+      "kind": "evaluation",
+      "seed": 2026072203,
+      "sha256": "ffea45d4075cd8a80ab8398633c7ee5cfb0417dbbc720b402db68a06a51320a6",
+      "task": "mmlu-redux"
+    }
+  ],
+  "rendered_training_sha256": "2a016cf6e2dd767eee0e8cf73cdffee7d55b14d4cbc301687fbb80597e299988",
+  "run_uid": "fpct-e0-20260722-v1",
+  "schema_version": 1
+}

@@ -1,0 +1,40 @@
+eval:
+  answer_method: generate
+  data_root: /fpct-e0/dev_data
+  dataset: ai2-arc
+  debug_dump_bad_samples: false
+  gate_diagnostics: false
+  gpu_ids:
+  - 0
+  - 1
+  math_grading_method: comprehensive
+  sample_interval: 1
+  use_cot: false
+  use_template: true
+model:
+  generation_config:
+    do_sample: false
+    max_new_tokens: 64
+  model_name: Rosetta
+  rosetta_config:
+    alignment_strategy: soft_span_overlap_v2
+    attn_implementation: eager
+    base_model: Qwen/Qwen3-0.6B
+    checkpoints_dir: /fpct-e0/seeds/2026072201/active/f/final
+    fpct_alignment_sanitizer: certified_slot0_v1
+    fpct_instrumentation: false
+    fpct_operator: c_post
+    include_response: false
+    is_do_alignment: true
+    soft_alignment_boundary_bonus: 0.5
+    soft_alignment_boundary_tolerance: 1
+    soft_alignment_confidence_alpha: 0.5
+    soft_alignment_confidence_floor: 0.5
+    soft_alignment_confidence_mode: entropy
+    soft_alignment_fallback_confidence: 0.25
+    soft_alignment_min_weight: 0.0
+    soft_alignment_score_mode: uniform
+    soft_alignment_top_k: 4
+    teacher_model: TinyLlama/TinyLlama-1.1B-Chat-v1.0
+output:
+  output_dir: /fpct-e0/seeds/2026072201/active/eval/Y_FC/ai2-arc

@@ -1,0 +1,128 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e0_fast_exploratory_v1",
+  "run_uid": "fpct-e0-20260722-v1",
+  "classification": "EXPLORATORY_NOT_CONFIRMATORY",
+  "eligible_for_formal_statistics": false,
+  "source_base_commit": "77f03c6b068fffd9bbec210aeb71701e6b8d6bd7",
+  "scientific_code_commit": "80fb295542ad298fae4cddb1273517b401bbcd17",
+  "exact_image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+  "image_digest": "sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+  "pair": {
+    "sender": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+    "sender_revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+    "receiver": "Qwen/Qwen3-0.6B",
+    "receiver_revision": "c1899de289a04d12100db370d81485cdf75e47ca"
+  },
+  "operator_contract": {
+    "headline": "F-C_post",
+    "fused_candidate": "K_F_ij=K_native_i+deltaK_ij; V_F_ij=V_native_i+deltaV_ij",
+    "c_post": "K_post_i=sum_j A_ij*K_F_ij; V_post_i=sum_j A_ij*V_F_ij",
+    "f": "z_tij=<Q_t,K_F_ij>/sqrt(d)+log(A_ij)+M_ti; one global softmax over all active (i,j); o_t=sum_ij p_tij*V_F_ij",
+    "prior_once": true,
+    "parent_mask_inheritance": true,
+    "invalid_probability_and_gradient_exact_zero": true,
+    "f_only_trainable_parameters": false
+  },
+  "fixed_conditions": {
+    "a": 1,
+    "g": 1,
+    "position_mode": "legacy",
+    "native_null": false,
+    "selector": false,
+    "include_response": false,
+    "attention_backend": "eager",
+    "alignment_top_k": 4,
+    "alignment_score_mode": "uniform",
+    "alignment_sanitizer": "certified_slot0_v1",
+    "sender_receiver_frozen": true,
+    "new_gate_router_or_auxiliary_loss": false
+  },
+  "training": {
+    "seeds_and_order": {
+      "2026072201": ["c_post", "f"],
+      "2026072202": ["f", "c_post"],
+      "2026072203": ["c_post", "f"]
+    },
+    "examples": 2048,
+    "optimizer_steps": 64,
+    "epochs": 1,
+    "processes": 2,
+    "gpus": 2,
+    "per_device_batch_size": 1,
+    "gradient_accumulation": 16,
+    "effective_global_batch": 32,
+    "learning_rate": 0.0001,
+    "weight_decay": 0.01,
+    "scheduler": "linear",
+    "warmup_ratio": 0.1,
+    "max_grad_norm": 1.0,
+    "max_length": 1024,
+    "precision": "bf16",
+    "projector_dropout": 0.1,
+    "official_checkpoint": "final completed optimizer step 64",
+    "initialization_from_old_checkpoint": false
+  },
+  "evaluation": {
+    "cells": ["Y_CC", "Y_CF", "Y_FC", "Y_FF"],
+    "generation": {"do_sample": false, "max_new_tokens": 64, "use_cot": false, "zero_shot": true},
+    "primary_aggregation": "content-group equal, task equal, three-task macro",
+    "tasks_and_groups": {"ai2-arc": 128, "openbookqa": 70, "mmlu-redux": 128},
+    "development_only": true,
+    "confirmatory_correctness_accessed_before_freeze": false
+  },
+  "development_data": {
+    "selection_partition": "frozen calibration",
+    "selection_order": "content_group_sha256 ascending within task",
+    "label_free": true,
+    "materialized_tree_sha256": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c"
+  },
+  "assets": {
+    "receiver_config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+    "receiver_tokenizer_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+    "receiver_model_sha256": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b",
+    "sender_config_sha256": "486bedda3a6988332e60d9638a09ca4b260d34ebcf1b19e22cf3b140b63d8fe9",
+    "sender_tokenizer_sha256": "bcd04f0eadf90287bd26e1a183ac487d8a141b09b06aecb7725bbdd343640f2e",
+    "sender_tokenizer_model_sha256": "9e556afd44213b6bd1be2b850ebbbd98f5481437a8021afaf58ee7fb1818d347",
+    "sender_model_sha256": "6e6001da2106d4757498752a021df6c2bdc332c650aae4bae6b0c004dcf14933",
+    "alignment_sidecar_sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990",
+    "alignment_sidecar_examples": 2048,
+    "rendered_training_sha256": "2a016cf6e2dd767eee0e8cf73cdffee7d55b14d4cbc301687fbb80597e299988",
+    "prompt_labels_all_minus_100": true
+  },
+  "hashes": {
+    "development_group_manifest_sha256": "25fe8c4dceeaa1174e1433a02ec86f312d909d7d58c3c9a8c7f2caa9d908216a",
+    "config_index_sha256": "555364574fb5f36b472a91ef9ea0bc9534660ff462c97566e793f7997e71b4ae",
+    "rendered_config_bundle_sha256": "021f09404666e05effe780d32f7b3956e145d440a565ead8c4790ac80a181391",
+    "formula_oracle_sha256": "d9933a3d4d2f0ed0e9a6c0bb9e5147df77c149efa340269643c6feef28c98a25",
+    "runner_sha256": "d3008d18bd19bb13c8bdc5526412c23bbe64dd3ba0a7ffe799f3f928d9d08f0e",
+    "effect_report_sha256": "e0977efa565850622eea3a0cf1b4bcf8942b5dd7a2f3b156ad162f2f6acef697",
+    "oracle_test_sha256": "26bcd03cc2d8a91863d51afa08721e9acf265b666ada5c2ab5b8fb26aeef7f98"
+  },
+  "retry": {
+    "whole_seed_infrastructure_only": 1,
+    "allowed": ["eviction_or_preemption", "node_loss", "transient_kubernetes_or_volume_failure"],
+    "selective_arm_retry": false,
+    "scientific_or_accuracy_retry": false
+  },
+  "stopping": {
+    "parity_failure": "E0_ENGINEERING_BLOCKED",
+    "evaluation_support_failure": "E0_EVALUATION_SUPPORT_BLOCKED",
+    "engineering_data_or_integrity_failure": "E0_ENGINEERING_OR_EXECUTION_BLOCKED",
+    "capacity_after_24h": "E0_INCOMPLETE_CAPACITY"
+  },
+  "decision": {
+    "go": "mean(T)>=1.00pp and at least 2/3 T>0 and no task mean(T)<-2.00pp and all controls pass and mechanism activation is nonzero",
+    "mechanism_positive": "mean(O)>0 and at least 2/3 O>0",
+    "complete_no_go": "E0_NO_GO_FOR_FURTHER_SPEND"
+  },
+  "kubernetes": {
+    "namespace": "c2c-research",
+    "node_name": "4090-48gx2",
+    "gpu_per_seed_job": 2,
+    "config_map_mount": "/opt/fpct-e0",
+    "result_root": "/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1",
+    "labels": {"study": "fpct-e0", "exploratory": "true", "confirmatory": "false", "eligible-for-formal-statistics": "false"}
+  },
+  "claim_boundary": "Exploratory single-pair TinyLlama-to-Qwen3 development-set result at 2048 examples and 64 steps; n=3, no significance, confirmatory, cross-pair, or universal claim."
+}

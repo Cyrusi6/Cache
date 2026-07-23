@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-e0-parity-__EXECUTION_SHORT__
+  namespace: c2c-research
+  labels: &labels
+    project: fpct
+    study: fpct-e0
+    exploratory: "true"
+    confirmatory: "false"
+    eligible-for-formal-statistics: "false"
+    run-uid: fpct-e0-20260722-v1
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      nodeName: 4090-48gx2
+      restartPolicy: Never
+      containers:
+      - name: parity
+        image: docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851
+        imagePullPolicy: IfNotPresent
+        command: ["/opt/conda/bin/python3.11", "/opt/fpct-e0/fpct_e0_formula_oracle.py"]
+        args: ["--output", "/fpct-e0/parity/formula_production_parity.json"]
+        env:
+        - {name: PYTHONPATH, value: /opt/fpct}
+        - {name: CUDA_VISIBLE_DEVICES, value: ""}
+        resources:
+          requests: {cpu: "4", memory: 16Gi}
+        volumeMounts:
+        - {name: e0-config, mountPath: /opt/fpct-e0, readOnly: true}
+        - {name: e0-results, mountPath: /fpct-e0}
+      volumes:
+      - name: e0-config
+        configMap: {name: __CONFIGMAP__}
+      - name: e0-results
+        hostPath: {path: /netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1, type: Directory}
