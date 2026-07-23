@@ -1462,3 +1462,10 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 恢复只重定向runtime write paths到`/fpct-e0`并设置`PYTHONDONTWRITEBYTECODE=1`；exact-image CPU preflight必须验证W&B/import前后source-tree SHA不变。
 - Matched恢复从step 0重跑整个seed 2026072201 attempt 3，随后同Pod依次运行2202/2203 attempt 2；不复用C_post checkpoint，不改scientific config、seed、data order、预算、evaluation或decision rule，且尚未读取E0 accuracy。
 - 首次CPU preflight在任何模型/GPU访问前因未将image repo root加入`sys.path`而失败；该纯编排缺口已前瞻修正，并同步更新preflight脚本SHA。旧failed Job保留为历史，只有replacement immutable preflight通过才会释放恢复训练。
+
+### 2026-07-24 FPCT-E0 TMPDIR closure recovery
+
+- Seed 2026072201 attempt 3在C_post 64 steps、formal integrity和checkpoint写入后被sealed post-target attestation拒绝；F、evaluation和后续seeds均未启动，attempt 3隔离且不复用。
+- Source tree与23个pre/post Rosetta module records均byte-identical。根因是runtime-write recovery把`TMPDIR`改为`/fpct-e0/tmp`，绕开了bootstrap只对`/tmp/tmp*` PyTorch `_remote_module_non_scriptable.py`目录执行的content-SHA canonicalization。
+- 前瞻修复只将`TMPDIR`恢复为容器`/tmp`；W&B/HF/XDG/Torch extension缓存继续隔离在`/fpct-e0`。Exact image、W&B offline mode和全部scientific config不变。
+- 新CPU-only closure preflight必须验证W&B offline lifecycle前后stable fingerprint、canonical torch marker与source-tree SHA一致；仅GO后从seed 2201 attempt 4 step 0重跑，再串行2202/2203。

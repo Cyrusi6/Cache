@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e0_tmpdir_closure_recovery_v1",
+  "run_uid": "fpct-e0-20260722-v1",
+  "source_commit": "e3e8d87f247a09605af0ff2273386125995b2b43",
+  "authorized_by_user": true,
+  "failure": {
+    "seed": 2026072201,
+    "attempt": 3,
+    "completed_arm_steps": {"c_post": 64, "f": 0},
+    "official_arm_accepted": false,
+    "classification": "ORCHESTRATION_TMPDIR_CLOSURE_FAILURE",
+    "attempt_quarantined": true,
+    "accuracy_read": false
+  },
+  "repair": {
+    "tmpdir": "/tmp",
+    "runtime_cache_root": "/fpct-e0",
+    "exact_image_unchanged": true,
+    "scientific_config_changed": false,
+    "preflight_required": true,
+    "restart_from_step_zero": true,
+    "checkpoint_reuse": false,
+    "serial_runs": [
+      {"seed": 2026072201, "attempt": 4},
+      {"seed": 2026072202, "attempt": 2},
+      {"seed": 2026072203, "attempt": 2}
+    ]
+  },
+  "unchanged": [
+    "operator definitions and headline contrast",
+    "alignment and certified sanitizer",
+    "model and tokenizer revisions",
+    "seed, initialization, RNG and data order",
+    "examples, optimizer steps, optimizer and scheduler",
+    "BF16 eager attention and checkpoint rule",
+    "evaluation cells, aggregation, thresholds and claim boundary",
+    "W&B offline mode"
+  ],
+  "hashes": {
+    "addendum_sha256": "4ce39b972ffb3a774e916a1f8958b6deb3ffa39a86fd2b03c19e417e93fc4707",
+    "preflight_script_sha256": "6db7488fb01d883d981ba4dbc45b0bb60a464e92be579eed75a615c18e71a09b",
+    "preflight_job_sha256": "efc9e8c3ef180ce4b1d44754cf3f32c71bbc54cf7f9b3c609d18003854f68060",
+    "recovery_job_sha256": "8f2466b3ada2c1e787bab16063c7f899b6cb77aab35ee52fca95e5592baefcec"
+  }
+}
