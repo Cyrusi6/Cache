@@ -38,9 +38,9 @@
     "W&B offline mode"
   ],
   "hashes": {
-    "addendum_sha256": "4ce39b972ffb3a774e916a1f8958b6deb3ffa39a86fd2b03c19e417e93fc4707",
-    "preflight_script_sha256": "6db7488fb01d883d981ba4dbc45b0bb60a464e92be579eed75a615c18e71a09b",
-    "preflight_job_sha256": "efc9e8c3ef180ce4b1d44754cf3f32c71bbc54cf7f9b3c609d18003854f68060",
+    "addendum_sha256": "eef077815de72257e765b9f040a98bb0de82c615fead67336804cfb77b69451d",
+    "preflight_script_sha256": "cd0cb760513e56c79ca6b38a397b90b20f03330a45d3510b4432c2b43dd9a6cf",
+    "preflight_job_sha256": "0a92ce25025047e6c8869f573f0099910597d1ff738ae31868fa3ce6ce1fd07c",
     "recovery_job_sha256": "8f2466b3ada2c1e787bab16063c7f899b6cb77aab35ee52fca95e5592baefcec"
   }
 }

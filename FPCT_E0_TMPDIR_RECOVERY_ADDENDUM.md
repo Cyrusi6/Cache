@@ -20,3 +20,5 @@ Before another GPU run, an exact-image CPU-only preflight must:
 6. attest that no model forward, training, checkpoint, or accuracy operation occurred.
 
 Only a `GO` preflight authorizes seed `2026072201` attempt 4. The complete seed restarts from step 0, then the same Pod serially runs seed `2026072202` attempt 2 and seed `2026072203` attempt 2. Accuracy remains unread until normal evaluation completion.
+
+The first TMPDIR preflight confirmed the canonical torch marker, identical stable `sys.path`, and identical image source tree, but the complete fingerprint still differed. It therefore correctly returned `BLOCKED` without GPU use. The replacement diagnostic preflight must additionally emit the exact recursive stable-projection differences; no recovery training is authorized until that difference is prospectively resolved and a later preflight returns `GO`.

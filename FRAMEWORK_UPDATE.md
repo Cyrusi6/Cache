@@ -1469,3 +1469,4 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Source tree与23个pre/post Rosetta module records均byte-identical。根因是runtime-write recovery把`TMPDIR`改为`/fpct-e0/tmp`，绕开了bootstrap只对`/tmp/tmp*` PyTorch `_remote_module_non_scriptable.py`目录执行的content-SHA canonicalization。
 - 前瞻修复只将`TMPDIR`恢复为容器`/tmp`；W&B/HF/XDG/Torch extension缓存继续隔离在`/fpct-e0`。Exact image、W&B offline mode和全部scientific config不变。
 - 新CPU-only closure preflight必须验证W&B offline lifecycle前后stable fingerprint、canonical torch marker与source-tree SHA一致；仅GO后从seed 2201 attempt 4 step 0重跑，再串行2202/2203。
+- 首次TMPDIR preflight确认canonical torch marker、stable sys.path和source tree均一致，但完整fingerprint仍有其他stable-projection字段变化，因此按合同`BLOCKED`且未启动GPU；replacement preflight增加递归projection diff以定位最后的编排差异。

@@ -17,6 +17,23 @@ def atomic_json(path: Path, payload: Any) -> None:
     os.replace(temporary, path)
 
 
+def projection_differences(before: Any, after: Any, path: str = "") -> list[dict[str, Any]]:
+    if isinstance(before, dict) and isinstance(after, dict):
+        differences: list[dict[str, Any]] = []
+        for key in sorted(set(before) | set(after)):
+            child = f"{path}.{key}" if path else key
+            if key not in before:
+                differences.append({"path": child, "before": None, "after": after[key]})
+            elif key not in after:
+                differences.append({"path": child, "before": before[key], "after": None})
+            else:
+                differences.extend(projection_differences(before[key], after[key], child))
+        return differences
+    if before != after:
+        return [{"path": path, "before": before, "after": after}]
+    return []
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--output", type=Path, required=True)
@@ -82,6 +99,9 @@ def main() -> int:
         value for value in stable_before
         if value.startswith("/tmp/tmp")
     ]
+    projection_diff = projection_differences(
+        before["stable_projection"], after["stable_projection"]
+    )
     status = "GO" if all((
         before["stable_fingerprint_sha256"]
         == after["stable_fingerprint_sha256"],
@@ -102,6 +122,7 @@ def main() -> int:
         "stable_sys_path_after": stable_after,
         "canonical_torch_remote_module_markers": canonical_markers,
         "raw_torch_tmp_entries": raw_torch_tmp,
+        "stable_projection_differences": projection_diff,
         "tmpdir": os.environ["TMPDIR"],
         "wandb_mode": "offline",
         "model_forward": False,

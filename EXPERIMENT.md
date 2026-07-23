@@ -5,6 +5,7 @@
 - Seed `2026072201` attempt 3 completed C_post training but failed the final sealed closure check; no F arm or accuracy evaluation ran.
 - Provenance comparison identified an orchestration-only mismatch: moving `TMPDIR` under `/fpct-e0` disabled the immutable bootstrap's `/tmp` content-SHA normalization for PyTorch's generated remote module.
 - The prospective recovery restores only `TMPDIR=/tmp`, keeps all persistent runtime caches outside `/opt/fpct`, requires an exact-image CPU closure preflight, and then restarts the full matched seed from step 0 before continuing the remaining two seeds.
+- The first CPU preflight remained `BLOCKED`: torch-path canonicalization and source-tree invariance passed, while another stable-projection field changed. No GPU job was released; a replacement diagnostic preflight now records the exact recursive projection diff.
 
 ## 2026-07-16：Kubernetes C2C Route-1 v2.2 Smoke
 
