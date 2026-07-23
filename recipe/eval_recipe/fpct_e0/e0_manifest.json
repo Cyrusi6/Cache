@@ -75,7 +75,7 @@
     "selection_partition": "frozen calibration",
     "selection_order": "content_group_sha256 ascending within task",
     "label_free": true,
-    "materialized_tree_sha256": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c"
+    "materialized_tree_sha256": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73"
   },
   "assets": {
     "receiver_config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
