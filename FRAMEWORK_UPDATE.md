@@ -1475,3 +1475,4 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Geometry diagnostic首次server-side create在运行前因纯数字short SHA被YAML解析成number而拒绝；`execution-sha` label已显式字符串化，没有创建Pod或产生diagnostic output。
 - Geometry diagnostic确认prefill `source_length=129`、sidecar range=`[3,120)`，但首个cached decode被wrapper section slicing错误缩成`source_length=1`。Production修复将mask boundary从`end`改为`initial_past_length+end`，不改operator或candidate geometry。
 - 新actual Qwen3/DynamicCache测试通过public wrapper `forward`复现并覆盖该路径；targeted qwen suite=`11 passed`，production/reference/Qwen/R2l exact-null组合=`66 passed`。后续必须构建新immutable image，仅恢复seed 2201 clean evaluation，checkpoint保持只读。
+- 新image从clean pushed commit `6a51ad4...`构建，digest=`sha256:19c7a815...`、embedded tree=`1534f7fe...`、tar SHA=`e13dbf2e...`。Recovery先要求单prompt prefill=129/decode=130 smoke，再建立attempt 5 clean evaluation；seed 2202/2203随后从step 0运行。

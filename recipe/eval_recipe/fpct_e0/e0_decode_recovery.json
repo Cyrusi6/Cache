@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e0_decode_mask_recovery_v1",
+  "run_uid": "fpct-e0-20260722-v1",
+  "authorized_by_user": true,
+  "failure": {
+    "seed": 2026072201,
+    "training_attempt": 4,
+    "matched_training_integrity": "GO",
+    "evaluation_valid": false,
+    "invalid_summary_interpretation": "quarantined empty result",
+    "root_cause": "cached decode attention mask sliced by current section length instead of past length plus section end"
+  },
+  "repair": {
+    "expression_before": "base_attention_mask[:, :end]",
+    "expression_after": "base_attention_mask[:, :initial_past_length + end]",
+    "operator_math_changed": false,
+    "training_math_changed": false,
+    "evaluation_decode_plumbing_changed": true
+  },
+  "image": {
+    "reference": "docker.io/library/fpct-e0-decode@sha256:19c7a81568b4701fa60f11c682423d9eb812fe6e8f95bcfc36aa21eb98e82683",
+    "git_commit": "6a51ad4ed1d66067c0ac2d3f2c8c3b5de0f5d2ba",
+    "source_tree_sha256": "1534f7fe2010ebc51b160b3bcb74e58d9eb44b3fd6cb8aad7674356dc91f4b7c",
+    "config_sha256": "f5ae17ba4c2f49c842e81fd65b3def2beb5bf768af46ae57c9ba1a8280fd30dc",
+    "bytes": 3519775894,
+    "tar_path": "/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1/assets/fpct-e0-decode-6a51ad4.tar",
+    "tar_bytes": 3519796224,
+    "tar_sha256": "e13dbf2ef38cfe2c06b76fc09695089c9d1f0939f96dc6089546156609346df1"
+  },
+  "execution": {
+    "decode_smoke_required": true,
+    "seed_2026072201": {
+      "training_source_attempt": 4,
+      "clean_evaluation_attempt": 5,
+      "retraining": false,
+      "checkpoint_modification": false
+    },
+    "seed_2026072202": {"attempt": 2, "from_step_zero": true},
+    "seed_2026072203": {"attempt": 2, "from_step_zero": true},
+    "final_effect_report_after_three_complete_seeds": true
+  },
+  "tests": {
+    "qwen_cpu_integration": "11 passed",
+    "targeted_fpct": "66 passed"
+  },
+  "hashes": {
+    "addendum_sha256": "883f9c0997f3208bdbc7d5ebffb0558cb8984dc324a21d9d5664e052221292fa",
+    "wrapper_sha256": "3639565bdd6e3308f64dcc10abc07319353e8f0cbba80e1efdf3633728363122",
+    "qwen_test_sha256": "a605841c72f106815dc9fbdc0cbd24d0b6fabfb6b49c4f087544957999c323f5",
+    "smoke_script_sha256": "93ee7d418dec80506fc66a0596c715ed2da4eddc57dda2a9f67bde364dfa9a0d",
+    "recovery_runner_sha256": "eba65f369c1df73839ab84642024eb9aeab400acf056cca0c82a2a8062890e94",
+    "image_loader_job_sha256": "3e026abe7ac3f2dd9340f79215f2636a207374748848ede23cd237a3935b66cd",
+    "smoke_job_sha256": "ab9a3c51576cacb75971f258c5b1a2522dd9c5ddb389639dd168e8b51d7da193",
+    "recovery_job_sha256": "87baea809fca1afbc9697b25b4f2c1243d96952be9cdd3d2382113d272104c80"
+  }
+}

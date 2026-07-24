@@ -9,6 +9,7 @@
 - The remaining difference was solely W&B's `ImportHookFinder` added to `sys.meta_path`. A presealed launcher now installs that same finder before fingerprinting, without changing the immutable SFT target or any training/evaluation setting; a third CPU preflight is required before GPU release.
 - The presealed run completed both 64-step arms with matched integrity GO. Evaluation then skipped every attempted sample because the FPCT sidecar parent range exceeded the decode cache source length; those empty 0% summaries are invalid. A one-prompt, no-correctness geometry diagnostic is used to capture the exact runtime lengths before any evaluation recovery.
 - The diagnostic captured prefill length 129 and first-decode length 1 for the unchanged sidecar range `[3,120)`. The wrapper incorrectly sliced a full cached-decode mask by current-section length only. The repair uses `initial_past_length + end`; actual Qwen3/DynamicCache and focused FPCT tests pass 11/11 and 66/66. A new immutable image is required before clean evaluation recovery.
+- Corrected image digest=`sha256:19c7a815...`, source commit=`6a51ad4...`, embedded tree=`1534f7fe...`, tar SHA=`e13dbf2e...`. A no-correctness smoke must recover geometry 129→130 before seed 2201 evaluation attempt 5 and fresh seeds 2202/2203 are released.
 
 ## 2026-07-16：Kubernetes C2C Route-1 v2.2 Smoke
 
