@@ -11,7 +11,7 @@ metadata:
     eligible-for-formal-statistics: "false"
     run-uid: fpct-e0-20260722-v1
     purpose: eval-geometry-diagnostic
-    execution-sha: __EXECUTION_SHORT__
+    execution-sha: "__EXECUTION_SHORT__"
 spec:
   backoffLimit: 0
   template:
