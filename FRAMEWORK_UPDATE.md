@@ -1471,3 +1471,4 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 新CPU-only closure preflight必须验证W&B offline lifecycle前后stable fingerprint、canonical torch marker与source-tree SHA一致；仅GO后从seed 2201 attempt 4 step 0重跑，再串行2202/2203。
 - 首次TMPDIR preflight确认canonical torch marker、stable sys.path和source tree均一致，但完整fingerprint仍有其他stable-projection字段变化，因此按合同`BLOCKED`且未启动GPU；replacement preflight增加递归projection diff以定位最后的编排差异。
 - Projection diff精确为W&B offline初始化新增`wandb.sdk.lib.import_hooks.ImportHookFinder`。新launcher在bootstrap预封存前注册并立即注销never-imported空hook，只预安装同一个finder；正式W&B会复用它，训练target仍是immutable `SFT_train.py`，W&B mode和scientific config不变。
+- Presealed recovery使seed 2201 attempt 4的C_post/F均完成64 steps，两个formal integrity与matched integrity全部GO。Evaluation随后所有样本触发`FPCT sidecar segment exceeds cache source length`，空结果不得使用；新增单prompt无correctness geometry diagnostic以记录decode source length与sidecar parent ranges，训练checkpoint保持只读。

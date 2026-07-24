@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e0_eval_geometry_diagnostic_v1",
+  "run_uid": "fpct-e0-20260722-v1",
+  "source_commit": "6b52da750009b5b29b8d71c2249c243430d57f39",
+  "seed": 2026072201,
+  "training_attempt": 4,
+  "training_integrity": "GO",
+  "accuracy_access": false,
+  "correctness_access": false,
+  "checkpoint_modified": false,
+  "diagnostic": {
+    "sample_count": 1,
+    "max_new_tokens": 2,
+    "fields": [
+      "source_length",
+      "parent_start",
+      "candidate_parent_count",
+      "parent_end",
+      "source_length_hint",
+      "max_slots_hint"
+    ]
+  },
+  "hashes": {
+    "script_sha256": "864b986babb4b6a92746e922c0b3c4b6a5be588bf84f61a77e0a65e81ba782ed",
+    "job_sha256": "c9310854cfa75a237cb411c5fc6d13dc298582831b7056b9aa42b6970bf61677"
+  }
+}
