@@ -1473,3 +1473,5 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Projection diff精确为W&B offline初始化新增`wandb.sdk.lib.import_hooks.ImportHookFinder`。新launcher在bootstrap预封存前注册并立即注销never-imported空hook，只预安装同一个finder；正式W&B会复用它，训练target仍是immutable `SFT_train.py`，W&B mode和scientific config不变。
 - Presealed recovery使seed 2201 attempt 4的C_post/F均完成64 steps，两个formal integrity与matched integrity全部GO。Evaluation随后所有样本触发`FPCT sidecar segment exceeds cache source length`，空结果不得使用；新增单prompt无correctness geometry diagnostic以记录decode source length与sidecar parent ranges，训练checkpoint保持只读。
 - Geometry diagnostic首次server-side create在运行前因纯数字short SHA被YAML解析成number而拒绝；`execution-sha` label已显式字符串化，没有创建Pod或产生diagnostic output。
+- Geometry diagnostic确认prefill `source_length=129`、sidecar range=`[3,120)`，但首个cached decode被wrapper section slicing错误缩成`source_length=1`。Production修复将mask boundary从`end`改为`initial_past_length+end`，不改operator或candidate geometry。
+- 新actual Qwen3/DynamicCache测试通过public wrapper `forward`复现并覆盖该路径；targeted qwen suite=`11 passed`，production/reference/Qwen/R2l exact-null组合=`66 passed`。后续必须构建新immutable image，仅恢复seed 2201 clean evaluation，checkpoint保持只读。

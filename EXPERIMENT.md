@@ -8,6 +8,7 @@
 - The first CPU preflight remained `BLOCKED`: torch-path canonicalization and source-tree invariance passed, while another stable-projection field changed. No GPU job was released; a replacement diagnostic preflight now records the exact recursive projection diff.
 - The remaining difference was solely W&B's `ImportHookFinder` added to `sys.meta_path`. A presealed launcher now installs that same finder before fingerprinting, without changing the immutable SFT target or any training/evaluation setting; a third CPU preflight is required before GPU release.
 - The presealed run completed both 64-step arms with matched integrity GO. Evaluation then skipped every attempted sample because the FPCT sidecar parent range exceeded the decode cache source length; those empty 0% summaries are invalid. A one-prompt, no-correctness geometry diagnostic is used to capture the exact runtime lengths before any evaluation recovery.
+- The diagnostic captured prefill length 129 and first-decode length 1 for the unchanged sidecar range `[3,120)`. The wrapper incorrectly sliced a full cached-decode mask by current-section length only. The repair uses `initial_past_length + end`; actual Qwen3/DynamicCache and focused FPCT tests pass 11/11 and 66/66. A new immutable image is required before clean evaluation recovery.
 
 ## 2026-07-16：Kubernetes C2C Route-1 v2.2 Smoke
 

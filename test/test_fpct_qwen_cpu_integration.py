@@ -130,6 +130,40 @@ def test_actual_qwen3_eager_prefill_decode_padding_gqa_mqa_and_gradients(
     assert wrapper._fpct_packed_layout.source_length == 5
 
 
+@pytest.mark.parametrize("num_key_value_heads", [1, 2])
+def test_wrapper_forward_decode_keeps_full_past_attention_mask_for_fpct_sidecar(
+    num_key_value_heads: int,
+) -> None:
+    model = _model(num_key_value_heads)
+    wrapper = RosettaModel([model], fpct_operator="f")
+    _sidecar(
+        wrapper,
+        batch_size=2,
+        source_length=4,
+        num_key_value_heads=num_key_value_heads,
+        ambiguous=True,
+    )
+    prefill = _forward(
+        wrapper,
+        torch.tensor([[4, 5, 6, 7], [8, 9, 10, 11]]),
+        torch.ones(2, 4, dtype=torch.long),
+    )
+    decode = wrapper.forward(
+        kv_cache_index=[
+            torch.tensor([[[-1, 0]]], dtype=torch.long)
+        ],
+        input_ids=torch.tensor([[12], [13]]),
+        attention_mask=torch.ones(2, 5, dtype=torch.long),
+        past_key_values=prefill.past_key_values,
+        use_cache=True,
+    )
+    assert decode.logits.shape == (2, 1, 64)
+    assert decode.past_key_values.get_seq_length() == 5
+    assert wrapper._fpct_packed_layout is not None
+    assert wrapper._fpct_packed_layout.source_length == 5
+    assert torch.isfinite(decode.logits).all()
+
+
 @pytest.mark.parametrize("operator", ["c_pre", "c_post", "f"])
 def test_actual_qwen3_runtime_operator_switch_and_config_roundtrip(
     operator: str, tmp_path: Path

@@ -1365,6 +1365,12 @@ class RosettaModel(nn.Module):
             section_starts.append(section_starts[-1] + l)
 
         curr_base_kv_cache = past_key_values
+        initial_past_length = (
+            int(past_key_values.get_seq_length())
+            if past_key_values is not None
+            and hasattr(past_key_values, "get_seq_length")
+            else 0
+        )
 
         for i in range(num_sections):
             start = section_starts[i]
@@ -1373,7 +1379,7 @@ class RosettaModel(nn.Module):
                 base_input_ids[:, start:end] if base_input_ids is not None else None
             )
             prefill_attention_mask = (
-                base_attention_mask[:, :end]
+                base_attention_mask[:, : initial_past_length + end]
                 if base_attention_mask is not None
                 else None
             )
