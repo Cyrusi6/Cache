@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e0_git_result_bundle_v1",
+  "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
+  "claim_boundary": "Exploratory TinyLlama-to-Qwen3 result at 2048 examples and 64 steps with n=3; no significance or cross-pair claim.",
+  "execution": {
+    "kubernetes_job": "fpct-e0-decode-recovery",
+    "completed_at": "2026-07-25T00:33:30+08:00",
+    "execution_commit": "6a51ad4ed1d66067c0ac2d3f2c8c3b5de0f5d2ba",
+    "bundle_parent_commit": "a1bb56cf0b315fdf4b03d56eab2e5a91560c3907",
+    "image": "docker.io/library/fpct-e0-decode@sha256:19c7a81568b4701fa60f11c682423d9eb812fe6e8f95bcfc36aa21eb98e82683",
+    "source_root": "/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1"
+  },
+  "included_artifacts": [
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/e0_effect_report.json",
+      "bytes": 964808,
+      "sha256": "df0364e549dd73f4705dad445d74fcfe8a7ff930e9eee30cba54c70416f29313"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/seed_2026072201_effect.json",
+      "bytes": 283397,
+      "sha256": "e55d981af7408aa885f3aec0984fd06029ed82e528eadcf71e1c6c929cc21318"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/seed_2026072201_mechanism_diagnostics.json",
+      "bytes": 7676,
+      "sha256": "adc7663890ab688cc5bdb4fc97c540b9dca73d544ad933943230e9bde1a7b594"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/seed_2026072201_matched_integrity.json",
+      "bytes": 4920,
+      "sha256": "b7a5bc7616067580e648d08e9f8686c940c3c0436e306eef8f5a0e87a0ff91f2"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/seed_2026072202_effect.json",
+      "bytes": 283375,
+      "sha256": "f2f8139991ba27782e92c897fe2cfc67640ad666b708af5d00ab87cfcd208d22"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/seed_2026072202_mechanism_diagnostics.json",
+      "bytes": 7671,
+      "sha256": "f5ba9a15bb8f20d97734f21fb59da6a40fe75a82b9746a8bbae4521f1dbed2aa"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/seed_2026072202_matched_integrity.json",
+      "bytes": 4920,
+      "sha256": "58ef68337e87de0917225fcd1dd71df2507bb746396878486e57fbe945385102"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/seed_2026072203_effect.json",
+      "bytes": 283416,
+      "sha256": "632343adbcf423fda6cd50fd4ea725ce573707567a4d42d990bb9c8852f3395a"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/seed_2026072203_mechanism_diagnostics.json",
+      "bytes": 7663,
+      "sha256": "73bffeec249827eacd80d7f802a9113e50202501a31d48cd20809df36dfce007"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/seed_2026072203_matched_integrity.json",
+      "bytes": 4920,
+      "sha256": "ed2849ab54ead0ed583fa9831cdfebcc7feba638b88ed0ad2413a5e19d77bc0c"
+    }
+  ],
+  "derived_tables": [
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/e0_seed_estimands.csv",
+      "bytes": 625,
+      "sha256": "e110593b76e29419ee8b55f36a492fbab875db55bdbbb33092bd1eeddea9b83c"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/e0_task_effects.csv",
+      "bytes": 239,
+      "sha256": "efd84c80af69a85eebefb73ff2d658776b74fbe1deb68a86f7dbc6063a5b1337"
+    }
+  ],
+  "excluded_large_artifacts": {
+    "root_size": "55GB",
+    "policy": "Remain on shared storage; not committed to Git.",
+    "contents": [
+      "checkpoints",
+      "per-sample CoT and predictions",
+      "W&B offline logs",
+      "runtime caches and temporary files"
+    ]
+  }
+}

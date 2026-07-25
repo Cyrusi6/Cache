@@ -1,0 +1,118 @@
+{
+  "arm_order": [
+    "c_post",
+    "f"
+  ],
+  "equal_fields": [
+    "step0_trainable_sha256",
+    "trainable_keys_sha256",
+    "rng_state_before_training_sha256",
+    "data_order_sha256",
+    "training_examples",
+    "optimizer_class",
+    "optimizer_group_count",
+    "optimizer_learning_rates",
+    "optimizer_weight_decay",
+    "scheduler_class",
+    "scheduler_initial_state_sha256"
+  ],
+  "records": {
+    "c_post": {
+      "checkpoint_reload_equal": true,
+      "data_order_sha256": "0d104d65154ac8a1b2f5b2425642047204cd60399cc25f9e3fe1fa59ad56226f",
+      "eager_backends": {
+        "receiver": "eager",
+        "sender": "eager"
+      },
+      "final_artifact_sha256": "09a1fe26b19bce4f717936a6ed51f044df9b2564963e10bf566cad8791589afc",
+      "official_checkpoint": "/fpct-e0/seeds/2026072201/attempt_4/c_post/checkpoint-64",
+      "official_checkpoint_sha256": "6a856ab094a3327a8166ea7a1aa269bd190312d15a3f196c6bcb4383d4e17995",
+      "operator": "c_post",
+      "optimizer_class": "torch.optim.adamw.AdamW",
+      "optimizer_group_count": 3,
+      "optimizer_learning_rates": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "optimizer_state_entry_count": 1120,
+      "optimizer_state_sha256": "1a2e430236d466d237cffa58b76458d64254a8c5f1cd74df67363222a83223ce",
+      "optimizer_steps": 64,
+      "optimizer_weight_decay": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "rng_state_before_training_rank_sha256": [
+        "a31438a4ab0c719258c420ef2aa98a4c97ecf65553c74e4b995d35fee4a019f1",
+        "a31438a4ab0c719258c420ef2aa98a4c97ecf65553c74e4b995d35fee4a019f1"
+      ],
+      "rng_state_before_training_sha256": "a31438a4ab0c719258c420ef2aa98a4c97ecf65553c74e4b995d35fee4a019f1",
+      "scheduler_class": "torch.optim.lr_scheduler.LambdaLR",
+      "scheduler_initial_state_sha256": "07b370b0d51b68dc86f6149e8a9a1afd15e79ea71aa0318d461eeb2de2d17454",
+      "scheduler_last_epoch": 64,
+      "scheduler_state_sha256": "898b65b64aa4e8306523227a730bffc6a3836e3e4c54b3ba1b4799408a786230",
+      "scheduler_step_matches": true,
+      "schema_version": 1,
+      "seed": 2026072201,
+      "step0_trainable_sha256": "7c416bdf41f8d34de2f6096fa6c81626c36c2a3a10e0bf20a7c0fd9737c6cb52",
+      "trainable_keys_sha256": "c33db1126ac5b14be0f119f2bebc60573d668f2da4227f4848de0e066477ba15",
+      "trainable_rank_hashes": [
+        "7c416bdf41f8d34de2f6096fa6c81626c36c2a3a10e0bf20a7c0fd9737c6cb52",
+        "7c416bdf41f8d34de2f6096fa6c81626c36c2a3a10e0bf20a7c0fd9737c6cb52"
+      ],
+      "training_examples": 2048,
+      "training_state_sha256": "49d6b846565d3d2cedc52e5ba311ea5a812935bcc4b52395c6c0ec81fc7b44d6"
+    },
+    "f": {
+      "checkpoint_reload_equal": true,
+      "data_order_sha256": "0d104d65154ac8a1b2f5b2425642047204cd60399cc25f9e3fe1fa59ad56226f",
+      "eager_backends": {
+        "receiver": "eager",
+        "sender": "eager"
+      },
+      "final_artifact_sha256": "c8f70342f3d3df0fe0394e53d3673781dd2c53a59b02ab6e19558b081fca24b8",
+      "official_checkpoint": "/fpct-e0/seeds/2026072201/attempt_4/f/checkpoint-64",
+      "official_checkpoint_sha256": "1f58070a2eb253822cb3fbde5c473ae711f656a4ff7a47ab404715a7f10ee7b5",
+      "operator": "f",
+      "optimizer_class": "torch.optim.adamw.AdamW",
+      "optimizer_group_count": 3,
+      "optimizer_learning_rates": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "optimizer_state_entry_count": 1120,
+      "optimizer_state_sha256": "1adaae18abe700563cf0b91ba73198cc6309873f161a8d684f8e56f908b417f1",
+      "optimizer_steps": 64,
+      "optimizer_weight_decay": [
+        0.01,
+        0.01,
+        0.01
+      ],
+      "rng_state_before_training_rank_sha256": [
+        "a31438a4ab0c719258c420ef2aa98a4c97ecf65553c74e4b995d35fee4a019f1",
+        "a31438a4ab0c719258c420ef2aa98a4c97ecf65553c74e4b995d35fee4a019f1"
+      ],
+      "rng_state_before_training_sha256": "a31438a4ab0c719258c420ef2aa98a4c97ecf65553c74e4b995d35fee4a019f1",
+      "scheduler_class": "torch.optim.lr_scheduler.LambdaLR",
+      "scheduler_initial_state_sha256": "07b370b0d51b68dc86f6149e8a9a1afd15e79ea71aa0318d461eeb2de2d17454",
+      "scheduler_last_epoch": 64,
+      "scheduler_state_sha256": "898b65b64aa4e8306523227a730bffc6a3836e3e4c54b3ba1b4799408a786230",
+      "scheduler_step_matches": true,
+      "schema_version": 1,
+      "seed": 2026072201,
+      "step0_trainable_sha256": "7c416bdf41f8d34de2f6096fa6c81626c36c2a3a10e0bf20a7c0fd9737c6cb52",
+      "trainable_keys_sha256": "c33db1126ac5b14be0f119f2bebc60573d668f2da4227f4848de0e066477ba15",
+      "trainable_rank_hashes": [
+        "7c416bdf41f8d34de2f6096fa6c81626c36c2a3a10e0bf20a7c0fd9737c6cb52",
+        "7c416bdf41f8d34de2f6096fa6c81626c36c2a3a10e0bf20a7c0fd9737c6cb52"
+      ],
+      "training_examples": 2048,
+      "training_state_sha256": "1391ffd930b448668b986f29cecbea993af9e2760fa16365613087ed4d08a12f"
+    }
+  },
+  "schema_version": 1,
+  "seed": 2026072201,
+  "status": "GO"
+}

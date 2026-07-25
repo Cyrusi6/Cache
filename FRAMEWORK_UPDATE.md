@@ -1476,3 +1476,13 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - Geometry diagnostic确认prefill `source_length=129`、sidecar range=`[3,120)`，但首个cached decode被wrapper section slicing错误缩成`source_length=1`。Production修复将mask boundary从`end`改为`initial_past_length+end`，不改operator或candidate geometry。
 - 新actual Qwen3/DynamicCache测试通过public wrapper `forward`复现并覆盖该路径；targeted qwen suite=`11 passed`，production/reference/Qwen/R2l exact-null组合=`66 passed`。后续必须构建新immutable image，仅恢复seed 2201 clean evaluation，checkpoint保持只读。
 - 新image从clean pushed commit `6a51ad4...`构建，digest=`sha256:19c7a815...`、embedded tree=`1534f7fe...`、tar SHA=`e13dbf2e...`。Recovery先要求单prompt prefill=129/decode=130 smoke，再建立attempt 5 clean evaluation；seed 2202/2203随后从step 0运行。
+
+### 2026-07-25 FPCT-E0 完成与结果归档
+
+- 研究目标：以三个 matched exploratory seeds 判断 TinyLlama→Qwen3 上的 FPCT 是否值得进入 36-run confirmatory campaign。
+- 核心执行：seed 2201 使用只读 attempt-4 checkpoints 在 attempt 5 重做修复后评测；seeds 2202/2203 从 step 0 完成 C_post/F 各 64 steps。最终 Job `fpct-e0-decode-recovery` 完成且无 Pod restart。
+- 实验配置：每臂 2,048 MMLU auxiliary-train examples、64 optimizer steps、双 RTX 4090 48GB、BF16、eager attention；四个冻结 inference cells 和 ARC/OpenBookQA/MMLU-Redux development evaluation。
+- 验证结果：3/3 matched integrity=`GO`，3/3 mechanism activation nonzero，所有正式 evaluation skipped=0；aggregate SHA256=`df0364e549dd73f4705dad445d74fcfe8a7ff930e9eee30cba54c70416f29313`。
+- 结果：mean `T=-0.2728 pp`，2/3 T positive；mean `O=-0.4762 pp`，0/3 O positive。Task mean T 为 ARC `-1.5625 pp`、MMLU `+3.1250 pp`、OpenBookQA `-2.3810 pp`。
+- 结论：冻结分类=`E0_NO_GO_FOR_FURTHER_SPEND`。工程路径成立且机制被激活，但当前 recipe 没有表现出正的 query-time accuracy effect，也未达到继续正式确认投入的门槛。
+- 归档：Git 保存 aggregate、每 seed effect、mechanism、integrity、CSV 与 SHA manifest；完整 55GB 运行产物继续保存在 `/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1`。

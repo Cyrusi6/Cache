@@ -410,3 +410,13 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - R2j CPU验证：targeted trainer/bootstrap integrity tests `29 passed, 2 warnings`；full suite `416 passed, 2 warnings`。尚无R2j GPU/pretrained/training/checkpoint/accuracy output。
 - R2j two-lock：scientific SHA `efa02fb...`；image `sha256:8eac5693...`；run-lock `51ce0a5e...`；run UID `fpct-r2j-efa02fb-v1`。新root预建attestations/results/W&B目录，lock前无GPU/pretrained/training/checkpoint/accuracy output。
 - R2j terminal：complete GPU GO、16 conditions+5 profiles完整、22/23 checks通过。Checkpoint-native FP32/BF16 delta均0，forced-on `0.2450/0.71875`，exact/no-sync/HBM/expansion均通过；唯一失败为median latency ratio `1.6886 > 1.50`（p95 `1.3455`通过）。Controller=`GPU_ENGINEERING_BLOCKED_R2`，未运行matched smoke/formal training/checkpoint/accuracy/model-selection/held-out。
+
+### 2026-07-25 FPCT-E0 三 seed 最终探索性结果
+
+- Kubernetes Job `fpct-e0-decode-recovery` 正常完成，Pod restart=0；三个 seed、两条训练臂、四个 inference cells 和三任务评测全部完成，正式评测 `skipped=0`。
+- 三个 seed 的 matched integrity 全部为 `GO`，真实 candidate-factorization activation 全部非零。旧 decode-mask 错误产生的空 0% 结果保持隔离，未进入最终统计。
+- Seed-level `T` 为 `+1.2128/-3.3780/+1.3467 pp`，均值 `-0.2728 pp`；`O` 为 `-0.1302/-1.0826/-0.2158 pp`，均值 `-0.4762 pp`，0/3 为正。
+- Task-level mean `T`：ARC `-1.5625 pp`、MMLU-Redux `+3.1250 pp`、OpenBookQA `-2.3810 pp`。
+- 冻结 GO 规则中“至少 2/3 T>0”通过，但 `mean(T)>=+1.00 pp` 失败，OpenBookQA 低于 `-2.00 pp` task floor，query-time mechanism positive gate 也失败。
+- 最终分类=`E0_NO_GO_FOR_FURTHER_SPEND`：当前 TinyLlama→Qwen3、2,048 examples/64 steps recipe 不支持投入 36-run confirmatory campaign；不外推为 FPCT 普遍无效。
+- 小型正式结果已版本化到 `recipe/eval_recipe/fpct_e0/versioned_outputs/`；完整 55GB checkpoints、逐样本输出和运行日志保留在 `/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1`，不提交 Git。
