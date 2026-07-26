@@ -1,12 +1,13 @@
 {
-  "schema_version": 1,
-  "protocol_id": "fpct_e1_mechanism_audit_v1",
+  "schema_version": 2,
+  "protocol_id": "fpct_e1_mechanism_audit_v2",
+  "supersedes_before_natural_output": "fpct_e1_mechanism_audit_v1",
   "created_at": "2026-07-26T00:00:00+08:00",
   "branch": "research/fpct-e1-mechanism-audit",
   "base_commit": "613958af38fad27e1ea933ccc0dda6d1af5cce89",
   "classification": "EXPLORATORY_MECHANISM_AUDIT_NOT_CONFIRMATORY",
-    "current_stage": "E1-1",
-  "current_status": "GO",
+  "current_stage": "COMMIT_A_PRE_DATA_EXECUTION_LOCK",
+  "current_status": "PRE_DATA_LOCK_GO_NATURAL_EXECUTION_NOT_STARTED",
   "e0_read_only": {
     "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
     "result_document": {
@@ -148,6 +149,11 @@
             "no NaN or Inf"
         ],
         "decision": "GO",
+        "consolidated_gate": {
+            "path": "recipe/eval_recipe/fpct_e1/e1_instrumentation_hard_gate.json",
+            "sha256": "d17b4b7f35e2384abfbd300cf109484d6aacc91dd84cd3f2573a8d5dd36d4b17",
+            "required_checks": 6
+        },
         "evidence": {
             "report": "FPCT_E1_INSTRUMENTATION_REPORT.md",
             "parity": {
@@ -162,14 +168,14 @@
                 "gamma_query_variance": 0.19730721414089203
             },
             "targeted_tests": {
-                "passed": 82,
+                "passed": 169,
                 "failed": 0
             }
         },
         "implementation_sha256": {
-            "rosetta/model/fpct_instrumentation.py": "89084c8311e9517cf40ad8413014c562cbafb687edcabd53c8bd4ecc19753844",
-            "rosetta/model/fpct_attention.py": "f3eb35f09d45c9e5b60f8d84029d41764afbd22fa1eed8098727fc923cd4cbf8",
-            "rosetta/model/wrapper.py": "3fa8d397ec0d22015519d3beb05ab244a4f5b8205dc5c58df1211a2edc989bf3",
+            "rosetta/model/fpct_instrumentation.py": "7b5b9f23001ede79007e68d6502a662145cb411ce6c332855671e3c7a1147faf",
+            "rosetta/model/fpct_attention.py": "ba7c7db8bd73d50a9ee414acc1986a03c571a3e4ab12b44a52a71772cc287809",
+            "rosetta/model/wrapper.py": "9d08af9ced794e15e4c0b7c7921a12529646576153e61c9e47a78e6c8abc0415",
             "script/analysis/fpct_e1_instrumentation_gate.py": "18d77b1a1cebae17572916b41d964160fc46b6527647551dff010dd6a77dbb9e",
             "test/test_fpct_instrumentation.py": "09e4b91a4b35d1fd9cae37c97077b32d966b18ae09c0d03a98aac8176952406d"
         }
@@ -185,8 +191,10 @@
       "Y_FC",
       "Y_FF"
     ],
-    "query_population": "teacher-forced gold response positions with label != -100",
-    "primary_diagnostic": "Delta log p(y*) = log p_F(y*) - log p_C_post(y*)",
+    "query_population": "teacher-forced query t iff labels[t+1] != -100 within the complete canonical assistant response",
+    "gold_response_template": "The correct answer is {A|B|C|D}.",
+    "primary_diagnostic": "sum token log-probability within complete response, then distinct-content-group-equal Delta log p(y*)",
+    "end_task_accuracy_contract": "E0-compatible deterministic generated-answer correctness counted once per distinct content group; never teacher-forced token argmax accuracy",
     "secondary": [
       "accuracy",
       "correctness flip"
@@ -197,6 +205,14 @@
       "attention functional effect"
     ],
     "normalized_dispersion": "D_X / (sum_j A_ij * ||X_ij||_2^2 + epsilon)",
+    "dispersion_accumulation_dtype": "float32",
+    "dispersion_epsilon": 1e-12,
+    "geometry_taps": {
+      "source": "after legal source candidate gather and before projector/fuser",
+      "fused": "after candidate-specific projector/fuser and legacy confidence/gate, before A-collapse and centered-lambda",
+      "head_reduction": "full head-by-feature Frobenius scalar; no sender/receiver head pairing"
+    },
+    "attention_head_contract": "query_head=Hq; kv_head=floor(query_head/(Hq/Hkv))",
     "contraction_ratio": {
       "r_K": "D_K_fused / (D_K_source + epsilon)",
       "r_V": "D_V_fused / (D_V_source + epsilon)"
@@ -208,19 +224,20 @@
       "neighbor_expansion",
       "taxonomy_unresolved"
         ],
+        "runtime_topology_contract": "certified_slot0_v1 with candidate_window=0 implies every retained runtime m>=2 functional row is partition_compositional; other strata live only in a separate raw-to-runtime topology ledger",
         "offline_contract": {
             "schema": {
                 "path": "recipe/eval_recipe/fpct_e1/e1_mechanism_schema.json",
-                "sha256": "b6911f3d9c5954602631dace29ebc0de074575205933b5e427c918c2ab02b2cd"
+                "sha256": "deed95b272f4b50ff759bebd68a0f13c0437a2368d54b6432fb6147519b2283e"
             },
             "runner": {
                 "path": "script/analysis/fpct_e1_mechanism_audit.py",
-                "sha256": "29b7e6042bf490cacce7b00f57935fe800e9d471cd70d97c00ecf86be43a0f2d"
+                "sha256": "8e9636a2f2e4a843be7bb5e70dacc4da1ac035ea2ef353b92dc92dc87115e926"
             },
             "test": {
                 "path": "test/test_fpct_e1_mechanism_audit.py",
-                "sha256": "caf72cf194af14947c6a47b766d2b451d9ab7a0f885e290ec7754832316608e6",
-                "passed": 13
+                "sha256": "21c1c5c3e34ecd5d428cb7328e927ef73dd685d4ceefa437673573a52be05694",
+                "passed": 20
             },
             "native_and_children_share_global_denominator": true,
             "taxonomy_unresolved_fail_closed": true
@@ -253,6 +270,89 @@
     "all_grid_points_reported": true,
     "best_lambda_only_reporting_forbidden": true,
     "fixed_checkpoint_evidence_class": "mechanistic headroom diagnostic, not matched-training or confirmatory evidence"
+  },
+  "execution_lock_contract": {
+    "status": "CODE_AND_PROTOCOL_FROZEN_PENDING_COMMIT_A",
+    "natural_e0_design_output_accessed": false,
+    "source_snapshot": {
+      "construction": "clean pushed Commit A git archive",
+      "receipt": "commit SHA + Git tree OID + ls-tree mode/blob/path + archive bytes + mounted-tree SHA",
+      "live_worktree_mount_forbidden": true,
+      "k8s_mount_read_only": true
+    },
+    "input_lock": {
+      "population": "E0-design only: ai2-arc 128, openbookqa 70, mmlu-redux 128",
+      "row_formula": "answer_query_count * certified_parent_count * 28 * 16",
+      "per_sample_ceiling": 262144,
+      "task_distribution": ["count", "sum", "min", "p50", "p95", "max", "argmax"],
+      "quantile_method": "nearest rank: sorted[ceil(p*n)-1]",
+      "e1_pilot_consumed": false
+    },
+    "checkpoint_contract": {
+      "loaded_trees": "six immutable final projector trees",
+      "cross_check": "each final projector set byte-identical to the same attempt checkpoint-64 projector set",
+      "both_final_and_step64_trees_hashed_read_only": true,
+      "projector_load_mode": "strict_attested",
+      "missing_or_unexpected_keys_allowed": false
+    },
+    "runtime_provenance": {
+      "immutable_image_probe_before_model_output": true,
+      "sender_receiver_full_asset_trees_verified_before_load": true,
+      "dev_data_configs_checkpoints_verified_before_load": true,
+      "actual_image_model_checkpoint_input_hashes": "pending_until_post_commit_execution_plan"
+    },
+    "raw_topology": {
+      "generated_before_model_output": true,
+      "artifact_formats": ["jsonl", "parquet", "aggregate_csv", "aggregate_json", "manifest"],
+      "functional_metrics_present": false,
+      "taxonomy_precedence": ["boundary_fallback", "neighbor_expansion", "partition_compositional", "strict_competing_overlap", "taxonomy_unresolved"]
+    },
+    "capture_storage": {
+      "format": "parquet_only",
+      "batch_rows": 4096,
+      "whole_table_materialization_forbidden": true,
+      "atomic_no_overwrite": true,
+      "recoverable_exclusive_claim_lease": true
+    },
+    "stage_graph": {
+      "cpost_baseline_shards": 18,
+      "factorized_endpoint_shards": 18,
+      "endpoint_closure_shards": 36,
+      "analyzer_and_finalized_receipt_required_before_e1_3": true,
+      "centered_lambda_addition_shards": 72,
+      "final_closure_shards": 108,
+      "lambda_zero": "real F-runtime exact-collapse control",
+      "lambda_one": "reused E1-2 F endpoint"
+    },
+    "baseline_ownership": {
+      "cpost_fields_runtime_backend_may_report": false,
+      "executor_mechanical_join_required": true,
+      "replicated_collapse_is_diagnostic_not_fourth_arm": true
+    },
+    "immutable_k8s_locks": {
+      "initial_and_finalized_configmaps_immutable": true,
+      "configmap_size_strictly_less_than_bytes": 1048576,
+      "mounted_byte_verification_required": true,
+      "input_raw_finalized_source_mounts_read_only": true,
+      "writable_scope": "current run output root only",
+      "node_name": "4090-48gx2",
+      "gpu_per_shard": 1,
+      "maximum_parallel_shards_on_node": 2
+    },
+    "implementation_and_test_sha256": {
+      "script/analysis/fpct_e1_mechanism_audit.py": "8e9636a2f2e4a843be7bb5e70dacc4da1ac035ea2ef353b92dc92dc87115e926",
+      "script/experiment/fpct_e1_capture_runner.py": "3babab4ab5c8b4f0be84280be36b572620d317f41912d783f95d018a79babfa7",
+      "script/experiment/fpct_e1_prepare_input_lock.py": "e450ccb40450894abd4f0b2e873d2c211f61c7eabfb3435cf500b4648bac5505",
+      "script/experiment/fpct_e1_runtime_backend.py": "99fa1b26bba3294e12cec766b165846903e3426d139eb258ed17f8b230c06cbe",
+      "script/experiment/fpct_e1_runtime_probe.py": "dde6b47b0b4779fe0c401c1bb563f67880f6c76e73c762ea6c992c123240066f",
+      "script/experiment/fpct_e1_source_snapshot_lock.py": "e55203df92a86e656e57372c7333e1f222e9d7a02cc709dbb85ea6cf287416f2",
+      "script/experiment/fpct_e1_k8s_lock_bundle.py": "170fde17abda50ecf85bbd050c3109bf0214178072aef4b181bb371f837f54f4",
+      "recipe/k8s/fpct_e1/e0_design_capture_job.yaml": "8e801db91130e30c29f210067da19d24e3ba361ecee9cd7e44edfe10cb4f1411",
+      "recipe/k8s/fpct_e1/runtime_probe_job.yaml": "85d966b62156a03627338f00804b6a909e43d2e89d81376d9656b342f0bdc88d",
+      "test/test_fpct_e1_capture_runner.py": "a3fc177ae5f1bdcbbf28cbdbab4f75c07573221c5c0e2deeafaa87bc7a690721",
+      "test/test_fpct_e1_source_snapshot_lock.py": "8a55578f06026ca07cbc3f384520086edc605648719a2aac6edf238c6a2365fa",
+      "test/test_fpct_e1_k8s_lock_bundle.py": "82ab1f53113b06f5bd0b3f2ded61ff7382151acae9ac0fadc2793319ae9d0fc4"
+    }
   },
   "authorization": {
     "instrumentation_hard_gate": true,

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "gate_id": "fpct_e1_instrumentation_hard_gate_v1",
+  "status": "GO",
+  "created_at": "2026-07-26T00:00:00+08:00",
+  "logical_path": "repo://recipe/eval_recipe/fpct_e1/e1_instrumentation_hard_gate.json",
+  "checks": {
+    "formula_oracles": true,
+    "instrumentation_on_off_equivalent": true,
+    "synthetic_query_variance_positive": true,
+    "multistep_accumulation_preserved": true,
+    "invalid_probability_gradient_exact_zero": true,
+    "no_nan_inf": true
+  },
+  "evidence": [
+    {
+      "logical_path": "repo://recipe/eval_recipe/fpct_e1/e1_instrumentation_parity.json",
+      "sha256": "00fb8403f1376eb0a3d4ccf498a6c7230a313aec7259f661553ca0e164a2d1fc"
+    },
+    {
+      "logical_path": "repo://recipe/eval_recipe/fpct_e1/e1_synthetic_query_variance.json",
+      "sha256": "f652ee99f8bce508b3f35953b10ad11ad4046ab0f868bf93fc08a82bb6ef14b2"
+    },
+    {
+      "logical_path": "repo://rosetta/model/fpct_instrumentation.py",
+      "sha256": "7b5b9f23001ede79007e68d6502a662145cb411ce6c332855671e3c7a1147faf"
+    },
+    {
+      "logical_path": "repo://rosetta/model/fpct_attention.py",
+      "sha256": "ba7c7db8bd73d50a9ee414acc1986a03c571a3e4ab12b44a52a71772cc287809"
+    },
+    {
+      "logical_path": "repo://rosetta/model/wrapper.py",
+      "sha256": "9d08af9ced794e15e4c0b7c7921a12529646576153e61c9e47a78e6c8abc0415"
+    },
+    {
+      "logical_path": "repo://test/test_fpct_instrumentation.py",
+      "sha256": "09e4b91a4b35d1fd9cae37c97077b32d966b18ae09c0d03a98aac8176952406d"
+    },
+    {
+      "logical_path": "repo://test/test_fpct_qwen_cpu_integration.py",
+      "sha256": "a605841c72f106815dc9fbdc0cbd24d0b6fabfb6b49c4f087544957999c323f5"
+    },
+    {
+      "logical_path": "repo://test/test_fpct_reference_operator.py",
+      "sha256": "34e537d379b87c398960c60c128d2a861b6be492c7d410704005f3587ef7e208"
+    },
+    {
+      "logical_path": "repo://test/test_fpct_production_path.py",
+      "sha256": "90eb7e642c75d9cb967944f902424adf352a548a139732b031f0839b929aa9f7"
+    },
+    {
+      "logical_path": "repo://test/test_fpct_e1_runtime_capture_primitives.py",
+      "sha256": "815e144976c4efcbb35ff69f180d32ea922938ee8a954173713b503f1dca1749"
+    }
+  ],
+  "test_summary": {
+    "suite": "fpct_e1_predata_15_file_suite",
+    "passed": 169,
+    "failed": 0,
+    "cuda_visible_devices": ""
+  },
+  "firewall": {
+    "natural_e0_design_output_accessed": false,
+    "e1_pilot_consumed": false,
+    "confirmatory_consumed": false,
+    "pretrained_model_loaded": false,
+    "gpu_or_kubernetes_used": false,
+    "training_used": false
+  }
+}

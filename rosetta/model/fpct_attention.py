@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from math import sqrt
-from typing import Iterable, Optional, Sequence
+from typing import Iterable, Mapping, Optional, Sequence
 
 import torch
 from torch import Tensor
@@ -12,6 +12,18 @@ from torch import nn
 
 
 FPCT_OPERATORS = frozenset({"c_pre", "c_post", "f"})
+FPCT_CAPTURE_GEOMETRY_KEYS = frozenset(
+    {
+        "source_d_k",
+        "source_d_v",
+        "source_energy_k",
+        "source_energy_v",
+        "fused_d_k",
+        "fused_d_v",
+        "fused_energy_k",
+        "fused_energy_v",
+    }
+)
 
 
 def normalize_fpct_operator(operator: Optional[str]) -> Optional[str]:
@@ -36,6 +48,9 @@ class FPCTSidecarSegment:
     certified: bool = False
     parent_force_native: Optional[Tensor] = None  # [B,N], semantic hard-gate identity
     parent_equivalent: Optional[Tensor] = None  # [B,N], exact final parent identity
+    # Capture-only sufficient statistics.  These are scalar per-parent
+    # reductions, never source/fused K/V tensors.
+    capture_geometry: Optional[Mapping[str, Tensor]] = None  # each [B,N]
 
     def validate(self) -> None:
         if self.parent_start < 0:
@@ -76,6 +91,19 @@ class FPCTSidecarSegment:
                 raise ValueError(
                     "sidecar parent_equivalent and candidate tensors must share a device"
                 )
+        if self.capture_geometry is not None:
+            if set(self.capture_geometry) != FPCT_CAPTURE_GEOMETRY_KEYS:
+                raise ValueError("sidecar capture geometry keys are incomplete")
+            expected = (self.key.shape[0], self.key.shape[2])
+            for name, value in self.capture_geometry.items():
+                if value.shape != expected:
+                    raise ValueError(f"sidecar {name} must be [B,N]")
+                if value.device != self.key.device:
+                    raise ValueError(
+                        f"sidecar {name} and candidate tensors must share a device"
+                    )
+                if not value.is_floating_point():
+                    raise ValueError(f"sidecar {name} must be floating point")
 
 
 @dataclass
@@ -93,6 +121,8 @@ class FPCTPackedMemory:
     parent_equivalent: Tensor
     all_parent_equivalent: Tensor
     top_k: int
+    # Optional capture-only scalar maps, each [B,S].
+    capture_geometry: Optional[dict[str, Tensor]] = None
 
 
 @dataclass(frozen=True)
@@ -475,6 +505,29 @@ def pack_fpct_memory(
             or segment.key.shape[-1] != d
         ):
             raise ValueError("sidecar/cache batch/head/dim mismatch")
+    geometry_segments = [
+        segment for segment in segments if segment.capture_geometry is not None
+    ]
+    capture_geometry: Optional[dict[str, Tensor]] = None
+    if geometry_segments:
+        if len(geometry_segments) != len(segments):
+            raise ValueError(
+                "capture source geometry must be present on every FPCT sidecar segment"
+            )
+        capture_geometry = {
+            name: torch.zeros(
+                b, source_length, device=key.device, dtype=torch.float32
+            )
+            for name in sorted(FPCT_CAPTURE_GEOMETRY_KEYS)
+        }
+        for segment in segments:
+            assert segment.capture_geometry is not None
+            start = segment.parent_start
+            end = start + segment.key.shape[2]
+            for name in capture_geometry:
+                capture_geometry[name][:, start:end] = segment.capture_geometry[
+                    name
+                ].to(device=key.device, dtype=torch.float32)
     safe_parent = layout.safe_parent
     parent_gather = safe_parent[:, None, :, None].expand(
         b, hkv, layout.max_slots, d
@@ -610,6 +663,7 @@ def pack_fpct_memory(
         parent_equivalent=parent_equivalent,
         all_parent_equivalent=parent_equivalent.all(dim=-1),
         top_k=layout.top_k,
+        capture_geometry=capture_geometry,
     )
 
 
@@ -887,6 +941,34 @@ def fpct_mechanism_diagnostics(
         & (broadcast_mask > torch.finfo(torch.float32).min / 2)
     )
     log_prior = packed.log_prior[:, None, None, :].float().expand_as(logits)
+    # Qwen causal masks commonly use the finite ``float32.min`` sentinel
+    # rather than ``-inf``.  Treating every finite value as active would give
+    # masked atoms non-zero diagnostic mass when a row has no other atom.
+    atom_active = (
+        packed.active[:, None, None, :]
+        & torch.isfinite(broadcast_mask)
+        & (broadcast_mask > torch.finfo(torch.float32).min / 2)
+    ).expand_as(logits)
+    global_masked = torch.where(
+        atom_active, logits, torch.full_like(logits, -torch.inf)
+    )
+    global_any = atom_active.any(dim=-1, keepdim=True)
+    global_probability = torch.softmax(
+        torch.where(global_any, global_masked, torch.zeros_like(global_masked)),
+        dim=-1,
+        dtype=torch.float32,
+    )
+    global_probability = torch.where(
+        atom_active, global_probability, torch.zeros_like(global_probability)
+    )
+    parent_attention_mass = torch.zeros(
+        b, hq, q_length, source_length,
+        device=query.device,
+        dtype=torch.float32,
+    )
+    parent_attention_mass.scatter_add_(
+        3, parent_index, global_probability
+    )
     raw_logits = logits - log_prior
     zeros = torch.zeros_like(logits)
     count = torch.zeros(
@@ -1011,6 +1093,26 @@ def fpct_mechanism_diagnostics(
     value_dispersion = torch.zeros_like(value_sum)
     key_dispersion.scatter_add_(2, parent_kv, key_dispersion_atom)
     value_dispersion.scatter_add_(2, parent_kv, value_dispersion_atom)
+    key_energy = torch.zeros_like(key_sum)
+    value_energy = torch.zeros_like(value_sum)
+    key_energy.scatter_add_(
+        2,
+        parent_kv,
+        torch.where(
+            candidate_mask_kv,
+            atom_prior * packed.key.float().square(),
+            0.0,
+        ),
+    )
+    value_energy.scatter_add_(
+        2,
+        parent_kv,
+        torch.where(
+            candidate_mask_kv,
+            atom_prior * packed.value.float().square(),
+            0.0,
+        ),
+    )
     parent_has_candidates = (
         torch.zeros(b, source_length, device=query.device, dtype=torch.float32)
         .scatter_add_(
@@ -1046,18 +1148,45 @@ def fpct_mechanism_diagnostics(
     }
     if not return_capture_payload:
         return metrics
+    derived_fused_geometry = {
+        "fused_d_k": key_dispersion.sum(dim=(1, 3))[:, None, :].expand(
+            b, hq, source_length
+        ),
+        "fused_d_v": value_dispersion.sum(dim=(1, 3))[:, None, :].expand(
+            b, hq, source_length
+        ),
+        "fused_energy_k": key_energy.sum(dim=(1, 3))[:, None, :].expand(
+            b, hq, source_length
+        ),
+        "fused_energy_v": value_energy.sum(dim=(1, 3))[:, None, :].expand(
+            b, hq, source_length
+        ),
+    }
+    capture_geometry = None
+    if packed.capture_geometry is not None:
+        capture_geometry = {
+            name: value[:, None, :].expand(b, hq, source_length)
+            for name, value in packed.capture_geometry.items()
+        }
     return metrics, {
         "gamma": gamma,
+        "prior": prior,
         "candidate_mask": candidate,
         "parent_index": packed.parent_index,
         "candidate_index": packed.candidate_index,
         "top_k": packed.top_k,
+        "num_key_value_heads": hkv,
         "source_length": source_length,
+        "parent_geometry": {
+            **derived_fused_geometry,
+            **(capture_geometry or {}),
+        },
         "parent_metrics": {
             "gamma_kl_prior": kl_parent,
             "gamma_tv_prior": tv_parent,
             "candidate_logit_variance": raw_variance,
             "candidate_logit_range": logit_range,
             "jensen_gap": jensen_gap,
+            "parent_attention_mass": parent_attention_mass,
         },
     }

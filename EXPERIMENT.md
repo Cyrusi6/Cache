@@ -436,3 +436,13 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - Random Qwen3 eager + DynamicCache 的 instrumentation OFF/ON logits、loss、cache bitwise equal；三步 greedy decode logits/cache/tokens均相同。
 - Synthetic query-changing variance=`0.1973072141`、top1 change=true；identical candidates 的 KL/TV/Jensen 均精确为0；capture不保存raw KV。
 - Instrumentation + E1 oracle + Qwen/reference/production targeted suite=`82 passed`。E1-1=`GO`；尚未加载 E0 pretrained checkpoint、运行自然 audit、GPU或训练。
+
+### 2026-07-26 FPCT-E1 pre-data execution lock
+
+- 研究目标：在 E0-design mechanism/topology output 前封存完整 producer-consumer contract，避免 baseline/F 竞态、resume 绕过、host/container path 漂移、整表 OOM 或事后修改 λ/operator。
+- 冻结输入：E0-design 326 distinct groups；E1-pilot 326 groups 的 hash-only membership 可验证但不可 render/tokenize/align/forward。Checkpoint runtime 实际加载六个 immutable `final` projector trees，同时验证同 attempt `checkpoint-64` projector set byte-identical。
+- 执行 recipe：18 个 C_post baseline shards 完整 marker 后才运行 18 个 F endpoints；36-shard analyzer 与 immutable `FINALIZED_E1_2` receipt deep-verify 后才运行 72 个 F λ additions。`λ=0` 是真实 F runtime control，`λ=1` 复用 endpoint；最终 108 shards 全量报告。
+- Artifact recipe：input sidecar、raw topology JSONL/Parquet/aggregates、每 shard capture Parquet、stage merged Parquet、六个 analyzer artifacts、source/runtime/ConfigMap/finalized receipts。大文件只写 `local/` 或 `/netdisk`，tracked manifests 记录 path/bytes/rows/SHA256。
+- 可复现 pre-data tests：`CUDA_VISIBLE_DEVICES='' python -m pytest -q --no-cov -p no:cacheprovider` 加 15 个 E1 instrumentation/executor/reference/Qwen test files，结果=`169 passed`。All-FPCT CPU suite=`356 passed`；项目 CPU-safe full suite=`595 passed, 2 warnings`。R2l/R2m 两个历史 immutable-lock failures 不属于 functional regression，未修改其历史 allowlist。
+- 预期 Commit A 后命令顺序：`fpct_e1_source_snapshot_lock.py create`；`fpct_e1_prepare_input_lock.py`；`fpct_e1_mechanism_audit.py raw-topology/verify-raw-topology`；immutable-image `fpct_e1_runtime_probe.py`；`fpct_e1_capture_runner.py prepare`；`fpct_e1_k8s_lock_bundle.py build/verify`；随后才允许 render baseline K8s jobs。
+- 当前观测：0 个新自然 E1 row、0 pretrained forward、0 GPU/K8s job、0 optimizer step、0 checkpoint modification、0 E1-pilot/confirmatory outcome。当前 GO 只表示 execution protocol/code 完整，不是 mechanism 或 performance GO。

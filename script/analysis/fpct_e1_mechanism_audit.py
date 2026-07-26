@@ -11,15 +11,18 @@ from __future__ import annotations
 
 import argparse
 import csv
+import heapq
 import hashlib
 import json
 import math
 import os
+import shutil
+import sqlite3
 import tempfile
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping, Sequence
+from typing import Any, Iterable, Iterator, Mapping, Sequence
 
 import torch
 
@@ -46,6 +49,39 @@ TOPOLOGIES = (
 )
 EPSILON = 1e-12
 FLOAT32_ATOL = 2e-5
+PARQUET_BATCH_ROWS = 4096
+MAX_LONG_FORM_ROWS_PER_SAMPLE = 262144
+MAX_STAGE_PARTITIONS = 108
+MAX_E0_DESIGN_SAMPLES = 326
+MAX_STAGE_SAMPLE_CHUNKS = MAX_STAGE_PARTITIONS * MAX_E0_DESIGN_SAMPLES
+
+PARTITION_COLUMNS = (
+    "seed",
+    "checkpoint_arm",
+    "inference_operator",
+    "cell",
+    "task",
+    "lambda_value",
+)
+SAMPLE_COLUMNS = ("sample_sha256", "content_group_sha256")
+FUNCTIONAL_SORT_COLUMNS = (
+    "seed",
+    "checkpoint_arm",
+    "inference_operator",
+    "task",
+    "sample_sha256",
+    "content_group_sha256",
+    "lambda_value",
+    "layer",
+    "query_head",
+    "query_position",
+    "parent_position",
+    "kv_head",
+    "target_position",
+    "target_token_id",
+    "candidate_count",
+    "topology",
+)
 
 OUTPUT_NAMES = {
     "rows": "e1_mechanism_rows.parquet",
@@ -55,6 +91,77 @@ OUTPUT_NAMES = {
     "topology": "e1_candidate_topology.csv",
     "lambda": "e1_centered_lambda_summary.csv",
 }
+
+RAW_TOPOLOGY_OUTPUT_NAMES = {
+    "jsonl": "e1_raw_topology_ledger.jsonl",
+    "parquet": "e1_raw_topology_ledger.parquet",
+    "aggregate_csv": "e1_raw_topology_aggregates.csv",
+    "aggregate_json": "e1_raw_topology_aggregates.json",
+    "manifest": "e1_raw_topology_manifest.json",
+}
+
+RAW_CANDIDATE_COLUMNS = (
+    "slot",
+    "source_index",
+    "source_token_id",
+    "source_offset",
+    "source_span",
+    "intersection",
+    "intersection_length",
+    "origin",
+    "raw_weight",
+    "runtime_retained",
+    "runtime_weight",
+    "complete_receiver_explanation",
+)
+
+RAW_TOPOLOGY_COLUMNS = (
+    "schema_version",
+    "split_role",
+    "task",
+    "sample_sha256",
+    "content_group_sha256",
+    "parent_position",
+    "receiver_token_id",
+    "receiver_offset",
+    "receiver_span",
+    "raw_candidate_count",
+    "runtime_candidate_count",
+    "raw_candidate_indices",
+    "runtime_candidate_indices",
+    "raw_weights",
+    "runtime_weights",
+    "candidates",
+    "certified",
+    "offset_uncertified",
+    "certification_reason",
+    "taxonomy",
+    "candidate_window",
+    "duplicate_or_overlap_alias",
+    "runtime_functional_eligible",
+    "functional_metrics_present",
+    "span_geometry_sha256",
+)
+
+RAW_AGGREGATE_COLUMNS = (
+    "schema_version",
+    "task",
+    "taxonomy",
+    "raw_m",
+    "runtime_m",
+    "parent_count",
+    "sample_count",
+    "content_group_count",
+    "raw_candidate_atom_count",
+    "runtime_candidate_atom_count",
+    "raw_extra_slot_count",
+    "runtime_extra_slot_count",
+    "raw_minus_runtime_candidate_count",
+    "raw_minus_runtime_extra_slot_count",
+    "certified_parent_count",
+    "offset_uncertified_parent_count",
+    "functional_metric_contract",
+)
 
 INPUT_COLUMNS = (
     "schema_version",
@@ -66,10 +173,16 @@ INPUT_COLUMNS = (
     "task",
     "sample_sha256",
     "content_group_sha256",
+    "input_sha256",
+    "alignment_sha256",
+    "labels_sha256",
+    "gold_response_sha256",
     "layer",
-    "head",
+    "query_head",
+    "kv_head",
     "query_position",
     "target_position",
+    "target_token_id",
     "parent_position",
     "candidate_count",
     "topology",
@@ -91,8 +204,8 @@ INPUT_COLUMNS = (
     "output_delta_l2",
     "gold_logp",
     "cpost_gold_logp",
-    "prediction_correct",
-    "cpost_prediction_correct",
+    "end_task_correct",
+    "cpost_end_task_correct",
 )
 
 DERIVED_COLUMNS = (
@@ -108,7 +221,7 @@ DERIVED_COLUMNS = (
     "projector_retention_k",
     "projector_retention_v",
     "delta_gold_logp",
-    "accuracy_flip",
+    "end_task_accuracy_flip",
 )
 
 OUTPUT_COLUMNS = INPUT_COLUMNS + DERIVED_COLUMNS
@@ -134,6 +247,25 @@ MEAN_COLUMNS = (
     "parent_attention_mass",
     "output_delta_l2",
     "delta_gold_logp",
+)
+
+PARENT_GEOMETRY_METRICS = (
+    "candidate_count",
+    "topology",
+    "source_d_k",
+    "source_d_v",
+    "source_energy_k",
+    "source_energy_v",
+    "fused_d_k",
+    "fused_d_v",
+    "fused_energy_k",
+    "fused_energy_v",
+    "normalized_source_d_k",
+    "normalized_source_d_v",
+    "normalized_fused_d_k",
+    "normalized_fused_d_v",
+    "projector_retention_k",
+    "projector_retention_v",
 )
 
 
@@ -347,7 +479,11 @@ def _native_atom_terms(
         mask = torch.zeros(b, 1, t, m, device=query.device, dtype=working_dtype)
     else:
         mask = torch.broadcast_to(native_mask.to(working_dtype), (b, h, t, m))
-    active = native_valid[:, None, None, :] & torch.isfinite(mask)
+    active = (
+        native_valid[:, None, None, :]
+        & torch.isfinite(mask)
+        & (mask > torch.finfo(torch.float32).min / 2)
+    )
     return logits + mask, active.expand(b, h, t, m), native_value
 
 
@@ -402,7 +538,11 @@ def centered_factorized_attention(
     else:
         mask = torch.broadcast_to(parent_mask.to(working_dtype), (b, h, t, n))
     logits = logits + mask.unsqueeze(-1)
-    active = legal[:, None, None, :, :] & torch.isfinite(mask.unsqueeze(-1))
+    active = (
+        legal[:, None, None, :, :]
+        & torch.isfinite(mask.unsqueeze(-1))
+        & (mask.unsqueeze(-1) > torch.finfo(torch.float32).min / 2)
+    )
     child_logits = logits.flatten(-2)
     child_active = active.expand(b, h, t, n, k).flatten(-2)
     native_logits, native_active, native_values = _native_atom_terms(
@@ -461,7 +601,9 @@ def collapsed_attention(
     else:
         mask = torch.broadcast_to(parent_mask.to(working_dtype), (b, h, t, n))
     parent_logits = logits + mask
-    parent_active = torch.isfinite(mask)
+    parent_active = torch.isfinite(mask) & (
+        mask > torch.finfo(torch.float32).min / 2
+    )
     native_logits, native_active, native_values = _native_atom_terms(
         query, native_key, native_value, native_valid, native_mask, working_dtype
     )
@@ -524,6 +666,8 @@ def classify_candidate_topology(
     candidate_origins: Sequence[str] | None = None,
     boundary_or_fallback: bool = False,
     independent_competitors: bool = False,
+    certified_partition: bool = False,
+    duplicate_or_overlap_alias: bool = False,
 ) -> str:
     """Conservatively classify raw m>=2 geometry.
 
@@ -538,25 +682,44 @@ def classify_candidate_topology(
     if len(origins) != len(source_spans):
         raise ValueError("candidate origin count mismatch")
     start, end = receiver_span
-    if boundary_or_fallback or start < 0 or end <= start or any(a < 0 or b <= a for a, b in source_spans):
+    malformed = start < 0 or end <= start or any(
+        a < 0 or b <= a for a, b in source_spans
+    )
+    if boundary_or_fallback or duplicate_or_overlap_alias or malformed:
         return "boundary_fallback"
     if any(origin == "window_neighbor" for origin in origins):
         return "neighbor_expansion"
-    intersections = sorted((max(start, a), min(end, b)) for a, b in source_spans if min(end, b) > max(start, a))
+    intersections = [
+        (max(start, a), min(end, b))
+        for a, b in source_spans
+        if min(end, b) > max(start, a)
+    ]
     if len(intersections) == len(source_spans):
         cursor = start
-        partition = True
+        partition = intersections == sorted(intersections)
         for left, right in intersections:
-            if left != cursor:
+            if left != cursor or right <= left:
                 partition = False
                 break
             cursor = right
-        if partition and cursor == end:
+        if partition and cursor == end and certified_partition:
             return "partition_compositional"
-    explicit_competition = independent_competitors or all(
-        origin == "independent_overlap" for origin in origins
+    elif certified_partition:
+        raise ValueError("certified partition lacks one intersection per candidate")
+    if certified_partition:
+        raise ValueError("certified partition geometry is not a disjoint complete cover")
+    complete_explanations = all(
+        left == start and right == end for left, right in intersections
     )
-    if explicit_competition and len(intersections) == len(source_spans):
+    explicit_competition = independent_competitors or all(
+        origin == "independent_complete_explanation" for origin in origins
+    )
+    if (
+        explicit_competition
+        and len(intersections) == len(source_spans)
+        and complete_explanations
+        and len(set(source_spans)) == len(source_spans)
+    ):
         return "competing_overlap"
     return "taxonomy_unresolved"
 
@@ -591,18 +754,36 @@ def validate_and_derive_row(raw: Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError(f"cell mismatch; expected {expected_cell}")
     if row["task"] not in TASKS:
         raise ValueError("unknown task")
-    row["sample_sha256"] = _sha256(row["sample_sha256"], "sample_sha256")
-    row["content_group_sha256"] = _sha256(row["content_group_sha256"], "content_group_sha256")
-    for name in ("layer", "head", "query_position", "target_position", "parent_position", "candidate_count"):
+    for name in (
+        "sample_sha256",
+        "content_group_sha256",
+        "input_sha256",
+        "alignment_sha256",
+        "labels_sha256",
+        "gold_response_sha256",
+    ):
+        row[name] = _sha256(row[name], name)
+    for name in (
+        "layer",
+        "query_head",
+        "kv_head",
+        "query_position",
+        "target_position",
+        "target_token_id",
+        "parent_position",
+        "candidate_count",
+    ):
         row[name] = _integer(row[name], name)
-    if row["candidate_count"] > 4:
-        raise ValueError("candidate_count exceeds frozen top-k=4")
+    if not 2 <= row["candidate_count"] <= 4:
+        raise ValueError("functional mechanism rows require certified 2<=candidate_count<=4")
+    if row["kv_head"] > row["query_head"]:
+        raise ValueError("kv_head/query_head mapping is impossible")
     if row["target_position"] != row["query_position"] + 1:
         raise ValueError("teacher-forcing causal shift mismatch")
     if row["topology"] not in TOPOLOGIES:
         raise ValueError("unknown topology")
-    if (row["candidate_count"] < 2) != (row["topology"] == "not_applicable"):
-        raise ValueError("topology must be not_applicable exactly when m<2")
+    if row["topology"] == "not_applicable":
+        raise ValueError("functional mechanism rows cannot use not_applicable topology")
     row["lambda_value"] = _grid_value(row["lambda_value"])
     if row["inference_operator"] == "c_post" and row["lambda_value"] != 0.0:
         raise ValueError("C_post baseline is only represented at lambda=0")
@@ -620,8 +801,8 @@ def validate_and_derive_row(raw: Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError("parent_attention_mass exceeds one")
     row["gold_logp"] = _finite_float(row["gold_logp"], "gold_logp")
     row["cpost_gold_logp"] = _finite_float(row["cpost_gold_logp"], "cpost_gold_logp")
-    if not isinstance(row["prediction_correct"], bool) or not isinstance(row["cpost_prediction_correct"], bool):
-        raise ValueError("correctness fields must be bool")
+    if not isinstance(row["end_task_correct"], bool) or not isinstance(row["cpost_end_task_correct"], bool):
+        raise ValueError("end-task correctness fields must be bool")
 
     kl = 0.0
     tv = 0.0
@@ -645,9 +826,23 @@ def validate_and_derive_row(raw: Mapping[str, Any]) -> dict[str, Any]:
     row["projector_retention_k"] = row["fused_d_k"] / (row["source_d_k"] + EPSILON)
     row["projector_retention_v"] = row["fused_d_v"] / (row["source_d_v"] + EPSILON)
     row["delta_gold_logp"] = row["gold_logp"] - row["cpost_gold_logp"]
-    row["accuracy_flip"] = row["prediction_correct"] != row["cpost_prediction_correct"]
+    row["end_task_accuracy_flip"] = (
+        row["end_task_correct"] != row["cpost_end_task_correct"]
+    )
     if row["lambda_value"] == 0.0:
-        if abs(row["delta_gold_logp"]) > FLOAT32_ATOL or row["output_delta_l2"] > FLOAT32_ATOL:
+        gamma_prior_delta = max(
+            (abs(gamma - prior) for gamma, prior in zip(row["gamma"], row["prior"])),
+            default=0.0,
+        )
+        if (
+            abs(row["delta_gold_logp"]) > FLOAT32_ATOL
+            or row["output_delta_l2"] > FLOAT32_ATOL
+            or row["candidate_logit_range"] > FLOAT32_ATOL
+            or row["candidate_logit_variance"] > FLOAT32_ATOL
+            or row["jensen_gap"] > FLOAT32_ATOL
+            or gamma_prior_delta > FLOAT32_ATOL
+            or row["end_task_accuracy_flip"]
+        ):
             raise ValueError("lambda=0 violates exact C_post row oracle")
     return row
 
@@ -655,13 +850,14 @@ def validate_and_derive_row(raw: Mapping[str, Any]) -> dict[str, Any]:
 def _query_group_key(row: Mapping[str, Any]) -> tuple[Any, ...]:
     return (
         row["seed"], row["checkpoint_arm"], row["inference_operator"], row["task"],
-        row["sample_sha256"], row["layer"], row["head"], row["parent_position"],
+        row["sample_sha256"], row["layer"], row["query_head"], row["parent_position"],
         row["lambda_value"],
     )
 
 
-def prepare_rows(raw_rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
-    rows = [validate_and_derive_row(row) for row in raw_rows]
+def _finish_prepared_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Fill cross-query fields and deterministically sort one bounded row set."""
+
     if not rows:
         raise ValueError("mechanism audit input is empty")
     grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
@@ -682,12 +878,16 @@ def prepare_rows(raw_rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
         for row in members:
             row["gamma_query_variance"] = accumulator.mean_candidate_variance
             row["posterior_top1_changed"] = accumulator.top1_changed
-    rows.sort(key=lambda row: (
-        row["seed"], row["checkpoint_arm"], row["inference_operator"], row["task"],
-        row["content_group_sha256"], row["sample_sha256"], row["lambda_value"],
-        row["layer"], row["head"], row["query_position"], row["parent_position"],
-    ))
+    rows.sort(key=lambda row: tuple(row[name] for name in FUNCTIONAL_SORT_COLUMNS))
     return rows
+
+
+def prepare_rows(raw_rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """In-memory helper retained for bounded fixtures and one-sample chunks only."""
+
+    return _finish_prepared_rows(
+        [validate_and_derive_row(row) for row in raw_rows]
+    )
 
 
 def _mean(rows: Sequence[Mapping[str, Any]], name: str) -> float:
@@ -704,9 +904,28 @@ def _group_rows(rows: Sequence[dict[str, Any]], keys: Sequence[str]) -> list[dic
         record["row_count"] = len(members)
         record["sample_count"] = len({row["sample_sha256"] for row in members})
         record["content_group_count"] = len({row["content_group_sha256"] for row in members})
+        record["unique_parent_count"] = len(
+            {
+                (
+                    row["sample_sha256"],
+                    row["layer"],
+                    row["parent_position"],
+                )
+                for row in members
+            }
+        )
         for name in MEAN_COLUMNS:
             record[f"mean_{name}"] = _mean(members, name)
-        record["accuracy_flip_rate"] = _mean(members, "accuracy_flip")
+        group_flip: dict[str, bool] = {}
+        for row in members:
+            previous = group_flip.setdefault(
+                row["content_group_sha256"], row["end_task_accuracy_flip"]
+            )
+            if previous != row["end_task_accuracy_flip"]:
+                raise ValueError("end-task correctness flip differs within content group")
+        record["group_equal_end_task_accuracy_flip_rate"] = (
+            sum(group_flip.values()) / len(group_flip)
+        )
         record["posterior_top1_change_rate"] = _mean(members, "posterior_top1_changed")
         output.append(record)
     return output
@@ -715,7 +934,10 @@ def _group_rows(rows: Sequence[dict[str, Any]], keys: Sequence[str]) -> list[dic
 def layer_head_records(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     return _group_rows(
         rows,
-        ("seed", "checkpoint_arm", "inference_operator", "cell", "task", "lambda_value", "layer", "head"),
+        (
+            "seed", "checkpoint_arm", "inference_operator", "cell", "task",
+            "lambda_value", "layer", "query_head", "kv_head",
+        ),
     )
 
 
@@ -724,13 +946,7 @@ def _consistent_parent_rows(rows: Sequence[dict[str, Any]]) -> list[dict[str, An
 
     keys = (
         "seed", "checkpoint_arm", "task", "sample_sha256", "content_group_sha256",
-        "layer", "head", "parent_position",
-    )
-    metric_names = (
-        "candidate_count", "topology", "source_d_k", "source_d_v", "source_energy_k",
-        "source_energy_v", "fused_d_k", "fused_d_v", "fused_energy_k", "fused_energy_v",
-        "normalized_source_d_k", "normalized_source_d_v", "normalized_fused_d_k",
-        "normalized_fused_d_v", "projector_retention_k", "projector_retention_v",
+        "layer", "parent_position",
     )
     grouped: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
     for row in rows:
@@ -739,21 +955,26 @@ def _consistent_parent_rows(rows: Sequence[dict[str, Any]]) -> list[dict[str, An
     for key, members in sorted(grouped.items()):
         reference = members[0]
         for other in members[1:]:
-            for name in metric_names:
+            for name in PARENT_GEOMETRY_METRICS:
                 if isinstance(reference[name], str):
                     equal = reference[name] == other[name]
                 else:
                     equal = math.isclose(float(reference[name]), float(other[name]), abs_tol=FLOAT32_ATOL, rel_tol=2e-5)
                 if not equal:
                     raise ValueError(f"pre-collapse candidate geometry differs across operator/query/lambda: {name}")
-        output.append({**{name: value for name, value in zip(keys, key)}, **{name: reference[name] for name in metric_names}})
+        output.append(
+            {
+                **{name: value for name, value in zip(keys, key)},
+                **{name: reference[name] for name in PARENT_GEOMETRY_METRICS},
+            }
+        )
     return output
 
 
 def contraction_records(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     parents = _consistent_parent_rows(rows)
     groups: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
-    keys = ("seed", "checkpoint_arm", "task", "layer", "head", "topology")
+    keys = ("seed", "checkpoint_arm", "task", "layer", "topology")
     for row in parents:
         groups[tuple(row[key] for key in keys)].append(row)
     output = []
@@ -794,23 +1015,6 @@ def _csv_bytes(rows: Sequence[Mapping[str, Any]]) -> bytes:
     return buffer.getvalue().encode()
 
 
-def _write_parquet(path: Path, rows: Sequence[dict[str, Any]]) -> None:
-    import pyarrow as pa
-    import pyarrow.parquet as pq
-
-    table = pa.Table.from_pylist([{name: row[name] for name in OUTPUT_COLUMNS} for row in rows])
-    table = table.select(list(OUTPUT_COLUMNS))
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    os.close(descriptor)
-    try:
-        pq.write_table(table, temporary, compression="zstd", use_dictionary=False, write_statistics=True)
-        os.replace(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
-
-
 def _unique_query_summary(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]]:
     keys = (
         "seed", "checkpoint_arm", "inference_operator", "cell", "task", "sample_sha256",
@@ -823,7 +1027,17 @@ def _unique_query_summary(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]
     for key, members in sorted(groups.items()):
         reference = members[0]
         for other in members[1:]:
-            for name in ("gold_logp", "cpost_gold_logp", "prediction_correct", "cpost_prediction_correct"):
+            for name in (
+                "gold_logp",
+                "cpost_gold_logp",
+                "end_task_correct",
+                "cpost_end_task_correct",
+                "target_token_id",
+                "input_sha256",
+                "alignment_sha256",
+                "labels_sha256",
+                "gold_response_sha256",
+            ):
                 if reference[name] != other[name] and not (
                     isinstance(reference[name], float)
                     and math.isclose(reference[name], other[name], abs_tol=FLOAT32_ATOL, rel_tol=2e-5)
@@ -831,35 +1045,159 @@ def _unique_query_summary(rows: Sequence[dict[str, Any]]) -> list[dict[str, Any]
                     raise ValueError(f"query-level outcome differs across layer/head/parent: {name}")
         unique.append({
             **{name: value for name, value in zip(keys, key)},
+            "input_sha256": reference["input_sha256"],
+            "alignment_sha256": reference["alignment_sha256"],
+            "labels_sha256": reference["labels_sha256"],
+            "gold_response_sha256": reference["gold_response_sha256"],
+            "target_token_id": reference["target_token_id"],
             "gold_logp": reference["gold_logp"],
             "cpost_gold_logp": reference["cpost_gold_logp"],
             "delta_gold_logp": reference["delta_gold_logp"],
-            "prediction_correct": reference["prediction_correct"],
-            "cpost_prediction_correct": reference["cpost_prediction_correct"],
-            "accuracy_flip": reference["accuracy_flip"],
+            "end_task_correct": reference["end_task_correct"],
+            "cpost_end_task_correct": reference["cpost_end_task_correct"],
+            "end_task_accuracy_flip": reference["end_task_accuracy_flip"],
         })
     return unique
 
 
-def build_summary(rows: Sequence[dict[str, Any]], artifact_sha256: Mapping[str, str]) -> dict[str, Any]:
-    query_rows = _unique_query_summary(rows)
+def _group_equal_response_summary(
+    query_rows: Sequence[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Sum token log-probability within response, then weight content groups equally."""
+
+    sample_keys = (
+        "seed", "checkpoint_arm", "inference_operator", "cell", "task",
+        "sample_sha256", "content_group_sha256", "lambda_value",
+    )
+    by_sample: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
+    for row in query_rows:
+        by_sample[tuple(row[name] for name in sample_keys)].append(row)
+
+    sample_rows: list[dict[str, Any]] = []
+    for key, members in sorted(by_sample.items()):
+        ordered = sorted(members, key=lambda row: row["query_position"])
+        if len({row["query_position"] for row in ordered}) != len(ordered):
+            raise ValueError("duplicate answer query in response summary")
+        reference = ordered[0]
+        for other in ordered[1:]:
+            for name in (
+                "end_task_correct",
+                "cpost_end_task_correct",
+                "input_sha256",
+                "alignment_sha256",
+                "labels_sha256",
+                "gold_response_sha256",
+            ):
+                if other[name] != reference[name]:
+                    raise ValueError(f"response-level field differs across queries: {name}")
+        sample_rows.append(
+            {
+                **{name: value for name, value in zip(sample_keys, key)},
+                "answer_query_count": len(ordered),
+                "response_gold_logp": sum(row["gold_logp"] for row in ordered),
+                "response_cpost_gold_logp": sum(
+                    row["cpost_gold_logp"] for row in ordered
+                ),
+                "response_delta_gold_logp": sum(
+                    row["delta_gold_logp"] for row in ordered
+                ),
+                "end_task_correct": reference["end_task_correct"],
+                "cpost_end_task_correct": reference["cpost_end_task_correct"],
+                "end_task_accuracy_flip": reference["end_task_accuracy_flip"],
+            }
+        )
+
+    group_keys = (
+        "seed", "checkpoint_arm", "inference_operator", "cell", "task",
+        "content_group_sha256", "lambda_value",
+    )
+    by_group: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
+    for row in sample_rows:
+        by_group[tuple(row[name] for name in group_keys)].append(row)
+    group_rows: list[dict[str, Any]] = []
+    for key, members in sorted(by_group.items()):
+        reference = members[0]
+        for other in members[1:]:
+            if (
+                other["end_task_correct"] != reference["end_task_correct"]
+                or other["cpost_end_task_correct"]
+                != reference["cpost_end_task_correct"]
+            ):
+                raise ValueError("end-task correctness differs within content group")
+        group_rows.append(
+            {
+                **{name: value for name, value in zip(group_keys, key)},
+                "sample_count": len(members),
+                "answer_query_count": sum(row["answer_query_count"] for row in members),
+                "response_gold_logp": _mean(members, "response_gold_logp"),
+                "response_cpost_gold_logp": _mean(
+                    members, "response_cpost_gold_logp"
+                ),
+                "response_delta_gold_logp": _mean(
+                    members, "response_delta_gold_logp"
+                ),
+                "end_task_correct": reference["end_task_correct"],
+                "cpost_end_task_correct": reference["cpost_end_task_correct"],
+                "end_task_accuracy_flip": reference["end_task_accuracy_flip"],
+            }
+        )
+    return group_rows
+
+
+def _build_summary_from_group_rows(
+    *,
+    row_count: int,
+    answer_query_count: int,
+    sample_ids: set[str],
+    content_group_ids: set[str],
+    seeds: set[int],
+    cells: set[str],
+    group_rows: Sequence[dict[str, Any]],
+    artifact_sha256: Mapping[str, str],
+) -> dict[str, Any]:
     primary_groups: dict[tuple[Any, ...], list[dict[str, Any]]] = defaultdict(list)
     primary_keys = ("seed", "checkpoint_arm", "inference_operator", "cell", "task", "lambda_value")
-    for row in query_rows:
+    seen_group_keys: set[tuple[Any, ...]] = set()
+    for row in sorted(
+        group_rows,
+        key=lambda value: (
+            *(value[name] for name in primary_keys),
+            value["content_group_sha256"],
+        ),
+    ):
+        exact_group_key = (
+            *(row[name] for name in primary_keys),
+            row["content_group_sha256"],
+        )
+        if exact_group_key in seen_group_keys:
+            raise ValueError(
+                "streaming summary requires one canonical sample per content group"
+            )
+        seen_group_keys.add(exact_group_key)
         primary_groups[tuple(row[name] for name in primary_keys)].append(row)
     primary = []
     for key, members in sorted(primary_groups.items()):
         record = {name: value for name, value in zip(primary_keys, key)}
         record.update(
-            answer_query_count=len(members),
-            sample_count=len({row["sample_sha256"] for row in members}),
-            content_group_count=len({row["content_group_sha256"] for row in members}),
-            mean_gold_logp=_mean(members, "gold_logp"),
-            mean_cpost_gold_logp=_mean(members, "cpost_gold_logp"),
-            mean_delta_gold_logp=_mean(members, "delta_gold_logp"),
-            accuracy=_mean(members, "prediction_correct"),
-            cpost_accuracy=_mean(members, "cpost_prediction_correct"),
-            accuracy_flip_rate=_mean(members, "accuracy_flip"),
+            answer_query_count=sum(row["answer_query_count"] for row in members),
+            sample_count=sum(row["sample_count"] for row in members),
+            content_group_count=len(members),
+            group_equal_mean_response_gold_logp=_mean(
+                members, "response_gold_logp"
+            ),
+            group_equal_mean_response_cpost_gold_logp=_mean(
+                members, "response_cpost_gold_logp"
+            ),
+            group_equal_mean_response_delta_gold_logp=_mean(
+                members, "response_delta_gold_logp"
+            ),
+            group_equal_end_task_accuracy=_mean(members, "end_task_correct"),
+            group_equal_cpost_end_task_accuracy=_mean(
+                members, "cpost_end_task_correct"
+            ),
+            group_equal_end_task_accuracy_flip_rate=_mean(
+                members, "end_task_accuracy_flip"
+            ),
         )
         primary.append(record)
     return {
@@ -868,12 +1206,12 @@ def build_summary(rows: Sequence[dict[str, Any]], artifact_sha256: Mapping[str, 
         "status": "COMPLETE",
         "split_role": SPLIT_ROLE,
         "lambda_grid": list(LAMBDA_GRID),
-        "row_count": len(rows),
-        "answer_query_count": len(query_rows),
-        "sample_count": len({row["sample_sha256"] for row in rows}),
-        "content_group_count": len({row["content_group_sha256"] for row in rows}),
-        "seeds": sorted({row["seed"] for row in rows}),
-        "cells": sorted({row["cell"] for row in rows}),
+        "row_count": row_count,
+        "answer_query_count": answer_query_count,
+        "sample_count": len(sample_ids),
+        "content_group_count": len(content_group_ids),
+        "seeds": sorted(seeds),
+        "cells": sorted(cells),
         "primary_teacher_forced_gold_logp": primary,
         "artifact_sha256": dict(sorted(artifact_sha256.items())),
         "integrity": {
@@ -888,35 +1226,1185 @@ def build_summary(rows: Sequence[dict[str, Any]], artifact_sha256: Mapping[str, 
     }
 
 
-def write_artifacts(raw_rows: Iterable[Mapping[str, Any]], output_dir: Path) -> dict[str, Any]:
-    rows = prepare_rows(raw_rows)
+def build_summary(
+    rows: Sequence[dict[str, Any]], artifact_sha256: Mapping[str, str]
+) -> dict[str, Any]:
+    query_rows = _unique_query_summary(rows)
+    return _build_summary_from_group_rows(
+        row_count=len(rows),
+        answer_query_count=len(query_rows),
+        sample_ids={row["sample_sha256"] for row in rows},
+        content_group_ids={row["content_group_sha256"] for row in rows},
+        seeds={row["seed"] for row in rows},
+        cells={row["cell"] for row in rows},
+        group_rows=_group_equal_response_summary(query_rows),
+        artifact_sha256=artifact_sha256,
+    )
+
+
+class _GroupedRecordCombiner:
+    """Combine bounded per-sample `_group_rows` outputs without retaining rows."""
+
+    def __init__(self, keys: Sequence[str]) -> None:
+        self.keys = tuple(keys)
+        self.states: dict[tuple[Any, ...], dict[str, Any]] = {}
+
+    def add_rows(self, rows: Sequence[Mapping[str, Any]]) -> None:
+        local_parents: dict[tuple[Any, ...], set[tuple[Any, ...]]] = defaultdict(set)
+        local_flip: dict[tuple[Any, ...], bool] = {}
+        for row in rows:
+            key = tuple(row[name] for name in self.keys)
+            state = self.states.setdefault(
+                key,
+                {
+                    "row_count": 0,
+                    "sample_count": 0,
+                    "content_group_count": 0,
+                    "unique_parent_count": 0,
+                    "mean_sums": {name: 0.0 for name in MEAN_COLUMNS},
+                    "group_flip_sum": 0,
+                    "posterior_top1_changed_sum": 0.0,
+                },
+            )
+            state["row_count"] += 1
+            for name in MEAN_COLUMNS:
+                state["mean_sums"][name] += float(row[name])
+            flip = bool(row["end_task_accuracy_flip"])
+            previous = local_flip.setdefault(key, flip)
+            if previous != flip:
+                raise ValueError("end-task correctness flip differs within content group")
+            state["posterior_top1_changed_sum"] += float(
+                row["posterior_top1_changed"]
+            )
+            local_parents[key].add(
+                (
+                    row["sample_sha256"],
+                    row["layer"],
+                    row["parent_position"],
+                )
+            )
+        for key, parents in local_parents.items():
+            self.states[key]["unique_parent_count"] += len(parents)
+            self.states[key]["sample_count"] += 1
+            self.states[key]["content_group_count"] += 1
+            self.states[key]["group_flip_sum"] += int(local_flip[key])
+
+    def finish(self) -> list[dict[str, Any]]:
+        output: list[dict[str, Any]] = []
+        for key, state in sorted(self.states.items()):
+            count = int(state["row_count"])
+            record = {name: value for name, value in zip(self.keys, key)}
+            record["row_count"] = count
+            record["sample_count"] = int(state["sample_count"])
+            record["content_group_count"] = int(state["content_group_count"])
+            record["unique_parent_count"] = int(state["unique_parent_count"])
+            for name in MEAN_COLUMNS:
+                record[f"mean_{name}"] = state["mean_sums"][name] / count
+            record["group_equal_end_task_accuracy_flip_rate"] = (
+                state["group_flip_sum"] / state["content_group_count"]
+            )
+            record["posterior_top1_change_rate"] = (
+                state["posterior_top1_changed_sum"] / count
+            )
+            output.append(record)
+        return output
+
+
+class _ContractionCombiner:
+    def __init__(self) -> None:
+        self.metric_names = (
+            "source_d_k",
+            "source_d_v",
+            "fused_d_k",
+            "fused_d_v",
+            "normalized_source_d_k",
+            "normalized_source_d_v",
+            "normalized_fused_d_k",
+            "normalized_fused_d_v",
+            "projector_retention_k",
+            "projector_retention_v",
+        )
+        self.keys = ("seed", "checkpoint_arm", "task", "layer", "topology")
+        self.states: dict[tuple[Any, ...], dict[str, Any]] = {}
+
+    def add(self, parent: Mapping[str, Any]) -> None:
+        key = tuple(parent[name] for name in self.keys)
+        state = self.states.setdefault(
+            key,
+            {
+                "parent_count": 0,
+                "content_group_ids": set(),
+                "sums": {name: 0.0 for name in self.metric_names},
+            },
+        )
+        state["parent_count"] += 1
+        state["content_group_ids"].add(parent["content_group_sha256"])
+        for name in self.metric_names:
+            state["sums"][name] += float(parent[name])
+
+    def finish(self) -> list[dict[str, Any]]:
+        output: list[dict[str, Any]] = []
+        for key, state in sorted(self.states.items()):
+            count = int(state["parent_count"])
+            record = {name: value for name, value in zip(self.keys, key)}
+            record["parent_count"] = count
+            record["content_group_count"] = len(state["content_group_ids"])
+            for name in self.metric_names:
+                record[f"mean_{name}"] = state["sums"][name] / count
+            output.append(record)
+        return output
+
+
+def _register_parent_geometry(
+    connection: sqlite3.Connection,
+    parent: Mapping[str, Any],
+    reference_order: tuple[str, float],
+) -> None:
+    key_columns = (
+        "seed",
+        "checkpoint_arm",
+        "task",
+        "sample_sha256",
+        "content_group_sha256",
+        "layer",
+        "parent_position",
+    )
+    key = canonical_json_bytes([parent[name] for name in key_columns])
+    geometry = {name: parent[name] for name in PARENT_GEOMETRY_METRICS}
+    payload = canonical_json_bytes(geometry).decode("utf-8")
+    parent_record = canonical_json_bytes(dict(parent)).decode("utf-8")
+    order_payload = canonical_json_bytes(list(reference_order)).decode("utf-8")
+    cursor = connection.execute(
+        """INSERT OR IGNORE INTO parent_geometry(
+               parent_key, seed, checkpoint_arm, task, sample_sha256,
+               content_group_sha256, layer, parent_position,
+               payload, parent_record, reference_order
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            key,
+            parent["seed"],
+            parent["checkpoint_arm"],
+            parent["task"],
+            parent["sample_sha256"],
+            parent["content_group_sha256"],
+            parent["layer"],
+            parent["parent_position"],
+            payload,
+            parent_record,
+            order_payload,
+        ),
+    )
+    if cursor.rowcount == 1:
+        return
+    stored = connection.execute(
+        "SELECT payload, reference_order FROM parent_geometry WHERE parent_key = ?",
+        (key,),
+    ).fetchone()
+    if stored is None:
+        raise RuntimeError("parent geometry index lost an existing key")
+    reference = json.loads(stored[0])
+    for name in PARENT_GEOMETRY_METRICS:
+        if isinstance(reference[name], str):
+            equal = reference[name] == geometry[name]
+        else:
+            equal = math.isclose(
+                float(reference[name]),
+                float(geometry[name]),
+                abs_tol=FLOAT32_ATOL,
+                rel_tol=2e-5,
+            )
+        if not equal:
+            raise ValueError(
+                f"pre-collapse candidate geometry differs across operator/query/lambda: {name}"
+            )
+    if reference_order < tuple(json.loads(stored[1])):
+        connection.execute(
+            """UPDATE parent_geometry
+               SET payload = ?, parent_record = ?, reference_order = ?
+               WHERE parent_key = ?""",
+            (payload, parent_record, order_payload, key),
+        )
+
+
+def _fragment_rows(path: Path) -> Iterator[dict[str, Any]]:
+    with path.open(encoding="utf-8") as handle:
+        previous: tuple[Any, ...] | None = None
+        for line in handle:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            key = tuple(row[name] for name in FUNCTIONAL_SORT_COLUMNS)
+            if previous is not None and key <= previous:
+                raise ValueError("functional partition fragment is not strictly sorted")
+            previous = key
+            yield row
+
+
+def _merge_partition_fragments(paths: Sequence[Path]) -> Iterator[dict[str, Any]]:
+    iterators = [iter(_fragment_rows(path)) for path in sorted(paths)]
+    heap: list[tuple[tuple[Any, ...], int, dict[str, Any]]] = []
+    for index, iterator in enumerate(iterators):
+        row = next(iterator, None)
+        if row is not None:
+            heapq.heappush(
+                heap,
+                (tuple(row[name] for name in FUNCTIONAL_SORT_COLUMNS), index, row),
+            )
+    previous: tuple[Any, ...] | None = None
+    while heap:
+        key, index, row = heapq.heappop(heap)
+        if previous is not None and key <= previous:
+            raise ValueError("functional detail row key is duplicate or unsorted")
+        previous = key
+        yield row
+        following = next(iterators[index], None)
+        if following is not None:
+            heapq.heappush(
+                heap,
+                (
+                    tuple(following[name] for name in FUNCTIONAL_SORT_COLUMNS),
+                    index,
+                    following,
+                ),
+            )
+
+
+def _write_bounded_parquet(path: Path, rows: Iterable[Mapping[str, Any]]) -> int:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    os.close(descriptor)
+    writer = None
+    schema = None
+    buffer: list[dict[str, Any]] = []
+    row_count = 0
+
+    def flush() -> None:
+        nonlocal writer, schema
+        if not buffer:
+            return
+        records = [{name: row[name] for name in OUTPUT_COLUMNS} for row in buffer]
+        table = pa.Table.from_pylist(records, schema=schema)
+        if schema is None:
+            table = table.select(list(OUTPUT_COLUMNS))
+            schema = table.schema
+            writer = pq.ParquetWriter(
+                temporary,
+                schema,
+                compression="zstd",
+                use_dictionary=False,
+                write_statistics=True,
+            )
+        assert writer is not None
+        writer.write_table(table)
+        buffer.clear()
+
+    try:
+        for row in rows:
+            buffer.append(dict(row))
+            row_count += 1
+            if len(buffer) >= PARQUET_BATCH_ROWS:
+                flush()
+        flush()
+        if writer is None:
+            raise ValueError("mechanism audit input is empty")
+        writer.close()
+        writer = None
+        os.replace(temporary, path)
+    finally:
+        if writer is not None:
+            writer.close()
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    return row_count
+
+
+def write_artifacts(
+    raw_rows: Iterable[Mapping[str, Any]], output_dir: Path
+) -> dict[str, Any]:
+    """Bounded external-memory derivation for one merged stage row stream."""
+
     output_dir.mkdir(parents=True, exist_ok=True)
-    parquet_path = output_dir / OUTPUT_NAMES["rows"]
-    _write_parquet(parquet_path, rows)
-    aggregate_sets = {
-        "layer_head": layer_head_records(rows),
-        "contraction": contraction_records(rows),
-        "topology": topology_records(rows),
-        "lambda": lambda_records(rows),
+    spill = Path(tempfile.mkdtemp(prefix=".functional-stream.", dir=output_dir))
+    connection = sqlite3.connect(spill / "parent_geometry.sqlite")
+    connection.execute("PRAGMA journal_mode=OFF")
+    connection.execute("PRAGMA synchronous=OFF")
+    connection.execute("PRAGMA temp_store=MEMORY")
+    connection.execute(
+        """CREATE TABLE parent_geometry (
+               parent_key BLOB PRIMARY KEY,
+               seed INTEGER NOT NULL,
+               checkpoint_arm TEXT NOT NULL,
+               task TEXT NOT NULL,
+               sample_sha256 TEXT NOT NULL,
+               content_group_sha256 TEXT NOT NULL,
+               layer INTEGER NOT NULL,
+               parent_position INTEGER NOT NULL,
+               payload TEXT NOT NULL,
+               parent_record TEXT NOT NULL,
+               reference_order TEXT NOT NULL
+           )"""
+    )
+    layer_combiner = _GroupedRecordCombiner(
+        (
+            "seed",
+            "checkpoint_arm",
+            "inference_operator",
+            "cell",
+            "task",
+            "lambda_value",
+            "layer",
+            "query_head",
+            "kv_head",
+        )
+    )
+    topology_combiner = _GroupedRecordCombiner(
+        (
+            "seed",
+            "checkpoint_arm",
+            "inference_operator",
+            "cell",
+            "task",
+            "lambda_value",
+            "topology",
+        )
+    )
+    lambda_combiner = _GroupedRecordCombiner(
+        (
+            "seed",
+            "checkpoint_arm",
+            "inference_operator",
+            "cell",
+            "task",
+            "lambda_value",
+        )
+    )
+    contraction_combiner = _ContractionCombiner()
+    fragment_paths: dict[tuple[Any, ...], Path] = {}
+    fragment_handles: dict[tuple[Any, ...], Any] = {}
+    seen_chunks: set[tuple[Any, ...]] = set()
+    last_sample_by_partition: dict[tuple[Any, ...], tuple[Any, ...]] = {}
+    group_rows: list[dict[str, Any]] = []
+    sample_ids: set[str] = set()
+    content_group_ids: set[str] = set()
+    seeds: set[int] = set()
+    cells: set[str] = set()
+    row_count = 0
+    answer_query_count = 0
+
+    def process_chunk(identity: tuple[Any, ...], rows: list[dict[str, Any]]) -> None:
+        nonlocal row_count, answer_query_count
+        if not rows:
+            return
+        partition = identity[: len(PARTITION_COLUMNS)]
+        sample = identity[len(PARTITION_COLUMNS) :]
+        prepared = _finish_prepared_rows(rows)
+        if len(prepared) > MAX_LONG_FORM_ROWS_PER_SAMPLE:
+            raise ValueError("functional sample exceeds frozen row ceiling")
+        for row in prepared:
+            if tuple(row[name] for name in PARTITION_COLUMNS) != partition or tuple(
+                row[name] for name in SAMPLE_COLUMNS
+            ) != sample:
+                raise ValueError("bounded functional chunk crossed partition/sample")
+        path = fragment_paths.setdefault(
+            partition,
+            spill
+            / (
+                hashlib.sha256(canonical_json_bytes(list(partition))).hexdigest()
+                + ".jsonl"
+            ),
+        )
+        handle = fragment_handles.get(partition)
+        if handle is None:
+            handle = path.open("ab")
+            fragment_handles[partition] = handle
+        for row in prepared:
+            handle.write(canonical_json_bytes({name: row[name] for name in OUTPUT_COLUMNS}))
+
+        sample_sha256, content_group_sha256 = sample
+        layer_combiner.add_rows(prepared)
+        topology_combiner.add_rows(prepared)
+        lambda_combiner.add_rows(prepared)
+        for parent in _consistent_parent_rows(prepared):
+            _register_parent_geometry(
+                connection,
+                parent,
+                (
+                    str(prepared[0]["inference_operator"]),
+                    float(prepared[0]["lambda_value"]),
+                ),
+            )
+        query_rows = _unique_query_summary(prepared)
+        group_rows.extend(_group_equal_response_summary(query_rows))
+        row_count += len(prepared)
+        answer_query_count += len(query_rows)
+        sample_ids.add(sample_sha256)
+        content_group_ids.add(content_group_sha256)
+        if (
+            len(sample_ids) > MAX_E0_DESIGN_SAMPLES
+            or len(content_group_ids) > MAX_E0_DESIGN_SAMPLES
+        ):
+            raise ValueError("functional stage exceeds frozen E0-design population")
+        seeds.add(int(prepared[0]["seed"]))
+        cells.add(str(prepared[0]["cell"]))
+
+    current_identity: tuple[Any, ...] | None = None
+    current_rows: list[dict[str, Any]] = []
+    try:
+        for raw in raw_rows:
+            row = validate_and_derive_row(raw)
+            partition = tuple(row[name] for name in PARTITION_COLUMNS)
+            sample = tuple(row[name] for name in SAMPLE_COLUMNS)
+            identity = (*partition, *sample)
+            if identity != current_identity:
+                if current_identity is not None:
+                    process_chunk(current_identity, current_rows)
+                if identity in seen_chunks:
+                    raise ValueError("functional partition/sample chunk is non-contiguous")
+                if (
+                    partition not in last_sample_by_partition
+                    and len(last_sample_by_partition) >= MAX_STAGE_PARTITIONS
+                ):
+                    raise ValueError("functional stage exceeds frozen partition count")
+                if len(seen_chunks) >= MAX_STAGE_SAMPLE_CHUNKS:
+                    raise ValueError("functional stage exceeds frozen sample-chunk count")
+                previous_sample = last_sample_by_partition.get(partition)
+                if previous_sample is not None and sample <= previous_sample:
+                    raise ValueError("functional samples are not ordered within partition")
+                seen_chunks.add(identity)
+                last_sample_by_partition[partition] = sample
+                current_identity = identity
+                current_rows = []
+            current_rows.append(row)
+            if len(current_rows) > MAX_LONG_FORM_ROWS_PER_SAMPLE:
+                raise ValueError("functional sample exceeds frozen row ceiling")
+        if current_identity is not None:
+            process_chunk(current_identity, current_rows)
+        if row_count == 0:
+            raise ValueError("mechanism audit input is empty")
+        connection.commit()
+        for (parent_record,) in connection.execute(
+            """SELECT parent_record FROM parent_geometry
+               ORDER BY seed, checkpoint_arm, task, sample_sha256,
+                        content_group_sha256, layer, parent_position"""
+        ):
+            contraction_combiner.add(json.loads(parent_record))
+        for handle in fragment_handles.values():
+            handle.flush()
+            os.fsync(handle.fileno())
+            handle.close()
+        fragment_handles.clear()
+
+        parquet_path = output_dir / OUTPUT_NAMES["rows"]
+        written = _write_bounded_parquet(
+            parquet_path, _merge_partition_fragments(list(fragment_paths.values()))
+        )
+        if written != row_count:
+            raise RuntimeError("functional detail merge changed the row count")
+        aggregate_sets = {
+            "layer_head": layer_combiner.finish(),
+            "contraction": contraction_combiner.finish(),
+            "topology": topology_combiner.finish(),
+            "lambda": lambda_combiner.finish(),
+        }
+        hashes = {OUTPUT_NAMES["rows"]: sha256_file(parquet_path)}
+        for name, records in aggregate_sets.items():
+            path = output_dir / OUTPUT_NAMES[name]
+            atomic_write(path, _csv_bytes(records))
+            hashes[path.name] = sha256_file(path)
+        summary = _build_summary_from_group_rows(
+            row_count=row_count,
+            answer_query_count=answer_query_count,
+            sample_ids=sample_ids,
+            content_group_ids=content_group_ids,
+            seeds=seeds,
+            cells=cells,
+            group_rows=group_rows,
+            artifact_sha256=hashes,
+        )
+        atomic_write(
+            output_dir / OUTPUT_NAMES["summary"], canonical_json_bytes(summary)
+        )
+        return summary
+    finally:
+        for handle in fragment_handles.values():
+            handle.close()
+        connection.close()
+        shutil.rmtree(spill, ignore_errors=True)
+
+
+RAW_BOUNDARY_REASONS = frozenset(
+    {
+        "zero_length_receiver_interval",
+        "duplicate_or_overlap_receiver_offsets",
+        "zero_length_source_interval",
+        "exact_duplicate_source_offsets",
+        "partial_overlap_source_offsets",
+        "candidate_without_receiver_intersection",
     }
-    hashes = {OUTPUT_NAMES["rows"]: sha256_file(parquet_path)}
-    for name, records in aggregate_sets.items():
-        path = output_dir / OUTPUT_NAMES[name]
-        atomic_write(path, _csv_bytes(records))
-        hashes[path.name] = sha256_file(path)
-    summary = build_summary(rows, hashes)
-    atomic_write(output_dir / OUTPUT_NAMES["summary"], canonical_json_bytes(summary))
-    return summary
+)
+RAW_ORIGINS = frozenset(
+    {"span_overlap", "window_neighbor", "fallback_or_unknown"}
+)
 
 
-def read_input_rows(path: Path) -> list[dict[str, Any]]:
+def _span(value: Any, name: str, *, optional: bool = False) -> list[int] | None:
+    if optional and value is None:
+        return None
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        raise ValueError(f"{name} must be a length-two span")
+    return [
+        _integer(value[0], f"{name}[0]"),
+        _integer(value[1], f"{name}[1]"),
+    ]
+
+
+def validate_raw_topology_row(raw: Mapping[str, Any]) -> dict[str, Any]:
+    """Validate one model-output-free raw-to-runtime topology parent row."""
+
+    if set(raw) != set(RAW_TOPOLOGY_COLUMNS):
+        missing = sorted(set(RAW_TOPOLOGY_COLUMNS) - set(raw))
+        extra = sorted(set(raw) - set(RAW_TOPOLOGY_COLUMNS))
+        raise ValueError(f"raw topology schema mismatch; missing={missing}, extra={extra}")
+    row = {name: raw[name] for name in RAW_TOPOLOGY_COLUMNS}
+    if _integer(row["schema_version"], "schema_version") != 1:
+        raise ValueError("raw topology schema version mismatch")
+    if row["split_role"] != SPLIT_ROLE:
+        raise ValueError("raw topology data firewall accepts E0-design only")
+    if row["task"] not in TASKS:
+        raise ValueError("raw topology task is unknown")
+    row["sample_sha256"] = _sha256(row["sample_sha256"], "sample_sha256")
+    row["content_group_sha256"] = _sha256(
+        row["content_group_sha256"], "content_group_sha256"
+    )
+    row["span_geometry_sha256"] = _sha256(
+        row["span_geometry_sha256"], "span_geometry_sha256"
+    )
+    for name in (
+        "parent_position",
+        "receiver_token_id",
+        "raw_candidate_count",
+        "runtime_candidate_count",
+        "candidate_window",
+    ):
+        row[name] = _integer(row[name], name)
+    if not 2 <= row["raw_candidate_count"] <= 4:
+        raise ValueError("raw topology requires 2<=raw_m<=4")
+    if not 1 <= row["runtime_candidate_count"] <= 4:
+        raise ValueError("raw topology requires 1<=runtime_m<=4")
+    row["receiver_offset"] = _span(row["receiver_offset"], "receiver_offset")
+    row["receiver_span"] = _span(row["receiver_span"], "receiver_span")
+    assert row["receiver_span"] is not None
+    if (
+        row["receiver_span"][0] < 0
+        or row["receiver_span"][1] < row["receiver_span"][0]
+    ):
+        raise ValueError("raw topology receiver span is reversed or negative")
+    for name, count in (
+        ("raw_candidate_indices", row["raw_candidate_count"]),
+        ("runtime_candidate_indices", row["runtime_candidate_count"]),
+    ):
+        if not isinstance(row[name], (list, tuple)) or len(row[name]) != count:
+            raise ValueError(f"{name} length differs from candidate count")
+        row[name] = [_integer(value, f"{name}[]") for value in row[name]]
+        if len(set(row[name])) != len(row[name]):
+            raise ValueError(f"{name} contains duplicate indices")
+    for name, count in (
+        ("raw_weights", row["raw_candidate_count"]),
+        ("runtime_weights", row["runtime_candidate_count"]),
+    ):
+        if not isinstance(row[name], (list, tuple)) or len(row[name]) != count:
+            raise ValueError(f"{name} length differs from candidate count")
+        row[name] = [
+            _finite_float(value, f"{name}[]", nonnegative=True)
+            for value in row[name]
+        ]
+        if any(value <= 0 for value in row[name]) or not math.isclose(
+            sum(row[name]), 1.0, abs_tol=FLOAT32_ATOL, rel_tol=0
+        ):
+            raise ValueError(f"{name} must be a positive normalized distribution")
+    if not isinstance(row["candidates"], list) or len(row["candidates"]) != row[
+        "raw_candidate_count"
+    ]:
+        raise ValueError("raw topology candidate ledger length mismatch")
+    candidates: list[dict[str, Any]] = []
+    runtime_by_index = dict(
+        zip(row["runtime_candidate_indices"], row["runtime_weights"])
+    )
+    for position, value in enumerate(row["candidates"]):
+        if not isinstance(value, Mapping) or set(value) != set(RAW_CANDIDATE_COLUMNS):
+            raise ValueError("raw topology candidate schema mismatch")
+        candidate = {name: value[name] for name in RAW_CANDIDATE_COLUMNS}
+        for name in ("slot", "source_index", "source_token_id", "intersection_length"):
+            candidate[name] = _integer(candidate[name], f"candidate.{name}")
+        if candidate["slot"] != position:
+            raise ValueError("raw topology candidate slots are not canonical")
+        if candidate["source_index"] != row["raw_candidate_indices"][position]:
+            raise ValueError("raw topology candidate/index ledger differs")
+        candidate["source_offset"] = _span(
+            candidate["source_offset"], "candidate.source_offset"
+        )
+        candidate["source_span"] = _span(
+            candidate["source_span"], "candidate.source_span"
+        )
+        candidate["intersection"] = _span(
+            candidate["intersection"], "candidate.intersection", optional=True
+        )
+        if candidate["origin"] not in RAW_ORIGINS:
+            raise ValueError("raw topology candidate origin is unknown")
+        if candidate["origin"] == "window_neighbor" and row["candidate_window"] <= 0:
+            raise ValueError("window-neighbor origin requires candidate_window>0")
+        candidate["raw_weight"] = _finite_float(
+            candidate["raw_weight"], "candidate.raw_weight", nonnegative=True
+        )
+        candidate["runtime_weight"] = _finite_float(
+            candidate["runtime_weight"], "candidate.runtime_weight", nonnegative=True
+        )
+        for name in (
+            "runtime_retained",
+            "complete_receiver_explanation",
+        ):
+            if not isinstance(candidate[name], bool):
+                raise ValueError(f"candidate.{name} must be boolean")
+        expected_intersection = (
+            max(row["receiver_span"][0], candidate["source_span"][0]),
+            min(row["receiver_span"][1], candidate["source_span"][1]),
+        )
+        expected_intersection_value = (
+            list(expected_intersection)
+            if expected_intersection[1] > expected_intersection[0]
+            else None
+        )
+        if candidate["intersection"] != expected_intersection_value:
+            raise ValueError("raw topology stored intersection does not recompute")
+        expected_length = (
+            expected_intersection[1] - expected_intersection[0]
+            if expected_intersection_value is not None
+            else 0
+        )
+        if candidate["intersection_length"] != expected_length:
+            raise ValueError("raw topology intersection length does not recompute")
+        complete = expected_intersection_value == row["receiver_span"]
+        if candidate["complete_receiver_explanation"] != complete:
+            raise ValueError("raw topology complete-explanation flag does not recompute")
+        retained = candidate["source_index"] in runtime_by_index
+        if candidate["runtime_retained"] != retained or not math.isclose(
+            candidate["runtime_weight"],
+            runtime_by_index.get(candidate["source_index"], 0.0),
+            abs_tol=FLOAT32_ATOL,
+            rel_tol=0,
+        ):
+            raise ValueError("raw topology runtime retention/weight does not recompute")
+        if not math.isclose(
+            candidate["raw_weight"], row["raw_weights"][position],
+            abs_tol=FLOAT32_ATOL, rel_tol=0,
+        ):
+            raise ValueError("raw topology candidate/raw weight ledger differs")
+        candidates.append(candidate)
+    row["candidates"] = candidates
+    for name in (
+        "certified",
+        "offset_uncertified",
+        "duplicate_or_overlap_alias",
+        "runtime_functional_eligible",
+        "functional_metrics_present",
+    ):
+        if not isinstance(row[name], bool):
+            raise ValueError(f"raw topology {name} must be boolean")
+    if row["offset_uncertified"] == row["certified"]:
+        raise ValueError("raw topology certified/uncertified flags are inconsistent")
+    if row["functional_metrics_present"]:
+        raise ValueError("raw topology ledger must never contain functional metrics")
+    expected_functional = row["certified"] and row["runtime_candidate_count"] >= 2
+    if row["runtime_functional_eligible"] != expected_functional:
+        raise ValueError("raw topology functional eligibility does not recompute")
+    if not row["certified"] and row["runtime_candidate_count"] > 1:
+        raise ValueError("uncertified raw parent retained multiple runtime candidates")
+    if row["taxonomy"] not in TOPOLOGIES or row["taxonomy"] == "not_applicable":
+        raise ValueError("raw topology taxonomy is invalid")
+    source_spans = [tuple(candidate["source_span"]) for candidate in candidates]
+    independent_complete = (
+        all(candidate["complete_receiver_explanation"] for candidate in candidates)
+        and len({candidate["source_token_id"] for candidate in candidates})
+        == len(candidates)
+        and len(set(source_spans)) == len(source_spans)
+    )
+    boundary = (
+        row["certification_reason"] in RAW_BOUNDARY_REASONS
+        or any(candidate["origin"] == "fallback_or_unknown" for candidate in candidates)
+    )
+    expected_taxonomy = classify_candidate_topology(
+        tuple(row["receiver_span"]),
+        source_spans,
+        candidate_origins=[candidate["origin"] for candidate in candidates],
+        boundary_or_fallback=boundary,
+        independent_competitors=independent_complete,
+        certified_partition=row["certified"],
+        duplicate_or_overlap_alias=row["duplicate_or_overlap_alias"],
+    )
+    if row["taxonomy"] != expected_taxonomy:
+        raise ValueError("raw topology taxonomy does not reproduce from frozen geometry")
+    geometry_sha = hashlib.sha256(
+        canonical_json_bytes(
+            {"receiver_span": row["receiver_span"], "candidates": candidates}
+        )
+    ).hexdigest()
+    if geometry_sha != row["span_geometry_sha256"]:
+        raise ValueError("raw topology span geometry SHA does not recompute")
+    return row
+
+
+def read_raw_topology_sidecar(path: Path) -> list[dict[str, Any]]:
+    """Read only the model-output-free raw topology ledger from a frozen sidecar."""
+
+    import torch
+
+    payload = torch.load(
+        path,
+        map_location="cpu",
+        weights_only=False,
+        mmap=True,
+    )
+    if (
+        not isinstance(payload, Mapping)
+        or payload.get("protocol_id") != "fpct_e1_e0_design_input_lock_v1"
+        or payload.get("split_role") != SPLIT_ROLE
+        or payload.get("e1_pilot_consumed") is not False
+        or payload.get("model_or_checkpoint_loaded") is not False
+    ):
+        raise ValueError("raw topology sidecar identity/firewall mismatch")
+    rows: list[dict[str, Any]] = []
+    seen: set[tuple[str, str, int]] = set()
+    for item in payload.get("items", []):
+        if not isinstance(item, Mapping):
+            raise ValueError("raw topology sidecar item is not a mapping")
+        for raw in item.get("raw_topology_ledger", []):
+            row = validate_raw_topology_row(raw)
+            if (
+                row["task"] != item.get("task")
+                or row["sample_sha256"] != item.get("sample_sha256")
+                or row["content_group_sha256"]
+                != item.get("content_group_sha256")
+            ):
+                raise ValueError("raw topology row differs from sidecar item identity")
+            key = (
+                row["task"],
+                row["sample_sha256"],
+                row["parent_position"],
+            )
+            if key in seen:
+                raise ValueError("duplicate raw topology parent row")
+            seen.add(key)
+            rows.append(row)
+    if not rows:
+        raise ValueError("raw topology sidecar contains no raw m>=2 parents")
+    return sorted(
+        rows,
+        key=lambda row: (
+            row["task"],
+            row["content_group_sha256"],
+            row["sample_sha256"],
+            row["parent_position"],
+        ),
+    )
+
+
+def raw_topology_aggregate_rows(
+    rows: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    groups: dict[tuple[Any, ...], list[Mapping[str, Any]]] = defaultdict(list)
+    keys = ("task", "taxonomy", "raw_candidate_count", "runtime_candidate_count")
+    for row in rows:
+        groups[tuple(row[name] for name in keys)].append(row)
+    output = []
+    for key, members in sorted(groups.items()):
+        task, taxonomy, raw_m, runtime_m = key
+        certified = sum(bool(row["certified"]) for row in members)
+        output.append(
+            {
+                "schema_version": 1,
+                "task": task,
+                "taxonomy": taxonomy,
+                "raw_m": raw_m,
+                "runtime_m": runtime_m,
+                "parent_count": len(members),
+                "sample_count": len({row["sample_sha256"] for row in members}),
+                "content_group_count": len(
+                    {row["content_group_sha256"] for row in members}
+                ),
+                "raw_candidate_atom_count": sum(
+                    int(row["raw_candidate_count"]) for row in members
+                ),
+                "runtime_candidate_atom_count": sum(
+                    int(row["runtime_candidate_count"]) for row in members
+                ),
+                "raw_extra_slot_count": sum(
+                    max(int(row["raw_candidate_count"]) - 1, 0)
+                    for row in members
+                ),
+                "runtime_extra_slot_count": sum(
+                    max(int(row["runtime_candidate_count"]) - 1, 0)
+                    for row in members
+                ),
+                "raw_minus_runtime_candidate_count": sum(
+                    int(row["raw_candidate_count"])
+                    - int(row["runtime_candidate_count"])
+                    for row in members
+                ),
+                "raw_minus_runtime_extra_slot_count": sum(
+                    max(int(row["raw_candidate_count"]) - 1, 0)
+                    - max(int(row["runtime_candidate_count"]) - 1, 0)
+                    for row in members
+                ),
+                "certified_parent_count": certified,
+                "offset_uncertified_parent_count": len(members) - certified,
+                "functional_metric_contract": (
+                    "SEPARATE_RUNTIME_FUNCTIONAL_TABLE_CERTIFIED_ONLY"
+                    if certified == len(members)
+                    else "UNAVAILABLE_UNCERTIFIED_NO_FUNCTIONAL_METRIC"
+                ),
+            }
+        )
+    return output
+
+
+def raw_topology_summary(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    by_task: dict[str, Any] = {}
+    for task in TASKS:
+        members = [row for row in rows if row["task"] == task]
+        if not members:
+            continue
+        taxonomy: dict[str, Any] = {}
+        for name in sorted({str(row["taxonomy"]) for row in members}):
+            selected = [row for row in members if row["taxonomy"] == name]
+            taxonomy[name] = {
+                "parent_count": len(selected),
+                "sample_count": len({row["sample_sha256"] for row in selected}),
+                "content_group_count": len(
+                    {row["content_group_sha256"] for row in selected}
+                ),
+            }
+        by_task[task] = {
+            "parent_count": len(members),
+            "sample_count": len({row["sample_sha256"] for row in members}),
+            "content_group_count": len(
+                {row["content_group_sha256"] for row in members}
+            ),
+            "raw_m_distribution": {
+                str(value): sum(row["raw_candidate_count"] == value for row in members)
+                for value in range(2, 5)
+            },
+            "runtime_m_distribution": {
+                str(value): sum(
+                    row["runtime_candidate_count"] == value for row in members
+                )
+                for value in range(1, 5)
+            },
+            "raw_candidate_atom_count": sum(
+                int(row["raw_candidate_count"]) for row in members
+            ),
+            "runtime_candidate_atom_count": sum(
+                int(row["runtime_candidate_count"]) for row in members
+            ),
+            "raw_minus_runtime_candidate_count": sum(
+                int(row["raw_candidate_count"])
+                - int(row["runtime_candidate_count"])
+                for row in members
+            ),
+            "raw_extra_slot_count": sum(
+                max(int(row["raw_candidate_count"]) - 1, 0)
+                for row in members
+            ),
+            "runtime_extra_slot_count": sum(
+                max(int(row["runtime_candidate_count"]) - 1, 0)
+                for row in members
+            ),
+            "raw_minus_runtime_extra_slot_count": sum(
+                max(int(row["raw_candidate_count"]) - 1, 0)
+                - max(int(row["runtime_candidate_count"]) - 1, 0)
+                for row in members
+            ),
+            "offset_uncertified_parent_count": sum(
+                bool(row["offset_uncertified"]) for row in members
+            ),
+            "taxonomy": taxonomy,
+        }
+    return {
+        "schema_version": 1,
+        "protocol_id": "fpct_e1_raw_to_runtime_topology_audit_v1",
+        "status": "COMPLETE_MODEL_OUTPUT_FREE",
+        "split_role": SPLIT_ROLE,
+        "row_count": len(rows),
+        "task": by_task,
+        "functional_metric_contract": (
+            "raw ledger has no logits/KV/accuracy/mechanism values; uncertified "
+            "parents have no functional metric; certified functional metrics live "
+            "only in the separate runtime mechanism table"
+        ),
+        "e1_pilot_consumed": False,
+        "confirmatory_consumed": False,
+    }
+
+
+def _atomic_raw_jsonl(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
+    """Write the ledger one row at a time instead of materializing one large blob."""
+
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(descriptor, "wb") as handle:
+            for row in rows:
+                handle.write(canonical_json_bytes(dict(row)))
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def _raw_arrow_schema() -> Any:
+    import pyarrow as pa
+
+    span = pa.list_(pa.int64(), 2)
+    candidate = pa.struct(
+        [
+            pa.field("slot", pa.int64(), nullable=False),
+            pa.field("source_index", pa.int64(), nullable=False),
+            pa.field("source_token_id", pa.int64(), nullable=False),
+            pa.field("source_offset", span, nullable=False),
+            pa.field("source_span", span, nullable=False),
+            pa.field("intersection", span),
+            pa.field("intersection_length", pa.int64(), nullable=False),
+            pa.field("origin", pa.string(), nullable=False),
+            pa.field("raw_weight", pa.float64(), nullable=False),
+            pa.field("runtime_retained", pa.bool_(), nullable=False),
+            pa.field("runtime_weight", pa.float64(), nullable=False),
+            pa.field("complete_receiver_explanation", pa.bool_(), nullable=False),
+        ]
+    )
+    types = {
+        "schema_version": pa.int64(),
+        "split_role": pa.string(),
+        "task": pa.string(),
+        "sample_sha256": pa.string(),
+        "content_group_sha256": pa.string(),
+        "parent_position": pa.int64(),
+        "receiver_token_id": pa.int64(),
+        "receiver_offset": span,
+        "receiver_span": span,
+        "raw_candidate_count": pa.int64(),
+        "runtime_candidate_count": pa.int64(),
+        "raw_candidate_indices": pa.list_(pa.int64()),
+        "runtime_candidate_indices": pa.list_(pa.int64()),
+        "raw_weights": pa.list_(pa.float64()),
+        "runtime_weights": pa.list_(pa.float64()),
+        "candidates": pa.list_(candidate),
+        "certified": pa.bool_(),
+        "offset_uncertified": pa.bool_(),
+        "certification_reason": pa.string(),
+        "taxonomy": pa.string(),
+        "candidate_window": pa.int64(),
+        "duplicate_or_overlap_alias": pa.bool_(),
+        "runtime_functional_eligible": pa.bool_(),
+        "functional_metrics_present": pa.bool_(),
+        "span_geometry_sha256": pa.string(),
+    }
+    return pa.schema(
+        [pa.field(name, types[name], nullable=False) for name in RAW_TOPOLOGY_COLUMNS]
+    )
+
+
+def _write_raw_parquet(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    os.close(descriptor)
+    try:
+        schema = _raw_arrow_schema()
+        with pq.ParquetWriter(
+            temporary,
+            schema,
+            compression="zstd",
+            use_dictionary=False,
+            write_statistics=True,
+        ) as writer:
+            for start in range(0, len(rows), 4096):
+                table = pa.Table.from_pylist(
+                    [
+                        {name: row[name] for name in RAW_TOPOLOGY_COLUMNS}
+                        for row in rows[start : start + 4096]
+                    ],
+                    schema=schema,
+                )
+                writer.write_table(table)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def write_raw_topology_artifacts(
+    input_lock_sidecar: Path, output_dir: Path
+) -> dict[str, Any]:
+    rows = read_raw_topology_sidecar(input_lock_sidecar)
+    aggregates = raw_topology_aggregate_rows(rows)
+    summary = raw_topology_summary(rows)
+    output_dir.mkdir(parents=True, exist_ok=False)
+    paths = {
+        name: output_dir / filename
+        for name, filename in RAW_TOPOLOGY_OUTPUT_NAMES.items()
+    }
+    _atomic_raw_jsonl(paths["jsonl"], rows)
+    _write_raw_parquet(paths["parquet"], rows)
+    atomic_write(paths["aggregate_csv"], _csv_bytes(aggregates))
+    atomic_write(paths["aggregate_json"], canonical_json_bytes(summary))
+    artifacts = {
+        paths["jsonl"].name: {
+            "sha256": sha256_file(paths["jsonl"]),
+            "bytes": paths["jsonl"].stat().st_size,
+            "row_count": len(rows),
+        },
+        paths["parquet"].name: {
+            "sha256": sha256_file(paths["parquet"]),
+            "bytes": paths["parquet"].stat().st_size,
+            "row_count": len(rows),
+        },
+        paths["aggregate_csv"].name: {
+            "sha256": sha256_file(paths["aggregate_csv"]),
+            "bytes": paths["aggregate_csv"].stat().st_size,
+            "row_count": len(aggregates),
+        },
+        paths["aggregate_json"].name: {
+            "sha256": sha256_file(paths["aggregate_json"]),
+            "bytes": paths["aggregate_json"].stat().st_size,
+        },
+    }
+    manifest = {
+        "schema_version": 1,
+        "protocol_id": "fpct_e1_raw_to_runtime_topology_audit_v1",
+        "status": "GO_MODEL_OUTPUT_FREE",
+        "split_role": SPLIT_ROLE,
+        "input_lock_sidecar": {
+            "path": str(input_lock_sidecar),
+            "sha256": sha256_file(input_lock_sidecar),
+            "bytes": input_lock_sidecar.stat().st_size,
+        },
+        "artifacts": artifacts,
+        "functional_metrics_present": False,
+        "uncertified_functional_metrics_available": False,
+        "runtime_functional_rows_are_separate": True,
+        "e1_pilot_consumed": False,
+        "confirmatory_consumed": False,
+    }
+    atomic_write(paths["manifest"], canonical_json_bytes(manifest))
+    return manifest
+
+
+def verify_raw_topology_artifacts(
+    input_lock_sidecar: Path, output_dir: Path
+) -> dict[str, Any]:
+    import pyarrow.parquet as pq
+
+    rows = read_raw_topology_sidecar(input_lock_sidecar)
+    aggregates = raw_topology_aggregate_rows(rows)
+    summary = raw_topology_summary(rows)
+    paths = {
+        name: output_dir / filename
+        for name, filename in RAW_TOPOLOGY_OUTPUT_NAMES.items()
+    }
+    with paths["jsonl"].open("rb") as handle:
+        for row in rows:
+            if handle.readline() != canonical_json_bytes(dict(row)):
+                raise ValueError("raw topology JSONL does not reproduce")
+        if handle.read(1):
+            raise ValueError("raw topology JSONL contains trailing rows")
+    parquet = pq.ParquetFile(paths["parquet"])
+    if tuple(parquet.schema_arrow.names) != RAW_TOPOLOGY_COLUMNS:
+        raise ValueError("raw topology parquet schema differs")
+    expected = iter(rows)
+    observed_count = 0
+    for batch in parquet.iter_batches(batch_size=4096):
+        columns = {
+            name: batch.column(batch.schema.get_field_index(name))
+            for name in RAW_TOPOLOGY_COLUMNS
+        }
+        for row_index in range(batch.num_rows):
+            observed = {
+                name: columns[name][row_index].as_py()
+                for name in RAW_TOPOLOGY_COLUMNS
+            }
+            expected_row = next(expected, None)
+            if expected_row is None or canonical_json_bytes(
+                observed
+            ) != canonical_json_bytes(expected_row):
+                raise ValueError("raw topology parquet content differs")
+            observed_count += 1
+    if observed_count != len(rows):
+        raise ValueError("raw topology parquet row count differs")
+    if paths["aggregate_csv"].read_bytes() != _csv_bytes(aggregates):
+        raise ValueError("raw topology CSV aggregate does not reproduce")
+    with paths["aggregate_json"].open(encoding="utf-8") as handle:
+        observed_aggregate = json.load(handle)
+    if observed_aggregate != summary:
+        raise ValueError("raw topology JSON aggregate does not reproduce")
+    with paths["manifest"].open(encoding="utf-8") as handle:
+        manifest = json.load(handle)
+    if (
+        manifest.get("status") != "GO_MODEL_OUTPUT_FREE"
+        or manifest.get("input_lock_sidecar", {}).get("sha256")
+        != sha256_file(input_lock_sidecar)
+    ):
+        raise ValueError("raw topology manifest identity/provenance mismatch")
+    for name in ("jsonl", "parquet", "aggregate_csv", "aggregate_json"):
+        path = paths[name]
+        record = manifest.get("artifacts", {}).get(path.name, {})
+        if (
+            record.get("sha256") != sha256_file(path)
+            or record.get("bytes") != path.stat().st_size
+        ):
+            raise ValueError(f"raw topology artifact provenance mismatch: {path.name}")
+    return {
+        "status": "GO_MODEL_OUTPUT_FREE",
+        "row_count": len(rows),
+        "artifact_sha256": {
+            path.name: sha256_file(path) for path in paths.values()
+        },
+        "e1_pilot_consumed": False,
+        "confirmatory_consumed": False,
+    }
+
+
+def read_input_rows(path: Path) -> Iterator[dict[str, Any]]:
+    """Yield one input row at a time; never materialize a stage artifact."""
+
     if path.suffix == ".jsonl":
-        return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
-    if path.suffix == ".parquet":
+        with path.open(encoding="utf-8") as handle:
+            for line in handle:
+                if line.strip():
+                    yield json.loads(line)
+        return
+    elif path.suffix == ".parquet":
         import pyarrow.parquet as pq
 
-        return pq.read_table(path).to_pylist()
-    raise ValueError("mechanism input must be .jsonl or .parquet")
+        parquet = pq.ParquetFile(path)
+        missing = [name for name in INPUT_COLUMNS if name not in parquet.schema_arrow.names]
+        if missing:
+            raise ValueError(f"mechanism parquet is missing input columns: {missing}")
+        for batch in parquet.iter_batches(batch_size=PARQUET_BATCH_ROWS):
+            indices = {
+                name: batch.schema.get_field_index(name) for name in INPUT_COLUMNS
+            }
+            columns = {name: batch.column(index) for name, index in indices.items()}
+            for row_index in range(batch.num_rows):
+                yield {
+                    name: columns[name][row_index].as_py() for name in INPUT_COLUMNS
+                }
+        return
+    else:
+        raise ValueError("mechanism input must be .jsonl or .parquet")
 
 
 def verify_artifacts(output_dir: Path) -> dict[str, Any]:
@@ -926,41 +2414,36 @@ def verify_artifacts(output_dir: Path) -> dict[str, Any]:
     missing = [str(path) for path in paths.values() if not path.is_file()]
     if missing:
         raise FileNotFoundError(f"missing E1 mechanism artifacts: {missing}")
-    table = pq.read_table(paths["rows"])
-    if tuple(table.column_names) != OUTPUT_COLUMNS:
+    parquet = pq.ParquetFile(paths["rows"])
+    if tuple(parquet.schema_arrow.names) != OUTPUT_COLUMNS:
         raise ValueError("mechanism parquet column order mismatch")
-    stored_rows = table.to_pylist()
-    prepared = prepare_rows([{name: row[name] for name in INPUT_COLUMNS} for row in stored_rows])
-    for expected, observed in zip(prepared, stored_rows):
-        for name in DERIVED_COLUMNS:
-            if isinstance(expected[name], float):
-                if not math.isclose(expected[name], observed[name], abs_tol=1e-12, rel_tol=1e-9):
-                    raise ValueError(f"derived parquet field mismatch: {name}")
-            elif expected[name] != observed[name]:
-                raise ValueError(f"derived parquet field mismatch: {name}")
-    expected_csv = {
-        "layer_head": layer_head_records(prepared),
-        "contraction": contraction_records(prepared),
-        "topology": topology_records(prepared),
-        "lambda": lambda_records(prepared),
-    }
-    for name, records in expected_csv.items():
-        if paths[name].read_bytes() != _csv_bytes(records):
-            raise ValueError(f"aggregate CSV mismatch: {paths[name].name}")
-    hashes = {paths["rows"].name: sha256_file(paths["rows"])}
-    for name in expected_csv:
-        hashes[paths[name].name] = sha256_file(paths[name])
-    expected_summary = build_summary(prepared, hashes)
-    observed_summary = json.loads(paths["summary"].read_text())
-    if observed_summary != expected_summary:
-        raise ValueError("mechanism summary does not reproduce from frozen parquet")
-    return {
-        "status": "GO",
-        "row_count": len(prepared),
-        "artifact_sha256": {path.name: sha256_file(path) for path in paths.values()},
-        "e1_pilot_consumed": False,
-        "confirmatory_consumed": False,
-    }
+    temporary = Path(
+        tempfile.mkdtemp(prefix=".mechanism-verify.", dir=output_dir.parent)
+    )
+    try:
+        reproduced = write_artifacts(read_input_rows(paths["rows"]), temporary)
+        for name, path in paths.items():
+            candidate = temporary / path.name
+            if (
+                candidate.stat().st_size != path.stat().st_size
+                or sha256_file(candidate) != sha256_file(path)
+            ):
+                raise ValueError(f"streaming artifact does not reproduce: {path.name}")
+        with paths["summary"].open(encoding="utf-8") as handle:
+            observed_summary = json.load(handle)
+        if observed_summary != reproduced:
+            raise ValueError("mechanism summary does not reproduce from frozen parquet")
+        return {
+            "status": "GO",
+            "row_count": int(reproduced["row_count"]),
+            "artifact_sha256": {
+                path.name: sha256_file(path) for path in paths.values()
+            },
+            "e1_pilot_consumed": False,
+            "confirmatory_consumed": False,
+        }
+    finally:
+        shutil.rmtree(temporary, ignore_errors=True)
 
 
 def synthetic_rows() -> list[dict[str, Any]]:
@@ -968,6 +2451,10 @@ def synthetic_rows() -> list[dict[str, Any]]:
 
     sample = hashlib.sha256(b"fpct-e1-synthetic-sample").hexdigest()
     group = hashlib.sha256(b"fpct-e1-synthetic-group").hexdigest()
+    input_sha = hashlib.sha256(b"fpct-e1-synthetic-input").hexdigest()
+    alignment_sha = hashlib.sha256(b"fpct-e1-synthetic-alignment").hexdigest()
+    labels_sha = hashlib.sha256(b"fpct-e1-synthetic-labels").hexdigest()
+    response_sha = hashlib.sha256(b"The correct answer is A.").hexdigest()
     rows = []
     for checkpoint_arm in CHECKPOINT_ARMS:
         arm_offset = 0.02 if checkpoint_arm == "f_trained" else 0.0
@@ -996,10 +2483,16 @@ def synthetic_rows() -> list[dict[str, Any]]:
                         "task": "ai2-arc",
                         "sample_sha256": sample,
                         "content_group_sha256": group,
+                        "input_sha256": input_sha,
+                        "alignment_sha256": alignment_sha,
+                        "labels_sha256": labels_sha,
+                        "gold_response_sha256": response_sha,
                         "layer": 0,
-                        "head": 0,
+                        "query_head": 0,
+                        "kv_head": 0,
                         "query_position": query_position,
                         "target_position": query_position + 1,
+                        "target_token_id": 7 + query_position,
                         "parent_position": 2,
                         "candidate_count": 2,
                         "topology": "partition_compositional",
@@ -1021,8 +2514,8 @@ def synthetic_rows() -> list[dict[str, Any]]:
                         "output_delta_l2": 0.0 if lambda_value == 0 else 0.01 * lambda_value,
                         "gold_logp": cpost_logp + delta,
                         "cpost_gold_logp": cpost_logp,
-                        "prediction_correct": True,
-                        "cpost_prediction_correct": True,
+                        "end_task_correct": True,
+                        "cpost_end_task_correct": True,
                     })
     return rows
 
@@ -1037,13 +2530,33 @@ def main(argv: Sequence[str] | None = None) -> int:
     aggregate.add_argument("--output-dir", type=Path, required=True)
     verify = subparsers.add_parser("verify", help="independently reproduce frozen aggregates")
     verify.add_argument("--output-dir", type=Path, required=True)
+    raw_topology = subparsers.add_parser(
+        "raw-topology",
+        help="export the model-output-free raw-to-runtime topology ledger",
+    )
+    raw_topology.add_argument("--input-lock-sidecar", type=Path, required=True)
+    raw_topology.add_argument("--output-dir", type=Path, required=True)
+    verify_raw = subparsers.add_parser(
+        "verify-raw-topology",
+        help="reproduce raw topology artifacts from the frozen input-lock sidecar",
+    )
+    verify_raw.add_argument("--input-lock-sidecar", type=Path, required=True)
+    verify_raw.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command == "dry-run":
         result = write_artifacts(synthetic_rows(), args.output_dir)
     elif args.command == "aggregate":
         result = write_artifacts(read_input_rows(args.input), args.output_dir)
-    else:
+    elif args.command == "verify":
         result = verify_artifacts(args.output_dir)
+    elif args.command == "raw-topology":
+        result = write_raw_topology_artifacts(
+            args.input_lock_sidecar, args.output_dir
+        )
+    else:
+        result = verify_raw_topology_artifacts(
+            args.input_lock_sidecar, args.output_dir
+        )
     print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
     return 0
 

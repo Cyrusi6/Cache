@@ -15,10 +15,13 @@
     "f_trained+c_post": "Y_FC",
     "f_trained+f": "Y_FF"
   },
-  "teacher_forcing": {
-    "causal_shift": "logits[:, t, :] score labels[:, t + 1]",
-    "eligible_target": "labels[:, t + 1] != -100",
-    "primary_metric": "delta_gold_logp = gold_logp(lambda) - cpost_gold_logp"
+    "teacher_forcing": {
+        "causal_shift": "logits[:, t, :] score labels[:, t + 1]",
+        "eligible_target": "labels[:, t + 1] != -100",
+        "gold_response_template": "The correct answer is {A|B|C|D}.",
+        "response_metric": "sum eligible-token gold_logp within each complete assistant response, average member samples within content group, then average distinct content groups",
+        "primary_metric": "group-equal response_delta_gold_logp = sum_t[gold_logp(lambda,t) - cpost_gold_logp(t)]",
+        "end_task_accuracy": "deterministic E0-compatible generated-answer correctness, counted once per distinct content group; never teacher-forced next-token accuracy"
   },
   "centered_lambda": {
     "grid": [
@@ -45,14 +48,78 @@
     "taxonomy_unresolved"
   ],
   "topology_decision_contract": {
-    "partition_compositional": "positive-length candidate intersections form a disjoint ordered complete cover of the receiver span",
-    "competing_overlap": "multiple candidates each overlap the receiver and an independent upstream determination explicitly certifies them as alternative explanations",
-    "boundary_fallback": "boundary, fallback, malformed, or special-token geometry is explicitly present",
-    "neighbor_expansion": "at least one candidate is explicitly introduced by the candidate window rather than direct span overlap",
-    "taxonomy_unresolved": "m>=2 geometry that satisfies none of the explicit rules; failure of the partition rule alone is never evidence of competition"
+    "precedence": [
+      "boundary_fallback",
+      "neighbor_expansion",
+      "partition_compositional",
+      "competing_overlap",
+      "taxonomy_unresolved"
+    ],
+    "partition_compositional": "the frozen sanitizer certifies the row and all positive-length candidate intersections form a source-index-unique, monotone, pairwise-disjoint complete cover of the receiver span",
+    "competing_overlap": "every candidate independently covers the complete receiver span; source indices and token IDs are unique; source spans are distinct; and zero-length, duplicate-offset, partial-overlap, receiver-overlap, boundary, fallback, and window-neighbor aliases are absent",
+    "boundary_fallback": "boundary/fallback geometry, a zero-length interval, duplicate/overlapping receiver offsets, duplicate source offsets, partial-overlap source alias, missing receiver intersection, malformed geometry, or special-token fallback is explicitly present",
+    "neighbor_expansion": "at least one candidate origin is explicitly window_neighbor and no higher-precedence boundary/fallback condition is present",
+    "taxonomy_unresolved": "m>=2 geometry that satisfies none of the frozen positive rules; ordinary soft-span partial coverage, multiple overlaps, or failure of the partition rule alone is never evidence of competition"
+  },
+  "raw_topology_audit": {
+    "source": "frozen fpct_e1_e0_design_input_lock_v1 sidecar only",
+    "grain": "task x sample x raw pre-sanitizer parent with m>=2",
+    "model_output_free": true,
+    "runtime_functional_rows_separate": true,
+    "row_columns": [
+      "schema_version",
+      "split_role",
+      "task",
+      "sample_sha256",
+      "content_group_sha256",
+      "parent_position",
+      "receiver_token_id",
+      "receiver_offset",
+      "receiver_span",
+      "raw_candidate_count",
+      "runtime_candidate_count",
+      "raw_candidate_indices",
+      "runtime_candidate_indices",
+      "raw_weights",
+      "runtime_weights",
+      "candidates",
+      "certified",
+      "offset_uncertified",
+      "certification_reason",
+      "taxonomy",
+      "candidate_window",
+      "duplicate_or_overlap_alias",
+      "runtime_functional_eligible",
+      "functional_metrics_present",
+      "span_geometry_sha256"
+    ],
+    "candidate_columns": [
+      "slot",
+      "source_index",
+      "source_token_id",
+      "source_offset",
+      "source_span",
+      "intersection",
+      "intersection_length",
+      "origin",
+      "raw_weight",
+      "runtime_retained",
+      "runtime_weight",
+      "complete_receiver_explanation"
+    ],
+    "candidate_origin_values": [
+      "span_overlap",
+      "window_neighbor",
+      "fallback_or_unknown"
+    ],
+    "span_frame": "receiver_span and candidate source_span/intersection are clipped message-content-relative character intervals; absolute tokenizer offsets are retained separately",
+    "runtime_collapse_contract": "offset-uncertified raw m>=2 rows retain at most one deterministic runtime candidate in every operator arm",
+    "functional_metric_contract": "raw and offset-uncertified topology rows contain no checkpoint/model/query functional metric; only certified runtime m>=2 rows may appear in the separate functional mechanism table",
+    "aggregate_contract": "report raw/runtime m, raw-minus-runtime candidate and extra-slot deltas, and taxonomy parent/sample/distinct-content-group counts for every task",
+    "serialization_contract": "JSONL is written row-wise and Parquet in fixed 4096-row batches; only raw m>=2 topology rows are serialized and no raw KV/logit tensor is retained"
   },
   "input_row": {
-    "grain": "seed x checkpoint arm x inference operator x task x sample x answer query x layer x head x parent x lambda",
+        "grain": "seed x checkpoint arm x inference operator x task x sample x answer query x layer x query head x parent x lambda",
     "required_columns": [
       "schema_version",
       "split_role",
@@ -61,12 +128,18 @@
       "inference_operator",
       "cell",
       "task",
-      "sample_sha256",
-      "content_group_sha256",
-      "layer",
-      "head",
-      "query_position",
-      "target_position",
+            "sample_sha256",
+            "content_group_sha256",
+            "input_sha256",
+            "alignment_sha256",
+            "labels_sha256",
+            "gold_response_sha256",
+            "layer",
+            "query_head",
+            "kv_head",
+            "query_position",
+            "target_position",
+            "target_token_id",
       "parent_position",
       "candidate_count",
       "topology",
@@ -88,11 +161,14 @@
       "output_delta_l2",
       "gold_logp",
       "cpost_gold_logp",
-      "prediction_correct",
-      "cpost_prediction_correct"
-    ],
-    "array_contract": "prior and gamma contain exactly candidate_count finite nonnegative values and each sums to one when candidate_count > 0",
-    "position_contract": "target_position = query_position + 1"
+            "end_task_correct",
+            "cpost_end_task_correct"
+        ],
+        "array_contract": "prior and gamma contain exactly candidate_count finite nonnegative values and each sums to one when candidate_count > 0",
+        "position_contract": "target_position = query_position + 1",
+        "candidate_contract": "functional rows contain certified runtime parents only, so 2 <= candidate_count <= 4",
+        "head_contract": "query_head is Hq; kv_head=floor(query_head/(Hq/Hkv)); source/fused D and energy are full head-by-feature Frobenius scalars repeated over query heads because sender and receiver heads have no semantic one-to-one map",
+        "baseline_join": "cpost fields are mechanically joined by the executor on seed/checkpoint arm/task/sample/query/target/target_token_id plus input/alignment/labels hashes; a runtime backend may not self-report them"
   },
   "derived_metrics": {
     "gamma_kl_prior": "sum_j gamma_j log(gamma_j/A_j)",
@@ -104,8 +180,23 @@
     "normalized_fused_d_k": "fused_d_k/(fused_energy_k+1e-12)",
     "normalized_fused_d_v": "fused_d_v/(fused_energy_v+1e-12)",
     "projector_retention_k": "fused_d_k/(source_d_k+1e-12)",
-    "projector_retention_v": "fused_d_v/(source_d_v+1e-12)",
-    "delta_gold_logp": "gold_logp-cpost_gold_logp"
+        "projector_retention_v": "fused_d_v/(source_d_v+1e-12)",
+        "delta_gold_logp": "per-token gold_logp-cpost_gold_logp",
+        "response_delta_gold_logp": "sum of delta_gold_logp over all eligible answer queries in a complete assistant response",
+        "end_task_accuracy_flip": "end_task_correct != cpost_end_task_correct"
+  },
+  "bounded_streaming_execution": {
+    "stage_input": "one deterministic merged Parquet whose shard blocks are ordered by canonical shard_id and whose rows are strictly frozen-row-key ordered within each shard",
+    "reader": "ParquetFile.iter_batches with 4096 rows per batch; no whole-file read_table/to_pylist/read_text materialization",
+    "derivation_chunk": "one partition x sample, where partition=(seed,checkpoint_arm,inference_operator,cell,task,lambda_value)",
+    "hard_max_rows_per_partition_sample": 262144,
+    "hard_max_stage_partitions": 108,
+    "hard_max_distinct_samples_and_content_groups": 326,
+    "hard_max_partition_sample_chunks": 35208,
+    "detail_output": "bounded partition fragments followed by deterministic k-way merge into 4096-row Parquet row groups",
+    "aggregate_output": "per-sample bounded reductions are combined in deterministic sample order; parent geometry consistency is enforced by a disk-backed unique index",
+    "verification": "re-read only input columns from frozen detail Parquet, independently rerun the same bounded derivation, and require byte-size plus SHA256 equality for every formal artifact",
+    "spill_contract": "temporary local spill only; removed on success or failure; no raw KV, logits, predictions, model, or checkpoint object is retained"
   },
   "artifacts": {
     "e1_mechanism_rows.parquet": {
@@ -115,13 +206,18 @@
         "checkpoint_arm",
         "inference_operator",
         "task",
-        "content_group_sha256",
         "sample_sha256",
-        "lambda_value",
-        "layer",
-        "head",
-        "query_position",
-        "parent_position"
+        "content_group_sha256",
+                "lambda_value",
+                "layer",
+                "query_head",
+                "query_position",
+                "parent_position",
+                "kv_head",
+                "target_position",
+                "target_token_id",
+                "candidate_count",
+                "topology"
       ]
     },
     "e1_mechanism_summary.json": {
@@ -138,9 +234,26 @@
     },
     "e1_centered_lambda_summary.csv": {
       "role": "same-checkpoint centered-lambda dose-response"
+    },
+    "e1_raw_topology_ledger.jsonl": {
+      "role": "local model-output-free, row-replayable raw-to-runtime geometry ledger from the frozen input-lock sidecar"
+    },
+    "e1_raw_topology_ledger.parquet": {
+      "role": "columnar duplicate of the local raw topology ledger"
+    },
+    "e1_raw_topology_aggregates.csv": {
+      "role": "task x taxonomy x raw-m x runtime-m parent/sample/group counts and raw/runtime candidate deltas"
+    },
+    "e1_raw_topology_aggregates.json": {
+      "role": "task-level raw/runtime m distributions, taxonomy counts, and no-functional-metric integrity statement"
+    },
+    "e1_raw_topology_manifest.json": {
+      "role": "hash, byte-size, row-count, source-sidecar provenance, and claim-boundary manifest for all raw topology artifacts"
     }
   },
-  "numerical_contract": {
+    "numerical_contract": {
+        "measurement_accumulation_dtype": "float32",
+        "dispersion_epsilon": 1e-12,
     "float64_atol": 1e-10,
     "float64_rtol": 1e-08,
     "float32_atol": 2e-05,

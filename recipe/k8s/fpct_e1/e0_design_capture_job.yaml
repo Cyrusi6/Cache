@@ -1,0 +1,102 @@
+# Render-only template.  Do not kubectl-apply this file directly.
+#
+# Render the 18 ``e1_2_cpost_baselines`` jobs first, then run verify-all with
+# ``--stage e1_2_cpost_baselines --write-completion``.  Only after that marker
+# exists may the 18 ``e1_2_factorized_endpoints`` jobs be rendered.  Verify the
+# complete 36-shard ``e1_2_endpoints`` stage before rendering E1-3. Kubernetes
+# has no native Job DAG, so these filesystem locks are operative dependencies.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-e1-__SHARD_SLUG__
+  namespace: c2c-research
+  annotations:
+    fpct.openai.com/render-only-source: "true"
+    fpct.openai.com/requires-phase: "__REQUIRES_PHASE__"
+  labels:
+    project: fpct
+    study: fpct-e1-mechanism-audit
+    role: e0-design
+    phase: __PHASE__
+    lambda-tag: __LAMBDA_TAG__
+    exploratory: "true"
+    e1-pilot-access: "false"
+    confirmatory: "false"
+    eligible-for-formal-statistics: "false"
+    execution-sha: __EXECUTION_SHA__
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        project: fpct
+        study: fpct-e1-mechanism-audit
+        role: e0-design
+        phase: __PHASE__
+        execution-sha: __EXECUTION_SHA__
+    spec:
+      nodeName: 4090-48gx2
+      restartPolicy: Never
+      containers:
+      - name: e0-design-capture
+        image: __IMMUTABLE_IMAGE_DIGEST__
+        imagePullPolicy: IfNotPresent
+        command:
+        - /opt/conda/bin/python3.11
+        - __RUNNER_CONTAINER_PATH__
+        args:
+        - run-shard
+        - --plan
+        - __PLAN_CONTAINER_PATH__
+        - --shard-id
+        - __SHARD_ID__
+        - --instrumentation-gate
+        - __INSTRUMENTATION_GATE_CONTAINER_PATH__
+        - --output-root
+        - __OUTPUT_CONTAINER_ROOT__
+        - --backend
+        - __FROZEN_RUNTIME_BACKEND__
+        - --path-view
+        - container
+        - --claim-id
+        - __CLAIM_ID__
+__FINALIZED_ARG_BLOCK__
+        env:
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: TRANSFORMERS_OFFLINE, value: "1"}
+        - {name: WANDB_MODE, value: offline}
+        - {name: C2C_PRESERVE_CUDA_VISIBLE_DEVICES, value: "1"}
+        - {name: C2C_MODEL_ROOT, value: __MODELS_CONTAINER_ROOT__}
+        - {name: PYTHONPATH, value: __REPO_CONTAINER_ROOT__}
+        - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+        resources:
+          limits: {nvidia.com/gpu: "1"}
+          requests: {nvidia.com/gpu: "1", cpu: "8", memory: 64Gi}
+        volumeMounts:
+        - {name: source-snapshot, mountPath: __REPO_CONTAINER_ROOT__, readOnly: true}
+        - {name: models, mountPath: __MODELS_CONTAINER_ROOT__, readOnly: true}
+        - {name: e0, mountPath: __E0_CONTAINER_ROOT__, readOnly: true}
+        - {name: e1-lock, mountPath: __GATE_CONTAINER_ROOT__, readOnly: true}
+        - {name: runtime-lock, mountPath: __RUNTIME_CONTAINER_ROOT__, readOnly: true}
+        - {name: input-lock, mountPath: __INPUT_LOCK_CONTAINER_ROOT__, readOnly: true}
+        - {name: raw-topology, mountPath: __RAW_TOPOLOGY_CONTAINER_ROOT__, readOnly: true}
+__FINALIZED_VOLUME_MOUNT_BLOCK__
+        - {name: e1-results, mountPath: __OUTPUT_CONTAINER_ROOT_MOUNT__}
+      volumes:
+      - name: source-snapshot
+        hostPath: {path: __SOURCE_SNAPSHOT_HOST__, type: Directory}
+      - name: models
+        hostPath: {path: __MODELS_HOST_ROOT__, type: Directory}
+      - name: e0
+        hostPath: {path: __E0_HOST_ROOT__, type: Directory}
+      - name: e1-lock
+        configMap: {name: __PLAN_GATE_CONFIGMAP_NAME__}
+      - name: runtime-lock
+        configMap: {name: __RUNTIME_CONFIGMAP_NAME__}
+      - name: input-lock
+        hostPath: {path: __INPUT_LOCK_HOST_ROOT_RENDER__, type: Directory}
+      - name: raw-topology
+        hostPath: {path: __RAW_TOPOLOGY_HOST_ROOT__, type: Directory}
+__FINALIZED_VOLUME_BLOCK__
+      - name: e1-results
+        hostPath: {path: __OUTPUT_HOST_ROOT__, type: DirectoryOrCreate}

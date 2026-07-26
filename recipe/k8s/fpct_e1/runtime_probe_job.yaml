@@ -1,0 +1,66 @@
+# Render-only template. Never kubectl-apply this file with unresolved placeholders.
+# It runs after Commit A in the same immutable image/node class as capture jobs.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fpct-e1-runtime-probe-__EXECUTION_SHA__
+  namespace: c2c-research
+  annotations:
+    fpct.openai.com/render-only-source: "true"
+    fpct.openai.com/model-output-free: "true"
+  labels:
+    project: fpct
+    study: fpct-e1-mechanism-audit
+    role: runtime-probe
+    execution-sha: __EXECUTION_SHA__
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        project: fpct
+        study: fpct-e1-mechanism-audit
+        role: runtime-probe
+        execution-sha: __EXECUTION_SHA__
+    spec:
+      nodeName: 4090-48gx2
+      restartPolicy: Never
+      containers:
+      - name: runtime-probe
+        image: __IMMUTABLE_IMAGE_DIGEST__
+        imagePullPolicy: IfNotPresent
+        command:
+        - /opt/conda/bin/python3.11
+        - /opt/fpct/script/experiment/fpct_e1_runtime_probe.py
+        args:
+        - --output
+        - __RUNTIME_PROBE_OUTPUT_PATH__
+        - --execution-sha
+        - __EXECUTION_SHA__
+        - --image-digest
+        - __IMMUTABLE_IMAGE_DIGEST__
+        - --source-snapshot-tree-sha
+        - __SOURCE_SNAPSHOT_TREE_SHA__
+        env:
+        - {name: HF_HUB_OFFLINE, value: "1"}
+        - {name: HF_DATASETS_OFFLINE, value: "1"}
+        - {name: TRANSFORMERS_OFFLINE, value: "1"}
+        - {name: PYTHONPATH, value: /opt/fpct}
+        - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+        resources:
+          limits: {nvidia.com/gpu: "1"}
+          requests: {nvidia.com/gpu: "1", cpu: "2", memory: 8Gi}
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        volumeMounts:
+        - {name: source-snapshot, mountPath: /opt/fpct, readOnly: true}
+        - {name: e1-results, mountPath: /fpct-e1}
+        - {name: tmp, mountPath: /tmp}
+      volumes:
+      - name: source-snapshot
+        hostPath: {path: __SOURCE_SNAPSHOT_HOST__, type: Directory}
+      - name: e1-results
+        hostPath: {path: /netdisk/lijunsi/fpct-e1, type: DirectoryOrCreate}
+      - name: tmp
+        emptyDir: {}

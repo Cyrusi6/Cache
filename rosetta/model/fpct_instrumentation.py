@@ -13,6 +13,26 @@ from torch import Tensor
 FPCT_CAPTURE_MODES = frozenset(
     {"prefill", "teacher_forced", "teacher_forced_response", "greedy_decode"}
 )
+# Prospective engineering bound for one explicit capture lifecycle.  The
+# consumer may request a lower bound, but an unbounded long-form accumulator is
+# never permitted.
+FPCT_CAPTURE_DEFAULT_MAX_LONG_FORM_ROWS = 262_144
+LONG_FORM_GEOMETRY_NAMES = (
+    "source_d_k",
+    "source_d_v",
+    "source_energy_k",
+    "source_energy_v",
+    "fused_d_k",
+    "fused_d_v",
+    "fused_energy_k",
+    "fused_energy_v",
+)
+LONG_FORM_PARENT_METRIC_NAMES = (
+    "candidate_logit_range",
+    "candidate_logit_variance",
+    "jensen_gap",
+    "parent_attention_mass",
+)
 
 
 def teacher_forced_query_mask(labels: Tensor) -> Tensor:
@@ -140,6 +160,8 @@ class _LayerCapture:
         self.candidate_count: Tensor | None = None
         self.duplicate_atom_max: Tensor | None = None
         self.query_chunks: list[dict[str, Any]] = []
+        self.primitive_chunks: list[dict[str, Any]] = []
+        self.incomplete_primitive_chunks = 0
 
     @staticmethod
     def _extend_source(value: Tensor, source_length: int, fill: int | bool) -> Tensor:
@@ -204,8 +226,13 @@ class _LayerCapture:
             state.pad_source(source_length)
 
     @staticmethod
-    def _dense_candidates(payload: Mapping[str, Any]) -> tuple[Tensor, Tensor, Tensor]:
+    def _dense_candidates(
+        payload: Mapping[str, Any]
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
         gamma = payload["gamma"].detach().float()
+        prior = payload["prior"].detach().float()
+        if prior.shape != gamma.shape:
+            raise ValueError("FPCT capture prior/gamma shape mismatch")
         candidate_mask = payload["candidate_mask"].detach().bool()
         parent = payload["parent_index"].detach().long().clamp_min(0)
         candidate = payload["candidate_index"].detach().long().clamp_min(0)
@@ -222,6 +249,10 @@ class _LayerCapture:
         dense_gamma.scatter_add_(
             3, flat_index, torch.where(candidate_mask, gamma, torch.zeros_like(gamma))
         )
+        dense_prior = torch.zeros_like(dense_gamma)
+        dense_prior.scatter_add_(
+            3, flat_index, torch.where(candidate_mask, prior, torch.zeros_like(prior))
+        )
         dense_valid_count = torch.zeros(
             b, h, q, dense_size, device=gamma.device, dtype=torch.long
         )
@@ -229,6 +260,7 @@ class _LayerCapture:
         dense_valid = dense_valid_count > 0
         return (
             dense_gamma.reshape(b, h, q, source_length, top_k),
+            dense_prior.reshape(b, h, q, source_length, top_k),
             dense_valid.reshape(b, h, q, source_length, top_k),
             dense_valid_count.reshape(b, h, q, source_length, top_k),
         )
@@ -238,8 +270,10 @@ class _LayerCapture:
         scalar_metrics: Mapping[str, Tensor],
         payload: Mapping[str, Any],
         query_eligible: Tensor,
-    ) -> None:
-        gamma, gamma_valid, duplicate_count = self._dense_candidates(payload)
+        *,
+        max_new_primitive_rows: int,
+    ) -> int:
+        gamma, prior, gamma_valid, duplicate_count = self._dense_candidates(payload)
         duplicate_max = duplicate_count.amax().detach()
         self.duplicate_atom_max = (
             duplicate_max
@@ -330,6 +364,81 @@ class _LayerCapture:
             ) / count.clamp_min(1)
             query_chunk["metrics"][name] = mean.detach()
         self.query_chunks.append(query_chunk)
+        parent_geometry = payload.get("parent_geometry", {})
+        query_metrics = payload.get("query_metrics", {})
+        if not isinstance(parent_geometry, Mapping) or not isinstance(
+            query_metrics, Mapping
+        ):
+            raise ValueError("FPCT capture primitive payload must be mappings")
+        compact_index = parent_valid.nonzero(as_tuple=False)
+        if compact_index.numel() == 0:
+            return 0
+        primitive_row_count = int(compact_index.shape[0])
+        if primitive_row_count > max_new_primitive_rows:
+            raise RuntimeError(
+                "FPCT capture long-form row ceiling exceeded before "
+                "materialization"
+            )
+        if (
+            any(name not in parent_geometry for name in LONG_FORM_GEOMETRY_NAMES)
+            or any(
+                name not in parent_metric_values
+                for name in LONG_FORM_PARENT_METRIC_NAMES
+            )
+            or "output_delta_l2" not in query_metrics
+        ):
+            self.incomplete_primitive_chunks += 1
+            return 0
+        batch_index, head_index, query_index, parent_index = compact_index.unbind(
+            dim=1
+        )
+        for name in LONG_FORM_GEOMETRY_NAMES:
+            if parent_geometry[name].shape != (b, h, source_length):
+                raise ValueError(f"FPCT capture {name} must be [B,H,N]")
+        for name in LONG_FORM_PARENT_METRIC_NAMES:
+            if parent_metric_values[name].shape != (b, h, q, source_length):
+                raise ValueError(f"FPCT capture {name} must be [B,H,Q,N]")
+        if query_metrics["output_delta_l2"].shape != (b, h, q):
+            raise ValueError("FPCT capture output_delta_l2 must be [B,H,Q]")
+        self.primitive_chunks.append(
+            {
+                "index": torch.stack(
+                    (
+                        batch_index,
+                        head_index,
+                        query_index + start_query,
+                        parent_index,
+                    ),
+                    dim=1,
+                ).detach().cpu(),
+                "gamma": gamma[
+                    batch_index, head_index, query_index, parent_index
+                ].detach().cpu(),
+                "prior": prior[
+                    batch_index, head_index, query_index, parent_index
+                ].detach().cpu(),
+                "valid": gamma_valid[
+                    batch_index, head_index, query_index, parent_index
+                ].detach().cpu(),
+                "parent_metrics": {
+                    name: parent_metric_values[name][
+                        batch_index, head_index, query_index, parent_index
+                    ].detach().cpu()
+                    for name in LONG_FORM_PARENT_METRIC_NAMES
+                },
+                "parent_geometry": {
+                    name: parent_geometry[name][
+                        batch_index, head_index, parent_index
+                    ].detach().cpu()
+                    for name in LONG_FORM_GEOMETRY_NAMES
+                },
+                "output_delta_l2": query_metrics["output_delta_l2"][
+                    batch_index, head_index, query_index
+                ].detach().cpu(),
+                "num_key_value_heads": int(payload["num_key_value_heads"]),
+            }
+        )
+        return primitive_row_count
 
 
 def _number(value: Tensor) -> float:
@@ -405,6 +514,7 @@ class FPCTCaptureAccumulator:
         *,
         metadata: Mapping[str, Any] | None = None,
         query_mask: Tensor | None = None,
+        max_long_form_rows: int = FPCT_CAPTURE_DEFAULT_MAX_LONG_FORM_ROWS,
     ) -> None:
         normalized = str(mode).lower()
         if normalized not in FPCT_CAPTURE_MODES:
@@ -413,6 +523,15 @@ class FPCTCaptureAccumulator:
             )
         self.mode = normalized
         self.metadata = deepcopy(dict(metadata or {}))
+        if (
+            isinstance(max_long_form_rows, bool)
+            or not isinstance(max_long_form_rows, int)
+            or max_long_form_rows <= 0
+        ):
+            raise ValueError("max_long_form_rows must be a positive integer")
+        self.max_long_form_rows = int(max_long_form_rows)
+        self.long_form_row_count = 0
+        self.failure_reason: str | None = None
         if query_mask is not None:
             if query_mask.ndim != 2:
                 raise ValueError("FPCT capture query_mask must be [B,T]")
@@ -434,6 +553,10 @@ class FPCTCaptureAccumulator:
     ) -> None:
         if self.closed:
             raise RuntimeError("cannot update a closed FPCT capture")
+        if self.failure_reason is not None:
+            raise RuntimeError(
+                f"FPCT capture is failed closed: {self.failure_reason}"
+            )
         layer = self.layers.setdefault(int(layer_index), _LayerCapture(layer_index))
         query_length = int(payload["gamma"].shape[2])
         batch_size = int(payload["gamma"].shape[0])
@@ -450,11 +573,28 @@ class FPCTCaptureAccumulator:
             if self.query_mask.shape[0] != batch_size or end > self.query_mask.shape[1]:
                 raise ValueError("FPCT capture query_mask does not cover this forward")
             eligible = self.query_mask[:, start:end].to(payload["gamma"].device)
-        layer.update(scalar_metrics, payload, eligible)
+        try:
+            added_rows = layer.update(
+                scalar_metrics,
+                payload,
+                eligible,
+                max_new_primitive_rows=(
+                    self.max_long_form_rows - self.long_form_row_count
+                ),
+            )
+        except RuntimeError as error:
+            if "long-form row ceiling exceeded" in str(error):
+                self.failure_reason = str(error)
+            raise
+        self.long_form_row_count += added_rows
 
     def finalize(self) -> dict[str, Any]:
         if self.closed:
             raise RuntimeError("FPCT capture has already ended")
+        if self.failure_reason is not None:
+            raise RuntimeError(
+                f"FPCT capture is failed closed: {self.failure_reason}"
+            )
         self.closed = True
         layer_reports: dict[str, Any] = {}
         global_metric_parts: dict[str, list[dict[str, Any]]] = {}
@@ -464,6 +604,8 @@ class FPCTCaptureAccumulator:
         top1_comparisons = 0
         top1_disagreements = 0
         any_top1_change = False
+        long_form_primitives: list[dict[str, Any]] = []
+        incomplete_primitive_chunks = 0
 
         for layer_index in sorted(self.layers):
             layer = self.layers[layer_index]
@@ -640,6 +782,63 @@ class FPCTCaptureAccumulator:
                             }
                         )
 
+            incomplete_primitive_chunks += layer.incomplete_primitive_chunks
+            for chunk in layer.primitive_chunks:
+                compact_index = chunk["index"]
+                gamma_values = chunk["gamma"]
+                prior_values = chunk["prior"]
+                valid_values = chunk["valid"]
+                geometry_values = chunk["parent_geometry"]
+                metric_values = chunk["parent_metrics"]
+                output_delta = chunk["output_delta_l2"]
+                row_count = int(compact_index.shape[0])
+                assert layer.num_heads is not None
+                num_heads = layer.num_heads
+                num_key_value_heads = int(chunk["num_key_value_heads"])
+                if (
+                    num_key_value_heads <= 0
+                    or num_heads % num_key_value_heads != 0
+                ):
+                    raise ValueError("FPCT capture Hq/Hkv mapping is invalid")
+                query_heads_per_kv_head = num_heads // num_key_value_heads
+                for compact_row in range(row_count):
+                    batch, query_head, query_position, parent = (
+                        int(value) for value in compact_index[compact_row]
+                    )
+                    legal = valid_values[compact_row]
+                    candidate_count = int(legal.sum())
+                    if candidate_count < 2:
+                        raise ValueError(
+                            "compacted FPCT primitive contains a non-ambiguous parent"
+                        )
+                    prior_row = prior_values[compact_row][legal]
+                    gamma_row = gamma_values[compact_row][legal]
+                    row: dict[str, Any] = {
+                        "batch_index": batch,
+                        "layer": layer_index,
+                        "query_head": query_head,
+                        "kv_head": query_head // query_heads_per_kv_head,
+                        "query_position": query_position,
+                        "parent_position": parent,
+                        "candidate_count": candidate_count,
+                        "prior": [float(value) for value in prior_row],
+                        "gamma": [float(value) for value in gamma_row],
+                        "output_delta_l2": float(output_delta[compact_row]),
+                    }
+                    row.update(
+                        {
+                            name: float(geometry_values[name][compact_row])
+                            for name in LONG_FORM_GEOMETRY_NAMES
+                        }
+                    )
+                    row.update(
+                        {
+                            name: float(metric_values[name][compact_row])
+                            for name in LONG_FORM_PARENT_METRIC_NAMES
+                        }
+                    )
+                    long_form_primitives.append(row)
+
             layer_report = {
                 "forward_count": layer.forward_count,
                 "query_count": layer.query_count,
@@ -708,6 +907,7 @@ class FPCTCaptureAccumulator:
         )
         return {
             "schema_version": 1,
+            "long_form_contract_version": 1,
             "mode": self.mode,
             "metadata": deepcopy(self.metadata),
             "forward_count": max(
@@ -716,5 +916,9 @@ class FPCTCaptureAccumulator:
             "metrics": metrics,
             "metric_statistics": global_statistics,
             "layers": layer_reports,
+            "long_form_primitives": long_form_primitives,
+            "long_form_incomplete_chunk_count": incomplete_primitive_chunks,
+            "long_form_row_count": self.long_form_row_count,
+            "max_long_form_rows": self.max_long_form_rows,
             "stores_raw_kv": False,
         }

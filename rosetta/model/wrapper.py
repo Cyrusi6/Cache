@@ -30,10 +30,31 @@ from rosetta.model.fpct_attention import (
 )
 from rosetta.model.sampling import sample_token
 from rosetta.model.fpct_instrumentation import (
+    FPCT_CAPTURE_DEFAULT_MAX_LONG_FORM_ROWS,
     FPCTCaptureAccumulator,
     teacher_forced_query_mask,
 )
 from transformers.utils import ModelOutput
+
+
+FPCT_CENTERED_LAMBDA_GRID = (0.0, 0.25, 0.5, 1.0, 2.0)
+
+
+def _normalize_fpct_centered_lambda(value: float) -> float:
+    if isinstance(value, bool):
+        raise ValueError("fpct_centered_lambda must be numeric")
+    normalized = float(value)
+    matches = [
+        candidate
+        for candidate in FPCT_CENTERED_LAMBDA_GRID
+        if abs(normalized - candidate) <= 1e-12
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            "fpct_centered_lambda must be one of "
+            f"{FPCT_CENTERED_LAMBDA_GRID}"
+        )
+    return matches[0]
 
 
 def _fpct_scope(enabled: bool, name: str):
@@ -93,6 +114,7 @@ class RosettaModel(nn.Module):
         fpct_collapse_to_parent_bypass: bool = False,
         fpct_profile_scopes: bool = False,
         fpct_trace: bool = False,
+        fpct_centered_lambda: float = 1.0,
     ):
         super().__init__()
         # model list: a list of model, model 0 by default is the base model
@@ -132,6 +154,9 @@ class RosettaModel(nn.Module):
         )
         self.fpct_profile_scopes = bool(fpct_profile_scopes)
         self.fpct_trace = bool(fpct_trace)
+        self.fpct_centered_lambda = _normalize_fpct_centered_lambda(
+            fpct_centered_lambda
+        )
         self._fpct_candidate_trace_tensors: Dict[
             int, List[Dict[str, torch.Tensor]]
         ] = {}
@@ -142,6 +167,8 @@ class RosettaModel(nn.Module):
             raise ValueError("replicated collapse is an F-only inference control")
         if self.fpct_collapse_to_parent_bypass and self.fpct_operator != "f":
             raise ValueError("collapse-to-parent bypass is an F-only control")
+        if self.fpct_centered_lambda != 1.0 and self.fpct_operator != "f":
+            raise ValueError("non-default centered lambda is an F-only diagnostic")
         if self.fpct_operator in {"c_post", "f"}:
             for projector in self.projector_list:
                 projector.suppress_host_diagnostics = True
@@ -158,7 +185,7 @@ class RosettaModel(nn.Module):
             )
         self.multi_source_fusion_mode = multi_source_fusion_mode
 
-    def fpct_config_dict(self) -> Dict[str, Optional[str]]:
+    def fpct_config_dict(self) -> Dict[str, Any]:
         config = {"operator": self.fpct_operator, "position_mode": "legacy", "a": "1", "g": "1"}
         if self.fpct_replicated_collapse:
             config["replicated_atoms"] = True
@@ -167,11 +194,23 @@ class RosettaModel(nn.Module):
             config["collapse_to_parent_bypass"] = True
         if self.fpct_instrumentation:
             config["instrumentation"] = True
+        if self.fpct_centered_lambda != 1.0:
+            config["centered_lambda"] = self.fpct_centered_lambda
         return config
 
     @property
     def fpct_capture_active(self) -> bool:
         return self._fpct_capture is not None
+
+    def set_fpct_centered_lambda(self, value: float) -> None:
+        """Set the frozen F-only diagnostic lambda before a model forward."""
+
+        normalized = _normalize_fpct_centered_lambda(value)
+        if normalized != 1.0 and self.fpct_operator != "f":
+            raise ValueError("non-default centered lambda is an F-only diagnostic")
+        if self._fpct_capture is not None:
+            raise RuntimeError("cannot change centered lambda during an active capture")
+        self.fpct_centered_lambda = normalized
 
     def begin_fpct_capture(
         self,
@@ -179,13 +218,17 @@ class RosettaModel(nn.Module):
         *,
         metadata: Optional[Mapping[str, Any]] = None,
         query_mask: Optional[torch.Tensor] = None,
+        max_long_form_rows: int = FPCT_CAPTURE_DEFAULT_MAX_LONG_FORM_ROWS,
     ) -> None:
         """Begin an explicit multi-forward query-time instrumentation capture."""
 
         if self._fpct_capture is not None:
             raise RuntimeError("an FPCT capture is already active")
         self._fpct_capture = FPCTCaptureAccumulator(
-            mode, metadata=metadata, query_mask=query_mask
+            mode,
+            metadata=metadata,
+            query_mask=query_mask,
+            max_long_form_rows=max_long_form_rows,
         )
 
     @staticmethod
@@ -415,6 +458,7 @@ class RosettaModel(nn.Module):
                 )
 
             packed = None
+            diagnostic_packed = None
             hierarchical_packed = None
             hierarchical_parent_key = None
             hierarchical_parent_value = None
@@ -433,6 +477,23 @@ class RosettaModel(nn.Module):
                 )
                 if collapse_to_parent:
                     fpct_layout.validate_runtime(base_key_states, fpct_sidecars)
+                    if (
+                        fpct_metric_sink is not None
+                        or fpct_capture_sink is not None
+                    ):
+                        diagnostic_packed = pack_fpct_memory(
+                            base_key_states,
+                            base_value_states,
+                            parent_attention_mask,
+                            fpct_sidecars,
+                            query_length=query_states.shape[-2],
+                            layout=fpct_layout,
+                            semantic_parent_equivalent=(
+                                fpct_semantic_parent_equivalent
+                            ),
+                            replicated_collapse=True,
+                            collapse_replicated_groups=False,
+                        )
                 else:
                     with _fpct_scope(fpct_profile_scopes, "fpct.pack"):
                         packed = pack_fpct_memory(
@@ -449,6 +510,23 @@ class RosettaModel(nn.Module):
                             collapse_replicated_groups=(
                                 not fpct_replicated_collapse
                             ),
+                        )
+                    if (
+                        fpct_metric_sink is not None
+                        or fpct_capture_sink is not None
+                    ):
+                        diagnostic_packed = pack_fpct_memory(
+                            base_key_states,
+                            base_value_states,
+                            parent_attention_mask,
+                            fpct_sidecars,
+                            query_length=query_states.shape[-2],
+                            layout=fpct_layout,
+                            semantic_parent_equivalent=(
+                                fpct_semantic_parent_equivalent
+                            ),
+                            replicated_collapse=fpct_replicated_collapse,
+                            collapse_replicated_groups=False,
                         )
                     if fpct_replicated_collapse:
                         with _fpct_scope(
@@ -471,17 +549,17 @@ class RosettaModel(nn.Module):
                         hierarchical_parent_mask = parent_attention_mask
                 if (
                     fpct_metric_sink is not None or fpct_capture_sink is not None
-                ) and packed is not None:
+                ) and diagnostic_packed is not None:
                     with _fpct_scope(fpct_profile_scopes, "fpct.diagnostics"):
                         if fpct_capture_sink is None:
                             metrics = fpct_mechanism_diagnostics(
-                                query_states, packed
+                                query_states, diagnostic_packed
                             )
                             capture_payload = None
                         else:
                             metrics, capture_payload = fpct_mechanism_diagnostics(
                                 query_states,
-                                packed,
+                                diagnostic_packed,
                                 return_capture_payload=True,
                             )
                         replicated = pack_fpct_memory(
@@ -495,9 +573,10 @@ class RosettaModel(nn.Module):
                                 fpct_semantic_parent_equivalent
                             ),
                             replicated_collapse=True,
+                            collapse_replicated_groups=False,
                         )
                         factorized_output, _ = fpct_eager_attention(
-                            query_states, packed
+                            query_states, diagnostic_packed
                         )
                         collapsed_output, _ = fpct_eager_attention(
                             query_states, replicated
@@ -505,6 +584,13 @@ class RosettaModel(nn.Module):
                         metrics["output_delta_l2"] = (
                             factorized_output.float() - collapsed_output.float()
                         ).square().mean().sqrt()
+                        if capture_payload is not None:
+                            capture_payload["query_metrics"] = {
+                                "output_delta_l2": (
+                                    factorized_output.float()
+                                    - collapsed_output.float()
+                                ).square().mean(dim=-1).sqrt()
+                            }
                     detached_metrics = {
                         name: value.detach() for name, value in metrics.items()
                     }
@@ -1021,6 +1107,78 @@ class RosettaModel(nn.Module):
             == "none"
         )
 
+    @staticmethod
+    def _fpct_candidate_geometry(
+        candidate_key: torch.Tensor,
+        candidate_value: torch.Tensor,
+        prior: torch.Tensor,
+        legal: torch.Tensor,
+        namespace: str,
+    ) -> Dict[str, torch.Tensor]:
+        """Reduce source candidates to capture-only scalar parent statistics."""
+
+        if candidate_key.ndim != 5 or candidate_value.shape != candidate_key.shape:
+            raise ValueError("FPCT candidate geometry requires [B,H,N,K,D] K/V")
+        if prior.shape != legal.shape or prior.shape != (
+            candidate_key.shape[0], candidate_key.shape[2], candidate_key.shape[3]
+        ):
+            raise ValueError("FPCT candidate geometry prior shape mismatch")
+        weight = torch.where(
+            legal,
+            prior.float(),
+            torch.zeros_like(prior, dtype=torch.float32),
+        )[:, None, :, :, None]
+
+        if namespace not in {"source", "fused"}:
+            raise ValueError("FPCT candidate geometry namespace is invalid")
+
+        def reduce(value: torch.Tensor, suffix: str) -> Dict[str, torch.Tensor]:
+            working = value.float()
+            mean = (working * weight).sum(dim=3, keepdim=True)
+            dispersion = (
+                weight * (working - mean).square()
+            ).sum(dim=3).sum(dim=(1, 3))
+            energy = (weight * working.square()).sum(dim=3).sum(dim=(1, 3))
+            return {
+                f"{namespace}_d_{suffix}": dispersion,
+                f"{namespace}_energy_{suffix}": energy,
+            }
+
+        return {
+            **reduce(candidate_key, "k"),
+            **reduce(candidate_value, "v"),
+        }
+
+    def _apply_fpct_centered_lambda(
+        self,
+        fused_key: torch.Tensor,
+        fused_value: torch.Tensor,
+        collapsed_key: torch.Tensor,
+        collapsed_value: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Apply the frozen centered family without touching the lambda=1 path."""
+
+        if self.fpct_centered_lambda == 1.0:
+            return fused_key, fused_value
+        if self.fpct_centered_lambda == 0.0:
+            return (
+                collapsed_key.unsqueeze(3).expand_as(fused_key),
+                collapsed_value.unsqueeze(3).expand_as(fused_value),
+            )
+        centered_lambda = self.fpct_centered_lambda
+        return (
+            (
+                collapsed_key.unsqueeze(3).float()
+                + centered_lambda
+                * (fused_key.float() - collapsed_key.unsqueeze(3).float())
+            ).to(dtype=fused_key.dtype),
+            (
+                collapsed_value.unsqueeze(3).float()
+                + centered_lambda
+                * (fused_value.float() - collapsed_value.unsqueeze(3).float())
+            ).to(dtype=fused_value.dtype),
+        )
+
     def _project_fpct_candidates(
         self,
         *,
@@ -1053,6 +1211,17 @@ class RosettaModel(nn.Module):
             certified=soft_section.get("fpct_prior_certified") is True,
         )
         legal = legal & index_valid.to(device=legal.device)
+        capture_geometry = (
+            self._fpct_candidate_geometry(
+                source_candidates_k,
+                source_candidates_v,
+                prior,
+                legal,
+                "source",
+            )
+            if self._fpct_capture is not None
+            else None
+        )
         weights = prior[:, None, :, :, None].float()
         averaged_source = (
             (source_candidates_k.float() * weights).sum(dim=3).to(
@@ -1169,6 +1338,25 @@ class RosettaModel(nn.Module):
         collapsed_value = (fused_value.float() * weights).sum(dim=3).to(
             dtype=base_kv[1].dtype
         )
+        if capture_geometry is not None:
+            # The projector/fuser contraction tap is prospectively fixed before
+            # the centered-lambda intervention so it is comparable across every
+            # lambda and inference operator.
+            capture_geometry.update(
+                self._fpct_candidate_geometry(
+                    fused_key,
+                    fused_value,
+                    prior,
+                    legal,
+                    "fused",
+                )
+            )
+        fused_key, fused_value = self._apply_fpct_centered_lambda(
+            fused_key,
+            fused_value,
+            collapsed_key,
+            collapsed_value,
+        )
         candidate_count = legal.sum(dim=-1)
         first_candidate = legal.to(torch.long).argmax(dim=-1)
         gather_index = first_candidate[:, None, :, None, None].expand(
@@ -1231,6 +1419,7 @@ class RosettaModel(nn.Module):
             nuisance,
             parent_force_native,
             parent_equivalent,
+            capture_geometry,
         )
 
     def _store_fpct_sidecar(
@@ -1247,6 +1436,7 @@ class RosettaModel(nn.Module):
         max_slots_hint: int = -1,
         source_length_hint: int = -1,
         certified: bool = False,
+        capture_geometry: Optional[Mapping[str, torch.Tensor]] = None,
     ) -> None:
         if not certified:
             if prior.device.type == "cuda":
@@ -1289,6 +1479,7 @@ class RosettaModel(nn.Module):
             certified=canonical[5],
             parent_force_native=parent_force_native,
             parent_equivalent=parent_equivalent,
+            capture_geometry=capture_geometry,
         )
         segment.validate()
         segments = self._fpct_sidecars.setdefault(target_layer_idx, [])
@@ -1822,6 +2013,7 @@ class RosettaModel(nn.Module):
                                             )
                                             is True
                                         ),
+                                        capture_geometry=fpct_record[10],
                                     )
 
                                 # Collect or apply projection based on mode

@@ -1502,3 +1502,12 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 数值合同：λ grid=`{0,.25,.5,1,2}`；native与children共享global denominator；λ0=C_post、λ1=F；invalid probability/gradient exact zero；unresolved topology不强行归为competing。
 - 验证结果：targeted=`82 passed`；teacher logits/loss/cache和三步greedy logits/cache/token bitwise equal；synthetic variance=`0.1973072141`；identical KL/TV/Jensen=0。
 - 结论：E1-1=`GO`。真实 E0-design audit 仍须先锁定capture executor、source/fused geometry、parent mass和gold-logp row contract；E1-pilot/confirmatory继续sealed。
+
+### 2026-07-26 FPCT-E1 pre-data execution lock
+
+- 研究目标：在任何新的自然 tokenizer/alignment 或 pretrained output 前，把 E0-design mechanism audit 与 centered-λ sweep 锁成可恢复、不可跨阶段、可逐字节审计的执行图；不训练、不读取 E1-pilot。
+- 核心改动：新增 CPU input/topology locker、explicit long-form runtime backend、Parquet-only capture executor、bounded streaming analyzer、clean git-archive source receipt、model-output-free runtime probe、strict-attested projector load、initial/finalized immutable ConfigMap bundle 与 dependency-safe K8s templates。
+- 实验配置：只使用 E0-design ARC/OpenBookQA/MMLU-Redux=`128/70/128` groups、三个 E0 seeds、C_post/F-trained 六个 immutable final projector trees；endpoint=`18 C_post + 18 F`，centered-λ additions=`72`，最终 closure=`108`；grid=`{0,.25,.5,1,2}`；每 shard 1 GPU、固定 `4090-48gx2`、最多双并行；无 optimizer/training。
+- 数据与资源合同：query `t` iff `labels[t+1]!=-100`；rows=`answer queries × certified parents × 28 × 16`，sample ceiling=`262144`；每 task 前瞻冻结 row-volume distribution；4096-row Parquet batches；source/input/raw/finalized mounts 只读，仅 current run output root 可写。
+- 验证结果：最终 15-file pre-data suite=`169 passed`；all-FPCT CPU suite=`356 passed`；项目 CPU-safe full suite=`595 passed, 2 warnings`。另两个历史 R2l/R2m immutable verifier按设计拒绝后续 E1 scientific hashes；JSON syntax、`py_compile`、`git diff --check`通过。旧 `82 passed` 记录保留为上一 instrumentation commit 的历史结果。
+- 结论：状态=`PRE-DATA LOCK GO / NATURAL EXECUTION NOT STARTED`。Commit A 后只允许先建 git-archive/input/raw/runtime/plan receipts；`18 C_post -> 18 F -> E1-2 finalized receipt -> 72 lambda` 不得越级。E1-pilot、confirmatory、训练与新 operator 均继续 sealed/not authorized。

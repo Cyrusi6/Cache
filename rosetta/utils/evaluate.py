@@ -8,16 +8,50 @@ like MMLU-Redux and MMMLU.
 import re
 import os
 import json
+import hashlib
 import torch
 import torch.nn as nn
 import numpy as np
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple, Optional, Mapping
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 from rosetta.model.projector import load_projector
 from rosetta.model.wrapper import RosettaModel
 from rosetta.model.oracle import OracleRosettaModel
 from rosetta.utils.model_loading import model_matches, resolve_model_path
+
+
+def _sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def load_projector_state_attested(
+    projector: nn.Module,
+    state_dict: Mapping[str, Any],
+    *,
+    strict_attested: bool,
+) -> Dict[str, Any]:
+    """Load one projector state with opt-in strictness; legacy stays non-strict."""
+
+    incompatible = projector.load_state_dict(
+        state_dict, strict=bool(strict_attested)
+    )
+    missing = list(getattr(incompatible, "missing_keys", ()))
+    unexpected = list(getattr(incompatible, "unexpected_keys", ()))
+    if strict_attested and (missing or unexpected):
+        raise RuntimeError(
+            f"strict projector state load mismatch: missing={missing}, unexpected={unexpected}"
+        )
+    return {
+        "strict": bool(strict_attested),
+        "missing_keys": missing,
+        "unexpected_keys": unexpected,
+        "state_key_count": len(state_dict),
+    }
 
 def build_prompt(dataset: str, locale: str, question: str, choices: str, use_cot: bool, use_template: bool = True) -> str:
     """
@@ -341,6 +375,14 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
     """
     # Prefer checkpoints_dir under model.rosetta_config; fall back to eval config for backward compatibility
     rosetta_config = model_config["rosetta_config"]
+    projector_load_mode = rosetta_config.get(
+        "projector_load_mode", "legacy_non_strict"
+    )
+    if projector_load_mode not in {"legacy_non_strict", "strict_attested"}:
+        raise ValueError(
+            "projector_load_mode must be legacy_non_strict or strict_attested"
+        )
+    strict_projector_load = projector_load_mode == "strict_attested"
     fpct_operator = rosetta_config.get("fpct_operator")
     attention_backend = rosetta_config.get("attn_implementation")
     if fpct_operator in {"c_post", "f"} and attention_backend != "eager":
@@ -414,6 +456,7 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
     # Each checkpoint directory contains standard format: projector_{idx}.pt
     projector_list = []
     num_llms = len(llm_models)
+    projector_load_records: List[Dict[str, Any]] = []
     
     # Track projector offset for each LLM (for config index adjustment)
     projector_offsets = [0]
@@ -421,17 +464,63 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
     for llm_idx, (_, checkpoint_dir) in enumerate(llm_configs):
         # Load projectors from this LLM's checkpoint directory
         # Standard naming: projector_{proj_idx}.pt / .json
-        num_projectors = len([f for f in os.listdir(checkpoint_dir) 
-                             if re.match(r"projector_\d+\.pt", f)])
+        checkpoint_files = os.listdir(checkpoint_dir)
+        if strict_projector_load:
+            pt_indices = {
+                int(match.group(1))
+                for name in checkpoint_files
+                if (match := re.fullmatch(r"projector_(\d+)\.pt", name))
+            }
+            json_indices = {
+                int(match.group(1))
+                for name in checkpoint_files
+                if (match := re.fullmatch(r"projector_(\d+)\.json", name))
+            }
+            if not pt_indices or pt_indices != json_indices:
+                raise RuntimeError(
+                    "strict projector artifact pairing mismatch: "
+                    f"pt={sorted(pt_indices)}, json={sorted(json_indices)}"
+                )
+            expected_indices = set(range(max(pt_indices) + 1))
+            if pt_indices != expected_indices:
+                raise RuntimeError(
+                    f"strict projector indices are not contiguous: {sorted(pt_indices)}"
+                )
+            projector_indices = sorted(pt_indices)
+        else:
+            # Preserve the historical enumeration behavior exactly.
+            num_projectors = len(
+                [f for f in checkpoint_files if re.match(r"projector_\d+\.pt", f)]
+            )
+            projector_indices = list(range(num_projectors))
         
-        for proj_idx in range(num_projectors):
+        for proj_idx in projector_indices:
             json_cfg = os.path.join(checkpoint_dir, f"projector_{proj_idx}.json")
             proj = load_projector(json_cfg)
             proj = proj.to(device)
             pt_path = os.path.join(checkpoint_dir, f"projector_{proj_idx}.pt")
             if os.path.exists(pt_path):
                 state_dict = torch.load(pt_path, map_location=device)
-                proj.load_state_dict(state_dict, strict=False)
+                load_record = load_projector_state_attested(
+                    proj,
+                    state_dict,
+                    strict_attested=strict_projector_load,
+                )
+                projector_load_records.append(
+                    {
+                        "source_model_index": llm_idx + 1,
+                        "projector_index": proj_idx,
+                        "json_path": os.path.abspath(json_cfg),
+                        "json_sha256": _sha256_file(json_cfg),
+                        "state_path": os.path.abspath(pt_path),
+                        "state_sha256": _sha256_file(pt_path),
+                        **load_record,
+                    }
+                )
+            elif strict_projector_load:
+                raise FileNotFoundError(
+                    f"strict projector state artifact missing: {pt_path}"
+                )
             projector_list.append(proj)
         
         # Record offset for next LLM
@@ -464,6 +553,11 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
         fpct_profile_scopes=rosetta_config.get("fpct_profile_scopes", False),
         fpct_trace=rosetta_config.get("fpct_trace", False),
     ).to(device).eval()
+    rosetta_model._projector_load_attestation = {
+        "mode": projector_load_mode,
+        "record_count": len(projector_load_records),
+        "records": projector_load_records,
+    }
 
     if fpct_operator in {"c_post", "f"}:
         for role, loaded_model in [("receiver", slm_model)] + [
@@ -524,6 +618,10 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
                         if source_idx not in rosetta_model.projector_dict[target_idx]:
                             rosetta_model.projector_dict[target_idx][source_idx] = {}
                         rosetta_model.projector_dict[target_idx][source_idx].update(layers)
+        elif strict_projector_load:
+            raise FileNotFoundError(
+                f"strict projector mapping artifact missing: {proj_cfg_path}"
+            )
 
     return rosetta_model, slm_tokenizer
 
