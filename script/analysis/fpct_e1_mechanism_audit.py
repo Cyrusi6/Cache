@@ -695,9 +695,10 @@ def classify_candidate_topology(
         if min(end, b) > max(start, a)
     ]
     if len(intersections) == len(source_spans):
+        ordered_intersections = sorted(intersections)
         cursor = start
-        partition = intersections == sorted(intersections)
-        for left, right in intersections:
+        partition = True
+        for left, right in ordered_intersections:
             if left != cursor or right <= left:
                 partition = False
                 break

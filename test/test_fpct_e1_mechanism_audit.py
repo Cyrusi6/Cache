@@ -266,10 +266,93 @@ def test_topology_taxonomy_is_mutually_exclusive() -> None:
     assert classify_candidate_topology(
         (0, 4), [(0, 2), (2, 4)], candidate_origins=["span_overlap", "window_neighbor"]
     ) == "neighbor_expansion"
-    with pytest.raises(ValueError, match="certified partition geometry"):
-        classify_candidate_topology(
-            (0, 4), [(2, 4), (0, 2)], certified_partition=True
-        )
+    assert classify_candidate_topology(
+        (0, 4), [(2, 4), (0, 2)], certified_partition=True
+    ) == "partition_compositional"
+
+
+def test_certified_partition_topology_is_candidate_permutation_invariant() -> None:
+    source_spans = [(0, 1), (1, 3), (3, 4)]
+    permutations = (
+        (0, 1, 2),
+        (0, 2, 1),
+        (1, 0, 2),
+        (1, 2, 0),
+        (2, 0, 1),
+        (2, 1, 0),
+    )
+    for permutation in permutations:
+        permuted_spans = [source_spans[index] for index in permutation]
+        assert classify_candidate_topology(
+            (0, 4), permuted_spans, certified_partition=True
+        ) == "partition_compositional"
+        assert classify_candidate_topology(
+            (0, 4), permuted_spans
+        ) == "taxonomy_unresolved"
+
+
+def test_raw_topology_ledger_preserves_permuted_certified_candidate_slots() -> None:
+    raw = {
+        "message_mask": [True],
+        "slm_ids": [101],
+        "llm_ids": [201, 202],
+        "slm_offsets": [(0, 4)],
+        "llm_offsets": [(0, 2), (2, 4)],
+        "content_spans_slm": [(0, 4)],
+        "content_spans_llm": [(0, 4)],
+        "sections": [
+            {"type": "message", "slm_range": (0, 1), "llm_range": (0, 2)}
+        ],
+        "soft_alignment": {
+            "source_indices": [[1, 0]],
+            "source_weights": [[0.7, 0.3]],
+        },
+    }
+    sanitized = {
+        "soft_alignment": {
+            "source_indices": [[1, 0]],
+            "source_weights": [[0.7, 0.3]],
+            "fpct_certified_mask": [True],
+            "fpct_certification_reason": ["certified_disjoint_partition"],
+        }
+    }
+
+    rows = raw_topology_ledger(
+        raw_details=raw,
+        sanitized_details=sanitized,
+        instruction_end=1,
+        task="ai2-arc",
+        sample_sha256="1" * 64,
+        content_group_sha256="2" * 64,
+        candidate_window=0,
+    )
+
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["taxonomy"] == "partition_compositional"
+    assert row["raw_candidate_indices"] == [1, 0]
+    assert row["runtime_candidate_indices"] == [1, 0]
+    assert row["raw_weights"] == [0.7, 0.3]
+    assert row["runtime_weights"] == [0.7, 0.3]
+    assert [candidate["slot"] for candidate in row["candidates"]] == [0, 1]
+    assert [candidate["source_index"] for candidate in row["candidates"]] == [1, 0]
+    assert [candidate["source_span"] for candidate in row["candidates"]] == [
+        [2, 4],
+        [0, 2],
+    ]
+    assert [candidate["intersection"] for candidate in row["candidates"]] == [
+        [2, 4],
+        [0, 2],
+    ]
+    assert [candidate["raw_weight"] for candidate in row["candidates"]] == [
+        0.7,
+        0.3,
+    ]
+    assert [candidate["runtime_weight"] for candidate in row["candidates"]] == [
+        0.7,
+        0.3,
+    ]
+    assert validate_raw_topology_row(row) == row
 
 
 def test_raw_topology_sidecar_export_is_separate_hashed_and_reproducible(

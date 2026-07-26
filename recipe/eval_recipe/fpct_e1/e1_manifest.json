@@ -1,17 +1,18 @@
 {
-  "schema_version": 3,
-  "protocol_id": "fpct_e1_mechanism_audit_v3",
-  "supersedes_before_natural_output": "fpct_e1_mechanism_audit_v2",
+  "schema_version": 4,
+  "protocol_id": "fpct_e1_mechanism_audit_v4",
+  "supersedes_after_pre_artifact_integrity_failure": "fpct_e1_mechanism_audit_v3",
   "historical_supersession_chain": [
     "fpct_e1_mechanism_audit_v1",
-    "fpct_e1_mechanism_audit_v2"
+    "fpct_e1_mechanism_audit_v2",
+    "fpct_e1_mechanism_audit_v3"
   ],
   "created_at": "2026-07-26T00:00:00+08:00",
   "branch": "research/fpct-e1-mechanism-audit",
   "base_commit": "613958af38fad27e1ea933ccc0dda6d1af5cce89",
   "classification": "EXPLORATORY_MECHANISM_AUDIT_NOT_CONFIRMATORY",
-  "current_stage": "COMMIT_A2_PRE_DATA_OPERATIONAL_CLOSURE",
-  "current_status": "PRE_DATA_OPERATIONAL_CLOSURE_GO_NATURAL_EXECUTION_NOT_STARTED",
+  "current_stage": "COMMIT_A3_TOPOLOGY_PERMUTATION_CORRECTION",
+  "current_status": "PROSPECTIVE_CORRECTNESS_FIX_PENDING_CLEAN_PUSHED_EXECUTION_COMMIT",
   "e0_read_only": {
     "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
     "result_document": {
@@ -236,14 +237,15 @@
             },
             "runner": {
                 "path": "script/analysis/fpct_e1_mechanism_audit.py",
-                "sha256": "8e9636a2f2e4a843be7bb5e70dacc4da1ac035ea2ef353b92dc92dc87115e926"
+                "sha256": "c1ab3fd21612eca55aac66a3d43a9725947824fa9fc49dbfac2c2168fb01d635"
             },
             "test": {
                 "path": "test/test_fpct_e1_mechanism_audit.py",
-                "sha256": "21c1c5c3e34ecd5d428cb7328e927ef73dd685d4ceefa437673573a52be05694",
-                "passed": 20
+                "sha256": "c657841c3820157776cf67afb01c63443ca59e5a77c69ba98c3a6b2b80821076",
+                "passed": 22
             },
             "native_and_children_share_global_denominator": true,
+            "certified_partition_taxonomy_candidate_permutation_invariant": true,
             "taxonomy_unresolved_fail_closed": true
         },
         "performance_go_gate": false,
@@ -276,8 +278,9 @@
     "fixed_checkpoint_evidence_class": "mechanistic headroom diagnostic, not matched-training or confirmatory evidence"
   },
   "execution_lock_contract": {
-    "status": "CODE_PROTOCOL_AND_K8S_CLOSURE_FROZEN_PENDING_CLEAN_PUSHED_EXECUTION_COMMIT",
-    "natural_e0_design_output_accessed": false,
+    "status": "POST_NATURAL_ALIGNMENT_PRE_ARTIFACT_CORRECTNESS_FIX_PENDING_CLEAN_PUSHED_EXECUTION_COMMIT",
+    "natural_e0_design_output_accessed": true,
+    "usable_natural_audit_artifact_accessed": false,
     "superseded_execution_attempt": {
       "execution_sha": "744a943ea804dfebe4e6d3cba756b6a89763002f",
       "status": "ABANDONED_BEFORE_NATURAL_DATA",
@@ -293,8 +296,24 @@
       "scientific_result": false,
       "successor_execution_sha": "PENDING_CLEAN_PUSHED_EXECUTION_COMMIT"
     },
+    "failed_execution_attempt": {
+      "execution_sha": "d1698177e60455a42731165b88a66374b8826718",
+      "status": "INCONCLUSIVE_INTEGRITY_FAILURE",
+      "lifecycle": "ABANDONED_AFTER_NATURAL_ALIGNMENT_PRE_ARTIFACT_INTEGRITY_FAILURE",
+      "receipt": "recipe/eval_recipe/fpct_e1/executions/d1698177/integrity_failure_receipt.json",
+      "reason_code": "RAW_TOPOLOGY_CERTIFIED_PARTITION_SLOT_ORDER_INVARIANCE_FAILURE",
+      "natural_tokenization_and_alignment": true,
+      "processed_row_count": "UNKNOWN_NOT_MATERIALIZED",
+      "artifact_count": 0,
+      "model_or_checkpoint_load": false,
+      "gpu_or_kubernetes": false,
+      "resume_allowed": false,
+      "artifact_reuse_allowed": false,
+      "scientific_result": false,
+      "successor_execution_sha": "PENDING_CLEAN_PUSHED_EXECUTION_COMMIT"
+    },
     "source_snapshot": {
-      "construction": "clean pushed successor execution commit git archive; superseded 744a943 archive is never reused",
+      "construction": "clean pushed successor execution commit git archive; superseded 744a943 and failed d1698177 archives are never reused",
       "receipt": "commit SHA + Git tree OID + ls-tree mode/blob/path + archive bytes + mounted-tree SHA",
       "live_worktree_mount_forbidden": true,
       "k8s_mount_read_only": true
@@ -329,6 +348,9 @@
       "generated_before_model_output": true,
       "artifact_formats": ["jsonl", "parquet", "aggregate_csv", "aggregate_json", "manifest"],
       "functional_metrics_present": false,
+      "certified_partition_taxonomy_uses_span_sorted_intersections": true,
+      "candidate_records_indices_weights_priors_remain_in_original_slot_order": true,
+      "correctness_fix_changes_threshold_or_operator": false,
       "taxonomy_precedence": ["boundary_fallback", "neighbor_expansion", "partition_compositional", "strict_competing_overlap", "taxonomy_unresolved"]
     },
     "capture_storage": {
@@ -369,7 +391,7 @@
       "maximum_parallel_shards_on_node": 2
     },
     "implementation_and_test_sha256": {
-      "script/analysis/fpct_e1_mechanism_audit.py": "8e9636a2f2e4a843be7bb5e70dacc4da1ac035ea2ef353b92dc92dc87115e926",
+      "script/analysis/fpct_e1_mechanism_audit.py": "c1ab3fd21612eca55aac66a3d43a9725947824fa9fc49dbfac2c2168fb01d635",
       "script/experiment/fpct_e1_capture_runner.py": "2dc12d66524560e8494648b4554b7cf98b060da875ba1bc1658bdca63d1a40cb",
       "script/experiment/fpct_e1_prepare_input_lock.py": "e450ccb40450894abd4f0b2e873d2c211f61c7eabfb3435cf500b4648bac5505",
       "script/experiment/fpct_e1_runtime_backend.py": "99fa1b26bba3294e12cec766b165846903e3426d139eb258ed17f8b230c06cbe",
@@ -380,6 +402,7 @@
       "recipe/k8s/fpct_e1/e0_design_capture_job.yaml": "a52d48847583d1dfd449b604307923f881cbd1af163c9d958b8860c4860ed470",
       "recipe/k8s/fpct_e1/runtime_probe_job.yaml": "336af4283ca5adc64ba1a7e7b68d052a7a6894c645c22f977ba5f8ee1690ede1",
       "test/test_fpct_e1_capture_runner.py": "f0bf104207a17b36c26b253cb0582e4359630de033195c7c1c4ff3167450b1ec",
+      "test/test_fpct_e1_mechanism_audit.py": "c657841c3820157776cf67afb01c63443ca59e5a77c69ba98c3a6b2b80821076",
       "test/test_fpct_e1_source_snapshot_lock.py": "8a55578f06026ca07cbc3f384520086edc605648719a2aac6edf238c6a2365fa",
       "test/test_fpct_e1_k8s_lock_bundle.py": "b5c366530af48b6c6c9e45897379e02fe7eb49766067bf5b440f95eafa86415d",
       "test/test_fpct_e1_runtime_probe.py": "1f60d91da2be0131f2bdc7cd7139c12b78380d69f8b553acb85245433f5a8100",
@@ -387,12 +410,12 @@
     },
     "operational_closure_tests": {
       "suite": "fpct_e1_predata_15_file_suite",
-      "passed": 211,
+      "passed": 213,
       "failed": 0,
-      "all_fpct_cpu_passed": 400,
-      "project_cpu_safe_full_suite_passed": 639,
+      "all_fpct_cpu_passed": 402,
+      "project_cpu_safe_full_suite_passed": 641,
       "cuda_visible_devices": "",
-      "basetemp": "/tmp/pytest-e1-predata-a2"
+      "basetemp": "/tmp/pytest-e1-predata-a3"
     }
   },
   "authorization": {

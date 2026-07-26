@@ -454,3 +454,11 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - Capture Job 必须携带 expected plan SHA 并重算 claim ID；initial/finalized ConfigMap `verify --output` receipts 是 renderer 的必需输入。Output 与 source/E0/models/input/raw 在 physical host path 和 lexical container path 上 fail-closed 隔离；rootfs read-only，cache 仅写 `/tmp` emptyDir。
 - 镜像固定为命名 OCI digest `repository@sha256:<64hex>`；裸 digest/tag 均拒绝。Fresh-subprocess hostile-PYTHONPATH/bytecode test、CLI forwarding、receipt/plan/path tamper tests全部通过。
 - 可复现 15-file CPU pre-data suite 重新执行为 `211 passed, 0 failed`；all-FPCT CPU=`400 passed`；项目 CPU-safe full suite=`639 passed`（`CUDA_VISIBLE_DEVICES=''`，`--no-cov -p no:cacheprovider`）。截至锁定仍无 E0-design 自然 row、pretrained output、checkpoint load、GPU/K8s、training、E1-pilot 或 confirmatory outcome。
+
+### 2026-07-26 FPCT-E1 d169 pre-artifact integrity failure
+
+- Execution=`d1698177e60455a42731165b88a66374b8826718`；run root=`/netdisk/lijunsi/fpct-e1/fpct-e1-d1698177-v1`；source receipt file SHA=`84811c64...`、mounted tree SHA=`5d7b4da6...`，均验证通过。
+- CPU input lock 已解析本地 Qwen3/TinyLlama tokenizer，并至少在 MMLU-Redux/high_school_geography 运行自然 tokenization/alignment；raw topology 分类随后抛出 `ValueError: certified partition geometry is not a disjoint complete cover`。Exact processed row count/hash=`UNKNOWN_NOT_MATERIALIZED`。
+- 输出目录实测为空：0 input sidecar/manifest、0 raw artifact/plan/runtime probe/ConfigMap、0 model/checkpoint load、0 forward、0 GPU/K8s/training、0 scientific result。D169 标为 `INCONCLUSIVE_INTEGRITY_FAILURE`，不 resume/reuse。
+- 独立代码审计确认 sanitizer 以 span order 认证，旧 classifier 却以 top-k slot order cursor 覆盖。最小 A3 修复只排序 derived intersections；candidate records、indices、weights、A 与 slot-0 语义不动。Mechanism tests=`22 passed`，15-file=`213 passed`，all-FPCT=`402 passed`，项目 CPU-safe full suite=`641 passed`。
+- 下一次只允许从新 clean/pushed A3 建全新 snapshot/run root 后，从 CPU input lock 开始全量重跑；任何 d169 partial state 均不得进入后续分析。

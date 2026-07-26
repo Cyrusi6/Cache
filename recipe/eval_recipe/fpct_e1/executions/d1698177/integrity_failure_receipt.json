@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_pre_artifact_integrity_failure_v1",
+  "status": "ABANDONED_AFTER_NATURAL_ALIGNMENT_PRE_ARTIFACT_INTEGRITY_FAILURE",
+  "reason_code": "RAW_TOPOLOGY_CERTIFIED_PARTITION_SLOT_ORDER_INVARIANCE_FAILURE",
+  "execution_sha": "d1698177e60455a42731165b88a66374b8826718",
+  "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-d1698177-v1",
+  "source_snapshot": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-d1698177-v1/source_snapshot",
+    "git_tree_oid": "fa0e43dc0b234a5d7953553b944ef6f9241e5ffa",
+    "mounted_tree_canonical_sha256": "5d7b4da6f18e2c84b15f538340f13b5d65a08d3419244d33cb91417793be5a5b",
+    "entry_count": 613,
+    "total_bytes": 23109079
+  },
+  "source_receipt": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-d1698177-v1/source_snapshot/.fpct_e1_source_snapshot_receipt.json",
+    "bytes": 152160,
+    "file_sha256": "84811c64c3650862557234c095216c16d31c55d70f07196c77d776a73469aa13",
+    "receipt_payload_sha256": "6fe93e3a20b93a243171a06f0c36c6b90902cd066cb8c3cd1c23c389da9195e4",
+    "status": "GO_IMMUTABLE_GIT_ARCHIVE"
+  },
+  "natural_processing": {
+    "dataset_input_lookup": true,
+    "local_tokenizers_resolved": [
+      "Qwen/Qwen3-0.6B",
+      "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    ],
+    "tokenization": true,
+    "alignment": true,
+    "raw_topology_computation_started": true,
+    "observed_task": "mmlu-redux",
+    "observed_subject": "high_school_geography",
+    "processed_row_count": "UNKNOWN_NOT_MATERIALIZED",
+    "sample_or_content_group_hash": "UNKNOWN_NOT_MATERIALIZED"
+  },
+  "failure": {
+    "error_class": "ValueError",
+    "message": "certified partition geometry is not a disjoint complete cover",
+    "stack": [
+      "script/experiment/fpct_e1_prepare_input_lock.py:790 prepare_input_lock",
+      "script/experiment/fpct_e1_prepare_input_lock.py:360 raw_topology_ledger",
+      "script/analysis/fpct_e1_mechanism_audit.py:710 classify_candidate_topology"
+    ],
+    "diagnosis": "sanitizer certification is span-order based, but the raw-topology classifier incorrectly required top-k slot order to equal span order",
+    "scientific_threshold_or_operator_changed": false
+  },
+  "artifact_firewall": {
+    "input_sidecar": false,
+    "input_manifest": false,
+    "raw_topology_artifact": false,
+    "capture_plan": false,
+    "runtime_probe": false,
+    "configmap": false,
+    "model_or_checkpoint_load": false,
+    "model_forward": false,
+    "gpu_or_kubernetes": false,
+    "training": false,
+    "e1_pilot_outcome": false,
+    "confirmatory_outcome": false,
+    "scientific_result": false
+  },
+  "correctness_fix_boundary": {
+    "allowed": "candidate-order-invariant sorting inside certified partition taxonomy plus synthetic permutation regression",
+    "forbidden": "changing certification, sanitizer, alignment, thresholds, operators, data membership, checkpoints, or reusing this run",
+    "new_clean_pushed_execution_required": true
+  },
+  "resume_allowed": false,
+  "artifact_reuse_allowed": false,
+  "deletion_required": false,
+  "successor_execution_sha": "NEXT_CLEAN_PUSHED_EXECUTION_COMMIT"
+}

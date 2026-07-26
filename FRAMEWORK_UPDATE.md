@@ -1519,3 +1519,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 实验配置：operator、grid、E0-design 326 groups、六个 projector checkpoint、18→18→72 DAG 和全部阈值均未改变；镜像引用只接受 `repository@sha256:<digest>`；E1-pilot 仍只允许解析已冻结 hash-only membership 以证明 counts/disjointness，不解析自然输入。
 - 验证结果：fresh subprocess 在恶意冲突 `PYTHONPATH` 且未设置 bytecode 环境变量时仍只加载 snapshot exact modules，source tree/receipt SHA 不变且无 `.pyc`；15-file pre-data suite=`211 passed`、all-FPCT CPU=`400 passed`、项目 CPU-safe full suite=`639 passed`；manifest implementation/test SHA 全量机械匹配。
 - 结论：只允许从后继 clean/pushed execution commit 创建全新 source snapshot/run UID；截至该 commit 前仍为 0 dataset lookup、0 natural tokenization/alignment、0 model/checkpoint load、0 GPU/K8s、0 training。该 GO 是 provenance/engineering closure，不是机制或性能结论。
+
+### 2026-07-26 FPCT-E1 d169 pre-artifact topology integrity recovery
+
+- 研究目标：严格保存 d169 自然 alignment 失败，判断它是科学 support failure 还是 diagnostic taxonomy correctness bug，并只在前者排除后做最小修复。
+- 失败事实：clean/pushed execution `d1698177...` 的 source receipt/tree 均通过；CPU input lock 在 MMLU-Redux/high_school_geography 的自然 tokenization/alignment 后进入 raw topology，因 `certified partition geometry is not a disjoint complete cover` fail-closed。0 sidecar/manifest/raw artifact/model/checkpoint/GPU/K8s/training；精确 row count/hash 未物化，不猜测。
+- 根因与改动：sanitizer 按 span order 认证合法 partition，而 classifier 错误要求 top-k slot order 已等于 span order。A3 只对派生 intersections 排序后检查无缝覆盖，不重排 candidate/index/weight/A/origin，不改 sanitizer、alignment、operator、threshold、split 或 hypothesis。
+- 验证：两候选反序、三候选六种全排列及 raw-ledger `[1,0]` end-to-end regression 均通过，candidate slot 同步保持；mechanism audit=`22 passed`，15-file=`213 passed`，all-FPCT=`402 passed`，项目 CPU-safe full suite=`641 passed`；未再次读取自然数据。
+- 结论：d169=`INCONCLUSIVE_INTEGRITY_FAILURE` 且永久禁止 resume/reuse。只有全新 clean/pushed A3 SHA、snapshot 与 run root 可以从 CPU input lock 完整重跑；E1-pilot/confirmatory继续sealed。

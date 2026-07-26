@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：Commit A2 pre-data operational closure
-> 当前状态：`PRE-DATA OPERATIONAL CLOSURE / NATURAL EXECUTION NOT STARTED`
-> 下一步：冻结并 push 后继 execution commit；随后只对 E0-design 生成 CPU input/topology lock 与 model-output-free runtime probe
+> 当前阶段：Commit A3 topology-permutation correctness fix
+> 当前状态：`D169 INCONCLUSIVE INTEGRITY FAILURE / SUCCESSOR COMMIT PENDING`
+> 下一步：冻结并 push A3；从全新 run root 重做完整 E0-design CPU input/topology lock
 > 更新时间：2026-07-26（Asia/Shanghai）
 
 ## 隔离身份
@@ -17,6 +17,7 @@
 | E0 compact artifact anchor SHA256 | `a988061a1353fb8ce6a944b6359f3a0117857013495246f009612492a1ceb42d` |
 | E1 split manifest SHA256 | `030b4236ed9bec82b145227259733b32a8c76af63adf2fa0f1282e3638b5b11d` |
 | Superseded execution SHA | `744a943ea804dfebe4e6d3cba756b6a89763002f`；`ABANDONED_BEFORE_NATURAL_DATA`；禁止 resume/reuse |
+| Failed execution SHA | `d1698177e60455a42731165b88a66374b8826718`；自然 alignment 后、artifact 前 integrity failure；禁止 resume/reuse |
 | Successor execution SHA | `PENDING_CLEAN_PUSHED_COMMIT` |
 | Consolidated gate SHA256 | `d17b4b7f35e2384abfbd300cf109484d6aacc91dd84cd3f2573a8d5dd36d4b17` |
 
@@ -38,8 +39,9 @@
 |---|---|---|---|---|
 | E1-0 protocol + split lock | `GO` | E0 result commit `613958a...` + human amendment | 文档、hash-only split lock | E0 readonly；E1-pilot/confirmatory sealed |
 | E1-1 instrumentation hard gate | `GO` | E1-0 GO | synthetic tensor + random-small Qwen CPU | pre-data suite `169 passed`；ON/OFF bitwise；cross-query variance>0 |
-| Commit A2 execution lock | `GO / COMMIT PENDING` | E1-1 GO + operational closure | 文档、代码、tests only | 744a943 在自然数据前 supersede；尚无自然 tokenization/alignment/model output |
-| E1-2 input/topology/provenance lock | `AUTHORIZED AFTER SUCCESSOR COMMIT` | clean pushed successor commit | CPU tokenizer/alignment；model-output-free K8s runtime probe | 只允许 326 E0-design groups；生成 immutable plan/receipts |
+| Commit A2 execution lock | `INCONCLUSIVE / ABANDONED` | E1-1 GO + operational closure | CPU input lock | d169 在自然 alignment 中因 slot-order taxonomy bug fail-closed；0 artifact/model/GPU |
+| Commit A3 correctness lock | `GO / COMMIT PENDING` | d169 receipt + synthetic permutation regression | 文档、单一 classifier 修复、tests only | 只排序派生 intersections；不改 candidate/A/operator/threshold/split |
+| E1-2 input/topology/provenance lock | `BLOCKED UNTIL CLEAN PUSHED A3` | clean pushed successor A3 | CPU tokenizer/alignment；model-output-free K8s runtime probe | 全新 run root；只允许 326 E0-design groups；不得复用 d169 |
 | E1-2 C_post baselines | `NOT STARTED` | input/topology/provenance lock GO | 18 K8s shards；1 GPU/shard；最多双卡并行 | actual checkpoint inference；无训练；不得启动 F endpoint 竞态 |
 | E1-2 F endpoints | `BLOCKED BY BASELINE MARKER` | 18 C_post closure | 18 K8s shards；1 GPU/shard | 只识别同 checkpoint F-C_post mechanism；无性能 GO |
 | E1-2 analyzer/finalized receipt | `BLOCKED BY 36-SHARD CLOSURE` | C_post+F endpoints complete | bounded CPU analysis | 必须产生 deep-verified immutable `FINALIZED_E1_2` |
@@ -64,7 +66,9 @@ Consolidated gate 固定六项且全部为 true：formula oracles、instrumentat
 ## Execution lock
 
 - History：`744a943...` 只生成 exact git archive、外置 source receipt 与空 input-lock directory；0 dataset lookup/tokenization/alignment/model/GPU。它作为 `ABANDONED_BEFORE_NATURAL_DATA` 保留，不是科学 NO-GO。
-- Source：clean pushed successor execution commit → 全新 run UID/root → exact git archive → snapshot root 内 canonical Git receipt → K8s read-only mount；不得挂 live worktree或复用 744 artifact。
+- Failure：`d1698177...` 从 valid snapshot 启动 CPU input lock，已访问 MMLU-Redux/high_school_geography 的自然 row、tokenizer 与 alignment；raw-topology classifier 将合法的 top-k slot permutation 误当 span coverage failure。0 sidecar/manifest/raw artifact/model/checkpoint/GPU；状态=`INCONCLUSIVE_INTEGRITY_FAILURE`，禁止 resume/reuse。
+- Correction：certified taxonomy 仅对派生 intersection 做 span sort 后检查无缝覆盖；candidate records、indices、weights、A 与 slot-0 语义保持原顺序。两/三 candidate permutation 与 ledger 端到端回归通过；未改 sanitizer、alignment、operator、threshold 或 split。A3 15-file=`213 passed`、all-FPCT=`402 passed`、项目 CPU-safe full suite=`641 passed`。
+- Source：clean pushed successor A3 → 全新 run UID/root → exact git archive → snapshot root 内 canonical Git receipt → K8s read-only mount；不得挂 live worktree或复用 744/d169 artifact。
 - Input：仅 E0-design；逐样本 rows=`answer queries × certified parents × 28 × 16`，hard ceiling=`262144`，task-level `sum/min/p50/p95/max/argmax` 预先冻结。
 - Topology：pre-sanitizer raw-to-runtime ledger 在任何 model output 前生成；uncertified rows 共同 slot-0 collapse，不携带 functional metric。
 - Checkpoints：实际加载六个 immutable `final` projector trees；同时 hash `checkpoint-64`，并要求 projector set byte-identical；strict-attested load 的 missing/unexpected keys 为空。
@@ -87,6 +91,7 @@ lambda        = {0, 0.25, 0.5, 1, 2}
 
 - E0 tracked result/checkpoint 未修改；
 - E1-pilot 未运行、未读取；confirmatory model-selection/test 未释放；
-- 未读取 dataset row、未运行自然 E0-design tokenizer/alignment audit，未运行 pretrained model forward；
+- d169 failed attempt 已读取至少一个 E0-design dataset row并运行 tokenizer/alignment；精确 row count/hash 未物化，未生成可用 audit artifact。Successor A3 尚未运行自然数据。
+- 未运行 pretrained model forward，未加载模型权重或 checkpoint；
 - 未运行 GPU/Kubernetes，未训练、未新增 seed、未启动 36-run；
-- 当前 GO 只到 successor Commit A2 与后续 CPU/model-output-free execution lock，不是 E1-2 scientific GO；原 `744a943...` 不在授权链上。
+- 当前 GO 只到 successor Commit A3 correctness lock，不是 E1-2 scientific GO；`744a943...` 与 `d1698177...` 均不在授权链上。
