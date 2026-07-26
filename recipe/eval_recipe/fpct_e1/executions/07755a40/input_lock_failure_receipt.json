@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_a4_input_lock_failure_closure_v1",
+  "classification": "DOCUMENTATION_ONLY_POST_BLOCK_CLOSURE",
+  "status": "A4_INPUT_LOCK_BLOCKED_HUMAN_REVIEW_REQUIRED",
+  "execution": {
+    "execution_sha": "07755a4039e89700e59af9e141026a57142f9da0",
+    "run_uid": "fpct-e1-a4-streaming-07755a40-v1",
+    "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a4-07755a40-v1",
+    "source_snapshot_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a4-07755a40-v1/source_snapshot",
+    "input_lock_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a4-07755a40-v1/input_lock"
+  },
+  "immutable_evidence": {
+    "blocked_receipt": {
+      "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a4-07755a40-v1/input_lock/A4_INPUT_LOCK_BLOCKED.json",
+      "sha256": "bc9002daebd1e8921d5fd5ca0705ab59efd115b350a785e0c368d322161cdec0",
+      "failed_check": "input_lock_rendered_prompt_sha_mismatch"
+    },
+    "execution_identity": {
+      "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a4-07755a40-v1/input_lock/a4_input_lock_execution_identity.json",
+      "sha256": "bdafa8df8d609b9bbf4c3468a7bb1452ec459c6e1adb5201a85ea772aa3f40df"
+    },
+    "source_snapshot_receipt": {
+      "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a4-07755a40-v1/source_snapshot/.fpct_e1_source_snapshot_receipt.json",
+      "semantic_receipt_sha256": "a5b5e87a816377fcaa4cb2080031da22532239a08c65ef5b07265ca4759b0afa",
+      "file_sha256": "b792803b23e22d082743d7f39aefcebd7178c5cd6e10108756f6693d7a778a8d"
+    }
+  },
+  "read_only_post_block_diagnostic": {
+    "provenance_notice": "These diagnostic fields were recovered read-only after the producer had already emitted the generic blocked receipt; they are not represented as fields native to that blocked receipt.",
+    "population_groups": 326,
+    "exact_prefix_group_count": 160,
+    "first_mismatch_ordinal_one_based": 161,
+    "first_mismatch": {
+      "task": "ai2-arc",
+      "content_group_sha256": "2ac15877caa468bf7ee3f2c16bcb9fd7b6e122bc2081c7eaaf2ecd0f64af42e4",
+      "sample_key_sha256": "55c885c900afb3b5f7a4541c68797000852c31971527148f5c29b6ccf783b4d8",
+      "source_row_id": "836",
+      "evaluation_question_id": 32,
+      "historical_anchor_rendered_prompt_sha256": "2b933c569545f2e26944f1702c1e878c20cb9554cd7d679cd48395b9da6e2828",
+      "production_runtime_rendered_prompt_sha256": "ad7828e4c67fad1515e4bb768624114be20091fd6bbb86960a3931d439a04a9d",
+      "historical_anchor_alignment_sha256": "1440a0c16db39ecb915318fd836dbad959c1ca5fb275b145343e8011cd79657f",
+      "production_runtime_alignment_sha256": "206b4ddc9b24874ea7b2d892e7c770901d18ccb5eb30e7cf3ac5d22fea5f03ed"
+    },
+    "root_cause": {
+      "category": "historical_first_four_choice_projection_vs_full_production_formatter",
+      "historical_anchor_choice_contract": "The frozen E0 support projection retained choices[0:4] and therefore rendered A-D only.",
+      "production_runtime_choice_contract": "The frozen UnifiedEvaluator ARC formatter iterated the complete materialized choice list.",
+      "observed_difference": "The materialized ARC row contains an additional E option; the content-group membership hash still matched because that hash normalizes text and considers only the first four choices.",
+      "streaming_or_operator_failure": false,
+      "accuracy_or_mechanism_result": false
+    }
+  },
+  "artifact_firewall": {
+    "usable_input_sidecar_created": false,
+    "usable_input_manifest_created": false,
+    "streaming_templates_created": false,
+    "raw_artifacts_created": false,
+    "runtime_probe_created": false,
+    "execution_plan_created": false,
+    "model_or_checkpoint_loaded": false,
+    "model_forward_run": false,
+    "gpu_or_cuda_used": false,
+    "kubernetes_used": false,
+    "training_run": false,
+    "e1_pilot_rendered_tokenized_aligned_run_or_read": false,
+    "confirmatory_outcome_accessed": false
+  },
+  "disposition": {
+    "run_root_permanently_abandoned": true,
+    "resume_allowed": false,
+    "artifact_reuse_allowed": false,
+    "downstream_e1_2_or_e1_3_authorized": false,
+    "next_state": "HUMAN_REVIEW_REQUIRED"
+  },
+  "human_decision_required": {
+    "approval_status": "NOT_APPROVED",
+    "selected_option": null,
+    "options": [
+      {
+        "id": "STRICT_HISTORICAL_PROJECTED_FIRST4_ANCHOR",
+        "contract": "Reconstruct the historical E0 dev-anchor prompt from the first four projected choices and require its rendered/alignment SHA exactly.",
+        "boundary": "This preserves the historical anchor but can differ from the prompt actually formatted by the E0 production evaluator for rows with an additional choice."
+      },
+      {
+        "id": "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT",
+        "contract": "Retain the historical first-four SHA as diagnostic provenance and prospectively freeze the full-row E0 production formatter output as the operative prompt/alignment anchor.",
+        "boundary": "This reproduces the production formatter but changes the operative anchor-verification contract."
+      }
+    ],
+    "automatic_recommendation_or_approval": false,
+    "requirements_after_approval": [
+      "prospective protocol amendment before any retry",
+      "new clean pushed commit",
+      "new immutable source snapshot",
+      "new run UID and run root",
+      "no reuse of execution 07755a40 artifacts"
+    ]
+  }
+}

@@ -484,3 +484,14 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - Gate 外 project CPU-safe complement=`449 passed, 2 deselected`；两项 deselected 是只接受旧 R2l/R2m frozen tree identity 的历史 guards，在 A4 后继分支上按设计 fail-closed。Gate+complement 共 `844 passed`，没有把这两项历史身份检查伪报为 A4 通过。
 - 执行 firewall：synthetic GO 以前禁止新自然数据；clean pushed A4 以前禁止新 snapshot/run；streaming CPU input-lock GO 以前禁止 runtime/checkpoint/plan 与 E1-2；E1-3 只能在 finalized E1-2 后执行。
 - 当前计数：A4 授权后新 natural lookup/render/tokenize/alignment=`0`，pretrained model/checkpoint forward=`0`，GPU/Kubernetes/training=`0`；clean pushed A4 commit、successor snapshot/run root 和 CPU input lock 均仍 `PENDING/NOT STARTED`；E1-pilot=`SEALED / NOT RUN / NOT READ`，confirmatory 仍 sealed。
+
+### 2026-07-27 FPCT-E1 A4 CPU input-lock fail-closed record
+
+- Execution：`07755a4039e89700e59af9e141026a57142f9da0`；UID=`fpct-e1-a4-streaming-07755a40-v1`；root=`/netdisk/lijunsi/fpct-e1/fpct-e1-a4-07755a40-v1`。
+- Immutable receipts：blocked SHA256=`bc9002daebd1e8921d5fd5ca0705ab59efd115b350a785e0c368d322161cdec0`；identity SHA256=`bdafa8df8d609b9bbf4c3468a7bb1452ec459c6e1adb5201a85ea772aa3f40df`；source receipt file SHA256=`b792803b23e22d082743d7f39aefcebd7178c5cd6e10108756f6693d7a778a8d`；source receipt 内部 `receipt_sha256`=`a5b5e87a816377fcaa4cb2080031da22532239a08c65ef5b07265ca4759b0afa`。
+- Producer 原生状态：`A4_INPUT_LOCK_BLOCKED`，failed check=`input_lock_rendered_prompt_sha_mismatch`。下列逐行定位是 read-only post-block diagnostic，不是对原 blocked receipt 的追溯改写。
+- Prefix：前 `160/326` groups exact；首个 mismatch ordinal=`161`。ARC group=`2ac15877caa468bf7ee3f2c16bcb9fd7b6e122bc2081c7eaaf2ecd0f64af42e4`；sample=`55c885c900afb3b5f7a4541c68797000852c31971527148f5c29b6ccf783b4d8`；source row=`836`；eval qid=`32`。
+- Rendered expected/actual SHA256=`2b933c569545f2e26944f1702c1e878c20cb9554cd7d679cd48395b9da6e2828` / `ad7828e4c67fad1515e4bb768624114be20091fd6bbb86960a3931d439a04a9d`；alignment expected/actual SHA256=`1440a0c16db39ecb915318fd836dbad959c1ca5fb275b145343e8011cd79657f` / `206b4ddc9b24874ea7b2d892e7c770901d18ccb5eb30e7cf3ac5d22fea5f03ed`。
+- Root cause：historical anchor 从 first-four label-free projection 渲染 A-D；materialized production row 保留额外 E 选项，真实 E0/A4 formatter 遍历完整 choices。该差异与 A4 streaming、operator 或 mechanism 无关。
+- Persistent outputs：仅 execution identity 与 generic blocked receipt；`0` usable input sidecar/manifest/templates/raw/runtime/plan，`0` model/checkpoint load/forward，`0` GPU/K8s/training。E1-pilot 与 confirmatory 继续 sealed。
+- Disposition：run root 永久 abandoned，resume/reuse=`false`。下一步=`HUMAN REVIEW REQUIRED`；未批准的候选合同为 strict historical first-four anchor 或 actual E0 production-runtime prompt。不得在同一 execution 自动选择、放宽或重跑。

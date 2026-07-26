@@ -1570,3 +1570,13 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 #### 结论与下一步
 
 A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution SHA 仍未产生。只有 clean push 后才能创建全新 snapshot/run root，并从第一个 E0-design 样本重建 input lock；input-lock GO 前不得运行 runtime/checkpoint/plan 或 E1-2，E1-3 仍须等待 finalized E1-2。
+
+### 2026-07-27 FPCT-E1 A4 input-lock prompt-anchor failure closure
+
+- 研究目标：仅对 execution `07755a4039e89700e59af9e141026a57142f9da0` 的 CPU input-lock fail-closed 事实做 documentation-only closure；不修改 A4 protocol/contract/gate/source/tests，不进入 E1-2/E1-3。
+- 执行身份：UID=`fpct-e1-a4-streaming-07755a40-v1`；root=`/netdisk/lijunsi/fpct-e1/fpct-e1-a4-07755a40-v1`；blocked receipt / identity SHA256=`bc9002daebd1e8921d5fd5ca0705ab59efd115b350a785e0c368d322161cdec0` / `bdafa8df8d609b9bbf4c3468a7bb1452ec459c6e1adb5201a85ea772aa3f40df`。Source receipt file SHA256=`b792803b23e22d082743d7f39aefcebd7178c5cd6e10108756f6693d7a778a8d`，其内部 `receipt_sha256`=`a5b5e87a816377fcaa4cb2080031da22532239a08c65ef5b07265ca4759b0afa`。
+- Producer 原生失败=`input_lock_rendered_prompt_sha_mismatch`。Read-only post-block diagnostic（不是 blocked receipt 原生字段）确认：326-group population 的前 160 个 exact match；第 161 个为 ARC group `2ac15877caa468bf7ee3f2c16bcb9fd7b6e122bc2081c7eaaf2ecd0f64af42e4`、sample `55c885c900afb3b5f7a4541c68797000852c31971527148f5c29b6ccf783b4d8`、source row `836`、eval qid `32`。
+- Expected/actual rendered SHA256=`2b933c569545f2e26944f1702c1e878c20cb9554cd7d679cd48395b9da6e2828` / `ad7828e4c67fad1515e4bb768624114be20091fd6bbb86960a3931d439a04a9d`；alignment SHA256=`1440a0c16db39ecb915318fd836dbad959c1ca5fb275b145343e8011cd79657f` / `206b4ddc9b24874ea7b2d892e7c770901d18ccb5eb30e7cf3ac5d22fea5f03ed`。
+- 根因：historical E0 support projection 只将 `choices[:4]` 写入 prompt anchor；实际 materialized ARC row 含额外 E 选项，production `UnifiedEvaluator` 对完整 choice list 渲染。前四项归一化 membership hash 仍相等，所以 exact rendered/alignment check 才首先暴露差异。
+- 验证边界：0 usable sidecar/manifest/templates/raw/runtime/plan；0 model/checkpoint load、forward、GPU、Kubernetes、training；E1-pilot 未 render/tokenize/align/run/read。该 root 永久 no-resume/no-reuse。
+- 结论：状态=`A4_INPUT_LOCK_BLOCKED / HUMAN REVIEW REQUIRED`。待人工在 `STRICT_HISTORICAL_PROJECTED_FIRST4_ANCHOR` 与 `ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT` 两个前瞻合同间选择；本文不把任何选项写成已批准或自动推荐。任一后继均需新 amendment、commit、snapshot、UID/root。

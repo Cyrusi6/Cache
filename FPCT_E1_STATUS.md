@@ -1,9 +1,9 @@
 # FPCT-E1 状态
 
-> 当前阶段：Commit A4 representation-preserving deterministic bounded streaming 的 pre-natural lock closure
-> 当前状态：`A4 SYNTHETIC HARD GATE GO / CLEAN PUSH AUTHORIZED`
-> 下一步：只允许提交并推送 enclosing clean A4 commit；local/upstream 相等后才能建全新 snapshot/run root，并从首样本重跑 CPU input lock
-> 更新时间：2026-07-26（Asia/Shanghai）
+> 当前阶段：A4 streaming CPU input-lock failure closure
+> 当前状态：`A4_INPUT_LOCK_BLOCKED / HUMAN REVIEW REQUIRED`
+> 下一步：人工在 historical projected-first4 anchor 与 actual E0 production-runtime prompt 两个合同之间作出前瞻选择；当前 execution 永久禁止 resume/reuse
+> 更新时间：2026-07-27（Asia/Shanghai）
 
 ## 隔离身份
 
@@ -20,7 +20,7 @@
 | Failed execution SHA | `d1698177e60455a42731165b88a66374b8826718`；自然 alignment 后、artifact 前 integrity failure；禁止 resume/reuse |
 | Resource-ceiling execution SHA | `612697dfc44ab46699728b8d2de0a6fce980a889`；自然 multi-task alignment 后、artifact 前 fail-closed；禁止 resume/reuse |
 | Successor execution SHA | `HUMAN_REVIEW_REQUIRED_NOT_ASSIGNED` |
-| A4 successor execution SHA | `PENDING_AFTER_CLEAN_PUSHED_A4`；当前不分配、不猜测 |
+| A4 successor execution SHA | `07755a4039e89700e59af9e141026a57142f9da0`；`A4_INPUT_LOCK_BLOCKED`；永久禁止 resume/reuse |
 | Consolidated gate SHA256 | `d17b4b7f35e2384abfbd300cf109484d6aacc91dd84cd3f2573a8d5dd36d4b17` |
 
 ## 人工决策锁
@@ -125,11 +125,11 @@ lambda        = {0, 0.25, 0.5, 1, 2}
 |---|---|---|---|---|
 | A4 v6 protocol/schema/implementation | `GO — PRE-NATURAL` | human prospective approval | 文档、schema、CPU synthetic code/tests | amendment/contract/schema 与实现已由 gate hash 闭包；不等于自然 input-lock GO |
 | A4 synthetic hard gate | `GO` | v6 implementation complete | CPU synthetic only | 10/10 冻结 checks 成立；`395 passed` |
-| Clean pushed Commit A4 | `PENDING` | synthetic hard gate GO | 当前 research branch commit/push | final commit SHA 尚未产生，不猜测 |
-| A4 source snapshot + run root | `NOT STARTED / CONDITIONAL` | clean local/upstream A4 identity | 全新 immutable snapshot/run UID/root | 不复用 744/d169/612 |
-| Streaming CPU input lock | `NOT STARTED / CONDITIONAL` | 新 snapshot/run root | E0-design CPU tokenizer/alignment | 必须从第一个样本开始；完整 geometry/template/receipt 闭包 |
-| E1-2 C_post/F mechanism audit | `NOT AUTHORIZED YET` | streaming input-lock GO + runtime/checkpoint/plan locks | 后续条件式资源 | input-lock 之前不得 model/checkpoint forward |
-| E1-3 centered-λ sweep | `NOT AUTHORIZED YET` | immutable finalized E1-2 | 后续条件式资源 | 只能在 E1-2 最终冻结后执行 |
+| Clean pushed Commit A4 | `GO` | synthetic hard gate GO | 当前 research branch commit/push | commit/upstream=`07755a4039e89700e59af9e141026a57142f9da0` |
+| A4 source snapshot + run root | `GO / NOW ABANDONED` | clean local/upstream A4 identity | immutable snapshot/run UID/root | UID=`fpct-e1-a4-streaming-07755a40-v1`；root 永久 no-resume/no-reuse |
+| Streaming CPU input lock | `BLOCKED / NO USABLE ARTIFACT` | 新 snapshot/run root | E0-design CPU tokenizer/alignment | 前 160/326 groups exact；第 161 个 ARC group prompt SHA fail-closed |
+| E1-2 C_post/F mechanism audit | `BLOCKED / NOT AUTHORIZED` | complete successor input-lock GO | 无 | 0 runtime/plan/model/forward；需新的人工前瞻决策 |
+| E1-3 centered-λ sweep | `BLOCKED / NOT AUTHORIZED` | immutable finalized E1-2 | 无 | 未进入 |
 | E1-pilot | `SEALED / NOT RUN / NOT READ` | operator 最终冻结及独立后续授权 | 当前无 | exploratory only；confirmatory eligibility=`no` |
 
 ### v6 实现和已锁定 synthetic 证据
@@ -145,12 +145,23 @@ lambda        = {0, 0.25, 0.5, 1, 2}
 - 十项 machine checks 全部成立：aggregate/chunk partition/reference row-key/weights/topology/semantic replay equivalence、bounded RSS、atomic no-overwrite、crash/resume；`whole_table_materialization_detected=false`。
 - A4 instrumentation re-attestation=`GO`：`110 passed`，synthetic gamma query variance=`0.19730721414089203`；parity/synthetic/hard-gate SHA256 分别为 `d7e78e5e8b54aa2ae21e105b53ad5cbdc8b52d78b6e422c36bdeed919d40c2f3`、`7524fb2ce873dde3450ad12ec26e39d6497f0f99fd9fe755edcfafda44c2ab40`、`0cd401328c5942f51a21f98a3418eb3a18c08a489c6a5cc8c99ef6775b1d6b3e`。Historical v1 evidence 保持原样，未覆盖。
 - Project CPU-safe complement（排除 gate 已覆盖的 14 个文件）=`449 passed, 2 deselected`；两项 deselected 均为绑定旧 R2l/R2m tree identity 的历史 guard，在 A4 后继分支上按设计 fail-closed（旧 diff allowlist 与旧 `fpct_attention.py` SHA），不属于 A4 runtime regression。与 gate 的 `395 passed` 合计为 `844 passed`。
-- Clean pushed A4 commit SHA / successor execution SHA：`PENDING_NOT_YET_ASSIGNED`。
+- Clean pushed A4 commit / execution SHA=`07755a4039e89700e59af9e141026a57142f9da0`；该 execution 已在 CPU input-lock 中 fail-closed，不再是可继续 successor。
 
 ### A4 当前 firewall
 
-- 自 A4 授权后尚未运行新的自然 dataset lookup、chat rendering、tokenization 或 alignment；
+- A4 execution 已对 E0-design 运行 CPU-only dataset lookup/chat rendering/tokenization/alignment：前 160 个 group 与历史 anchor 完全相等，第 161 个 group fail-closed；没有产生可用 input-lock artifact；
 - 尚未加载 E0 pretrained model 权重或 projector checkpoint，未运行 model forward；
 - 尚未运行 GPU、Kubernetes 或 training；
 - E1-pilot 仍为 `SEALED / NOT RUN / NOT READ`，confirmatory 仍 sealed；
-- 只有 synthetic gate=`GO` 且 A4 clean push 后，才能建全新 snapshot/run root；只有 streaming input lock=`GO` 后，才能条件式进入 E1-2，E1-3 又必须等待 finalized E1-2。
+- `07755a40` run root 永久 abandoned/non-reusable；只有新的人工前瞻修订、新 clean commit/snapshot/run root 且新 input-lock=`GO` 后，才可能条件式进入 E1-2，E1-3 仍必须等待 finalized E1-2。
+
+## 2026-07-27 A4 input-lock prompt-anchor failure closure
+
+- Execution=`07755a4039e89700e59af9e141026a57142f9da0`；UID=`fpct-e1-a4-streaming-07755a40-v1`；root=`/netdisk/lijunsi/fpct-e1/fpct-e1-a4-07755a40-v1`。
+- Generic blocked receipt SHA256=`bc9002daebd1e8921d5fd5ca0705ab59efd115b350a785e0c368d322161cdec0`；execution identity SHA256=`bdafa8df8d609b9bbf4c3468a7bb1452ec459c6e1adb5201a85ea772aa3f40df`；source receipt file SHA256=`b792803b23e22d082743d7f39aefcebd7178c5cd6e10108756f6693d7a778a8d`，其内部 `receipt_sha256`=`a5b5e87a816377fcaa4cb2080031da22532239a08c65ef5b07265ca4759b0afa`。Producer 原生失败字段仅为 `input_lock_rendered_prompt_sha_mismatch`。
+- Read-only post-block diagnostic（不得伪装为 generic blocked receipt 原生字段）：总 population=`326` groups；前 `160` 个 exact match；第 `161` 个为 ARC group=`2ac15877caa468bf7ee3f2c16bcb9fd7b6e122bc2081c7eaaf2ecd0f64af42e4`、sample=`55c885c900afb3b5f7a4541c68797000852c31971527148f5c29b6ccf783b4d8`、source row=`836`、eval qid=`32`。
+- Historical/actual rendered SHA256 分别为 `2b933c569545f2e26944f1702c1e878c20cb9554cd7d679cd48395b9da6e2828` / `ad7828e4c67fad1515e4bb768624114be20091fd6bbb86960a3931d439a04a9d`；alignment SHA256 分别为 `1440a0c16db39ecb915318fd836dbad959c1ca5fb275b145343e8011cd79657f` / `206b4ddc9b24874ea7b2d892e7c770901d18ccb5eb30e7cf3ac5d22fea5f03ed`。
+- Root cause：旧 E0 dev-anchor 从 label-free support projection 的 `choices[:4]` 渲染 A-D；materialized ARC row 保留额外 E 选项，E0/A4 production `UnifiedEvaluator` 遍历完整 choices。Membership hash 只看归一化后的前四项，因而先通过；随后 exact rendered/alignment anchor fail-closed。这不是 streaming、operator、mechanism 或 accuracy 结果。
+- 0 usable sidecar/manifest/templates/raw/runtime/plan；0 model/checkpoint load、forward、GPU、Kubernetes、training。E1-pilot 继续 `SEALED / NOT RENDERED / NOT TOKENIZED / NOT ALIGNED / NOT RUN / NOT READ`。
+- 机器可读闭环：`recipe/eval_recipe/fpct_e1/executions/07755a40/input_lock_failure_receipt.json`。当前 root 永久 no-resume/no-reuse。
+- `HUMAN REVIEW REQUIRED`，尚未批准也不自动推荐两项之一：`STRICT_HISTORICAL_PROJECTED_FIRST4_ANCHOR` 或 `ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT`。任一选择都必须先形成新的前瞻 amendment，再使用新 commit/snapshot/run UID/root；不得原地放宽、重跑或复用本 execution。

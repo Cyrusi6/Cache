@@ -13,8 +13,8 @@
   "branch": "research/fpct-e1-mechanism-audit",
   "base_commit": "613958af38fad27e1ea933ccc0dda6d1af5cce89",
   "classification": "EXPLORATORY_MECHANISM_AUDIT_NOT_CONFIRMATORY",
-  "current_stage": "COMMIT_A4_CLEAN_PUSH_PENDING_AFTER_SYNTHETIC_GO",
-  "current_status": "A4_SYNTHETIC_HARD_GATE_GO_CLEAN_PUSH_AND_INPUT_LOCK_PENDING",
+  "current_stage": "A4_STREAMING_CPU_INPUT_LOCK_FAILURE_CLOSURE",
+  "current_status": "A4_INPUT_LOCK_BLOCKED_HUMAN_REVIEW_REQUIRED",
   "e0_read_only": {
     "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
     "result_document": {
@@ -119,8 +119,55 @@
     "all_hard_gate_conditions_satisfied": true,
     "tracked_source_sha256_record": "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json#/evidence/tracked_source_sha256",
     "natural_data_accessed": false,
-    "clean_pushed_a4_commit": "PENDING",
-    "successor_input_lock": "PENDING_CONDITIONAL_AFTER_CLEAN_PUSH_AND_FRESH_SNAPSHOT"
+    "clean_pushed_a4_commit": "07755a4039e89700e59af9e141026a57142f9da0",
+    "successor_input_lock": "BLOCKED_NO_USABLE_ARTIFACT_PERMANENT_NO_RESUME_NO_REUSE"
+  },
+  "a4_input_lock_failure_closure": {
+    "status": "A4_INPUT_LOCK_BLOCKED_HUMAN_REVIEW_REQUIRED",
+    "machine_readable_receipt": "recipe/eval_recipe/fpct_e1/executions/07755a40/input_lock_failure_receipt.json",
+    "machine_readable_receipt_sha256": "2300e19d04233c734d13b7181246bd6628941c0fa486981938cb4216e06bdc9d",
+    "execution_sha": "07755a4039e89700e59af9e141026a57142f9da0",
+    "run_uid": "fpct-e1-a4-streaming-07755a40-v1",
+    "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a4-07755a40-v1",
+    "immutable_evidence": {
+      "blocked_receipt_sha256": "bc9002daebd1e8921d5fd5ca0705ab59efd115b350a785e0c368d322161cdec0",
+      "execution_identity_sha256": "bdafa8df8d609b9bbf4c3468a7bb1452ec459c6e1adb5201a85ea772aa3f40df",
+      "source_receipt_file_sha256": "b792803b23e22d082743d7f39aefcebd7178c5cd6e10108756f6693d7a778a8d",
+      "source_receipt_internal_sha256": "a5b5e87a816377fcaa4cb2080031da22532239a08c65ef5b07265ca4759b0afa",
+      "producer_native_failed_check": "input_lock_rendered_prompt_sha_mismatch"
+    },
+    "read_only_post_block_diagnostic": {
+      "not_native_to_generic_blocked_receipt": true,
+      "population_groups": 326,
+      "exact_prefix_group_count": 160,
+      "first_mismatch_ordinal_one_based": 161,
+      "task": "ai2-arc",
+      "content_group_sha256": "2ac15877caa468bf7ee3f2c16bcb9fd7b6e122bc2081c7eaaf2ecd0f64af42e4",
+      "sample_key_sha256": "55c885c900afb3b5f7a4541c68797000852c31971527148f5c29b6ccf783b4d8",
+      "source_row_id": "836",
+      "evaluation_question_id": 32,
+      "rendered_expected_sha256": "2b933c569545f2e26944f1702c1e878c20cb9554cd7d679cd48395b9da6e2828",
+      "rendered_actual_sha256": "ad7828e4c67fad1515e4bb768624114be20091fd6bbb86960a3931d439a04a9d",
+      "alignment_expected_sha256": "1440a0c16db39ecb915318fd836dbad959c1ca5fb275b145343e8011cd79657f",
+      "alignment_actual_sha256": "206b4ddc9b24874ea7b2d892e7c770901d18ccb5eb30e7cf3ac5d22fea5f03ed",
+      "root_cause": "historical first-four choice projection omitted the materialized ARC E option while the production formatter rendered the complete choice list"
+    },
+    "usable_sidecar_manifest_templates_raw_runtime_or_plan_count": 0,
+    "model_checkpoint_load_or_forward_count": 0,
+    "gpu_kubernetes_or_training_count": 0,
+    "e1_pilot_consumed": false,
+    "run_root_resume_allowed": false,
+    "run_root_artifact_reuse_allowed": false,
+    "human_review": {
+      "approval_status": "NOT_APPROVED",
+      "selected_option": null,
+      "options": [
+        "STRICT_HISTORICAL_PROJECTED_FIRST4_ANCHOR",
+        "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT"
+      ],
+      "automatic_recommendation_or_approval": false,
+      "new_amendment_commit_snapshot_uid_and_root_required": true
+    }
   },
     "data_split_lock": {
         "path": "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json",
@@ -168,7 +215,7 @@
     "e0_design": {
       "source": "historical frozen calibration development groups",
       "role": "instrumentation-validated mechanism audit, topology audit, and centered-lambda sweep",
-      "status": "AUTHORIZED_ONLY_FOR_NEW_A4_CPU_INPUT_LOCK_AFTER_SYNTHETIC_GATE_GO"
+      "status": "A4_INPUT_LOCK_BLOCKED_AFTER_CPU_EXACT_PREFIX_NO_RETRY_AUTHORIZED"
     },
     "e1_pilot": {
       "source": "support-fit-only certified groups",
@@ -199,7 +246,9 @@
     ]
   },
   "a4_execution_order": {
-    "operative": true,
+    "operative": false,
+    "blocked_at": "cpu_e0_design_streaming_input_lock_and_receipt",
+    "resume_or_reuse_allowed": false,
     "order": [
       "protocol_v6_schema_v6_implementation_and_synthetic_cpu_hard_gate",
       "clean_pushed_commit_A4",
@@ -632,9 +681,9 @@
   },
   "authorization": {
     "instrumentation_hard_gate": true,
-    "e0_design_input_lock_rerun": "CONDITIONALLY_AUTHORIZED_ONLY_AFTER_CLEAN_PUSHED_A4_SNAPSHOT",
-    "e0_design_mechanism_audit": "CONDITIONALLY_AUTHORIZED_ONLY_AFTER_SUCCESSOR_INPUT_LOCK_GO",
-    "e0_design_centered_lambda_sweep": "CONDITIONALLY_AUTHORIZED_ONLY_AFTER_E1_2_FINALIZED",
+    "e0_design_input_lock_rerun": "BLOCKED_HUMAN_PROSPECTIVE_AMENDMENT_REQUIRED",
+    "e0_design_mechanism_audit": "BLOCKED_NO_INPUT_LOCK_GO",
+    "e0_design_centered_lambda_sweep": "BLOCKED_NO_FINALIZED_E1_2",
     "new_training": false,
     "additional_e0_seeds": false,
     "e1_pilot_forward_or_outcome": false,
@@ -644,9 +693,11 @@
     "36_run_confirmatory": false
   },
   "execution_authorization": {
-    "a4_successor_input_lock_operative": true,
-    "a4_successor_dag_operative": true,
+    "a4_successor_input_lock_operative": false,
+    "a4_successor_dag_operative": false,
     "requires_streaming_input_lock_go": true,
+    "blocked_execution_sha": "07755a4039e89700e59af9e141026a57142f9da0",
+    "human_review_required": true,
     "historical_attempt_resume_allowed": false,
     "e1_pilot_forward_or_outcome": false,
     "training": false
