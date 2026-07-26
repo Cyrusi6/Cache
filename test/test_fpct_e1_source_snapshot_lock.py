@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
+import sys
 import tarfile
 from pathlib import Path
 
@@ -82,6 +84,64 @@ def _sealed(tmp_path: Path) -> tuple[Path, str, Path, Path, dict]:
     return repo, execution_sha, snapshot, receipt, record
 
 
+def _minimal_bootstrap_snapshot(
+    tmp_path: Path,
+) -> tuple[Path, Path, Path, str]:
+    repo = tmp_path / "bootstrap-repo"
+    repo.mkdir()
+    _run(repo, "init", "-q")
+    _run(repo, "config", "user.email", "fpct-test@example.invalid")
+    _run(repo, "config", "user.name", "FPCT Test")
+    for relative in (
+        "script/runtime",
+        "script/analysis",
+        "rosetta/model",
+        "rosetta/train",
+        "rosetta/utils",
+    ):
+        (repo / relative).mkdir(parents=True, exist_ok=True)
+    source_bootstrap = (
+        Path(__file__).resolve().parents[1] / "script/runtime/fpct_bootstrap.py"
+    )
+    shutil.copy2(source_bootstrap, repo / "script/runtime/fpct_bootstrap.py")
+    for relative in (
+        "rosetta/__init__.py",
+        "rosetta/model/__init__.py",
+        "rosetta/train/__init__.py",
+        "rosetta/utils/__init__.py",
+        "rosetta/train/dataset_adapters.py",
+        "rosetta/utils/evaluate.py",
+        "script/analysis/fpct_1b_structural_support_audit.py",
+        "script/analysis/fpct_3_5_alignment_correctness.py",
+        "script/analysis/fpct_3_7_certified_support_audit.py",
+    ):
+        (repo / relative).write_text("# sealed fixture\n", encoding="utf-8")
+    (repo / "rosetta/model/aligner.py").write_text(
+        "class AlignmentStrategy:\n"
+        "    EXACT_IDENTITY = 'exact_identity'\n\n"
+        "class TokenAligner:\n"
+        "    def align_chat_messages_soft(self, apply_confidence_control=False):\n"
+        "        return None\n"
+        "    def sanitize_fpct_soft_alignment(self):\n"
+        "        return None\n",
+        encoding="utf-8",
+    )
+    target = repo / "script/runtime/target.py"
+    target.write_text("print('target executed')\n", encoding="utf-8")
+    _run(repo, "add", ".")
+    _run(repo, "commit", "-q", "-m", "bootstrap fixture")
+    execution_sha = _run(repo, "rev-parse", "HEAD")
+    snapshot = _archive(repo, execution_sha, tmp_path / "bootstrap-snapshot")
+    receipt = snapshot / DEFAULT_RECEIPT_NAME
+    create_source_snapshot_lock(
+        repo=repo,
+        execution_sha=execution_sha,
+        snapshot_root=snapshot,
+        output_path=receipt,
+    )
+    return snapshot, snapshot / "script/runtime/target.py", receipt, execution_sha
+
+
 def test_create_and_both_verifiers_freeze_exact_archive(tmp_path: Path) -> None:
     repo, execution_sha, snapshot, receipt, record = _sealed(tmp_path)
     assert record["protocol_id"] == PROTOCOL_ID
@@ -100,6 +160,15 @@ def test_create_and_both_verifiers_freeze_exact_archive(tmp_path: Path) -> None:
 
     mounted = verify_source_snapshot_receipt(receipt, snapshot, execution_sha)
     assert mounted["status"] == "GO_MOUNTED_SOURCE_SNAPSHOT"
+    from script.runtime import fpct_bootstrap
+
+    bootstrap_record = fpct_bootstrap._stdlib_verify_source_snapshot(snapshot)
+    assert bootstrap_record["head"] == execution_sha
+    assert bootstrap_record["source"] == "fpct_e1_source_snapshot_receipt"
+    assert (
+        bootstrap_record["tree_sha256"]
+        == mounted["mounted_tree_canonical_sha256"]
+    )
     full = verify_source_snapshot_lock(
         repo=repo,
         execution_sha=execution_sha,
@@ -107,6 +176,97 @@ def test_create_and_both_verifiers_freeze_exact_archive(tmp_path: Path) -> None:
         receipt_path=receipt,
     )
     assert full["status"] == "GO_REPO_AND_MOUNTED_SOURCE_SNAPSHOT"
+
+
+def test_bootstrap_rejects_tampered_closure_before_top_level_executes(
+    tmp_path: Path,
+) -> None:
+    snapshot, target, _receipt, _execution_sha = _minimal_bootstrap_snapshot(
+        tmp_path
+    )
+    marker = tmp_path / "tampered-closure-executed.txt"
+    aligner = snapshot / "rosetta/model/aligner.py"
+    aligner.write_text(
+        "from pathlib import Path\n"
+        f"Path({str(marker)!r}).write_text('EXECUTED')\n"
+        "raise RuntimeError('tampered closure imported')\n",
+        encoding="utf-8",
+    )
+    bootstrap = snapshot / "script/runtime/fpct_bootstrap.py"
+    result = subprocess.run(
+        [
+            str(Path(sys.executable).resolve()),
+            "-I",
+            str(bootstrap),
+            "--repo-root",
+            str(snapshot),
+            "--target",
+            str(target),
+        ],
+        cwd=snapshot,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode != 0
+    assert "snapshot tree differs" in result.stderr
+    assert not marker.exists()
+    assert "tampered closure imported" not in result.stderr
+
+
+@pytest.mark.parametrize(
+    "receipt_mutation",
+    ["missing", "broken_symlink", "directory", "fifo"],
+)
+def test_bootstrap_rejects_noncanonical_or_missing_provenance_before_closure_exec(
+    tmp_path: Path,
+    receipt_mutation: str,
+) -> None:
+    snapshot, target, receipt, _execution_sha = _minimal_bootstrap_snapshot(
+        tmp_path
+    )
+    marker = tmp_path / f"closure-executed-{receipt_mutation}.txt"
+    (snapshot / "rosetta/model/aligner.py").write_text(
+        "from pathlib import Path\n"
+        f"Path({str(marker)!r}).write_text('EXECUTED')\n"
+        "raise RuntimeError('unverified closure imported')\n",
+        encoding="utf-8",
+    )
+    receipt.unlink()
+    if receipt_mutation == "broken_symlink":
+        receipt.symlink_to("missing-source-snapshot-receipt.json")
+    elif receipt_mutation == "directory":
+        receipt.mkdir()
+    elif receipt_mutation == "fifo":
+        os.mkfifo(receipt)
+
+    bootstrap = snapshot / "script/runtime/fpct_bootstrap.py"
+    result = subprocess.run(
+        [
+            str(Path(sys.executable).resolve()),
+            "-I",
+            str(bootstrap),
+            "--repo-root",
+            str(snapshot),
+            "--target",
+            str(target),
+        ],
+        cwd=snapshot,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=120,
+        check=False,
+    )
+    assert result.returncode != 0
+    if receipt_mutation == "missing":
+        assert "requires exactly one provenance marker" in result.stderr
+    else:
+        assert "is not a canonical regular file" in result.stderr
+    assert not marker.exists()
+    assert "unverified closure imported" not in result.stderr
 
 
 def test_create_rejects_dirty_wrong_head_manual_copy_and_overwrite(

@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：Commit A3 E0-design CPU input lock
-> 当前状态：`INCONCLUSIVE_RESOURCE_CEILING / REVIEW REQUIRED`
-> 下一步：等待人工决定是否停止，或以前瞻性新版协议实现 representation-preserving streaming；不得自动重跑
+> 当前阶段：Commit A4 representation-preserving deterministic bounded streaming 的 pre-natural lock closure
+> 当前状态：`A4 SYNTHETIC HARD GATE GO / CLEAN PUSH AUTHORIZED`
+> 下一步：只允许提交并推送 enclosing clean A4 commit；local/upstream 相等后才能建全新 snapshot/run root，并从首样本重跑 CPU input lock
 > 更新时间：2026-07-26（Asia/Shanghai）
 
 ## 隔离身份
@@ -20,6 +20,7 @@
 | Failed execution SHA | `d1698177e60455a42731165b88a66374b8826718`；自然 alignment 后、artifact 前 integrity failure；禁止 resume/reuse |
 | Resource-ceiling execution SHA | `612697dfc44ab46699728b8d2de0a6fce980a889`；自然 multi-task alignment 后、artifact 前 fail-closed；禁止 resume/reuse |
 | Successor execution SHA | `HUMAN_REVIEW_REQUIRED_NOT_ASSIGNED` |
+| A4 successor execution SHA | `PENDING_AFTER_CLEAN_PUSHED_A4`；当前不分配、不猜测 |
 | Consolidated gate SHA256 | `d17b4b7f35e2384abfbd300cf109484d6aacc91dd84cd3f2573a8d5dd36d4b17` |
 
 ## 人工决策锁
@@ -35,6 +36,8 @@
 已物化 652-row split manifest。E0-design 与 E1-pilot 各为 `128/70/128`，distinct content-group intersection=`0`。E1-pilot 仍未 render、tokenize、align、forward 或读取 outcome。
 
 ## 阶段表
+
+> 下表保留 A3 resource-ceiling failure 当时的历史状态；当前 operative 状态见文末 A4 阶段表。
 
 | 阶段 | 状态 | 依赖 | 允许资源 | 决策/边界 |
 |---|---|---|---|---|
@@ -65,6 +68,8 @@ Consolidated gate 固定六项且全部为 true：formula oracles、instrumentat
 在 744a943 被前瞻 supersede 后，新增 runtime renderer/mounted receipt/expected-plan/path-disjoint/image-digest/fresh-subprocess closure；同一 15-file pre-data suite 重新执行为 `211 passed, 0 failed`，all-FPCT CPU suite=`400 passed`，项目 CPU-safe full suite=`639 passed`。该结果只证明前输出工程与 provenance 闭包，不是自然机制激活或性能证据。
 
 ## Execution lock
+
+> 本节保留 A2/A3 当时的 execution contract 和 review 边界；A4 的后续人工批准及新执行顺序见文末，不回写历史原文。
 
 - History：`744a943...` 只生成 exact git archive、外置 source receipt 与空 input-lock directory；0 dataset lookup/tokenization/alignment/model/GPU。它作为 `ABANDONED_BEFORE_NATURAL_DATA` 保留，不是科学 NO-GO。
 - Failure：`d1698177...` 从 valid snapshot 启动 CPU input lock，已访问 MMLU-Redux/high_school_geography 的自然 row、tokenizer 与 alignment；raw-topology classifier 将合法的 top-k slot permutation 误当 span coverage failure。0 sidecar/manifest/raw artifact/model/checkpoint/GPU；状态=`INCONCLUSIVE_INTEGRITY_FAILURE`，禁止 resume/reuse。
@@ -100,3 +105,52 @@ lambda        = {0, 0.25, 0.5, 1, 2}
 - 未运行 GPU/Kubernetes，未训练、未新增 seed、未启动 36-run；
 - E1-pilot 仍未 render/tokenize/align/run/read；confirmatory仍 sealed。
 - 当前结论只说明现有 cumulative-row representation 的工程上限不足，不是机制、数学或性能结论。`744a943...`、`d1698177...` 与 `612697df...` 均不在可继续执行链上。
+
+## 2026-07-26 A4 representation-preserving streaming 前瞻修订
+
+### 人工授权与不变量
+
+用户已在任何新自然 input-lock 、pretrained output 或 E1-pilot outcome 之前明确批准 `APPROVED_PROSPECTIVE_AMENDMENT_E1_A4_STREAMING`。A4 只改变物理存储和 reduction 调度，不改变：
+
+- 完整 logical-row universe 与原 15-field row key；
+- 每个 metric、weight、topology、prior、mask、estimand 和 endpoint；
+- operator、checkpoint、centered-λ grid、E0-design membership 和科学 claim boundary；
+- production physical chunk size=`4096`，禁止截断 logical rows、删除大样本或将累计 ceiling 事后改名为 chunk size。
+
+历史 execution `744a943...`、`d1698177...`、`612697df...` 均永久 `ABANDONED / NON-REUSABLE`；A4 不 resume 也不复用任何 partial state。上方 A3 记录保留为当时的真实执行边界，不是需要回写的错误。
+
+### A4 operative 阶段表
+
+| 阶段 | 当前状态 | 依赖 | 授权资源 | 决策边界 |
+|---|---|---|---|---|
+| A4 v6 protocol/schema/implementation | `GO — PRE-NATURAL` | human prospective approval | 文档、schema、CPU synthetic code/tests | amendment/contract/schema 与实现已由 gate hash 闭包；不等于自然 input-lock GO |
+| A4 synthetic hard gate | `GO` | v6 implementation complete | CPU synthetic only | 10/10 冻结 checks 成立；`395 passed` |
+| Clean pushed Commit A4 | `PENDING` | synthetic hard gate GO | 当前 research branch commit/push | final commit SHA 尚未产生，不猜测 |
+| A4 source snapshot + run root | `NOT STARTED / CONDITIONAL` | clean local/upstream A4 identity | 全新 immutable snapshot/run UID/root | 不复用 744/d169/612 |
+| Streaming CPU input lock | `NOT STARTED / CONDITIONAL` | 新 snapshot/run root | E0-design CPU tokenizer/alignment | 必须从第一个样本开始；完整 geometry/template/receipt 闭包 |
+| E1-2 C_post/F mechanism audit | `NOT AUTHORIZED YET` | streaming input-lock GO + runtime/checkpoint/plan locks | 后续条件式资源 | input-lock 之前不得 model/checkpoint forward |
+| E1-3 centered-λ sweep | `NOT AUTHORIZED YET` | immutable finalized E1-2 | 后续条件式资源 | 只能在 E1-2 最终冻结后执行 |
+| E1-pilot | `SEALED / NOT RUN / NOT READ` | operator 最终冻结及独立后续授权 | 当前无 | exploratory only；confirmatory eligibility=`no` |
+
+### v6 实现和已锁定 synthetic 证据
+
+- Normative amendment：`FPCT_E1_STREAMING_AMENDMENT.md`。
+- Machine-readable contract/schema：`recipe/eval_recipe/fpct_e1/e1_streaming_contract.json` 与 `e1_streaming_schema.json`。
+- Streaming identity/storage verifier：`script/analysis/fpct_e1_streaming_verify.py`；synthetic gate runner：`script/analysis/fpct_e1_streaming_synthetic_gate.py`。
+- Input-lock、runtime primitive spool/capture、analyzer 和 K8s execution-plan consumer 已改为 4096-row bounded streaming；aggregate-only capture 不保留 cumulative long-form list。
+- Tests 覆盖原 row-key/reference equivalence、ordinal bijection、chunk-partition semantic equivalence、百万级 logical rows、bounded RSS、atomic no-overwrite、crash/resume、corruption/tamper fail-closed 与 analyzer deterministic reduction。
+- Normative SHA256：amendment=`2fd6412a5533ecc4085e52a81e514425ae5fe6ffa64ec47ebbd7bc9669a20c74`；contract=`919d7c9955c749d2d3603a2356701c65e5b552d22b8ab8cc23c91ea7246e6f22`；schema=`5d389e81f87a18e02889204f055e61c9a7fed8957e8d990f9642558700a39618`。
+- Final synthetic gate=`GO`：artifact SHA256=`42b6c98fd5f27a49e258bae4b79ff3c4673c9144465a3c43f9a672d228c82df4`，evidence SHA256=`d22bb1997234dd0c895f1b819e9cbf3bb1102633502f482cbb7b2d4d4ecc8e43`，`395 passed in 4020.78s`。
+- Full-schema baseline=`4480 rows / 2 chunks / 147111936 B peak RSS`；stress=`1000384 rows / 245 chunks / 192376832 B peak RSS`；冻结 threshold=`283295744 B`，其中 canonical row bound=`2078 B`、allocator/buffer allowance=`136183808 B`。Stress 在阈值内，且 whole-table materialization 未被检测到。
+- 十项 machine checks 全部成立：aggregate/chunk partition/reference row-key/weights/topology/semantic replay equivalence、bounded RSS、atomic no-overwrite、crash/resume；`whole_table_materialization_detected=false`。
+- A4 instrumentation re-attestation=`GO`：`110 passed`，synthetic gamma query variance=`0.19730721414089203`；parity/synthetic/hard-gate SHA256 分别为 `d7e78e5e8b54aa2ae21e105b53ad5cbdc8b52d78b6e422c36bdeed919d40c2f3`、`7524fb2ce873dde3450ad12ec26e39d6497f0f99fd9fe755edcfafda44c2ab40`、`0cd401328c5942f51a21f98a3418eb3a18c08a489c6a5cc8c99ef6775b1d6b3e`。Historical v1 evidence 保持原样，未覆盖。
+- Project CPU-safe complement（排除 gate 已覆盖的 14 个文件）=`449 passed, 2 deselected`；两项 deselected 均为绑定旧 R2l/R2m tree identity 的历史 guard，在 A4 后继分支上按设计 fail-closed（旧 diff allowlist 与旧 `fpct_attention.py` SHA），不属于 A4 runtime regression。与 gate 的 `395 passed` 合计为 `844 passed`。
+- Clean pushed A4 commit SHA / successor execution SHA：`PENDING_NOT_YET_ASSIGNED`。
+
+### A4 当前 firewall
+
+- 自 A4 授权后尚未运行新的自然 dataset lookup、chat rendering、tokenization 或 alignment；
+- 尚未加载 E0 pretrained model 权重或 projector checkpoint，未运行 model forward；
+- 尚未运行 GPU、Kubernetes 或 training；
+- E1-pilot 仍为 `SEALED / NOT RUN / NOT READ`，confirmatory 仍 sealed；
+- 只有 synthetic gate=`GO` 且 A4 clean push 后，才能建全新 snapshot/run root；只有 streaming input lock=`GO` 后，才能条件式进入 E1-2，E1-3 又必须等待 finalized E1-2。

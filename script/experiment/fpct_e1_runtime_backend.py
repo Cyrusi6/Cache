@@ -20,6 +20,8 @@ import hashlib
 import json
 import math
 import os
+import shutil
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Iterator, Mapping, MutableMapping, Sequence
@@ -29,11 +31,23 @@ import yaml
 from script.experiment.fpct_e1_capture_runner import (
     ALLOWED_SPLIT_ROLE,
     CAPTURE_BACKEND_CONTRACT_VERSION,
+    CAPTURE_STAGING_PROTOCOL_ID,
     CELL_SPEC,
+    _audit_columns,
+    _backend_projection_bytes,
+    canonical_json_bytes,
+    sha256_bytes,
+)
+from script.analysis.fpct_e1_streaming_verify import (
+    PHYSICAL_CHUNK_ROWS,
+    canonical_endpoint_id,
+    encode_row_ordinal,
+    endpoint_row_id,
+    logical_row_id,
 )
 
 
-LONG_FORM_CONTRACT_VERSION = 1
+LONG_FORM_CONTRACT_VERSION = 2
 GOLD_RESPONSE_TEMPLATE = "The correct answer is {answer}."
 MAX_CANDIDATES = 4
 PRIOR_ATOL = 2e-5
@@ -47,6 +61,9 @@ PRIMITIVE_FIELDS = (
     "parent_position",
     "candidate_count",
     "prior",
+    "runtime_source_indices",
+    "candidate_valid_mask",
+    "candidate_slot_weights",
     "gamma",
     "source_d_k",
     "source_d_v",
@@ -62,6 +79,203 @@ PRIMITIVE_FIELDS = (
     "parent_attention_mass",
     "output_delta_l2",
 )
+
+
+class PrimitiveChunkSpool:
+    """Ephemeral bounded tensor spool used between model capture and row join."""
+
+    def __init__(
+        self,
+        *,
+        expected_rows: int,
+        num_query_heads: int,
+        num_key_value_heads: int,
+        root: Path | None = None,
+    ) -> None:
+        if isinstance(expected_rows, bool) or not isinstance(expected_rows, int) or expected_rows <= 0:
+            raise ValueError("primitive spool expected_rows must be positive")
+        self.expected_rows = expected_rows
+        if (
+            isinstance(num_query_heads, bool)
+            or not isinstance(num_query_heads, int)
+            or isinstance(num_key_value_heads, bool)
+            or not isinstance(num_key_value_heads, int)
+            or num_query_heads <= 0
+            or num_key_value_heads <= 0
+            or num_query_heads % num_key_value_heads
+        ):
+            raise ValueError("primitive spool Hq/Hkv geometry is invalid")
+        self.num_query_heads = num_query_heads
+        self.num_key_value_heads = num_key_value_heads
+        self.root = Path(
+            tempfile.mkdtemp(prefix="fpct-e1-primitives-", dir=root)
+            if root is not None
+            else tempfile.mkdtemp(prefix="fpct-e1-primitives-")
+        )
+        self.records: list[dict[str, Any]] = []
+        self.row_count = 0
+        self.max_chunk_rows = 0
+        self.complete = False
+        self.aborted = False
+        self._previous_index: tuple[int, int, int, int, int] | None = None
+
+    def write_primitive_chunk(self, chunk: Mapping[str, Any]) -> None:
+        if self.complete or self.aborted:
+            raise RuntimeError("primitive spool is already closed")
+        import torch
+
+        index = chunk.get("index")
+        layer = chunk.get("layer")
+        if (
+            not isinstance(index, torch.Tensor)
+            or index.ndim != 2
+            or index.shape[1] != 4
+            or isinstance(layer, bool)
+            or not isinstance(layer, int)
+        ):
+            raise ValueError("primitive spool chunk index/layer contract mismatch")
+        count = int(index.shape[0])
+        if count <= 0 or count > PHYSICAL_CHUNK_ROWS:
+            raise ValueError("primitive spool chunk exceeds 4096 rows")
+        if self.row_count + count > self.expected_rows:
+            raise RuntimeError("primitive spool emitted more than expected logical rows")
+        if int(chunk.get("num_key_value_heads", -1)) != self.num_key_value_heads:
+            raise ValueError("primitive spool Hkv changed")
+        source_indices = chunk.get("source_indices")
+        valid = chunk.get("valid")
+        prior = chunk.get("prior")
+        if (
+            chunk.get("source_indices_certified") is not True
+            or not isinstance(source_indices, torch.Tensor)
+            or not isinstance(valid, torch.Tensor)
+            or not isinstance(prior, torch.Tensor)
+            or source_indices.shape != valid.shape
+            or source_indices.shape != prior.shape
+            or source_indices.ndim != 2
+            or source_indices.shape[0] != count
+            or source_indices.shape[1] != MAX_CANDIDATES
+        ):
+            raise ValueError("primitive spool lacks certified four-slot source identity")
+        index_cpu = index.detach().cpu()
+        first = (layer, *(int(value) for value in index_cpu[0]))
+        last = (layer, *(int(value) for value in index_cpu[-1]))
+        if first > last or (
+            self._previous_index is not None and first <= self._previous_index
+        ):
+            raise ValueError("primitive spool chunks are not in frozen numeric order")
+        previous = None
+        for values in index_cpu:
+            current = (layer, *(int(value) for value in values))
+            if previous is not None and current <= previous:
+                raise ValueError("primitive spool rows are duplicate or reordered")
+            previous = current
+        self._previous_index = last
+        chunk_index = len(self.records)
+        final = self.root / f"chunk_{chunk_index:08d}.pt"
+        temporary = self.root / f".{final.name}.tmp"
+        if final.exists() or temporary.exists():
+            raise FileExistsError("primitive spool chunk path already exists")
+        torch.save(dict(chunk), temporary)
+        os.replace(temporary, final)
+        self.records.append(
+            {
+                "chunk_index": chunk_index,
+                "path": final,
+                "row_count": count,
+                "first": first,
+                "last": last,
+            }
+        )
+        self.row_count += count
+        self.max_chunk_rows = max(self.max_chunk_rows, count)
+
+    def finalize(self) -> dict[str, Any]:
+        if self.aborted:
+            raise RuntimeError("cannot finalize an aborted primitive spool")
+        if self.row_count != self.expected_rows:
+            raise RuntimeError(
+                f"primitive spool row count mismatch: {self.row_count} != {self.expected_rows}"
+            )
+        self.complete = True
+        return {
+            "complete": True,
+            "row_count": self.row_count,
+            "chunk_count": len(self.records),
+            "max_chunk_rows": self.max_chunk_rows,
+            "physical_chunk_rows": PHYSICAL_CHUNK_ROWS,
+            "stores_raw_kv": False,
+        }
+
+    def abort(self) -> None:
+        self.aborted = True
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def cleanup(self) -> None:
+        shutil.rmtree(self.root, ignore_errors=True)
+
+    def iter_primitives(self) -> Iterator[dict[str, Any]]:
+        if not self.complete or self.aborted:
+            raise RuntimeError("primitive spool is not complete")
+        import torch
+
+        emitted = 0
+        for record in self.records:
+            chunk = torch.load(record["path"], map_location="cpu", weights_only=False)
+            index = chunk["index"]
+            legal_values = chunk["valid"]
+            for offset in range(int(index.shape[0])):
+                batch, query_head, query_position, parent = (
+                    int(value) for value in index[offset]
+                )
+                legal = legal_values[offset].bool()
+                candidate_count = int(legal.sum())
+                if candidate_count < 2:
+                    raise ValueError("streamed primitive contains a non-ambiguous parent")
+                row: dict[str, Any] = {
+                    "batch_index": batch,
+                    "layer": int(chunk["layer"]),
+                    "query_head": query_head,
+                    "kv_head": query_head
+                    // (self.num_query_heads // self.num_key_value_heads),
+                    "query_position": query_position,
+                    "parent_position": parent,
+                    "candidate_count": candidate_count,
+                    "prior": [float(value) for value in chunk["prior"][offset][legal]],
+                    "runtime_source_indices": [
+                        int(value) for value in chunk["source_indices"][offset]
+                    ],
+                    "candidate_valid_mask": [bool(value) for value in legal],
+                    "candidate_slot_weights": [
+                        float(value) if bool(valid_value) else 0.0
+                        for value, valid_value in zip(
+                            chunk["prior"][offset], legal
+                        )
+                    ],
+                    "gamma": [float(value) for value in chunk["gamma"][offset][legal]],
+                    "output_delta_l2": float(chunk["output_delta_l2"][offset]),
+                }
+                row.update(
+                    {
+                        name: float(chunk["parent_geometry"][name][offset])
+                        for name in (
+                            "source_d_k", "source_d_v", "source_energy_k", "source_energy_v",
+                            "fused_d_k", "fused_d_v", "fused_energy_k", "fused_energy_v",
+                        )
+                    }
+                )
+                row.update(
+                    {
+                        name: float(chunk["parent_metrics"][name][offset])
+                        for name in (
+                            "candidate_logit_range", "candidate_logit_variance",
+                            "jensen_gap", "parent_attention_mass",
+                        )
+                    }
+                )
+                emitted += 1
+                yield row
+        if emitted != self.expected_rows:
+            raise RuntimeError("primitive spool replay count differs from expected rows")
 
 
 def _canonical_json(value: Any) -> bytes:
@@ -141,12 +355,12 @@ def _to_python(value: Any) -> Any:
 
 
 def capture_primitives(report: Mapping[str, Any]) -> list[dict[str, Any]]:
-    """Validate the model-side bounded contract and reject summary-only capture."""
+    """Legacy v1 helper retained only for bounded synthetic fixtures."""
 
     if report.get("stores_raw_kv") is not False:
         raise RuntimeError("capture report does not attest stores_raw_kv=false")
-    if report.get("long_form_contract_version") != LONG_FORM_CONTRACT_VERSION:
-        raise RuntimeError("bounded long-form capture contract version mismatch")
+    if report.get("long_form_contract_version") != 1:
+        raise RuntimeError("legacy long-form capture contract version mismatch")
     if report.get("long_form_incomplete_chunk_count") != 0:
         raise RuntimeError("bounded long-form capture contains incomplete chunks")
     raw = report.get("long_form_primitives")
@@ -181,16 +395,21 @@ def teacher_forced_capture_bounded(
     labels: Any,
     *,
     metadata: Mapping[str, Any],
-    max_long_form_rows: int,
+    expected_long_form_rows: int,
+    primitive_sink: PrimitiveChunkSpool,
 ) -> Any:
-    """Run the frozen teacher-forced lifecycle with an item-specific hard cap."""
+    """Run exact-count teacher forcing with bounded sink emission."""
 
     import torch
 
     if labels.ndim != 2:
         raise ValueError("labels must be [B,T]")
-    if isinstance(max_long_form_rows, bool) or not isinstance(max_long_form_rows, int) or max_long_form_rows <= 0:
-        raise ValueError("max_long_form_rows must be a positive integer")
+    if (
+        isinstance(expected_long_form_rows, bool)
+        or not isinstance(expected_long_form_rows, int)
+        or expected_long_form_rows <= 0
+    ):
+        raise ValueError("expected_long_form_rows must be a positive integer")
     expected = torch.zeros_like(labels, dtype=torch.bool)
     expected[:, :-1] = labels[:, 1:] != -100
     for name in ("begin_fpct_capture", "end_fpct_capture", "fpct_teacher_forced_query_mask"):
@@ -203,14 +422,29 @@ def teacher_forced_capture_bounded(
         mode="teacher_forced_response",
         metadata=dict(metadata),
         query_mask=model_mask,
-        max_long_form_rows=max_long_form_rows,
+        expected_long_form_rows=expected_long_form_rows,
+        primitive_sink=primitive_sink,
+        primitive_chunk_rows=PHYSICAL_CHUNK_ROWS,
+        detail_mode="aggregate_only",
     )
     outputs = model(**dict(forward_inputs), labels=labels)
     report = model.end_fpct_capture()
-    if report.get("max_long_form_rows") != max_long_form_rows:
-        raise RuntimeError("capture report row ceiling differs from frozen input lock")
-    if report.get("long_form_row_count") != max_long_form_rows:
+    if report.get("long_form_contract_version") != LONG_FORM_CONTRACT_VERSION:
+        raise RuntimeError("capture report streaming contract version mismatch")
+    if report.get("expected_long_form_rows") != expected_long_form_rows:
+        raise RuntimeError("capture report exact count differs from frozen input lock")
+    if report.get("long_form_row_count") != expected_long_form_rows:
         raise RuntimeError("capture row count differs from the exact frozen row universe")
+    if "long_form_primitives" in report:
+        raise RuntimeError("streaming capture report materialized a primitive row list")
+    receipt = report.get("long_form_stream")
+    if (
+        not isinstance(receipt, Mapping)
+        or receipt.get("complete") is not True
+        or receipt.get("row_count") != expected_long_form_rows
+        or int(receipt.get("max_chunk_rows", 0)) > PHYSICAL_CHUNK_ROWS
+    ):
+        raise RuntimeError("capture primitive sink receipt is invalid")
     logits = outputs.logits
     shifted, eligible = labels[:, 1:], labels[:, 1:] != -100
     batch, query = torch.where(eligible)
@@ -257,6 +491,30 @@ def topology_contract(details: Mapping[str, Any], instruction_end: int) -> dict[
         raise ValueError("sanitized alignment metadata lengths differ")
     result: dict[int, dict[str, Any]] = {}
     for parent, (row_indices, row_weights) in enumerate(zip(indices, weights)):
+        if not isinstance(row_indices, list) or not isinstance(row_weights, list):
+            raise ValueError("sanitized alignment candidate rows must be lists")
+        if len(row_indices) != MAX_CANDIDATES or len(row_weights) != MAX_CANDIDATES:
+            raise ValueError("sanitized alignment must preserve the frozen top-k=4 slots")
+        normalized_indices = [int(value) for value in row_indices]
+        normalized_weights = [float(value) for value in row_weights]
+        if any(not math.isfinite(value) or value < 0 for value in normalized_weights):
+            raise ValueError("sanitized alignment contains invalid slot mass")
+        valid_mask = [
+            index >= 0 and weight > 0
+            for index, weight in zip(normalized_indices, normalized_weights)
+        ]
+        if any(
+            (not valid) and (index != -1 or weight != 0.0)
+            for index, weight, valid in zip(
+                normalized_indices, normalized_weights, valid_mask
+            )
+        ):
+            raise ValueError("sanitized alignment invalid slots are not canonical (-1,0)")
+        legal_indices = [
+            index for index, valid in zip(normalized_indices, valid_mask) if valid
+        ]
+        if len(set(legal_indices)) != len(legal_indices):
+            raise ValueError("sanitized alignment contains duplicate legal source indices")
         prior = _compact_prior(row_weights, row_indices)
         count = len(prior)
         if count >= 2 and not bool(certified[parent]):
@@ -268,6 +526,10 @@ def topology_contract(details: Mapping[str, Any], instruction_end: int) -> dict[
         result[parent] = {
             "candidate_count": count,
             "prior": prior,
+            "candidate_indices": normalized_indices,
+            "candidate_valid_mask": valid_mask,
+            "candidate_slot_weights": normalized_weights,
+            "statistical_weight": 1.0,
             "topology": "partition_compositional" if count >= 2 else "not_applicable",
             "within_instruction": parent < instruction_end,
         }
@@ -317,16 +579,22 @@ def feature_provenance(
     }
 
 
-def assemble_sample_rows(
+def iter_assemble_sample_rows(
     *,
-    primitives: Sequence[Mapping[str, Any]],
+    primitives: Iterator[Mapping[str, Any]],
     gold: Mapping[str, Any],
     topology: Mapping[int, Mapping[str, Any]],
+    answer_queries: Sequence[Mapping[str, Any]],
+    certified_parents: Sequence[Mapping[str, Any]],
+    num_layers: int,
+    num_query_heads: int,
+    num_kv_heads: int,
     descriptor: Mapping[str, Any],
     shard: Mapping[str, Any],
     provenance: Mapping[str, str],
     end_task_correct: bool,
-) -> list[dict[str, Any]]:
+    require_complete: bool = True,
+) -> Iterator[dict[str, Any]]:
     """Join current-operator primitives with sealed identity and gold tokens.
 
     No ``cpost_*`` field is accepted or returned.  Those fields are owned by
@@ -354,7 +622,27 @@ def assemble_sample_rows(
     if not isinstance(sample_values, list) or len(sample_values) != 1:
         raise ValueError("E0-design runtime requires exactly one canonical sample per group")
     sample_sha = str(sample_values[0])
-    rows: list[dict[str, Any]] = []
+    query_indices = {
+        int(value["query_position"]): index
+        for index, value in enumerate(answer_queries)
+    }
+    parent_indices = {
+        int(value["parent_position"]): index
+        for index, value in enumerate(certified_parents)
+    }
+    if len(query_indices) != len(answer_queries) or len(parent_indices) != len(
+        certified_parents
+    ):
+        raise ValueError("frozen answer-query/parent sequence contains duplicates")
+    endpoint = canonical_endpoint_id(
+        int(shard["seed"]),
+        shard["checkpoint_arm"],
+        shard["inference_operator"],
+        shard["cell"],
+        shard["task"],
+        float(shard["lambda_value"]),
+    )
+    expected_ordinal = 0
     for primitive in primitives:
         batch = int(primitive["batch_index"])
         query = int(primitive["query_position"])
@@ -365,6 +653,8 @@ def assemble_sample_rows(
             raise ValueError("mechanism primitive is not an eligible answer query")
         if parent not in topology or not topology[parent]["within_instruction"]:
             raise ValueError("mechanism primitive references non-prompt transported memory")
+        if query not in query_indices or parent not in parent_indices:
+            raise ValueError("mechanism primitive is outside frozen compact geometry")
         expected = topology[parent]
         count = int(primitive["candidate_count"])
         if count < 2 or count > MAX_CANDIDATES:
@@ -375,10 +665,27 @@ def assemble_sample_rows(
         expected_prior = list(expected["prior"])
         if any(abs(left - right) > PRIOR_ATOL for left, right in zip(prior, expected_prior)):
             raise ValueError("capture prior differs from frozen sanitized alignment")
+        runtime_indices = [int(value) for value in primitive["runtime_source_indices"]]
+        runtime_valid = [bool(value) for value in primitive["candidate_valid_mask"]]
+        runtime_slot_weights = [float(value) for value in primitive["candidate_slot_weights"]]
+        if (
+            len(runtime_indices) != MAX_CANDIDATES
+            or len(runtime_valid) != MAX_CANDIDATES
+            or len(runtime_slot_weights) != MAX_CANDIDATES
+            or runtime_indices != list(expected["candidate_indices"])
+            or runtime_valid != list(expected["candidate_valid_mask"])
+            or any(
+                abs(left - right) > PRIOR_ATOL
+                for left, right in zip(
+                    runtime_slot_weights, expected["candidate_slot_weights"]
+                )
+            )
+        ):
+            raise ValueError("runtime candidate slot/mask identity differs from frozen alignment")
         gamma = _strict_distribution(list(primitive["gamma"]), count, "gamma")
         target, target_token_id, gold_logp = gold_index[(batch, query)]
         row = {
-            "schema_version": 1,
+            "schema_version": 6,
             "split_role": ALLOWED_SPLIT_ROLE,
             "seed": int(shard["seed"]),
             "checkpoint_arm": shard["checkpoint_arm"],
@@ -402,6 +709,10 @@ def assemble_sample_rows(
             "topology": expected["topology"],
             "lambda_value": float(shard["lambda_value"]),
             "prior": prior,
+            "candidate_indices": runtime_indices,
+            "candidate_valid_mask": runtime_valid,
+            "candidate_slot_weights": runtime_slot_weights,
+            "statistical_weight": float(expected.get("statistical_weight", 1.0)),
             "gamma": gamma,
             "gold_logp": gold_logp,
             "end_task_correct": bool(end_task_correct),
@@ -414,22 +725,90 @@ def assemble_sample_rows(
                 "kv_head",
                 "query_position",
                 "parent_position",
-                "candidate_count",
-                "prior",
-                "gamma",
+                    "candidate_count",
+                    "prior",
+                    "runtime_source_indices",
+                    "candidate_valid_mask",
+                    "candidate_slot_weights",
+                    "gamma",
             }:
                 row[name] = float(primitive[name])
-        rows.append(row)
-    key_names = (
-        "seed", "checkpoint_arm", "task", "sample_sha256",
-        "content_group_sha256", "input_sha256", "alignment_sha256",
-        "labels_sha256", "gold_response_sha256", "layer", "query_head",
-        "kv_head", "query_position", "target_position", "target_token_id",
-        "parent_position", "candidate_count", "topology",
+        ordinal = encode_row_ordinal(
+            layer=row["layer"],
+            query_head=row["query_head"],
+            query_index=query_indices[query],
+            parent_index=parent_indices[parent],
+            num_layers=num_layers,
+            num_query_heads=num_query_heads,
+            answer_query_count=len(answer_queries),
+            certified_parent_count=len(certified_parents),
+        )
+        if require_complete and ordinal != expected_ordinal:
+            raise ValueError(
+                f"streamed primitive order differs from ordinal contract: {ordinal} != {expected_ordinal}"
+            )
+        row["row_ordinal"] = ordinal
+        row["logical_row_id"] = logical_row_id(row)
+        row["endpoint_id"] = endpoint
+        row["endpoint_row_id"] = endpoint_row_id(endpoint, row["logical_row_id"])
+        expected_ordinal = expected_ordinal + 1 if require_complete else ordinal + 1
+        yield row
+    expected_count = (
+        num_layers * num_query_heads * len(answer_queries) * len(certified_parents)
     )
-    return sorted(
-        rows,
-        key=lambda row: _canonical_json([row[name] for name in key_names]),
+    if require_complete and expected_ordinal != expected_count:
+        raise RuntimeError("streamed runtime rows do not cover the full logical universe")
+
+
+def assemble_sample_rows(
+    *,
+    primitives: Sequence[Mapping[str, Any]],
+    gold: Mapping[str, Any],
+    topology: Mapping[int, Mapping[str, Any]],
+    descriptor: Mapping[str, Any],
+    shard: Mapping[str, Any],
+    provenance: Mapping[str, str],
+    end_task_correct: bool,
+) -> list[dict[str, Any]]:
+    """Test-only materialized compatibility wrapper around the A4 iterator."""
+
+    values = [dict(value) for value in primitives]
+    if not values:
+        return []
+    query_values = sorted({int(value["query_position"]) for value in values})
+    parent_values = sorted({int(value["parent_position"]) for value in values})
+    answer_queries = [
+        {
+            "query_position": value,
+            "target_position": value + 1,
+            "target_token_id": int(
+                _to_python(gold["target_token_id"])[
+                    _to_python(gold["query_position"]).index(value)
+                ]
+            ),
+        }
+        for value in query_values
+    ]
+    certified_parents = [
+        {"parent_position": value, **dict(topology[value])}
+        for value in parent_values
+    ]
+    return list(
+        iter_assemble_sample_rows(
+            primitives=iter(values),
+            gold=gold,
+            topology=topology,
+            answer_queries=answer_queries,
+            certified_parents=certified_parents,
+            num_layers=max(int(value["layer"]) for value in values) + 1,
+            num_query_heads=max(int(value["query_head"]) for value in values) + 1,
+            num_kv_heads=max(int(value["kv_head"]) for value in values) + 1,
+            descriptor=descriptor,
+            shard=shard,
+            provenance=provenance,
+            end_task_correct=end_task_correct,
+            require_complete=False,
+        )
     )
 
 
@@ -691,11 +1070,23 @@ def load_frozen_input_items(
         raise ValueError("input-lock sidecar SHA differs from execution plan")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if (
-        manifest.get("protocol_id") != "fpct_e1_e0_design_input_lock_v1"
-        or manifest.get("status") != "FROZEN_CPU_INPUTS_NO_MODEL_OUTPUT"
+        manifest.get("schema_version") != 2
+        or manifest.get("protocol_id")
+        != "fpct_e1_e0_design_input_lock_v2_streaming"
+        or manifest.get("status") != "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT"
         or manifest.get("split_role") != ALLOWED_SPLIT_ROLE
     ):
         raise ValueError("input-lock manifest identity/firewall mismatch")
+    streaming_contract = manifest.get("streaming_contract", {})
+    if (
+        streaming_contract.get("protocol_id")
+        != "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        or streaming_contract.get("physical_chunk_rows") != PHYSICAL_CHUNK_ROWS
+        or streaming_contract.get("historical_cumulative_ceiling_operative") is not False
+        or not isinstance(streaming_contract.get("geometry_lock"), Mapping)
+        or not isinstance(streaming_contract.get("streaming_template_lock"), Mapping)
+    ):
+        raise ValueError("input-lock streaming contract/receipt is absent")
     expected = request.get("expected_row_template")
     task_contract = manifest.get("task_contract", {}).get(task, {})
     if task_contract.get("row_template") != expected:
@@ -716,6 +1107,18 @@ def load_frozen_input_items(
         payload.get("protocol_id") != manifest["protocol_id"]
         or payload.get("split_role") != ALLOWED_SPLIT_ROLE
         or payload.get("model_or_checkpoint_loaded") is not False
+        or payload.get("streaming_contract")
+        != {
+            "protocol_id": streaming_contract["protocol_id"],
+            "schema_sha256": streaming_contract["schema_sha256"],
+            "physical_chunk_rows": streaming_contract["physical_chunk_rows"],
+            "expanded_logical_rows_present": False,
+            "compact_geometry_only": True,
+            "geometry_lock": streaming_contract["geometry_lock"],
+            "streaming_template_lock": streaming_contract[
+                "streaming_template_lock"
+            ],
+        }
     ):
         raise ValueError("input-lock sidecar identity/firewall mismatch")
     items = [dict(item) for item in payload.get("items", []) if item.get("task") == task]
@@ -769,7 +1172,15 @@ def load_frozen_input_items(
             num_query_heads=int(manifest["dimensions"]["num_attention_heads"]),
         )
         if item.get("expected_long_form_rows") != observed_rows:
-            raise ValueError("input-lock item long-form row ceiling changed")
+            raise ValueError("input-lock item logical row count changed")
+        if (
+            item.get("Q_s") != len(item.get("answer_queries", []))
+            or item.get("P_s") != len(item.get("certified_parents", []))
+            or item.get("N_s") != observed_rows
+            or item.get("expected_chunk_count")
+            != math.ceil(observed_rows / PHYSICAL_CHUNK_ROWS)
+        ):
+            raise ValueError("input-lock compact geometry fields changed")
         semantic = {
             key: value
             for key, value in item.items()
@@ -797,7 +1208,21 @@ def load_frozen_input_items(
         task_contract,
         manifest.get("expected_long_form_rows_by_task", {}).get(task, {}),
     )
-    return sorted(items, key=lambda item: item["sample_sha256"])
+    return _canonical_runtime_items(items)
+
+
+def _canonical_runtime_items(
+    items: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """Canonicalize any sidecar storage order to the frozen stream order."""
+
+    ordered_items = sorted(
+        (dict(item) for item in items), key=lambda item: item["sample_sha256"],
+    )
+    ordered_samples = [item["sample_sha256"] for item in ordered_items]
+    if len(ordered_samples) != len(set(ordered_samples)):
+        raise ValueError("input-lock runtime stream contains a duplicate sample")
+    return ordered_items
 
 
 def nested_input_sha256(value: Any) -> str:
@@ -855,6 +1280,122 @@ def verify_runtime_assets_before_load(request: Mapping[str, Any]) -> dict[str, A
     return attestation
 
 
+def _validate_capture_resume_cursor(
+    request: Mapping[str, Any], input_items: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Bind a runner-verified prefix to the compact sample geometry."""
+
+    sample_order = [str(item.get("sample_sha256", "")) for item in input_items]
+    if sample_order != sorted(sample_order) or len(sample_order) != len(set(sample_order)):
+        raise ValueError("runtime capture items are not in unique sample-SHA order")
+    cursor = request.get("resume_cursor")
+    shard = request["shard"]
+    if not isinstance(cursor, Mapping):
+        raise ValueError("runtime capture request lacks a resume cursor")
+    payload = {key: value for key, value in cursor.items() if key != "cursor_sha256"}
+    if (
+        cursor.get("schema_version") != 1
+        or cursor.get("protocol_id") != CAPTURE_STAGING_PROTOCOL_ID
+        or cursor.get("plan_sha256") != request["plan_sha256"]
+        or cursor.get("shard_id") != shard["shard_id"]
+        or cursor.get("cursor_sha256")
+        != sha256_bytes(canonical_json_bytes(payload))
+        or cursor.get("scientific_prefix_reverified") is not True
+        or cursor.get("resume_only_from_first_incomplete_range") is not True
+        or cursor.get("backend_projection_columns") != list(_audit_columns()[0])
+        or cursor.get("partial_sample_backend_prefix_row_count")
+        != cursor.get("next_row_ordinal")
+        or not isinstance(
+            cursor.get("partial_sample_backend_prefix_sha256"), str,
+        )
+        or len(cursor["partial_sample_backend_prefix_sha256"]) != 64
+    ):
+        raise ValueError("runtime capture resume cursor identity changed")
+    completed_rows = cursor.get("completed_logical_rows")
+    completed_samples = cursor.get("completed_sample_count")
+    next_ordinal = cursor.get("next_row_ordinal")
+    if (
+        not isinstance(completed_rows, int)
+        or not isinstance(completed_samples, int)
+        or not isinstance(next_ordinal, int)
+        or completed_rows < 0
+        or not 0 <= completed_samples <= len(input_items)
+        or next_ordinal < 0
+    ):
+        raise ValueError("runtime capture resume cursor range is invalid")
+    prefix_rows = sum(
+        int(item["expected_long_form_rows"])
+        for item in input_items[:completed_samples]
+    )
+    if completed_samples == len(input_items):
+        if (
+            cursor.get("next_sample_sha256") is not None
+            or next_ordinal != 0
+            or completed_rows != prefix_rows
+        ):
+            raise ValueError("complete runtime capture cursor changed")
+    else:
+        next_item = input_items[completed_samples]
+        if (
+            cursor.get("next_sample_sha256") != next_item["sample_sha256"]
+            or next_ordinal >= int(next_item["expected_long_form_rows"])
+            or next_ordinal % PHYSICAL_CHUNK_ROWS != 0
+            or completed_rows != prefix_rows + next_ordinal
+        ):
+            raise ValueError("runtime capture cursor is not the first incomplete chunk")
+    return dict(cursor)
+
+
+class _RecomputedPrefixVerifier:
+    """Online exact backend-column digest used before yielding a resume suffix."""
+
+    def __init__(
+        self, cursor: Mapping[str, Any],
+        channel: MutableMapping[str, Any],
+    ) -> None:
+        self.cursor = cursor
+        self.channel = channel
+        self.columns = _audit_columns()[0]
+        self.digest = hashlib.sha256()
+        self.count = 0
+        self.finalized = False
+
+    def observe(self, row: Mapping[str, Any]) -> None:
+        if self.finalized:
+            raise RuntimeError("resume prefix verifier observed a row after finalize")
+        if self.count >= int(
+            self.cursor["partial_sample_backend_prefix_row_count"]
+        ):
+            raise RuntimeError("resume prefix verifier observed too many rows")
+        self.digest.update(_backend_projection_bytes(row, self.columns))
+        self.count += 1
+
+    def finalize(self) -> None:
+        if self.finalized:
+            return
+        observed_sha = self.digest.hexdigest()
+        exact = (
+            self.count
+            == int(self.cursor["partial_sample_backend_prefix_row_count"])
+            and observed_sha
+            == self.cursor["partial_sample_backend_prefix_sha256"]
+        )
+        self.channel.update({
+            "status": (
+                "GO_EXACT_PREFIX_MATCH" if exact
+                else "FAILED_PREFIX_MISMATCH"
+            ),
+            "observed_row_count": self.count,
+            "observed_backend_projection_sha256": observed_sha,
+            "exact_match": exact,
+        })
+        self.finalized = True
+        if not exact:
+            raise RuntimeError(
+                "recomputed runtime prefix differs from immutable prefix"
+            )
+
+
 def _iter_real_rows(
     *,
     request: Mapping[str, Any],
@@ -866,12 +1407,19 @@ def _iter_real_rows(
     device: Any,
     generation_config: Mapping[str, Any],
     input_items: Sequence[Mapping[str, Any]],
+    resume_cursor: Mapping[str, Any],
+    resume_prefix_verification: MutableMapping[str, Any],
 ) -> Iterator[dict[str, Any]]:
     import torch
 
     shard = request["shard"]
     descriptors = {row["content_group_sha256"]: row for row in request["group_contract"]}
-    for item in input_items:
+    completed_samples = int(resume_cursor["completed_sample_count"])
+    for item_index, item in enumerate(input_items):
+        if item_index < completed_samples:
+            # Runner has recursively replayed and reverified these immutable
+            # chunks before this backend/model was loaded.
+            continue
         descriptor = descriptors[item["content_group_sha256"]]
         sample_values = descriptor["sample_sha256"]
         feature = item["feature"]
@@ -909,27 +1457,60 @@ def _iter_real_rows(
             ),
         }
         expected_rows = int(item["expected_long_form_rows"])
-        with torch.no_grad():
-            observation = teacher_forced_capture_bounded(
-                model,
-                batch,
-                labels,
-                metadata=metadata,
-                max_long_form_rows=expected_rows,
-            )
-        primitives = capture_primitives(observation.capture_report)
-        rows = assemble_sample_rows(
-            primitives=primitives,
-            gold=observation.gold,
-            topology=topology,
-            descriptor=descriptor,
-            shard=shard,
-            provenance=provenance,
-            end_task_correct=end_task_correct,
+        spool = PrimitiveChunkSpool(
+            expected_rows=expected_rows,
+            num_query_heads=16,
+            num_key_value_heads=8,
         )
-        if not rows:
-            raise RuntimeError("certified E0-design sample emitted no mechanism rows")
-        yield from rows
+        try:
+            with torch.no_grad():
+                observation = teacher_forced_capture_bounded(
+                    model,
+                    batch,
+                    labels,
+                    metadata=metadata,
+                    expected_long_form_rows=expected_rows,
+                    primitive_sink=spool,
+                )
+            emitted = 0
+            skip_before = (
+                int(resume_cursor["next_row_ordinal"])
+                if item_index == completed_samples else 0
+            )
+            prefix_verifier = _RecomputedPrefixVerifier(
+                resume_cursor, resume_prefix_verification,
+            )
+            if skip_before == 0:
+                prefix_verifier.finalize()
+            for row in iter_assemble_sample_rows(
+                primitives=spool.iter_primitives(),
+                gold=observation.gold,
+                topology=topology,
+                answer_queries=item["answer_queries"],
+                certified_parents=item["certified_parents"],
+                num_layers=28,
+                num_query_heads=16,
+                num_kv_heads=8,
+                descriptor=descriptor,
+                shard=shard,
+                provenance=provenance,
+                end_task_correct=end_task_correct,
+            ):
+                if int(row["row_ordinal"]) != emitted:
+                    raise RuntimeError("runtime sample row ordinal is not contiguous")
+                emitted += 1
+                if int(row["row_ordinal"]) < skip_before:
+                    # A partially completed sample still executes once, but
+                    # its already-committed prefix is checked and never
+                    # re-emitted to the sink.
+                    prefix_verifier.observe(row)
+                    continue
+                prefix_verifier.finalize()
+                yield row
+            if emitted != expected_rows:
+                raise RuntimeError("certified E0-design sample emitted an incomplete row stream")
+        finally:
+            spool.cleanup()
 
 
 def run_capture_backend(request: Mapping[str, Any]) -> dict[str, Any]:
@@ -973,6 +1554,22 @@ def run_capture_backend(request: Mapping[str, Any]) -> dict[str, Any]:
     # pretrained model or any projector checkpoint.
     runtime_asset_attestation = verify_runtime_assets_before_load(request)
     input_items = load_frozen_input_items(request, shard["task"])
+    resume_cursor = _validate_capture_resume_cursor(request, input_items)
+    resume_prefix_verification: MutableMapping[str, Any] = {
+        "schema_version": 1,
+        "protocol_id": CAPTURE_STAGING_PROTOCOL_ID,
+        "cursor_sha256": resume_cursor["cursor_sha256"],
+        "expected_row_count": resume_cursor[
+            "partial_sample_backend_prefix_row_count"
+        ],
+        "expected_backend_projection_sha256": resume_cursor[
+            "partial_sample_backend_prefix_sha256"
+        ],
+        "status": "PENDING_RECOMPUTATION",
+        "observed_row_count": None,
+        "observed_backend_projection_sha256": None,
+        "exact_match": False,
+    }
     from script.experiment.fpct_e1_prepare_input_lock import expected_long_form_row_volume
 
     long_form_row_volume_attestation = {
@@ -1052,10 +1649,13 @@ def run_capture_backend(request: Mapping[str, Any]) -> dict[str, Any]:
         device=device,
         generation_config=formatter.generation_config,
         input_items=input_items,
+        resume_cursor=resume_cursor,
+        resume_prefix_verification=resume_prefix_verification,
     )
     return {
         "contract_version": CAPTURE_BACKEND_CONTRACT_VERSION,
         "rows": rows,
+        "resume_prefix_verification": resume_prefix_verification,
         "attestation": {
             "split_role": ALLOWED_SPLIT_ROLE,
             "capture_mode": "teacher_forced_response",
@@ -1068,6 +1668,14 @@ def run_capture_backend(request: Mapping[str, Any]) -> dict[str, Any]:
             "image_digest": request["image_digest"],
             "checkpoint_tree_sha256": shard["checkpoint_tree_sha256"],
             "membership_sha256": request["membership_sha256"],
+            "resume_cursor_sha256": resume_cursor["cursor_sha256"],
+            "resume_completed_logical_rows": resume_cursor[
+                "completed_logical_rows"
+            ],
+            "resume_next_sample_sha256": resume_cursor[
+                "next_sample_sha256"
+            ],
+            "resume_next_row_ordinal": resume_cursor["next_row_ordinal"],
             "gold_response_template": GOLD_RESPONSE_TEMPLATE,
             "gold_response_template_sha256": _sha256_bytes(
                 GOLD_RESPONSE_TEMPLATE.encode("utf-8")
@@ -1091,10 +1699,12 @@ def run_capture_backend(request: Mapping[str, Any]) -> dict[str, Any]:
 __all__ = [
     "GOLD_RESPONSE_TEMPLATE",
     "LONG_FORM_CONTRACT_VERSION",
+    "PrimitiveChunkSpool",
     "assemble_sample_rows",
     "canonical_content_sha256",
     "canonical_sample_sha256",
     "capture_primitives",
+    "iter_assemble_sample_rows",
     "teacher_forced_capture_bounded",
     "verify_expected_long_form_row_volume",
     "deterministic_end_task_correct",

@@ -199,10 +199,13 @@ def _qwen_model(state=None) -> Qwen3ForCausalLM:
 
 def _wrapper_sidecar(wrapper: RosettaModel) -> None:
     generator = torch.Generator().manual_seed(719)
-    key = torch.randn(1, 2, 4, 2, 8, generator=generator)
-    value = torch.randn(1, 2, 4, 2, 8, generator=generator)
-    prior = torch.tensor([[[0.6, 0.4], [1.0, 0.0], [0.7, 0.3], [1.0, 0.0]]])
-    wrapper._store_fpct_sidecar(0, 0, key, value, prior, prior > 0)
+    key = torch.randn(1, 2, 4, 4, 8, generator=generator)
+    value = torch.randn(1, 2, 4, 4, 8, generator=generator)
+    prior = torch.tensor([[[0.6, 0.4, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0], [0.7, 0.3, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]])
+    source_indices = torch.tensor([[[11, 12, -1, -1], [13, -1, -1, -1], [14, 15, -1, -1], [16, -1, -1, -1]]])
+    wrapper._store_fpct_sidecar(
+        0, 0, key, value, prior, prior > 0, source_indices=source_indices
+    )
 
 
 def _qwen_forward(

@@ -26,8 +26,15 @@ from typing import Any, Iterable, Iterator, Mapping, Sequence
 
 import torch
 
+from script.analysis.fpct_e1_streaming_verify import (
+    PROTOCOL_ID,
+    SCHEMA_VERSION,
+    canonical_endpoint_id,
+    endpoint_row_id as expected_endpoint_row_id,
+    logical_row_id as expected_logical_row_id,
+)
 
-SCHEMA_VERSION = 1
+
 SPLIT_ROLE = "e0_design"
 TASKS = ("ai2-arc", "openbookqa", "mmlu-redux")
 CHECKPOINT_ARMS = ("c_post_trained", "f_trained")
@@ -50,10 +57,9 @@ TOPOLOGIES = (
 EPSILON = 1e-12
 FLOAT32_ATOL = 2e-5
 PARQUET_BATCH_ROWS = 4096
-MAX_LONG_FORM_ROWS_PER_SAMPLE = 262144
+MAX_SYNTHETIC_REFERENCE_ROWS = 2 * PARQUET_BATCH_ROWS
 MAX_STAGE_PARTITIONS = 108
 MAX_E0_DESIGN_SAMPLES = 326
-MAX_STAGE_SAMPLE_CHUNKS = MAX_STAGE_PARTITIONS * MAX_E0_DESIGN_SAMPLES
 
 PARTITION_COLUMNS = (
     "seed",
@@ -65,22 +71,10 @@ PARTITION_COLUMNS = (
 )
 SAMPLE_COLUMNS = ("sample_sha256", "content_group_sha256")
 FUNCTIONAL_SORT_COLUMNS = (
-    "seed",
-    "checkpoint_arm",
-    "inference_operator",
-    "task",
+    "endpoint_id",
     "sample_sha256",
-    "content_group_sha256",
-    "lambda_value",
-    "layer",
-    "query_head",
-    "query_position",
-    "parent_position",
-    "kv_head",
-    "target_position",
-    "target_token_id",
-    "candidate_count",
-    "topology",
+    "row_ordinal",
+    "endpoint_row_id",
 )
 
 OUTPUT_NAMES = {
@@ -186,8 +180,16 @@ INPUT_COLUMNS = (
     "parent_position",
     "candidate_count",
     "topology",
+    "row_ordinal",
+    "logical_row_id",
+    "endpoint_id",
+    "endpoint_row_id",
     "lambda_value",
     "prior",
+    "candidate_indices",
+    "candidate_valid_mask",
+    "candidate_slot_weights",
+    "statistical_weight",
     "gamma",
     "source_d_k",
     "source_d_v",
@@ -736,6 +738,35 @@ def _validate_distribution(values: Any, count: int, name: str) -> list[float]:
     return result
 
 
+def attach_stream_identity(
+    row: Mapping[str, Any], row_ordinal: int
+) -> dict[str, Any]:
+    """Attach the A4 physical locator and matched endpoint identities.
+
+    This utility does not assign ordinals; callers must use the frozen
+    sample-local Cartesian formula.  It is used by synthetic fixtures and is
+    also suitable for producer-side contract tests.
+    """
+
+    result = dict(row)
+    result["row_ordinal"] = _integer(row_ordinal, "row_ordinal")
+    if result["row_ordinal"] < 0:
+        raise ValueError("row_ordinal must be nonnegative")
+    result["logical_row_id"] = expected_logical_row_id(result)
+    result["endpoint_id"] = canonical_endpoint_id(
+        result["seed"],
+        result["checkpoint_arm"],
+        result["inference_operator"],
+        result["cell"],
+        result["task"],
+        float(result["lambda_value"]),
+    )
+    result["endpoint_row_id"] = expected_endpoint_row_id(
+        result["endpoint_id"], result["logical_row_id"]
+    )
+    return result
+
+
 def validate_and_derive_row(raw: Mapping[str, Any]) -> dict[str, Any]:
     missing = [name for name in INPUT_COLUMNS if name not in raw]
     if missing:
@@ -773,8 +804,11 @@ def validate_and_derive_row(raw: Mapping[str, Any]) -> dict[str, Any]:
         "target_token_id",
         "parent_position",
         "candidate_count",
+        "row_ordinal",
     ):
         row[name] = _integer(row[name], name)
+    if row["row_ordinal"] < 0:
+        raise ValueError("row_ordinal must be nonnegative")
     if not 2 <= row["candidate_count"] <= 4:
         raise ValueError("functional mechanism rows require certified 2<=candidate_count<=4")
     if row["kv_head"] > row["query_head"]:
@@ -788,8 +822,84 @@ def validate_and_derive_row(raw: Mapping[str, Any]) -> dict[str, Any]:
     row["lambda_value"] = _grid_value(row["lambda_value"])
     if row["inference_operator"] == "c_post" and row["lambda_value"] != 0.0:
         raise ValueError("C_post baseline is only represented at lambda=0")
+    expected_endpoint = canonical_endpoint_id(
+        row["seed"],
+        row["checkpoint_arm"],
+        row["inference_operator"],
+        row["cell"],
+        row["task"],
+        row["lambda_value"],
+    )
+    if row["endpoint_id"] != expected_endpoint:
+        raise ValueError("endpoint_id differs from the frozen endpoint identity")
+    logical_id = expected_logical_row_id(row)
+    if row["logical_row_id"] != logical_id:
+        raise ValueError("logical_row_id differs from the frozen existing row key")
+    endpoint_logical_id = expected_endpoint_row_id(expected_endpoint, logical_id)
+    if row["endpoint_row_id"] != endpoint_logical_id:
+        raise ValueError("endpoint_row_id differs from endpoint_id/logical_row_id")
     count = row["candidate_count"]
     row["prior"] = _validate_distribution(row["prior"], count, "prior")
+    candidate_indices = row["candidate_indices"]
+    candidate_valid = row["candidate_valid_mask"]
+    candidate_slot_weights = row["candidate_slot_weights"]
+    if not (
+        isinstance(candidate_indices, list)
+        and isinstance(candidate_valid, list)
+        and isinstance(candidate_slot_weights, list)
+        and len(candidate_indices) == len(candidate_valid) == len(candidate_slot_weights) == 4
+    ):
+        raise ValueError("candidate slot geometry must contain exactly four slots")
+    row["candidate_indices"] = [
+        _integer(value, "candidate_indices", nonnegative=False)
+        for value in candidate_indices
+    ]
+    if any(not isinstance(value, bool) for value in candidate_valid):
+        raise ValueError("candidate_valid_mask must contain bool values")
+    row["candidate_valid_mask"] = list(candidate_valid)
+    row["candidate_slot_weights"] = [
+        _finite_float(value, "candidate_slot_weights", nonnegative=True)
+        for value in candidate_slot_weights
+    ]
+    expected_valid = [
+        index >= 0 and weight > 0
+        for index, weight in zip(
+            row["candidate_indices"], row["candidate_slot_weights"]
+        )
+    ]
+    legal_indices = [
+        index
+        for index, valid in zip(row["candidate_indices"], expected_valid)
+        if valid
+    ]
+    legal_weights = [
+        weight
+        for weight, valid in zip(row["candidate_slot_weights"], expected_valid)
+        if valid
+    ]
+    if (
+        row["candidate_valid_mask"] != expected_valid
+        or len(legal_indices) != count
+        or len(set(legal_indices)) != count
+        or any(
+            (not valid) and (index != -1 or weight != 0.0)
+            for index, weight, valid in zip(
+                row["candidate_indices"],
+                row["candidate_slot_weights"],
+                row["candidate_valid_mask"],
+            )
+        )
+        or any(
+            abs(left - right) > FLOAT32_ATOL
+            for left, right in zip(legal_weights, row["prior"])
+        )
+    ):
+        raise ValueError("candidate identity/mask/slot weights differ from legal prior")
+    row["statistical_weight"] = _finite_float(
+        row["statistical_weight"], "statistical_weight", nonnegative=True
+    )
+    if row["statistical_weight"] <= 0:
+        raise ValueError("statistical_weight must be strictly positive")
     row["gamma"] = _validate_distribution(row["gamma"], count, "gamma")
     for name in (
         "source_d_k", "source_d_v", "source_energy_k", "source_energy_v",
@@ -884,11 +994,14 @@ def _finish_prepared_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def prepare_rows(raw_rows: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
-    """In-memory helper retained for bounded fixtures and one-sample chunks only."""
+    """Small synthetic reference; never part of the formal analyzer path."""
 
-    return _finish_prepared_rows(
-        [validate_and_derive_row(row) for row in raw_rows]
-    )
+    rows: list[dict[str, Any]] = []
+    for raw in raw_rows:
+        if len(rows) >= MAX_SYNTHETIC_REFERENCE_ROWS:
+            raise ValueError("synthetic in-memory reference exceeds its test-only bound")
+        rows.append(validate_and_derive_row(raw))
+    return _finish_prepared_rows(rows)
 
 
 def _mean(rows: Sequence[Mapping[str, Any]], name: str) -> float:
@@ -1203,7 +1316,7 @@ def _build_summary_from_group_rows(
         primary.append(record)
     return {
         "schema_version": SCHEMA_VERSION,
-        "protocol_id": "fpct_e1_e0_design_mechanism_audit_v1",
+        "protocol_id": PROTOCOL_ID,
         "status": "COMPLETE",
         "split_role": SPLIT_ROLE,
         "lambda_grid": list(LAMBDA_GRID),
@@ -1222,6 +1335,9 @@ def _build_summary_from_group_rows(
             "causal_shift_verified": True,
             "lambda_zero_exact_cpost_rows": True,
             "precollapse_geometry_operator_invariant": True,
+            "representation_preserving_streaming": True,
+            "formal_reduction_order": "endpoint_id/sample_sha256/row_ordinal",
+            "logical_row_ceiling": None,
         },
         "claim_boundary": "E0-design mechanism localization only; no E1-pilot or confirmatory performance claim.",
     }
@@ -1303,6 +1419,135 @@ class _GroupedRecordCombiner:
                 record[f"mean_{name}"] = state["mean_sums"][name] / count
             record["group_equal_end_task_accuracy_flip_rate"] = (
                 state["group_flip_sum"] / state["content_group_count"]
+            )
+            record["posterior_top1_change_rate"] = (
+                state["posterior_top1_changed_sum"] / count
+            )
+            output.append(record)
+        return output
+
+
+class _DiskBackedGroupedReducer:
+    """Ordered floating reduction with disk-backed distinct ledgers.
+
+    Floating sums are updated only by the caller's frozen logical-row order.
+    SQLite is used solely for exact distinct membership and group-consistency
+    checks, so neither physical chunk boundaries nor shard completion order can
+    change a formal floating result.
+    """
+
+    def __init__(
+        self,
+        connection: sqlite3.Connection,
+        name: str,
+        keys: Sequence[str],
+    ) -> None:
+        self.connection = connection
+        self.name = name
+        self.keys = tuple(keys)
+        self.states: dict[str, dict[str, Any]] = {}
+
+    def add(self, row: Mapping[str, Any]) -> None:
+        key_values = [row[name] for name in self.keys]
+        key = canonical_json_bytes(key_values).decode("utf-8").rstrip("\n")
+        state = self.states.setdefault(
+            key,
+            {
+                "key_values": key_values,
+                "row_count": 0,
+                "mean_sums": {name: 0.0 for name in MEAN_COLUMNS},
+                "posterior_top1_changed_sum": 0.0,
+                "sample_count": 0,
+                "unique_parent_count": 0,
+                "current_sample": None,
+                "current_content_group": None,
+                "current_first_query": None,
+                "current_flip": None,
+            },
+        )
+        sample = str(row["sample_sha256"])
+        group = str(row["content_group_sha256"])
+        flip = int(bool(row["end_task_accuracy_flip"]))
+        if sample != state["current_sample"]:
+            if state["current_sample"] is not None and sample < state["current_sample"]:
+                raise ValueError("formal sample reduction order regressed")
+            state["current_sample"] = sample
+            state["current_content_group"] = group
+            state["current_first_query"] = int(row["query_position"])
+            state["current_flip"] = flip
+            state["sample_count"] += 1
+            cursor = self.connection.execute(
+                """INSERT OR IGNORE INTO aggregate_group_flip(
+                       reducer, aggregate_key, content_group_sha256, flip
+                   ) VALUES (?, ?, ?, ?)""",
+                (self.name, key, group, flip),
+            )
+            if cursor.rowcount == 0:
+                stored = self.connection.execute(
+                    """SELECT flip FROM aggregate_group_flip
+                       WHERE reducer = ? AND aggregate_key = ?
+                             AND content_group_sha256 = ?""",
+                    (self.name, key, group),
+                ).fetchone()
+                if stored is None or int(stored[0]) != flip:
+                    raise ValueError(
+                        "end-task correctness flip differs within content group"
+                    )
+        elif (
+            group != state["current_content_group"]
+            or flip != state["current_flip"]
+        ):
+            raise ValueError("sample-level group/correctness fields changed")
+
+        state["row_count"] += 1
+        for metric in MEAN_COLUMNS:
+            state["mean_sums"][metric] += float(row[metric])
+        state["posterior_top1_changed_sum"] += float(
+            row["posterior_top1_changed"]
+        )
+        first_query = int(state["current_first_query"])
+        if "query_head" in self.keys:
+            parent_representative = int(row["query_position"]) == first_query
+        else:
+            parent_representative = (
+                int(row["query_head"]) == 0
+                and int(row["query_position"]) == first_query
+            )
+        if parent_representative:
+            state["unique_parent_count"] += 1
+
+    def finish(self) -> list[dict[str, Any]]:
+        groups: dict[str, tuple[int, int]] = {
+            str(key): (int(count), int(flip_sum))
+            for key, count, flip_sum in self.connection.execute(
+                """SELECT aggregate_key, COUNT(*), SUM(flip)
+                   FROM aggregate_group_flip WHERE reducer = ?
+                   GROUP BY aggregate_key ORDER BY aggregate_key""",
+                (self.name,),
+            )
+        }
+        output: list[dict[str, Any]] = []
+        ordered_states = sorted(
+            self.states.values(), key=lambda state: tuple(state["key_values"])
+        )
+        for state in ordered_states:
+            key_values = state["key_values"]
+            key = canonical_json_bytes(key_values).decode("utf-8").rstrip("\n")
+            count = int(state["row_count"])
+            group_count, flip_sum = groups[key]
+            record = {
+                name: value for name, value in zip(self.keys, key_values)
+            }
+            record.update(
+                row_count=count,
+                sample_count=int(state["sample_count"]),
+                content_group_count=group_count,
+                unique_parent_count=int(state["unique_parent_count"]),
+            )
+            for metric in MEAN_COLUMNS:
+                record[f"mean_{metric}"] = state["mean_sums"][metric] / count
+            record["group_equal_end_task_accuracy_flip_rate"] = (
+                flip_sum / group_count
             )
             record["posterior_top1_change_rate"] = (
                 state["posterior_top1_changed_sum"] / count
@@ -1522,19 +1767,418 @@ def _write_bounded_parquet(path: Path, rows: Iterable[Mapping[str, Any]]) -> int
     return row_count
 
 
+def _query_group_identity(row: Mapping[str, Any]) -> str:
+    return canonical_json_bytes(
+        [
+            row["endpoint_id"],
+            row["sample_sha256"],
+            row["layer"],
+            row["query_head"],
+            row["parent_position"],
+        ]
+    ).decode("utf-8").rstrip("\n")
+
+
+def _parent_geometry_row(row: Mapping[str, Any]) -> dict[str, Any]:
+    keys = (
+        "seed",
+        "checkpoint_arm",
+        "task",
+        "sample_sha256",
+        "content_group_sha256",
+        "layer",
+        "parent_position",
+    )
+    return {
+        **{name: row[name] for name in keys},
+        **{name: row[name] for name in PARENT_GEOMETRY_METRICS},
+    }
+
+
+def _stage_functional_rows(
+    connection: sqlite3.Connection,
+    raw_rows: Iterable[Mapping[str, Any]],
+) -> tuple[int, set[str], set[str], set[int], set[str], set[tuple[Any, ...]]]:
+    """Pass one: validate and persist rows without retaining a sample table."""
+
+    row_count = 0
+    sample_ids: set[str] = set()
+    content_group_ids: set[str] = set()
+    seeds: set[int] = set()
+    cells: set[str] = set()
+    partitions: set[tuple[Any, ...]] = set()
+    for raw in raw_rows:
+        row = validate_and_derive_row(raw)
+        partition = tuple(row[name] for name in PARTITION_COLUMNS)
+        partitions.add(partition)
+        if len(partitions) > MAX_STAGE_PARTITIONS:
+            raise ValueError("functional stage exceeds frozen partition count")
+        sample_ids.add(str(row["sample_sha256"]))
+        content_group_ids.add(str(row["content_group_sha256"]))
+        if (
+            len(sample_ids) > MAX_E0_DESIGN_SAMPLES
+            or len(content_group_ids) > MAX_E0_DESIGN_SAMPLES
+        ):
+            raise ValueError("functional stage exceeds frozen E0-design population")
+        seeds.add(int(row["seed"]))
+        cells.add(str(row["cell"]))
+        payload = canonical_json_bytes(
+            {name: row[name] for name in OUTPUT_COLUMNS}
+        ).decode("utf-8").rstrip("\n")
+        try:
+            connection.execute(
+                """INSERT INTO staged_rows(
+                       endpoint_row_id, endpoint_id, task, sample_sha256,
+                       content_group_sha256, row_ordinal, logical_row_id,
+                       layer, query_head, query_position, parent_position,
+                       query_group, payload
+                   ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    row["endpoint_row_id"],
+                    row["endpoint_id"],
+                    row["task"],
+                    row["sample_sha256"],
+                    row["content_group_sha256"],
+                    row["row_ordinal"],
+                    row["logical_row_id"],
+                    row["layer"],
+                    row["query_head"],
+                    row["query_position"],
+                    row["parent_position"],
+                    _query_group_identity(row),
+                    payload,
+                ),
+            )
+        except sqlite3.IntegrityError as error:
+            raise ValueError(
+                "duplicate endpoint row or endpoint/sample row_ordinal"
+            ) from error
+        row_count += 1
+    if row_count == 0:
+        raise ValueError("mechanism audit input is empty")
+    connection.commit()
+    return row_count, sample_ids, content_group_ids, seeds, cells, partitions
+
+
+def _first_occurrence_values(
+    connection: sqlite3.Connection,
+    endpoint_id: str,
+    sample_sha256: str,
+    column: str,
+) -> list[int]:
+    if column not in {"layer", "query_head", "query_position", "parent_position"}:
+        raise ValueError("unsupported ordinal coordinate")
+    return [
+        int(value)
+        for value, _ in connection.execute(
+            f"""SELECT {column}, MIN(row_ordinal) FROM staged_rows
+                WHERE endpoint_id = ? AND sample_sha256 = ?
+                GROUP BY {column} ORDER BY MIN(row_ordinal), {column}""",
+            (endpoint_id, sample_sha256),
+        )
+    ]
+
+
+def _validate_staged_cartesian(connection: sqlite3.Connection) -> None:
+    """Prove each endpoint/sample ordinal is a complete Cartesian bijection."""
+
+    connection.execute(
+        """CREATE TABLE logical_universe (
+               task TEXT NOT NULL,
+               sample_sha256 TEXT NOT NULL,
+               row_ordinal INTEGER NOT NULL,
+               logical_row_id TEXT NOT NULL,
+               PRIMARY KEY(task, sample_sha256, row_ordinal)
+           )"""
+    )
+    connection.execute(
+        """INSERT OR IGNORE INTO logical_universe(
+               task, sample_sha256, row_ordinal, logical_row_id
+           )
+           SELECT task, sample_sha256, row_ordinal, logical_row_id
+           FROM staged_rows
+           ORDER BY endpoint_id, sample_sha256, row_ordinal"""
+    )
+    mismatch = connection.execute(
+        """SELECT 1 FROM staged_rows AS staged
+           JOIN logical_universe AS frozen
+             ON frozen.task = staged.task
+            AND frozen.sample_sha256 = staged.sample_sha256
+            AND frozen.row_ordinal = staged.row_ordinal
+           WHERE frozen.logical_row_id != staged.logical_row_id
+           LIMIT 1"""
+    ).fetchone()
+    if mismatch is not None:
+        raise ValueError("logical row identity differs across matched endpoints")
+    groups = connection.execute(
+        """SELECT endpoint_id, task, sample_sha256, COUNT(*),
+                  MIN(row_ordinal), MAX(row_ordinal),
+                  COUNT(DISTINCT content_group_sha256)
+           FROM staged_rows
+           GROUP BY endpoint_id, task, sample_sha256
+           ORDER BY endpoint_id, sample_sha256"""
+    )
+    for endpoint, task, sample, count, minimum, maximum, group_count in groups:
+        count = int(count)
+        if int(minimum) != 0 or int(maximum) != count - 1:
+            raise ValueError("row_ordinal range is not contiguous from zero")
+        if int(group_count) != 1:
+            raise ValueError("content-group identity changes within endpoint/sample")
+        layers = _first_occurrence_values(connection, endpoint, sample, "layer")
+        heads = _first_occurrence_values(
+            connection, endpoint, sample, "query_head"
+        )
+        queries = _first_occurrence_values(
+            connection, endpoint, sample, "query_position"
+        )
+        parents = _first_occurrence_values(
+            connection, endpoint, sample, "parent_position"
+        )
+        if not all((layers, heads, queries, parents)):
+            raise ValueError("ordinal geometry has an empty Cartesian axis")
+        if layers != list(range(len(layers))) or heads != list(range(len(heads))):
+            raise ValueError("layer/query-head coordinates are not zero-based dense")
+        if queries != sorted(queries) or parents != sorted(parents):
+            raise ValueError(
+                "row_ordinal does not encode the frozen Cartesian order"
+            )
+        expected_count = len(layers) * len(heads) * len(queries) * len(parents)
+        if count != expected_count:
+            raise ValueError(
+                "endpoint/sample rows are not a complete logical Cartesian universe"
+            )
+        parent_count = len(parents)
+        query_count = len(queries)
+        head_count = len(heads)
+        cursor = connection.execute(
+            """SELECT row_ordinal, layer, query_head, query_position,
+                      parent_position
+               FROM staged_rows
+               WHERE endpoint_id = ? AND sample_sha256 = ?
+               ORDER BY row_ordinal""",
+            (endpoint, sample),
+        )
+        for expected_ordinal, values in enumerate(cursor):
+            ordinal, layer, head, query, parent = values
+            if int(ordinal) != expected_ordinal:
+                raise ValueError("row_ordinal contains a gap or reorder")
+            parent_index = expected_ordinal % parent_count
+            value = expected_ordinal // parent_count
+            query_index = value % query_count
+            value //= query_count
+            head_index = value % head_count
+            layer_index = value // head_count
+            if (
+                int(layer) != layers[layer_index]
+                or int(head) != heads[head_index]
+                or int(query) != queries[query_index]
+                or int(parent) != parents[parent_index]
+            ):
+                raise ValueError("row_ordinal does not encode the frozen Cartesian order")
+    connection.commit()
+
+
+def _prepare_query_statistics(connection: sqlite3.Connection) -> None:
+    """Pass-two prelude: reduce gamma in canonical group/query order."""
+
+    current_key: str | None = None
+    accumulator: GammaQueryAccumulator | None = None
+    seen_queries: set[int] = set()
+
+    def flush() -> None:
+        if current_key is None or accumulator is None:
+            return
+        connection.execute(
+            "INSERT INTO query_statistics VALUES (?, ?, ?)",
+            (
+                current_key,
+                accumulator.mean_candidate_variance,
+                int(accumulator.top1_changed),
+            ),
+        )
+
+    cursor = connection.execute(
+        """SELECT query_group, query_position, payload FROM staged_rows
+           ORDER BY query_group, query_position, row_ordinal"""
+    )
+    for key, query_position, payload in cursor:
+        row = json.loads(payload)
+        if key != current_key:
+            flush()
+            current_key = str(key)
+            accumulator = GammaQueryAccumulator(int(row["candidate_count"]))
+            seen_queries = set()
+        assert accumulator is not None
+        query_position = int(query_position)
+        if query_position in seen_queries:
+            raise ValueError("duplicate query-parent-layer-head mechanism row")
+        seen_queries.add(query_position)
+        accumulator.update(row["gamma"])
+    flush()
+    connection.commit()
+
+
+_QUERY_OUTCOME_FIELDS = (
+    "seed",
+    "checkpoint_arm",
+    "inference_operator",
+    "cell",
+    "task",
+    "sample_sha256",
+    "content_group_sha256",
+    "query_position",
+    "target_position",
+    "lambda_value",
+    "input_sha256",
+    "alignment_sha256",
+    "labels_sha256",
+    "gold_response_sha256",
+    "target_token_id",
+    "gold_logp",
+    "cpost_gold_logp",
+    "delta_gold_logp",
+    "end_task_correct",
+    "cpost_end_task_correct",
+    "end_task_accuracy_flip",
+)
+
+
+def _register_query_outcome(
+    connection: sqlite3.Connection, row: Mapping[str, Any]
+) -> None:
+    key = canonical_json_bytes(
+        [
+            row["endpoint_id"],
+            row["sample_sha256"],
+            row["query_position"],
+            row["target_position"],
+        ]
+    ).decode("utf-8").rstrip("\n")
+    payload = canonical_json_bytes(
+        {name: row[name] for name in _QUERY_OUTCOME_FIELDS}
+    ).decode("utf-8").rstrip("\n")
+    cursor = connection.execute(
+        """INSERT OR IGNORE INTO query_outcomes(
+               query_key, endpoint_id, sample_sha256, query_position, payload
+           ) VALUES (?, ?, ?, ?, ?)""",
+        (key, row["endpoint_id"], row["sample_sha256"], row["query_position"], payload),
+    )
+    if cursor.rowcount == 1:
+        return
+    stored = connection.execute(
+        "SELECT payload FROM query_outcomes WHERE query_key = ?", (key,)
+    ).fetchone()
+    if stored is None:
+        raise RuntimeError("query-outcome index lost an existing key")
+    reference = json.loads(stored[0])
+    observed = json.loads(payload)
+    for name in _QUERY_OUTCOME_FIELDS:
+        left, right = reference[name], observed[name]
+        equal = left == right
+        if isinstance(left, float) and isinstance(right, float):
+            equal = math.isclose(
+                left, right, abs_tol=FLOAT32_ATOL, rel_tol=2e-5
+            )
+        if not equal:
+            raise ValueError(
+                f"query-level outcome differs across layer/head/parent: {name}"
+            )
+
+
+def _group_rows_from_query_index(
+    connection: sqlite3.Connection,
+) -> tuple[list[dict[str, Any]], int]:
+    group_rows: list[dict[str, Any]] = []
+    current: tuple[str, str] | None = None
+    response_rows: list[dict[str, Any]] = []
+    answer_query_count = 0
+
+    def flush() -> None:
+        if not response_rows:
+            return
+        derived = _group_equal_response_summary(response_rows)
+        if len(derived) != 1:
+            raise ValueError("one endpoint/sample produced multiple response groups")
+        group_rows.extend(derived)
+
+    for endpoint, sample, payload in connection.execute(
+        """SELECT endpoint_id, sample_sha256, payload FROM query_outcomes
+           ORDER BY endpoint_id, sample_sha256, query_position"""
+    ):
+        identity = (str(endpoint), str(sample))
+        if identity != current:
+            flush()
+            current = identity
+            response_rows = []
+        response_rows.append(json.loads(payload))
+        answer_query_count += 1
+    flush()
+    return group_rows, answer_query_count
+
+
 def write_artifacts(
     raw_rows: Iterable[Mapping[str, Any]], output_dir: Path
 ) -> dict[str, Any]:
-    """Bounded external-memory derivation for one merged stage row stream."""
+    """Two-pass, disk-backed, representation-preserving formal reducer.
+
+    Pass one validates and stages individual logical rows.  Pass two replays
+    only the frozen ``endpoint_id/sample_sha256/row_ordinal`` order.  Therefore
+    no cumulative sample-sized list or observation-derived logical-row ceiling
+    exists, and floating reductions are independent of chunk completion order.
+    """
 
     output_dir.mkdir(parents=True, exist_ok=True)
     spill = Path(tempfile.mkdtemp(prefix=".functional-stream.", dir=output_dir))
-    connection = sqlite3.connect(spill / "parent_geometry.sqlite")
+    connection = sqlite3.connect(spill / "formal_reducer.sqlite")
     connection.execute("PRAGMA journal_mode=OFF")
     connection.execute("PRAGMA synchronous=OFF")
-    connection.execute("PRAGMA temp_store=MEMORY")
-    connection.execute(
-        """CREATE TABLE parent_geometry (
+    connection.execute("PRAGMA temp_store=FILE")
+    connection.executescript(
+        """CREATE TABLE staged_rows (
+               endpoint_row_id TEXT PRIMARY KEY,
+               endpoint_id TEXT NOT NULL,
+               task TEXT NOT NULL,
+               sample_sha256 TEXT NOT NULL,
+               content_group_sha256 TEXT NOT NULL,
+               row_ordinal INTEGER NOT NULL CHECK(row_ordinal >= 0),
+               logical_row_id TEXT NOT NULL,
+               layer INTEGER NOT NULL,
+               query_head INTEGER NOT NULL,
+               query_position INTEGER NOT NULL,
+               parent_position INTEGER NOT NULL,
+               query_group TEXT NOT NULL,
+               payload TEXT NOT NULL,
+               UNIQUE(endpoint_id, sample_sha256, row_ordinal)
+           );
+           CREATE INDEX staged_formal_order ON staged_rows(
+               endpoint_id, sample_sha256, row_ordinal
+           );
+           CREATE INDEX staged_query_order ON staged_rows(
+               query_group, query_position, row_ordinal
+           );
+           CREATE TABLE query_statistics (
+               query_group TEXT PRIMARY KEY,
+               gamma_query_variance REAL NOT NULL,
+               posterior_top1_changed INTEGER NOT NULL
+           );
+           CREATE TABLE query_outcomes (
+               query_key TEXT PRIMARY KEY,
+               endpoint_id TEXT NOT NULL,
+               sample_sha256 TEXT NOT NULL,
+               query_position INTEGER NOT NULL,
+               payload TEXT NOT NULL
+           );
+           CREATE INDEX query_outcome_order ON query_outcomes(
+               endpoint_id, sample_sha256, query_position
+           );
+           CREATE TABLE aggregate_group_flip (
+               reducer TEXT NOT NULL,
+               aggregate_key TEXT NOT NULL,
+               content_group_sha256 TEXT NOT NULL,
+               flip INTEGER NOT NULL,
+               PRIMARY KEY(reducer, aggregate_key, content_group_sha256)
+           );
+           CREATE TABLE parent_geometry (
                parent_key BLOB PRIMARY KEY,
                seed INTEGER NOT NULL,
                checkpoint_arm TEXT NOT NULL,
@@ -1546,145 +2190,90 @@ def write_artifacts(
                payload TEXT NOT NULL,
                parent_record TEXT NOT NULL,
                reference_order TEXT NOT NULL
-           )"""
+           );"""
     )
-    layer_combiner = _GroupedRecordCombiner(
-        (
-            "seed",
-            "checkpoint_arm",
-            "inference_operator",
-            "cell",
-            "task",
-            "lambda_value",
-            "layer",
-            "query_head",
-            "kv_head",
-        )
-    )
-    topology_combiner = _GroupedRecordCombiner(
-        (
-            "seed",
-            "checkpoint_arm",
-            "inference_operator",
-            "cell",
-            "task",
-            "lambda_value",
-            "topology",
-        )
-    )
-    lambda_combiner = _GroupedRecordCombiner(
-        (
-            "seed",
-            "checkpoint_arm",
-            "inference_operator",
-            "cell",
-            "task",
-            "lambda_value",
-        )
-    )
-    contraction_combiner = _ContractionCombiner()
     fragment_paths: dict[tuple[Any, ...], Path] = {}
     fragment_handles: dict[tuple[Any, ...], Any] = {}
-    seen_chunks: set[tuple[Any, ...]] = set()
-    last_sample_by_partition: dict[tuple[Any, ...], tuple[Any, ...]] = {}
-    group_rows: list[dict[str, Any]] = []
-    sample_ids: set[str] = set()
-    content_group_ids: set[str] = set()
-    seeds: set[int] = set()
-    cells: set[str] = set()
-    row_count = 0
-    answer_query_count = 0
+    try:
+        (
+            row_count,
+            sample_ids,
+            content_group_ids,
+            seeds,
+            cells,
+            _partitions,
+        ) = _stage_functional_rows(connection, raw_rows)
+        _validate_staged_cartesian(connection)
+        _prepare_query_statistics(connection)
 
-    def process_chunk(identity: tuple[Any, ...], rows: list[dict[str, Any]]) -> None:
-        nonlocal row_count, answer_query_count
-        if not rows:
-            return
-        partition = identity[: len(PARTITION_COLUMNS)]
-        sample = identity[len(PARTITION_COLUMNS) :]
-        prepared = _finish_prepared_rows(rows)
-        if len(prepared) > MAX_LONG_FORM_ROWS_PER_SAMPLE:
-            raise ValueError("functional sample exceeds frozen row ceiling")
-        for row in prepared:
-            if tuple(row[name] for name in PARTITION_COLUMNS) != partition or tuple(
-                row[name] for name in SAMPLE_COLUMNS
-            ) != sample:
-                raise ValueError("bounded functional chunk crossed partition/sample")
-        path = fragment_paths.setdefault(
-            partition,
-            spill
-            / (
-                hashlib.sha256(canonical_json_bytes(list(partition))).hexdigest()
-                + ".jsonl"
+        layer_reducer = _DiskBackedGroupedReducer(
+            connection,
+            "layer_head",
+            (
+                "seed", "checkpoint_arm", "inference_operator", "cell",
+                "task", "lambda_value", "layer", "query_head", "kv_head",
             ),
         )
-        handle = fragment_handles.get(partition)
-        if handle is None:
-            handle = path.open("ab")
-            fragment_handles[partition] = handle
-        for row in prepared:
-            handle.write(canonical_json_bytes({name: row[name] for name in OUTPUT_COLUMNS}))
+        topology_reducer = _DiskBackedGroupedReducer(
+            connection,
+            "topology",
+            (
+                "seed", "checkpoint_arm", "inference_operator", "cell",
+                "task", "lambda_value", "topology",
+            ),
+        )
+        lambda_reducer = _DiskBackedGroupedReducer(
+            connection,
+            "lambda",
+            (
+                "seed", "checkpoint_arm", "inference_operator", "cell",
+                "task", "lambda_value",
+            ),
+        )
+        contraction_combiner = _ContractionCombiner()
 
-        sample_sha256, content_group_sha256 = sample
-        layer_combiner.add_rows(prepared)
-        topology_combiner.add_rows(prepared)
-        lambda_combiner.add_rows(prepared)
-        for parent in _consistent_parent_rows(prepared):
-            _register_parent_geometry(
-                connection,
-                parent,
-                (
-                    str(prepared[0]["inference_operator"]),
-                    float(prepared[0]["lambda_value"]),
+        for payload, variance, top1_changed in connection.execute(
+            """SELECT staged.payload, statistics.gamma_query_variance,
+                      statistics.posterior_top1_changed
+               FROM staged_rows AS staged
+               JOIN query_statistics AS statistics
+                 ON statistics.query_group = staged.query_group
+               ORDER BY staged.endpoint_id, staged.sample_sha256,
+                        staged.row_ordinal"""
+        ):
+            row = json.loads(payload)
+            row["gamma_query_variance"] = float(variance)
+            row["posterior_top1_changed"] = bool(top1_changed)
+            partition = tuple(row[name] for name in PARTITION_COLUMNS)
+            path = fragment_paths.setdefault(
+                partition,
+                spill
+                / (
+                    hashlib.sha256(
+                        canonical_json_bytes(list(partition))
+                    ).hexdigest()
+                    + ".jsonl"
                 ),
             )
-        query_rows = _unique_query_summary(prepared)
-        group_rows.extend(_group_equal_response_summary(query_rows))
-        row_count += len(prepared)
-        answer_query_count += len(query_rows)
-        sample_ids.add(sample_sha256)
-        content_group_ids.add(content_group_sha256)
-        if (
-            len(sample_ids) > MAX_E0_DESIGN_SAMPLES
-            or len(content_group_ids) > MAX_E0_DESIGN_SAMPLES
-        ):
-            raise ValueError("functional stage exceeds frozen E0-design population")
-        seeds.add(int(prepared[0]["seed"]))
-        cells.add(str(prepared[0]["cell"]))
+            handle = fragment_handles.get(partition)
+            if handle is None:
+                handle = path.open("ab")
+                fragment_handles[partition] = handle
+            handle.write(
+                canonical_json_bytes(
+                    {name: row[name] for name in OUTPUT_COLUMNS}
+                )
+            )
+            layer_reducer.add(row)
+            topology_reducer.add(row)
+            lambda_reducer.add(row)
+            _register_parent_geometry(
+                connection,
+                _parent_geometry_row(row),
+                (str(row["inference_operator"]), float(row["lambda_value"])),
+            )
+            _register_query_outcome(connection, row)
 
-    current_identity: tuple[Any, ...] | None = None
-    current_rows: list[dict[str, Any]] = []
-    try:
-        for raw in raw_rows:
-            row = validate_and_derive_row(raw)
-            partition = tuple(row[name] for name in PARTITION_COLUMNS)
-            sample = tuple(row[name] for name in SAMPLE_COLUMNS)
-            identity = (*partition, *sample)
-            if identity != current_identity:
-                if current_identity is not None:
-                    process_chunk(current_identity, current_rows)
-                if identity in seen_chunks:
-                    raise ValueError("functional partition/sample chunk is non-contiguous")
-                if (
-                    partition not in last_sample_by_partition
-                    and len(last_sample_by_partition) >= MAX_STAGE_PARTITIONS
-                ):
-                    raise ValueError("functional stage exceeds frozen partition count")
-                if len(seen_chunks) >= MAX_STAGE_SAMPLE_CHUNKS:
-                    raise ValueError("functional stage exceeds frozen sample-chunk count")
-                previous_sample = last_sample_by_partition.get(partition)
-                if previous_sample is not None and sample <= previous_sample:
-                    raise ValueError("functional samples are not ordered within partition")
-                seen_chunks.add(identity)
-                last_sample_by_partition[partition] = sample
-                current_identity = identity
-                current_rows = []
-            current_rows.append(row)
-            if len(current_rows) > MAX_LONG_FORM_ROWS_PER_SAMPLE:
-                raise ValueError("functional sample exceeds frozen row ceiling")
-        if current_identity is not None:
-            process_chunk(current_identity, current_rows)
-        if row_count == 0:
-            raise ValueError("mechanism audit input is empty")
         connection.commit()
         for (parent_record,) in connection.execute(
             """SELECT parent_record FROM parent_geometry
@@ -1705,16 +2294,17 @@ def write_artifacts(
         if written != row_count:
             raise RuntimeError("functional detail merge changed the row count")
         aggregate_sets = {
-            "layer_head": layer_combiner.finish(),
+            "layer_head": layer_reducer.finish(),
             "contraction": contraction_combiner.finish(),
-            "topology": topology_combiner.finish(),
-            "lambda": lambda_combiner.finish(),
+            "topology": topology_reducer.finish(),
+            "lambda": lambda_reducer.finish(),
         }
         hashes = {OUTPUT_NAMES["rows"]: sha256_file(parquet_path)}
         for name, records in aggregate_sets.items():
             path = output_dir / OUTPUT_NAMES[name]
             atomic_write(path, _csv_bytes(records))
             hashes[path.name] = sha256_file(path)
+        group_rows, answer_query_count = _group_rows_from_query_index(connection)
         summary = _build_summary_from_group_rows(
             row_count=row_count,
             answer_query_count=answer_query_count,
@@ -1958,7 +2548,11 @@ def validate_raw_topology_row(raw: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def read_raw_topology_sidecar(path: Path) -> list[dict[str, Any]]:
-    """Read only the model-output-free raw topology ledger from a frozen sidecar."""
+    """Read the A4 v2 model-output-free topology ledger, fail-closed.
+
+    Historical v1 sidecars belong to abandoned executions and are deliberately
+    rejected: A4 forbids both resume and artifact reuse.
+    """
 
     import torch
 
@@ -1970,12 +2564,37 @@ def read_raw_topology_sidecar(path: Path) -> list[dict[str, Any]]:
     )
     if (
         not isinstance(payload, Mapping)
-        or payload.get("protocol_id") != "fpct_e1_e0_design_input_lock_v1"
+        or payload.get("schema_version") != 2
+        or payload.get("protocol_id")
+        != "fpct_e1_e0_design_input_lock_v2_streaming"
         or payload.get("split_role") != SPLIT_ROLE
-        or payload.get("e1_pilot_consumed") is not False
-        or payload.get("model_or_checkpoint_loaded") is not False
+        or payload.get("status")
+        != "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT"
     ):
         raise ValueError("raw topology sidecar identity/firewall mismatch")
+    firewall = payload.get("firewall")
+    if not isinstance(firewall, Mapping) or any(
+        firewall.get(name) is not False
+        for name in (
+            "e1_pilot_consumed",
+            "model_selection_consumed",
+            "test_consumed",
+            "model_or_checkpoint_loaded",
+            "gpu_or_cuda_used",
+        )
+    ):
+        raise ValueError("raw topology sidecar identity/firewall mismatch")
+    streaming = payload.get("streaming_contract")
+    if (
+        not isinstance(streaming, Mapping)
+        or streaming.get("protocol_id")
+        != "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        or streaming.get("physical_chunk_rows") != 4096
+        or streaming.get("expanded_logical_rows_present") is not False
+        or not isinstance(streaming.get("geometry_lock"), Mapping)
+        or not isinstance(streaming.get("streaming_template_lock"), Mapping)
+    ):
+        raise ValueError("raw topology sidecar lacks the operative A4 lock")
     rows: list[dict[str, Any]] = []
     seen: set[tuple[str, str, int]] = set()
     for item in payload.get("items", []):
@@ -2474,8 +3093,8 @@ def synthetic_rows() -> list[dict[str, Any]]:
                     gamma = [value / total for value in gamma]
                     cpost_logp = -1.5 + arm_offset + 0.01 * query_position
                     delta = 0.0 if lambda_value == 0 else 0.005 * lambda_value * (1 if query_position == 5 else -1)
-                    rows.append({
-                        "schema_version": 1,
+                    rows.append(attach_stream_identity({
+                        "schema_version": SCHEMA_VERSION,
                         "split_role": "e0_design",
                         "seed": 2026072201,
                         "checkpoint_arm": checkpoint_arm,
@@ -2499,6 +3118,10 @@ def synthetic_rows() -> list[dict[str, Any]]:
                         "topology": "partition_compositional",
                         "lambda_value": lambda_value,
                         "prior": prior,
+                        "candidate_indices": [17, 18, -1, -1],
+                        "candidate_valid_mask": [True, True, False, False],
+                        "candidate_slot_weights": [0.6, 0.4, 0.0, 0.0],
+                        "statistical_weight": 1.0,
                         "gamma": gamma,
                         "source_d_k": 0.4,
                         "source_d_v": 0.3,
@@ -2517,7 +3140,7 @@ def synthetic_rows() -> list[dict[str, Any]]:
                         "cpost_gold_logp": cpost_logp,
                         "end_task_correct": True,
                         "cpost_end_task_correct": True,
-                    })
+                    }, query_position - 4))
     return rows
 
 

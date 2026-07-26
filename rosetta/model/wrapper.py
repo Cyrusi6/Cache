@@ -30,7 +30,7 @@ from rosetta.model.fpct_attention import (
 )
 from rosetta.model.sampling import sample_token
 from rosetta.model.fpct_instrumentation import (
-    FPCT_CAPTURE_DEFAULT_MAX_LONG_FORM_ROWS,
+    FPCT_CAPTURE_MAX_PRIMITIVE_CHUNK_ROWS,
     FPCTCaptureAccumulator,
     teacher_forced_query_mask,
 )
@@ -218,7 +218,11 @@ class RosettaModel(nn.Module):
         *,
         metadata: Optional[Mapping[str, Any]] = None,
         query_mask: Optional[torch.Tensor] = None,
-        max_long_form_rows: int = FPCT_CAPTURE_DEFAULT_MAX_LONG_FORM_ROWS,
+        max_long_form_rows: Optional[int] = None,
+        expected_long_form_rows: Optional[int] = None,
+        primitive_sink: Optional[Any] = None,
+        primitive_chunk_rows: int = FPCT_CAPTURE_MAX_PRIMITIVE_CHUNK_ROWS,
+        detail_mode: str = "full",
     ) -> None:
         """Begin an explicit multi-forward query-time instrumentation capture."""
 
@@ -229,6 +233,10 @@ class RosettaModel(nn.Module):
             metadata=metadata,
             query_mask=query_mask,
             max_long_form_rows=max_long_form_rows,
+            expected_long_form_rows=expected_long_form_rows,
+            primitive_sink=primitive_sink,
+            primitive_chunk_rows=primitive_chunk_rows,
+            detail_mode=detail_mode,
         )
 
     @staticmethod
@@ -242,7 +250,11 @@ class RosettaModel(nn.Module):
             raise RuntimeError("no FPCT capture is active")
         capture = self._fpct_capture
         self._fpct_capture = None
-        return capture.finalize()
+        try:
+            return capture.finalize()
+        except BaseException:
+            capture._abort_sink()
+            raise
 
     @property
     def device(self):
@@ -1430,6 +1442,7 @@ class RosettaModel(nn.Module):
         fused_value: torch.Tensor,
         prior: torch.Tensor,
         legal: torch.Tensor,
+        source_indices: Optional[torch.Tensor] = None,
         parent_force_native: Optional[torch.Tensor] = None,
         parent_equivalent: Optional[torch.Tensor] = None,
         prior_sha256: str = "",
@@ -1473,6 +1486,12 @@ class RosettaModel(nn.Module):
             value=fused_value,
             prior=canonical[0],
             valid=canonical[1],
+            source_indices=(
+                source_indices.to(device=fused_key.device, dtype=torch.long)
+                if source_indices is not None
+                else None
+            ),
+            source_indices_certified=source_indices is not None,
             prior_sha256=canonical[2],
             max_slots_hint=canonical[3],
             source_length_hint=canonical[4],
@@ -1992,6 +2011,7 @@ class RosettaModel(nn.Module):
                                         fused_value=fpct_record[3],
                                         prior=fpct_record[4],
                                         legal=fpct_record[5],
+                                        source_indices=soft_section["source_indices"],
                                         parent_force_native=fpct_record[8],
                                         parent_equivalent=fpct_record[9],
                                         prior_sha256=soft_section.get(

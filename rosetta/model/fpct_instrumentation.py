@@ -17,6 +17,11 @@ FPCT_CAPTURE_MODES = frozenset(
 # consumer may request a lower bound, but an unbounded long-form accumulator is
 # never permitted.
 FPCT_CAPTURE_DEFAULT_MAX_LONG_FORM_ROWS = 262_144
+# Physical emission is independently bounded from the logical row universe.
+# Production streaming may lower this value for tests, but may never increase
+# it without a new protocol version.
+FPCT_CAPTURE_MAX_PRIMITIVE_CHUNK_ROWS = 4_096
+FPCT_CAPTURE_DETAIL_MODES = frozenset({"full", "aggregate_only"})
 LONG_FORM_GEOMETRY_NAMES = (
     "source_d_k",
     "source_d_v",
@@ -162,6 +167,7 @@ class _LayerCapture:
         self.query_chunks: list[dict[str, Any]] = []
         self.primitive_chunks: list[dict[str, Any]] = []
         self.incomplete_primitive_chunks = 0
+        self.eligible_query_count = 0
 
     @staticmethod
     def _extend_source(value: Tensor, source_length: int, fill: int | bool) -> Tensor:
@@ -228,7 +234,7 @@ class _LayerCapture:
     @staticmethod
     def _dense_candidates(
         payload: Mapping[str, Any]
-    ) -> tuple[Tensor, Tensor, Tensor, Tensor]:
+    ) -> tuple[Tensor, Tensor, Tensor, Tensor, Tensor]:
         gamma = payload["gamma"].detach().float()
         prior = payload["prior"].detach().float()
         if prior.shape != gamma.shape:
@@ -236,6 +242,9 @@ class _LayerCapture:
         candidate_mask = payload["candidate_mask"].detach().bool()
         parent = payload["parent_index"].detach().long().clamp_min(0)
         candidate = payload["candidate_index"].detach().long().clamp_min(0)
+        source_index = payload["source_index"].detach().long()
+        if source_index.shape != parent.shape:
+            raise ValueError("FPCT capture source-index identity shape mismatch")
         top_k = int(payload["top_k"])
         source_length = int(payload["source_length"])
         b, h, q, memory = gamma.shape
@@ -258,11 +267,20 @@ class _LayerCapture:
         )
         dense_valid_count.scatter_add_(3, flat_index, candidate_mask.long())
         dense_valid = dense_valid_count > 0
+        dense_source_index = torch.full(
+            (b, dense_size), -1, device=gamma.device, dtype=torch.long
+        )
+        dense_source_index.scatter_(
+            1,
+            (parent * top_k + candidate),
+            source_index,
+        )
         return (
             dense_gamma.reshape(b, h, q, source_length, top_k),
             dense_prior.reshape(b, h, q, source_length, top_k),
             dense_valid.reshape(b, h, q, source_length, top_k),
             dense_valid_count.reshape(b, h, q, source_length, top_k),
+            dense_source_index.reshape(b, source_length, top_k),
         )
 
     def update(
@@ -272,8 +290,13 @@ class _LayerCapture:
         query_eligible: Tensor,
         *,
         max_new_primitive_rows: int,
+        primitive_sink: Any | None = None,
+        primitive_chunk_rows: int = FPCT_CAPTURE_MAX_PRIMITIVE_CHUNK_ROWS,
+        retain_detail_rows: bool = True,
     ) -> int:
-        gamma, prior, gamma_valid, duplicate_count = self._dense_candidates(payload)
+        gamma, prior, gamma_valid, duplicate_count, source_indices = self._dense_candidates(payload)
+        if primitive_sink is not None and payload.get("source_indices_certified") is not True:
+            raise ValueError("FPCT streamed primitives require certified runtime source indices")
         duplicate_max = duplicate_count.amax().detach()
         self.duplicate_atom_max = (
             duplicate_max
@@ -284,6 +307,7 @@ class _LayerCapture:
         if query_eligible.shape != (b, q):
             raise ValueError("FPCT capture query mask slice must be [B,Q]")
         query_eligible = query_eligible.to(device=gamma.device, dtype=torch.bool)
+        self.eligible_query_count += int(query_eligible.detach().sum().cpu())
         gamma_valid = gamma_valid & query_eligible[:, None, :, None, None]
         self._ensure_structure(
             batch_size=b,
@@ -363,7 +387,8 @@ class _LayerCapture:
                 dim=-1
             ) / count.clamp_min(1)
             query_chunk["metrics"][name] = mean.detach()
-        self.query_chunks.append(query_chunk)
+        if retain_detail_rows:
+            self.query_chunks.append(query_chunk)
         parent_geometry = payload.get("parent_geometry", {})
         query_metrics = payload.get("query_metrics", {})
         if not isinstance(parent_geometry, Mapping) or not isinstance(
@@ -389,9 +414,6 @@ class _LayerCapture:
         ):
             self.incomplete_primitive_chunks += 1
             return 0
-        batch_index, head_index, query_index, parent_index = compact_index.unbind(
-            dim=1
-        )
         for name in LONG_FORM_GEOMETRY_NAMES:
             if parent_geometry[name].shape != (b, h, source_length):
                 raise ValueError(f"FPCT capture {name} must be [B,H,N]")
@@ -400,8 +422,13 @@ class _LayerCapture:
                 raise ValueError(f"FPCT capture {name} must be [B,H,Q,N]")
         if query_metrics["output_delta_l2"].shape != (b, h, q):
             raise ValueError("FPCT capture output_delta_l2 must be [B,H,Q]")
-        self.primitive_chunks.append(
-            {
+
+        def primitive_payload(indices: Tensor) -> dict[str, Any]:
+            batch_index, head_index, query_index, parent_index = indices.unbind(
+                dim=1
+            )
+            return {
+                "layer": self.layer_index,
                 "index": torch.stack(
                     (
                         batch_index,
@@ -420,6 +447,12 @@ class _LayerCapture:
                 "valid": gamma_valid[
                     batch_index, head_index, query_index, parent_index
                 ].detach().cpu(),
+                "source_indices": source_indices[
+                    batch_index, parent_index
+                ].detach().cpu(),
+                "source_indices_certified": bool(
+                    payload.get("source_indices_certified") is True
+                ),
                 "parent_metrics": {
                     name: parent_metric_values[name][
                         batch_index, head_index, query_index, parent_index
@@ -437,7 +470,24 @@ class _LayerCapture:
                 ].detach().cpu(),
                 "num_key_value_heads": int(payload["num_key_value_heads"]),
             }
-        )
+
+        if primitive_sink is None:
+            self.primitive_chunks.append(primitive_payload(compact_index))
+        else:
+            writer = getattr(primitive_sink, "write_primitive_chunk", None)
+            if not callable(writer):
+                raise TypeError(
+                    "FPCT primitive sink must define write_primitive_chunk()"
+            )
+            for start in range(0, primitive_row_count, primitive_chunk_rows):
+                end = min(start + primitive_chunk_rows, primitive_row_count)
+                chunk = primitive_payload(compact_index[start:end])
+                emitted = int(chunk["index"].shape[0])
+                if emitted <= 0 or emitted > primitive_chunk_rows:
+                    raise RuntimeError(
+                        "FPCT primitive sink chunk violates the physical row bound"
+                    )
+                writer(chunk)
         return primitive_row_count
 
 
@@ -514,7 +564,11 @@ class FPCTCaptureAccumulator:
         *,
         metadata: Mapping[str, Any] | None = None,
         query_mask: Tensor | None = None,
-        max_long_form_rows: int = FPCT_CAPTURE_DEFAULT_MAX_LONG_FORM_ROWS,
+        max_long_form_rows: int | None = None,
+        expected_long_form_rows: int | None = None,
+        primitive_sink: Any | None = None,
+        primitive_chunk_rows: int = FPCT_CAPTURE_MAX_PRIMITIVE_CHUNK_ROWS,
+        detail_mode: str = "full",
     ) -> None:
         normalized = str(mode).lower()
         if normalized not in FPCT_CAPTURE_MODES:
@@ -523,15 +577,66 @@ class FPCTCaptureAccumulator:
             )
         self.mode = normalized
         self.metadata = deepcopy(dict(metadata or {}))
+        legacy_max_was_explicit = max_long_form_rows is not None
+        if max_long_form_rows is None:
+            max_long_form_rows = FPCT_CAPTURE_DEFAULT_MAX_LONG_FORM_ROWS
         if (
             isinstance(max_long_form_rows, bool)
             or not isinstance(max_long_form_rows, int)
             or max_long_form_rows <= 0
         ):
             raise ValueError("max_long_form_rows must be a positive integer")
-        self.max_long_form_rows = int(max_long_form_rows)
+        if expected_long_form_rows is not None and (
+            isinstance(expected_long_form_rows, bool)
+            or not isinstance(expected_long_form_rows, int)
+            or expected_long_form_rows <= 0
+        ):
+            raise ValueError("expected_long_form_rows must be a positive integer")
+        if expected_long_form_rows is not None and legacy_max_was_explicit:
+            raise ValueError(
+                "streaming exact count cannot be combined with the legacy row ceiling"
+            )
+        if primitive_sink is not None and expected_long_form_rows is None:
+            raise ValueError(
+                "a primitive sink requires exact expected_long_form_rows"
+            )
+        if expected_long_form_rows is not None and primitive_sink is None:
+            raise ValueError(
+                "exact expected_long_form_rows requires a primitive sink"
+            )
+        if detail_mode not in FPCT_CAPTURE_DETAIL_MODES:
+            raise ValueError(
+                f"detail_mode must be one of {sorted(FPCT_CAPTURE_DETAIL_MODES)}"
+            )
+        if detail_mode == "aggregate_only" and primitive_sink is None:
+            raise ValueError("aggregate_only capture requires a primitive sink")
+        if (
+            isinstance(primitive_chunk_rows, bool)
+            or not isinstance(primitive_chunk_rows, int)
+            or primitive_chunk_rows <= 0
+            or primitive_chunk_rows > FPCT_CAPTURE_MAX_PRIMITIVE_CHUNK_ROWS
+        ):
+            raise ValueError(
+                "primitive_chunk_rows must be an integer in [1, 4096]"
+            )
+        self.expected_long_form_rows = (
+            int(expected_long_form_rows)
+            if expected_long_form_rows is not None
+            else None
+        )
+        # In streaming mode the logical count is an exact contract rather than
+        # a memory ceiling.  Keep the legacy field for report compatibility.
+        self.max_long_form_rows = (
+            self.expected_long_form_rows
+            if self.expected_long_form_rows is not None
+            else int(max_long_form_rows)
+        )
+        self.primitive_sink = primitive_sink
+        self.primitive_chunk_rows = int(primitive_chunk_rows)
+        self.detail_mode = detail_mode
         self.long_form_row_count = 0
         self.failure_reason: str | None = None
+        self._sink_aborted = False
         if query_mask is not None:
             if query_mask.ndim != 2:
                 raise ValueError("FPCT capture query_mask must be [B,T]")
@@ -544,6 +649,14 @@ class FPCTCaptureAccumulator:
             )
         self.layers: dict[int, _LayerCapture] = {}
         self.closed = False
+
+    def _abort_sink(self) -> None:
+        if self.primitive_sink is None or self._sink_aborted:
+            return
+        self._sink_aborted = True
+        abort = getattr(self.primitive_sink, "abort", None)
+        if callable(abort):
+            abort()
 
     def update(
         self,
@@ -581,10 +694,13 @@ class FPCTCaptureAccumulator:
                 max_new_primitive_rows=(
                     self.max_long_form_rows - self.long_form_row_count
                 ),
+                primitive_sink=self.primitive_sink,
+                primitive_chunk_rows=self.primitive_chunk_rows,
+                retain_detail_rows=self.detail_mode == "full",
             )
-        except RuntimeError as error:
-            if "long-form row ceiling exceeded" in str(error):
-                self.failure_reason = str(error)
+        except BaseException as error:
+            self.failure_reason = str(error)
+            self._abort_sink()
             raise
         self.long_form_row_count += added_rows
 
@@ -595,6 +711,16 @@ class FPCTCaptureAccumulator:
             raise RuntimeError(
                 f"FPCT capture is failed closed: {self.failure_reason}"
             )
+        if (
+            self.expected_long_form_rows is not None
+            and self.long_form_row_count != self.expected_long_form_rows
+        ):
+            self.failure_reason = (
+                "FPCT capture exact logical row count mismatch: "
+                f"{self.long_form_row_count} != {self.expected_long_form_rows}"
+            )
+            self._abort_sink()
+            raise RuntimeError(self.failure_reason)
         self.closed = True
         layer_reports: dict[str, Any] = {}
         global_metric_parts: dict[str, list[dict[str, Any]]] = {}
@@ -666,121 +792,125 @@ class FPCTCaptureAccumulator:
                 )
 
             query_rows: list[dict[str, Any]] = []
-            for chunk in layer.query_chunks:
-                positions = chunk["positions"].detach().cpu().tolist()
-                eligible = chunk["eligible"].detach().cpu()
-                parent_count = chunk["parent_count"].detach().cpu()
-                comparisons_tensor = chunk["top1_comparisons"].detach().cpu()
-                disagreements_tensor = chunk["top1_disagreements"].detach().cpu()
-                metric_tensors = {
-                    name: value.detach().cpu()
-                    for name, value in chunk["metrics"].items()
+            if self.detail_mode == "full":
+                for chunk in layer.query_chunks:
+                    positions = chunk["positions"].detach().cpu().tolist()
+                    eligible = chunk["eligible"].detach().cpu()
+                    parent_count = chunk["parent_count"].detach().cpu()
+                    comparisons_tensor = chunk["top1_comparisons"].detach().cpu()
+                    disagreements_tensor = chunk["top1_disagreements"].detach().cpu()
+                    metric_tensors = {
+                        name: value.detach().cpu()
+                        for name, value in chunk["metrics"].items()
+                    }
+                    batch_size, num_heads, query_length = parent_count.shape
+                    for batch in range(batch_size):
+                        for head in range(num_heads):
+                            for local_query in range(query_length):
+                                if not bool(eligible[batch, local_query]):
+                                    continue
+                                query_rows.append(
+                                    {
+                                        "batch_index": batch,
+                                        "head_index": head,
+                                        "query_position": positions[local_query],
+                                        "parent_count": int(parent_count[batch, head, local_query]),
+                                        "top1_comparisons": int(comparisons_tensor[batch, head, local_query]),
+                                        "top1_disagreements": int(disagreements_tensor[batch, head, local_query]),
+                                        "metrics": {
+                                            name: float(value[batch, head, local_query])
+                                            for name, value in metric_tensors.items()
+                                        },
+                                    }
+                                )
+
+            parent_rows: list[dict[str, Any]] = []
+            assert layer.batch_size is not None
+            if self.detail_mode == "full":
+                assert layer.candidate_count is not None
+                candidate_count_cpu = layer.candidate_count.detach().cpu()
+                gamma_count_cpu = layer.gamma.count.detach().cpu()
+                gamma_mean_cpu = layer.gamma.mean.detach().cpu()
+                gamma_m2_cpu = layer.gamma.m2.detach().cpu()
+                comparison_cpu = layer.top1_comparisons.detach().cpu()
+                disagreement_cpu = layer.top1_disagreements.detach().cpu()
+                any_change_cpu = layer.top1_any_change.detach().cpu()
+                parent_metric_cpu = {
+                    name: (
+                        state.count.detach().cpu(),
+                        state.mean.detach().cpu(),
+                        state.m2.detach().cpu(),
+                    )
+                    for name, state in layer.parent_metrics.items()
                 }
-                batch_size, num_heads, query_length = parent_count.shape
-                for batch in range(batch_size):
-                    for head in range(num_heads):
-                        for local_query in range(query_length):
-                            if not bool(eligible[batch, local_query]):
+                for batch in range(layer.batch_size):
+                    for head in range(layer.num_heads):
+                        for parent in range(candidate_count_cpu.shape[1]):
+                            candidate_count = int(candidate_count_cpu[batch, parent])
+                            if candidate_count < 2:
                                 continue
-                            query_rows.append(
+                            stream_count = gamma_count_cpu[batch, head, parent]
+                            stream_valid = stream_count >= 2
+                            stream_variance = gamma_m2_cpu[batch, head, parent] / stream_count.clamp_min(1)
+                            query_count = int(stream_count.max())
+                            parent_rows.append(
                                 {
                                     "batch_index": batch,
                                     "head_index": head,
-                                    "query_position": positions[local_query],
-                                    "parent_count": int(parent_count[batch, head, local_query]),
-                                    "top1_comparisons": int(comparisons_tensor[batch, head, local_query]),
-                                    "top1_disagreements": int(disagreements_tensor[batch, head, local_query]),
+                                    "parent_position": parent,
+                                    "candidate_count": candidate_count,
+                                    "query_count": query_count,
+                                    "candidate_gamma_moments": [
+                                        {
+                                            "candidate_index": candidate,
+                                            "count": int(stream_count[candidate]),
+                                            "mean": float(
+                                                gamma_mean_cpu[
+                                                    batch, head, parent, candidate
+                                                ]
+                                            ),
+                                            "variance": float(
+                                                gamma_m2_cpu[
+                                                    batch, head, parent, candidate
+                                                ]
+                                                / stream_count[candidate].clamp_min(1)
+                                            ),
+                                        }
+                                        for candidate in range(stream_count.shape[0])
+                                        if int(stream_count[candidate]) > 0
+                                    ],
+                                    "gamma_query_variance": float(
+                                        torch.where(
+                                            stream_valid,
+                                            stream_variance,
+                                            torch.zeros_like(stream_variance),
+                                        ).sum()
+                                        / stream_valid.sum().clamp_min(1)
+                                    ),
+                                    "posterior_top1_change_rate": (
+                                        int(disagreement_cpu[batch, head, parent])
+                                        / int(comparison_cpu[batch, head, parent])
+                                        if int(comparison_cpu[batch, head, parent])
+                                        else 0.0
+                                    ),
+                                    "posterior_top1_any_change": bool(
+                                        any_change_cpu[batch, head, parent]
+                                    ),
                                     "metrics": {
-                                        name: float(value[batch, head, local_query])
-                                        for name, value in metric_tensors.items()
+                                        name: float(mean[batch, head, parent])
+                                        for name, (count, mean, _m2) in parent_metric_cpu.items()
+                                        if count[batch, head, parent] > 0
+                                    },
+                                    "metric_variances": {
+                                        name: float(
+                                            m2[batch, head, parent]
+                                            / count[batch, head, parent].clamp_min(1)
+                                        )
+                                        for name, (count, _mean, m2) in parent_metric_cpu.items()
+                                        if count[batch, head, parent] > 0
                                     },
                                 }
                             )
-
-            assert layer.candidate_count is not None
-            candidate_count_cpu = layer.candidate_count.detach().cpu()
-            gamma_count_cpu = layer.gamma.count.detach().cpu()
-            gamma_mean_cpu = layer.gamma.mean.detach().cpu()
-            gamma_m2_cpu = layer.gamma.m2.detach().cpu()
-            comparison_cpu = layer.top1_comparisons.detach().cpu()
-            disagreement_cpu = layer.top1_disagreements.detach().cpu()
-            any_change_cpu = layer.top1_any_change.detach().cpu()
-            parent_metric_cpu = {
-                name: (
-                    state.count.detach().cpu(),
-                    state.mean.detach().cpu(),
-                    state.m2.detach().cpu(),
-                )
-                for name, state in layer.parent_metrics.items()
-            }
-            parent_rows: list[dict[str, Any]] = []
-            assert layer.batch_size is not None
-            for batch in range(layer.batch_size):
-                for head in range(layer.num_heads):
-                    for parent in range(candidate_count_cpu.shape[1]):
-                        candidate_count = int(candidate_count_cpu[batch, parent])
-                        if candidate_count < 2:
-                            continue
-                        stream_count = gamma_count_cpu[batch, head, parent]
-                        stream_valid = stream_count >= 2
-                        stream_variance = gamma_m2_cpu[batch, head, parent] / stream_count.clamp_min(1)
-                        query_count = int(stream_count.max())
-                        parent_rows.append(
-                            {
-                                "batch_index": batch,
-                                "head_index": head,
-                                "parent_position": parent,
-                                "candidate_count": candidate_count,
-                                "query_count": query_count,
-                                "candidate_gamma_moments": [
-                                    {
-                                        "candidate_index": candidate,
-                                        "count": int(stream_count[candidate]),
-                                        "mean": float(
-                                            gamma_mean_cpu[
-                                                batch, head, parent, candidate
-                                            ]
-                                        ),
-                                        "variance": float(
-                                            gamma_m2_cpu[batch, head, parent, candidate]
-                                            / stream_count[candidate].clamp_min(1)
-                                        ),
-                                    }
-                                    for candidate in range(stream_count.shape[0])
-                                    if int(stream_count[candidate]) > 0
-                                ],
-                                "gamma_query_variance": float(
-                                    torch.where(
-                                        stream_valid,
-                                        stream_variance,
-                                        torch.zeros_like(stream_variance),
-                                    ).sum()
-                                    / stream_valid.sum().clamp_min(1)
-                                ),
-                                "posterior_top1_change_rate": (
-                                    int(disagreement_cpu[batch, head, parent])
-                                    / int(comparison_cpu[batch, head, parent])
-                                    if int(comparison_cpu[batch, head, parent])
-                                    else 0.0
-                                ),
-                                "posterior_top1_any_change": bool(
-                                    any_change_cpu[batch, head, parent]
-                                ),
-                                "metrics": {
-                                    name: float(mean[batch, head, parent])
-                                    for name, (count, mean, _m2) in parent_metric_cpu.items()
-                                    if count[batch, head, parent] > 0
-                                },
-                                "metric_variances": {
-                                    name: float(
-                                        m2[batch, head, parent]
-                                        / count[batch, head, parent].clamp_min(1)
-                                    )
-                                    for name, (count, _mean, m2) in parent_metric_cpu.items()
-                                    if count[batch, head, parent] > 0
-                                },
-                            }
-                        )
 
             incomplete_primitive_chunks += layer.incomplete_primitive_chunks
             for chunk in layer.primitive_chunks:
@@ -788,6 +918,7 @@ class FPCTCaptureAccumulator:
                 gamma_values = chunk["gamma"]
                 prior_values = chunk["prior"]
                 valid_values = chunk["valid"]
+                source_index_values = chunk["source_indices"]
                 geometry_values = chunk["parent_geometry"]
                 metric_values = chunk["parent_metrics"]
                 output_delta = chunk["output_delta_l2"]
@@ -795,6 +926,8 @@ class FPCTCaptureAccumulator:
                 assert layer.num_heads is not None
                 num_heads = layer.num_heads
                 num_key_value_heads = int(chunk["num_key_value_heads"])
+                if int(chunk.get("layer", -1)) != layer_index:
+                    raise ValueError("FPCT primitive chunk layer identity changed")
                 if (
                     num_key_value_heads <= 0
                     or num_heads % num_key_value_heads != 0
@@ -822,6 +955,18 @@ class FPCTCaptureAccumulator:
                         "parent_position": parent,
                         "candidate_count": candidate_count,
                         "prior": [float(value) for value in prior_row],
+                        "runtime_source_indices": [
+                            int(value) for value in source_index_values[compact_row]
+                        ],
+                        "candidate_valid_mask": [
+                            bool(value) for value in legal
+                        ],
+                        "candidate_slot_weights": [
+                            float(value) if bool(valid) else 0.0
+                            for value, valid in zip(
+                                prior_values[compact_row], legal
+                            )
+                        ],
                         "gamma": [float(value) for value in gamma_row],
                         "output_delta_l2": float(output_delta[compact_row]),
                     }
@@ -842,7 +987,7 @@ class FPCTCaptureAccumulator:
             layer_report = {
                 "forward_count": layer.forward_count,
                 "query_count": layer.query_count,
-                "eligible_query_count": len(query_rows) // layer.num_heads,
+                "eligible_query_count": layer.eligible_query_count,
                 "gamma_query_variance": gamma["mean"],
                 "gamma_query_variance_max": gamma["max"],
                 "gamma_query_stream_count": gamma["stream_count"],
@@ -855,9 +1000,10 @@ class FPCTCaptureAccumulator:
                 },
                 "metric_statistics": metric_statistics,
                 "heads": head_reports,
-                "query_summaries": query_rows,
-                "parent_summaries": parent_rows,
             }
+            if self.detail_mode == "full":
+                layer_report["query_summaries"] = query_rows
+                layer_report["parent_summaries"] = parent_rows
             layer_reports[str(layer_index)] = layer_report
 
         global_statistics: dict[str, Any] = {}
@@ -905,9 +1051,11 @@ class FPCTCaptureAccumulator:
                 "posterior_top1_any_change": any_top1_change,
             }
         )
-        return {
+        report = {
             "schema_version": 1,
-            "long_form_contract_version": 1,
+            "long_form_contract_version": (
+                2 if self.expected_long_form_rows is not None else 1
+            ),
             "mode": self.mode,
             "metadata": deepcopy(self.metadata),
             "forward_count": max(
@@ -916,9 +1064,54 @@ class FPCTCaptureAccumulator:
             "metrics": metrics,
             "metric_statistics": global_statistics,
             "layers": layer_reports,
-            "long_form_primitives": long_form_primitives,
             "long_form_incomplete_chunk_count": incomplete_primitive_chunks,
             "long_form_row_count": self.long_form_row_count,
             "max_long_form_rows": self.max_long_form_rows,
             "stores_raw_kv": False,
         }
+        if self.expected_long_form_rows is None:
+            report["long_form_primitives"] = long_form_primitives
+            return report
+
+        finalizer = getattr(self.primitive_sink, "finalize", None)
+        if not callable(finalizer):
+            self.failure_reason = "FPCT primitive sink must define finalize()"
+            self._abort_sink()
+            raise TypeError(self.failure_reason)
+        try:
+            receipt = finalizer()
+        except BaseException as error:
+            self.failure_reason = str(error)
+            self._abort_sink()
+            raise
+        if not isinstance(receipt, Mapping):
+            self.failure_reason = "FPCT primitive sink finalize() must return a mapping"
+            self._abort_sink()
+            raise TypeError(self.failure_reason)
+        row_count = receipt.get("row_count")
+        chunk_count = receipt.get("chunk_count")
+        maximum = receipt.get("max_chunk_rows")
+        if (
+            receipt.get("complete") is not True
+            or isinstance(row_count, bool)
+            or row_count != self.long_form_row_count
+            or isinstance(chunk_count, bool)
+            or not isinstance(chunk_count, int)
+            or chunk_count <= 0
+            or isinstance(maximum, bool)
+            or not isinstance(maximum, int)
+            or maximum <= 0
+            or maximum > self.primitive_chunk_rows
+        ):
+            self.failure_reason = "FPCT primitive sink receipt violates the streaming contract"
+            self._abort_sink()
+            raise RuntimeError(self.failure_reason)
+        report.update(
+            {
+                "detail_mode": self.detail_mode,
+                "expected_long_form_rows": self.expected_long_form_rows,
+                "primitive_chunk_rows": self.primitive_chunk_rows,
+                "long_form_stream": deepcopy(dict(receipt)),
+            }
+        )
+        return report

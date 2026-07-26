@@ -25,6 +25,142 @@ def _sha(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
+def _canonical_sha(value: object) -> str:
+    return hashlib.sha256(runner.canonical_json_bytes(value)).hexdigest()
+
+
+def _synthetic_streaming_gate_fixture(repo_snapshot: Path) -> dict:
+    """Build a cheap, fully bound gate receipt for capture-runner tests.
+
+    The production million-row/RSS gate is exercised by its own test module.
+    Capture-runner tests only need a schema-complete immutable receipt whose
+    evidence, source, and test hashes can be independently recomputed.
+    """
+
+    from script.analysis import fpct_e1_streaming_synthetic_gate as gate
+
+    environment = {
+        "python": "fixture",
+        "python_executable": "/fixture/python",
+        "platform": "fixture-linux",
+        "machine": "x86_64",
+        "pyarrow": "fixture",
+        "cuda_visible_devices": "",
+    }
+    baseline = {
+        "case_id": "fixture_full_schema_two_chunk_baseline",
+        "logical_rows": 4480,
+        "emitted_rows": 4480,
+        "semantic_stream_sha256": _sha("fixture-baseline-semantic-stream"),
+        "replay_semantic_stream_sha256": _sha(
+            "fixture-baseline-semantic-stream"
+        ),
+        "chunk_count": 2,
+        "physical_file_bytes": 8192,
+        "max_physical_chunk_bytes": 4096,
+        "max_observed_canonical_row_bytes": 2048,
+        "peak_rss_bytes": 64 * 1024 * 1024,
+    }
+    stress = {
+        "case_id": "fixture_full_schema_million_row_stress",
+        "logical_rows": 1_000_384,
+        "emitted_rows": 1_000_384,
+        "semantic_stream_sha256": _sha("fixture-stress-semantic-stream"),
+        "replay_semantic_stream_sha256": _sha(
+            "fixture-stress-semantic-stream"
+        ),
+        "chunk_count": 245,
+        "physical_file_bytes": 2_048_000,
+        "max_physical_chunk_bytes": 8192,
+        "max_observed_canonical_row_bytes": 2048,
+        "peak_rss_bytes": 96 * 1024 * 1024,
+    }
+    targeted_tests = {
+        "command": ["fixture-pytest", *gate.TEST_FILES],
+        "exit_code": 0,
+        "output_sha256": _sha("fixture-targeted-tests-passed"),
+        "last_output_line": "fixture targeted tests passed",
+        "test_files": list(gate.TEST_FILES),
+    }
+    evidence = {
+        "environment": environment,
+        "targeted_tests": targeted_tests,
+        "tracked_source_sha256": {
+            relative: runner.sha256_file(repo_snapshot / relative)
+            for relative in gate.TRACKED_SOURCE_FILES
+        },
+        "baseline_full_record": baseline,
+        "stress_full_record": stress,
+        "canonical_full_schema_row_bound_bytes": 2048,
+        "buffer_copy_multiplier": gate.BUFFER_COPY_MULTIPLIER,
+        "allocator_and_buffer_allowance_bytes": (
+            gate.BUFFER_COPY_MULTIPLIER
+            * gate.PHYSICAL_CHUNK_ROWS
+            * 2048
+        ),
+    }
+    checks = {
+        "row_key_reference_equivalence": True,
+        "weights_reference_equivalence": True,
+        "topology_reference_equivalence": True,
+        "semantic_stream_replay_equal": True,
+        "chunk_partition_semantic_equivalence": True,
+        "aggregate_partition_equivalence": True,
+        "bounded_peak_rss": True,
+        "whole_table_materialization_detected": False,
+        "atomic_no_overwrite": True,
+        "crash_resume_equivalence": True,
+    }
+    return {
+        "schema_version": gate.SCHEMA_VERSION,
+        "protocol_id": gate.PROTOCOL_ID,
+        "artifact_type": "synthetic_streaming_hard_gate",
+        "status": "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE",
+        "natural_data_accessed": False,
+        "observed_natural_616448_used": False,
+        "environment_identity_sha256": _canonical_sha(environment),
+        "streaming_schema_sha256": runner.sha256_file(
+            repo_snapshot / runner.STREAMING_SCHEMA_RELATIVE
+        ),
+        "mechanism_schema_sha256": runner.sha256_file(
+            repo_snapshot / runner.MECHANISM_SCHEMA_RELATIVE
+        ),
+        "physical_chunk_rows": gate.PHYSICAL_CHUNK_ROWS,
+        "measurement_method": (
+            "capture-runner fixture with schema-complete synthetic records; "
+            "the production million-row/RSS gate is not run by this fixture"
+        ),
+        "synthetic_cases": [
+            {
+                key: record[key]
+                for key in (
+                    "case_id",
+                    "logical_rows",
+                    "peak_rss_bytes",
+                    "emitted_rows",
+                    "semantic_stream_sha256",
+                )
+            }
+            for record in (baseline, stress)
+        ],
+        "objective_threshold_derivation": (
+            "fixture baseline plus the frozen 16 * 4096 * row-bound allowance"
+        ),
+        "threshold_bytes": (
+            baseline["peak_rss_bytes"]
+            + gate.BUFFER_COPY_MULTIPLIER
+            * gate.PHYSICAL_CHUNK_ROWS
+            * 2048
+        ),
+        "estimated_physical_bytes_per_row": 2048,
+        "checks": checks,
+        "whole_table_materialization_detected": False,
+        "locked_before_successor_natural_input": True,
+        "evidence": evidence,
+        "evidence_sha256": _canonical_sha(evidence),
+    }
+
+
 def _gate(tmp_path: Path, repo_snapshot: Path, *, status: str = "GO") -> Path:
     evidence = repo_snapshot / "test/test_fpct_instrumentation.py"
     payload = {
@@ -58,18 +194,23 @@ def _checkpoint_root(tmp_path: Path) -> Path:
             for leaf in ("checkpoint-64", "final"):
                 directory = attempt / trained / leaf
                 directory.mkdir(parents=True)
-                (directory / "projector_config.json").write_text('{"version":1}\n')
+                (directory / "projector_0.json").write_text('{"version":1}\n')
                 (directory / "projector_0.pt").write_bytes(b"synthetic-projector")
             (attempt / trained / "checkpoint-64" / "training_state.pt").write_bytes(b"state")
     return root
 
 
 def _source_snapshot(tmp_path: Path) -> Path:
+    from script.analysis import fpct_e1_streaming_synthetic_gate as gate
+
     repository = tmp_path / "source-repository"
     snapshot = tmp_path / "source-snapshot"
     relative_files = {
         runner.SPLIT_MANIFEST_RELATIVE,
         runner.E1_MANIFEST_RELATIVE,
+        runner.STREAMING_CONTRACT_RELATIVE,
+        runner.STREAMING_SCHEMA_RELATIVE,
+        runner.STREAMING_SYNTHETIC_GATE_RELATIVE,
         runner.MECHANISM_SCHEMA_RELATIVE,
         runner.E0_DEV_MANIFEST_RELATIVE,
         runner.E0_CONFIG_INDEX_RELATIVE,
@@ -81,6 +222,7 @@ def _source_snapshot(tmp_path: Path) -> Path:
         runner.RUNTIME_PROBE_RENDERER_RELATIVE,
         Path("script/experiment/fpct_e1_source_snapshot_lock.py"),
         Path("script/experiment/fpct_e1_k8s_lock_bundle.py"),
+        Path("script/analysis/fpct_e1_streaming_verify.py"),
         Path("rosetta/model/wrapper.py"),
         Path("rosetta/model/fpct_attention.py"),
         Path("rosetta/model/fpct_instrumentation.py"),
@@ -101,12 +243,35 @@ def _source_snapshot(tmp_path: Path) -> Path:
         Path("test/test_fpct_e1_runtime_capture_primitives.py"),
         Path("test/test_fpct_instrumentation.py"),
         Path("test/test_fpct_e1_mechanism_audit.py"),
+        Path("test/test_fpct_e1_streaming.py"),
     }
+    relative_files.update(Path(path) for path in gate.TRACKED_SOURCE_FILES)
     relative_files.update(path.relative_to(REPO_ROOT) for path in (REPO_ROOT / runner.E0_CONFIG_ROOT_RELATIVE).glob("*"))
     for relative in sorted(relative_files):
         source, destination = REPO_ROOT / relative, repository / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
+        if relative == runner.STREAMING_SYNTHETIC_GATE_RELATIVE and not source.exists():
+            continue
         shutil.copy2(source, destination)
+    manifest_path = repository / runner.E1_MANIFEST_RELATIVE
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["execution_authorization"] = {
+        "a4_successor_input_lock_operative": True,
+        "a4_successor_dag_operative": True,
+        "requires_streaming_input_lock_go": True,
+        "historical_attempt_resume_allowed": False,
+        "e1_pilot_forward_or_outcome": False,
+        "training": False,
+    }
+    manifest_path.write_bytes(runner.canonical_json_bytes(manifest))
+    synthetic_path = repository / runner.STREAMING_SYNTHETIC_GATE_RELATIVE
+    if not synthetic_path.exists():
+        synthetic_path.parent.mkdir(parents=True, exist_ok=True)
+        synthetic_path.write_bytes(
+            runner.canonical_json_bytes(
+                _synthetic_streaming_gate_fixture(repository)
+            )
+        )
     def git(*args: str) -> str:
         result = subprocess.run(
             ["git", "-C", str(repository), *args], check=True,
@@ -211,10 +376,52 @@ def _resolved_plan(tmp_path: Path) -> tuple[dict, Path, Path]:
     input_lock_root = tmp_path / "input-lock"
     input_lock_root.mkdir()
     sidecar = input_lock_root / "e1_input_lock.pt"
+    execution_identity = {
+        "schema_version": 1,
+        "protocol_id": "fpct_e1_a4_input_lock_execution_identity_v1",
+        "execution_sha": execution_sha,
+        "execution_prefix": execution_sha[:8],
+        "run_uid": f"fpct-e1-a4-streaming-{execution_sha[:8]}-v1",
+        "run_root": str(tmp_path.absolute()),
+        "source_snapshot_root": str(repo_snapshot.absolute()),
+        "source_snapshot_receipt": {
+            "path": str(source_receipt.absolute()),
+            "bytes": source_receipt.stat().st_size,
+            "file_sha256": runner.sha256_file(source_receipt),
+        },
+        "input_lock_root": str(input_lock_root.absolute()),
+        "historical_execution_resume_allowed": False,
+        "historical_artifact_reuse_allowed": False,
+        "identity_sha256": _sha("a4-identity:" + execution_sha),
+    }
     dimensions = {"num_hidden_layers": 28, "num_attention_heads": 16, "num_key_value_heads": 8}
+    schema_sha = runner.sha256_file(repo_snapshot / runner.STREAMING_SCHEMA_RELATIVE)
     items = []
     for task in runner.TASKS:
         for group in draft["group_contract"][task]:
+            answer_queries = [
+                {
+                    "query_position": 4,
+                    "target_position": 5,
+                    "target_token_id": 7,
+                }
+            ]
+            certified_parents = [{
+                "parent_position": 2,
+                "candidate_count": 2,
+                "prior": [0.6, 0.4],
+                "topology": "partition_compositional",
+                "candidate_indices": [3, 4, -1, -1],
+                "candidate_valid_mask": [True, True, False, False],
+                "candidate_slot_weights": [0.6, 0.4, 0.0, 0.0],
+                "statistical_weight": 1.0,
+            }]
+            raw_topology_compact = {
+                "raw_m_ge_2_parent_count": 0,
+                "raw_parent_sequence_sha256": _sha(
+                    "raw-topology-empty:" + group["content_group_sha256"]
+                ),
+            }
             item = {
                 "task": task,
                 "sample_sha256": group["sample_sha256"][0],
@@ -224,7 +431,29 @@ def _resolved_plan(tmp_path: Path) -> tuple[dict, Path, Path]:
                     "prompt_alignment_sha256": group["prompt_alignment_sha256"],
                 },
                 "rendered_prompt_sha256": group["rendered_prompt_sha256"],
-                "expected_long_form_rows": 1,
+                "provenance": {
+                    "input_sha256": _sha("input:" + group["content_group_sha256"]),
+                    "alignment_sha256": _sha("full-response-alignment:" + group["content_group_sha256"]),
+                    "labels_sha256": _sha("labels:" + group["content_group_sha256"]),
+                    "gold_response_sha256": _sha("gold:" + group["content_group_sha256"]),
+                },
+                "answer_queries": answer_queries,
+                "certified_parents": certified_parents,
+                "Q_s": 1,
+                "P_s": 1,
+                "N_s": 28 * 16,
+                "answer_query_sequence_sha256": runner._nested_semantic_sha256(
+                    answer_queries
+                ),
+                "parent_sequence_sha256": runner._nested_semantic_sha256(
+                    certified_parents
+                ),
+                "raw_topology_compact": raw_topology_compact,
+                "raw_topology_compact_sha256": runner._nested_semantic_sha256(
+                    raw_topology_compact
+                ),
+                "expected_chunk_count": 1,
+                "expected_long_form_rows": 28 * 16,
             }
             item["item_semantic_sha256"] = runner._nested_semantic_sha256(item)
             items.append(item)
@@ -256,41 +485,194 @@ def _resolved_plan(tmp_path: Path) -> tuple[dict, Path, Path]:
         content_group_sha256=topology_item["content_group_sha256"],
         candidate_window=0,
     )
+    topology_item["raw_topology_compact"] = {
+        "raw_m_ge_2_parent_count": len(topology_item["raw_topology_ledger"]),
+        "raw_parent_sequence_sha256": runner._nested_semantic_sha256(
+            topology_item["raw_topology_ledger"]
+        ),
+    }
+    topology_item["raw_topology_compact_sha256"] = runner._nested_semantic_sha256(
+        topology_item["raw_topology_compact"]
+    )
     topology_item["item_semantic_sha256"] = runner._nested_semantic_sha256(
         {key: value for key, value in topology_item.items() if key != "item_semantic_sha256"}
     )
-    torch.save({
-        "schema_version": 1,
-        "protocol_id": "fpct_e1_e0_design_input_lock_v1",
+    sidecar_payload = {
+        "schema_version": runner.INPUT_LOCK_SCHEMA_VERSION,
+        "protocol_id": runner.INPUT_LOCK_PROTOCOL_ID,
+        "status": runner.INPUT_LOCK_STATUS,
         "split_role": runner.ALLOWED_SPLIT_ROLE,
         "items": items,
         "dimensions": dimensions,
+        "execution_identity": execution_identity,
+        "firewall": {
+            "e1_pilot_consumed": False,
+            "model_selection_consumed": False,
+            "test_consumed": False,
+            "model_or_checkpoint_loaded": False,
+            "gpu_or_cuda_used": False,
+        },
         "e1_pilot_consumed": False,
         "model_or_checkpoint_loaded": False,
         "cuda_initialized": False,
-    }, sidecar)
+    }
+    torch.save(sidecar_payload, sidecar)
     task_contract = {}
+    from script.analysis.fpct_e1_streaming_verify import (
+        SampleRowStream,
+        PARQUET_MANIFEST_NAME,
+        attest_ordered_sample_streams,
+        canonical_endpoint_id,
+        write_parquet_stream_artifact,
+    )
     for task in runner.TASKS:
-        shard = next(row for row in draft["shards"] if row["stage"] == runner.STAGE_E1_2 and row["task"] == task and row["lambda_value"] == 0.0)
-        rows = [_row(shard, group) for group in draft["group_contract"][task]]
-        keys = sorted(runner._key_bytes(row, runner.ROW_TEMPLATE_COLUMNS) for row in rows)
-        digest = hashlib.sha256()
-        for key in keys:
-            digest.update(key + b"\n")
         members = sorted((item for item in items if item["task"] == task), key=lambda item: item["sample_sha256"])
+        streams = [
+            SampleRowStream(
+                item,
+                num_layers=28,
+                num_query_heads=16,
+                num_kv_heads=8,
+                endpoint_id=canonical_endpoint_id(0, "input_geometry", "input_geometry", "INPUT_LOCK", task, 0.0),
+                schema_sha256=schema_sha,
+            )
+            for item in members
+        ]
+        attested = attest_ordered_sample_streams(streams)
         task_contract[task] = {
             "group_count": len(draft["group_contract"][task]),
             "members": [{"sample_sha256": item["sample_sha256"], "content_group_sha256": item["content_group_sha256"], "item_semantic_sha256": item["item_semantic_sha256"]} for item in members],
             "membership_sha256": runner._nested_semantic_sha256(sorted([item["sample_sha256"], item["content_group_sha256"], item["item_semantic_sha256"]] for item in members)),
-            "row_template": {"count": len(keys), "sha256": digest.hexdigest()},
+            "row_template": {
+                "count": attested["logical_row_count"],
+                "semantic_stream_sha256": attested["semantic_stream_sha256"],
+                "schema_sha256": schema_sha,
+                "physical_chunk_rows": runner.PARQUET_BATCH_ROWS,
+                "sample_count": attested["sample_count"],
+                "first_sample_sha256": attested["first_sample_sha256"],
+                "last_sample_sha256": attested["last_sample_sha256"],
+                "ordinal_order": "sample_sha256,row_ordinal",
+            },
             "expected_long_form_rows": runner._expected_long_form_rows_contract(members),
         }
+    index_records = []
+    global_template_digest = hashlib.sha256()
+    for item in sorted(items, key=lambda value: (value["sample_sha256"], value["content_group_sha256"])):
+        stream = SampleRowStream(
+            item, num_layers=28, num_query_heads=16, num_kv_heads=8,
+            endpoint_id=canonical_endpoint_id(0, "input_geometry", "input_geometry", "INPUT_LOCK", item["task"], 0.0),
+            schema_sha256=schema_sha,
+        )
+        sample_root = input_lock_root / "row_templates" / item["sample_sha256"]
+        sample_root.mkdir(parents=True, exist_ok=True)
+        execution_binding = sample_root / "execution_binding.json"
+        execution_binding.write_bytes(runner.canonical_json_bytes({
+            "schema_version": 1,
+            "protocol_id": "fpct_e1_a4_sample_stream_execution_binding_v1",
+            "execution_identity_sha256": execution_identity["identity_sha256"],
+            "sample_sha256": item["sample_sha256"],
+            "item_semantic_sha256": item["item_semantic_sha256"],
+            "historical_artifact_reuse_allowed": False,
+        }))
+        verified = write_parquet_stream_artifact(sample_root, stream)
+        sample_manifest = sample_root / PARQUET_MANIFEST_NAME
+        for row in stream.iter_rows():
+            global_template_digest.update(runner.canonical_json_bytes(row))
+        index_records.append({
+            "task": item["task"], "sample_sha256": item["sample_sha256"],
+            "content_group_sha256": item["content_group_sha256"],
+            "manifest_relative_path": str(sample_manifest.relative_to(input_lock_root)),
+            "manifest_sha256": runner.sha256_file(sample_manifest),
+            "manifest_bytes": sample_manifest.stat().st_size,
+            "expected_logical_rows": stream.row_count,
+            "emitted_logical_rows": verified["emitted_logical_rows"],
+            "chunk_count": verified["chunk_count"],
+            "semantic_stream_sha256": verified["semantic_stream_sha256"],
+            "item_semantic_sha256": item["item_semantic_sha256"],
+            "raw_topology_compact_sha256": item[
+                "raw_topology_compact_sha256"
+            ],
+            "execution_binding_relative_path": str(
+                execution_binding.relative_to(input_lock_root)
+            ),
+            "execution_binding_sha256": runner.sha256_file(execution_binding),
+        })
+    geometry_samples = input_lock_root / "input_geometry_samples.parquet"
+    geometry_samples.write_bytes(b"synthetic-compact-geometry")
+    geometry_manifest = input_lock_root / "input_geometry_manifest.json"
+    geometry_manifest.write_bytes(runner.canonical_json_bytes({"schema_version": 6, "protocol_id": runner.A4_PROTOCOL_ID, "artifact_type": "input_geometry_manifest"}))
+    geometry_receipt = input_lock_root / "input_geometry_receipt.json"
+    geometry_receipt.write_bytes(runner.canonical_json_bytes({
+        "schema_version": 6, "protocol_id": runner.A4_PROTOCOL_ID,
+        "status": "GO", "expanded_logical_rows_materialized": False,
+        "e1_pilot_consumed": False, "model_or_checkpoint_loaded": False,
+        "gpu_or_kubernetes_used": False,
+    }))
+    geometry_lock = {
+        name: {"path": str(path), "sha256": runner.sha256_file(path), "bytes": path.stat().st_size}
+        for name, path in {"manifest": geometry_manifest, "samples": geometry_samples, "receipt": geometry_receipt}.items()
+    }
+    total_rows = sum(item["N_s"] for item in items)
+    template_index = input_lock_root / "input_row_template_chunk_index.json"
+    template_index.write_bytes(runner.canonical_json_bytes({
+        "schema_version": 6, "protocol_id": runner.A4_PROTOCOL_ID,
+        "artifact_type": "chunk_manifest_index", "population": "e0_design",
+        "physical_chunk_rows": runner.PARQUET_BATCH_ROWS,
+        "sample_count": len(items), "expected_logical_rows": total_rows,
+        "emitted_logical_rows": total_rows,
+        "semantic_stream_sha256": global_template_digest.hexdigest(),
+        "schema_sha256": schema_sha, "records": index_records,
+    }))
+    template_receipt = input_lock_root / "streaming_input_lock_receipt.json"
+    receipt_true = {
+        name: True for name in (
+            "protocol_and_schema_versioned", "expected_logical_rows_eq_emitted",
+            "ordinal_first_eq_zero", "ordinal_last_eq_expected_minus_one",
+            "ordinal_ranges_contiguous", "row_key_reference_equivalence",
+            "weights_reference_equivalence", "topology_reference_equivalence",
+            "semantic_stream_replay_equal", "chunk_partition_semantic_equivalence",
+            "aggregate_partition_equivalence", "bounded_peak_rss",
+            "atomic_no_overwrite", "crash_resume_equivalence",
+            "raw_topology_complete", "task_counts_exact_128_70_128",
+            "input_assets_unchanged_during_lock",
+        )
+    }
+    template_receipt.write_bytes(runner.canonical_json_bytes({
+        "schema_version": 6, "protocol_id": runner.A4_PROTOCOL_ID,
+        "status": "GO", **receipt_true,
+        "old_attempt_artifact_reused": False, "e1_pilot_consumed": False,
+        "model_or_checkpoint_loaded": False, "gpu_or_kubernetes_used": False,
+        "whole_table_materialization_detected": False,
+        "missing_rows": 0, "duplicate_rows": 0, "overlapping_chunks": 0,
+        "chunk_manifest_index_sha256": runner.sha256_file(template_index),
+        "geometry_manifest_sha256": runner.sha256_file(geometry_manifest),
+        "semantic_stream_sha256": global_template_digest.hexdigest(),
+        "schema_sha256": schema_sha,
+        "rss_lock_sha256": runner.sha256_file(repo_snapshot / runner.STREAMING_SYNTHETIC_GATE_RELATIVE),
+    }))
+    template_lock = {
+        "index": {"path": str(template_index), "sha256": runner.sha256_file(template_index), "bytes": template_index.stat().st_size},
+        "receipt": {"path": str(template_receipt), "sha256": runner.sha256_file(template_receipt), "bytes": template_receipt.stat().st_size},
+        "expected_logical_rows": total_rows, "emitted_logical_rows": total_rows,
+        "semantic_stream_sha256": global_template_digest.hexdigest(),
+    }
+    sidecar_payload["streaming_contract"] = {
+        "protocol_id": runner.A4_PROTOCOL_ID,
+        "schema_sha256": schema_sha,
+        "physical_chunk_rows": runner.PARQUET_BATCH_ROWS,
+        "expanded_logical_rows_present": False,
+        "compact_geometry_only": True,
+        "geometry_lock": geometry_lock,
+        "streaming_template_lock": template_lock,
+    }
+    torch.save(sidecar_payload, sidecar)
     input_manifest = input_lock_root / "e1_input_lock_manifest.json"
     input_manifest.write_bytes(runner.canonical_json_bytes({
-        "schema_version": 1,
-        "protocol_id": "fpct_e1_e0_design_input_lock_v1",
-        "status": "FROZEN_CPU_INPUTS_NO_MODEL_OUTPUT",
+        "schema_version": runner.INPUT_LOCK_SCHEMA_VERSION,
+        "protocol_id": runner.INPUT_LOCK_PROTOCOL_ID,
+        "status": runner.INPUT_LOCK_STATUS,
         "split_role": runner.ALLOWED_SPLIT_ROLE,
+        "execution_identity": execution_identity,
         "dimensions": dimensions,
         "task_contract": task_contract,
         "expected_long_form_rows_by_task": {
@@ -313,6 +695,18 @@ def _resolved_plan(tmp_path: Path) -> tuple[dict, Path, Path]:
                 "tree_sha256": _sha(role + ":tree"),
             }
             for role, model_id in {"receiver": "Qwen/Qwen3-0.6B", "sender": "TinyLlama/TinyLlama-1.1B-Chat-v1.0"}.items()
+        },
+        "streaming_contract": {
+            "protocol_id": runner.A4_PROTOCOL_ID,
+            "schema_sha256": schema_sha,
+            "physical_chunk_rows": runner.PARQUET_BATCH_ROWS,
+            "historical_cumulative_ceiling_operative": False,
+            "geometry_lock": geometry_lock,
+            "streaming_template_lock": template_lock,
+            "synthetic_gate": {
+                "path": str(repo_snapshot / runner.STREAMING_SYNTHETIC_GATE_RELATIVE),
+                "sha256": runner.sha256_file(repo_snapshot / runner.STREAMING_SYNTHETIC_GATE_RELATIVE),
+            },
         },
         "sidecar": {"path": str(sidecar), "bytes": sidecar.stat().st_size, "sha256": runner.sha256_file(sidecar)},
         "firewall": {"e1_pilot_consumed": False, "model_selection_consumed": False, "test_consumed": False, "model_or_checkpoint_loaded": False, "gpu_or_cuda_used": False},
@@ -368,35 +762,26 @@ def _write_phase_marker(plan: dict, output: Path, stage: str, closure: str = "4"
     return path
 
 
-def _row(shard: dict, group: dict, query: int = 4) -> dict:
+def _row(shard: dict, identity: dict) -> dict:
     value = shard["lambda_value"]
     prior = [0.6, 0.4]
     gamma = prior if value == 0 else [0.5 + 0.1 * min(value, 2), 0.5 - 0.1 * min(value, 2)]
     return {
-        "schema_version": 1,
+        "schema_version": runner.SCHEMA_VERSION,
         "split_role": runner.ALLOWED_SPLIT_ROLE,
         "seed": shard["seed"],
         "checkpoint_arm": shard["checkpoint_arm"],
         "inference_operator": shard["inference_operator"],
         "cell": shard["cell"],
         "task": shard["task"],
-        "sample_sha256": group["sample_sha256"][0],
-        "content_group_sha256": group["content_group_sha256"],
-        "input_sha256": _sha("input:" + group["content_group_sha256"]),
-        "alignment_sha256": _sha("full-response-alignment:" + group["content_group_sha256"]),
-        "labels_sha256": _sha("labels:" + group["content_group_sha256"]),
-        "gold_response_sha256": _sha("gold:" + group["content_group_sha256"]),
-        "layer": 0,
-        "query_head": 0,
-        "kv_head": 0,
-        "query_position": query,
-        "target_position": query + 1,
-        "target_token_id": 7,
-        "parent_position": 2,
-        "candidate_count": 2,
-        "topology": "partition_compositional",
+        **{name: identity[name] for name in (
+            *runner.ROW_TEMPLATE_COLUMNS, "row_ordinal", "logical_row_id",
+            "endpoint_id", "endpoint_row_id", "candidate_indices",
+            "candidate_valid_mask", "candidate_slot_weights",
+            "statistical_weight",
+        )},
         "lambda_value": value,
-        "prior": prior,
+        "prior": identity["prior"],
         "gamma": gamma,
         "source_d_k": 0.4,
         "source_d_v": 0.3,
@@ -417,10 +802,13 @@ def _row(shard: dict, group: dict, query: int = 4) -> dict:
 
 
 def _sorted_rows(plan: dict, shard: dict) -> list[dict]:
-    rows = [_row(shard, group) for group in plan["group_contract"][shard["task"]]]
-    final_columns = runner._audit_columns()[1]
-    keys = runner._row_key_columns(final_columns)
-    return sorted(rows, key=lambda row: runner._key_bytes(row, keys))
+    streams, _ = runner._capture_sample_streams(plan, shard, "host")
+    return [
+        _row(shard, stream.row_at(ordinal))
+        for sample in sorted(streams)
+        for stream in (streams[sample],)
+        for ordinal in range(stream.row_count)
+    ]
 
 
 def _first_parquet_row(path: Path) -> dict:
@@ -428,6 +816,79 @@ def _first_parquet_row(path: Path) -> dict:
 
     batch = next(pq.ParquetFile(path).iter_batches(batch_size=1))
     return batch.to_pylist()[0]
+
+
+def _first_capture_row(output_dir: Path) -> dict:
+    return next(runner._iter_capture_parquet_rows(output_dir))
+
+
+def _fixture_stable_attestation(plan: dict, shard: dict) -> dict:
+    checkpoint = next(
+        record for record in plan["checkpoints"]
+        if record["checkpoint_id"] == shard["checkpoint_id"]
+    )
+    files = checkpoint["final"]["files"]
+    json_file = next(row for row in files if row["relative"].endswith("projector_0.json"))
+    state_file = next(row for row in files if row["relative"].endswith("projector_0.pt"))
+    runtime_assets = {
+        role: {
+            "model_id": frozen["model_id"],
+            "runtime_path": frozen["resolved_path"],
+            "tree_sha256": frozen["tree_sha256"],
+            "file_count": frozen["file_count"],
+            "bytes": frozen["bytes"],
+            "verified_before_model_or_tokenizer_load": True,
+        }
+        for role, frozen in plan["input_lock"]["prepared"]["runtime_assets"].items()
+    }
+    expected_rows = {
+        **plan["input_lock"]["prepared"]["task_contract"][shard["task"]]
+        ["expected_long_form_rows"],
+        "source": "frozen_cpu_input_lock",
+        "passed_explicitly_per_item": True,
+        "exact_row_count_required": True,
+        "verified_before_model_load": True,
+    }
+    return {
+        "split_role": runner.ALLOWED_SPLIT_ROLE,
+        "capture_mode": "teacher_forced_response",
+        "causal_shift_verified": True,
+        "stores_raw_kv": False,
+        "long_form_contract_version": 2,
+        "plan_sha256": plan["plan_sha256"],
+        "shard_id": shard["shard_id"],
+        "execution_sha": plan["runtime_lock"]["execution_sha"],
+        "image_digest": plan["runtime_lock"]["image_digest"],
+        "checkpoint_tree_sha256": shard["checkpoint_tree_sha256"],
+        "membership_sha256": shard["membership_sha256"],
+        "gold_response_template": runner.GOLD_RESPONSE_TEMPLATE,
+        "gold_response_template_sha256": runner.sha256_bytes(
+            runner.GOLD_RESPONSE_TEMPLATE.encode("utf-8")
+        ),
+        "correctness_semantics": runner.CORRECTNESS_SEMANTICS,
+        "backend_supplied_cpost_fields": False,
+        "runtime_assets": runtime_assets,
+        "projector_load": {
+            "mode": "strict_attested",
+            "record_count": 1,
+            "records": [{
+                "source_model_index": 1,
+                "projector_index": 0,
+                "json_path": f"/fixture/projector_0.json",
+                "json_sha256": json_file["sha256"],
+                "state_path": f"/fixture/projector_0.pt",
+                "state_sha256": state_file["sha256"],
+                "strict": True,
+                "missing_keys": [],
+                "unexpected_keys": [],
+                "state_key_count": 1,
+            }],
+        },
+        "expected_long_form_rows": expected_rows,
+        "e1_pilot_consumed": False,
+        "model_selection_consumed": False,
+        "test_consumed": False,
+    }
 
 
 def _backend_for(plan: dict, shard: dict, *, inject_cpost: bool = False, drop_last: bool = False):
@@ -440,6 +901,27 @@ def _backend_for(plan: dict, shard: dict, *, inject_cpost: bool = False, drop_la
         assert request["input_lock_sidecar_sha256"] == plan["input_lock"]["prepared"]["sidecar"]["sha256"]
         assert request["runtime_assets"] == plan["input_lock"]["prepared"]["runtime_assets"]
         rows = _sorted_rows(plan, shard)
+        cursor = request["resume_cursor"]
+        cursor_payload = {
+            key: value for key, value in cursor.items()
+            if key != "cursor_sha256"
+        }
+        assert cursor["cursor_sha256"] == runner.sha256_bytes(
+            runner.canonical_json_bytes(cursor_payload)
+        )
+        completed = cursor["completed_logical_rows"]
+        assert 0 <= completed <= len(rows)
+        if completed < len(rows):
+            assert (
+                rows[completed]["sample_sha256"],
+                rows[completed]["row_ordinal"],
+            ) == (
+                cursor["next_sample_sha256"],
+                cursor["next_row_ordinal"],
+            )
+        else:
+            assert cursor["next_sample_sha256"] is None
+        rows = rows[completed:]
         if inject_cpost:
             rows[0]["cpost_gold_logp"] = 999.0
         if drop_last:
@@ -447,17 +929,31 @@ def _backend_for(plan: dict, shard: dict, *, inject_cpost: bool = False, drop_la
         return {
             "contract_version": runner.CAPTURE_BACKEND_CONTRACT_VERSION,
             "rows": iter(rows),
+            "resume_prefix_verification": {
+                "schema_version": 1,
+                "protocol_id": runner.CAPTURE_STAGING_PROTOCOL_ID,
+                "cursor_sha256": cursor["cursor_sha256"],
+                "expected_row_count": cursor[
+                    "partial_sample_backend_prefix_row_count"
+                ],
+                "expected_backend_projection_sha256": cursor[
+                    "partial_sample_backend_prefix_sha256"
+                ],
+                "status": "GO_EXACT_PREFIX_MATCH",
+                "observed_row_count": cursor[
+                    "partial_sample_backend_prefix_row_count"
+                ],
+                "observed_backend_projection_sha256": cursor[
+                    "partial_sample_backend_prefix_sha256"
+                ],
+                "exact_match": True,
+            },
             "attestation": {
-                "split_role": runner.ALLOWED_SPLIT_ROLE,
-                "capture_mode": "teacher_forced_response",
-                "causal_shift_verified": True,
-                "stores_raw_kv": False,
-                "plan_sha256": plan["plan_sha256"],
-                "shard_id": shard["shard_id"],
-                "execution_sha": plan["runtime_lock"]["execution_sha"],
-                "image_digest": FAKE_IMAGE,
-                "checkpoint_tree_sha256": shard["checkpoint_tree_sha256"],
-                "membership_sha256": shard["membership_sha256"],
+                **_fixture_stable_attestation(plan, shard),
+                "resume_cursor_sha256": cursor["cursor_sha256"],
+                "resume_completed_logical_rows": completed,
+                "resume_next_sample_sha256": cursor["next_sample_sha256"],
+                "resume_next_row_ordinal": cursor["next_row_ordinal"],
             },
         }
     return backend
@@ -467,6 +963,11 @@ def test_plan_freezes_two_stage_36_plus_72_graph_and_lambda_ids(tmp_path: Path) 
     plan, _, _ = _resolved_plan(tmp_path)
     runner.validate_execution_plan(plan, require_checkpoints=True, for_execution=True)
     assert plan["shard_count"] == runner.EXPECTED_SHARD_COUNT == 108
+    assert plan["schema_version"] == 6
+    assert plan["protocol_id"] == runner.PROTOCOL_ID
+    assert plan["a4_operative_lock"]["status"] == "GO_NEW_A4_SUCCESSOR_DAG_ONLY"
+    assert plan["a4_operative_lock"]["historical_execution_resume_allowed"] is False
+    assert plan["input_lock"]["prepared"]["status"] == runner.INPUT_LOCK_STATUS
     assert sum(row["stage"] == runner.STAGE_E1_2 for row in plan["shards"]) == 36
     assert sum(row["stage"] == runner.STAGE_E1_3 for row in plan["shards"]) == 72
     assert all("lambda-" in row["shard_id"] for row in plan["shards"])
@@ -497,8 +998,16 @@ def test_plan_freezes_two_stage_36_plus_72_graph_and_lambda_ids(tmp_path: Path) 
         "test/test_fpct_e1_prepare_input_lock.py",
         "test/test_fpct_e1_runtime_backend.py",
         "test/test_fpct_e1_runtime_capture_primitives.py",
+        "script/analysis/fpct_e1_streaming_verify.py",
+        "test/test_fpct_e1_streaming.py",
+        "recipe/eval_recipe/fpct_e1/e1_streaming_contract.json",
+        "recipe/eval_recipe/fpct_e1/e1_streaming_schema.json",
+        "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json",
     ):
         assert f"repo://{relative}" in frozen_sources
+    assert set(runner._row_key_columns(runner._audit_columns()[1])).isdisjoint(
+        {"row_ordinal", "logical_row_id", "endpoint_id", "endpoint_row_id"}
+    )
 
 
 def test_runtime_probe_renderer_is_frozen_and_tamper_fails_closed(
@@ -672,7 +1181,10 @@ def test_prepared_input_lock_membership_is_recomputed_not_format_checked(tmp_pat
     payload["task_contract"]["openbookqa"]["membership_sha256"] = "f" * 64
     manifest_path.write_bytes(runner.canonical_json_bytes(payload))
     with pytest.raises(ValueError, match="does not recompute"):
-        runner._prepared_input_lock(manifest_path, sidecar_path, plan["group_contract"])
+        runner._prepared_input_lock(
+            manifest_path, sidecar_path, plan["group_contract"],
+            repo_root=Path(plan["path_roots"]["repo"]["host"]),
+        )
 
 
 def test_raw_topology_lock_blocks_artifact_tamper_before_any_shard(tmp_path: Path) -> None:
@@ -820,19 +1332,17 @@ def test_render_k8s_cli_requires_and_forwards_mounted_receipts(
 
 def test_backend_cannot_supply_cpost_and_f_is_joined_from_baseline(tmp_path: Path, monkeypatch) -> None:
     plan, plan_path, gate = _resolved_plan(tmp_path)
-    monkeypatch.setattr(runner, "PARQUET_BATCH_ROWS", 16)
     cpost = _find_shard(plan, seed=runner.SEEDS[0], arm="c_post_trained", task="openbookqa", value=0.0, stage=runner.STAGE_E1_2)
     factorized = _find_shard(plan, seed=runner.SEEDS[0], arm="c_post_trained", task="openbookqa", value=1.0, stage=runner.STAGE_E1_2)
     output = tmp_path / "outputs"
     baseline_result = _execute_shard(plan_path, cpost["shard_id"], gate, output, "fixture:backend", claim_id="baseline", backend_loader=lambda _: _backend_for(plan, cpost))
-    assert baseline_result["schema_boundary"]["parquet_batch_rows"] == 16
-    assert baseline_result["parquet_row_group_count"] == 5
-    import pyarrow.parquet as pq
-    assert pq.ParquetFile(output / cpost["output_relative"] / "e1_capture_rows.parquet").num_row_groups == 5
+    assert baseline_result["schema_boundary"]["physical_chunk_rows"] == 4096
+    assert baseline_result["parquet_chunk_count"] == runner.TASK_GROUP_COUNTS["openbookqa"]
+    assert baseline_result["streaming_receipt"]["order"] == "sample_sha256,row_ordinal"
     monkeypatch.setattr(runner, "_verify_phase_marker", lambda *_args, **_kwargs: {"status": "GO"})
     result = _execute_shard(plan_path, factorized["shard_id"], gate, output, "fixture:backend", claim_id="factorized", backend_loader=lambda _: _backend_for(plan, factorized))
     assert result["row_key_attestation"]["exact_bijection_with_cpost"] is True
-    first = _first_parquet_row(output / factorized["output_relative"] / "e1_capture_rows.parquet")
+    first = _first_capture_row(output / factorized["output_relative"])
     assert first["cpost_gold_logp"] == -1.25
     assert first["gold_logp"] == pytest.approx(-1.24)
     assert first["cpost_end_task_correct"] is True
@@ -865,7 +1375,7 @@ def test_f_runtime_lambda_zero_is_executed_and_exactly_joins_cpost(tmp_path: Pat
     monkeypatch.setattr(runner, "_verify_finalized_e1_2_lock", lambda *_args, **_kwargs: {"status": "GO"})
     result = _execute_shard(plan_path, control["shard_id"], gate, output, "fixture:backend", claim_id="f-lambda-zero", finalized_lock_sha256="f" * 64, backend_loader=lambda _: _backend_for(plan, control))
     assert result["row_key_attestation"]["exact_bijection_with_cpost"] is True
-    row = _first_parquet_row(output / control["output_relative"] / "e1_capture_rows.parquet")
+    row = _first_capture_row(output / control["output_relative"])
     assert row["inference_operator"] == "f"
     assert row["lambda_value"] == 0.0
     assert row["gamma"] == row["prior"]
@@ -1004,7 +1514,11 @@ def test_e1_3_completed_resume_rechecks_every_lock_before_fast_return(
     finally:
         gate.write_bytes(gate_bytes)
 
-    baseline_parquet = output / baseline["output_relative"] / "e1_capture_rows.parquet"
+    baseline_root = output / baseline["output_relative"]
+    baseline_manifest = json.loads((baseline_root / "capture_manifest.json").read_text())
+    sample_manifest_path = baseline_root / baseline_manifest["sample_streams"][0]["manifest_relative_path"]
+    sample_manifest = json.loads(sample_manifest_path.read_text())
+    baseline_parquet = sample_manifest_path.parent / sample_manifest["chunks"][0]["relative_path"]
     baseline_parquet.write_bytes(baseline_parquet.read_bytes() + b"tamper")
     with pytest.raises(ValueError, match="capture provenance mismatch"):
         _execute_shard(
@@ -1034,6 +1548,525 @@ def test_failed_claim_records_error_and_same_claim_id_can_resume(tmp_path: Path)
     succeeded = json.loads(runner._claim_path(output, shard).read_text())
     assert succeeded["status"] == "SUCCEEDED"
     assert succeeded["attempt"] == 2
+
+
+def test_streaming_template_nested_chunk_and_orphan_fail_before_backend(
+    tmp_path: Path,
+) -> None:
+    plan, plan_path, gate = _resolved_plan(tmp_path)
+    shard = _find_shard(
+        plan, seed=runner.SEEDS[0], arm="c_post_trained",
+        task="openbookqa", value=0.0, stage=runner.STAGE_E1_2,
+    )
+    index_path = runner.resolve_logical_path(
+        plan,
+        plan["input_lock"]["prepared"]["streaming_contract"]
+        ["streaming_template_lock"]["index"]["logical_path"],
+    )
+    index = json.loads(index_path.read_text())
+    nested_manifest = index_path.parent / index["records"][0][
+        "manifest_relative_path"
+    ]
+    nested = json.loads(nested_manifest.read_text())
+    physical = nested_manifest.parent / nested["chunks"][0]["relative_path"]
+    original = physical.read_bytes()
+    backend_loaded = False
+
+    def loader(_spec):
+        nonlocal backend_loaded
+        backend_loaded = True
+        return pytest.fail("backend must not load before recursive template GO")
+
+    physical.write_bytes(original + b"nested-tamper")
+    with pytest.raises(ValueError, match="streaming-template physical chunk"):
+        _execute_shard(
+            plan_path, shard["shard_id"], gate, tmp_path / "outputs",
+            "fixture:backend", claim_id="nested-tamper", backend_loader=loader,
+        )
+    assert backend_loaded is False
+    physical.write_bytes(original)
+
+    orphan = nested_manifest.parent / "unreferenced-template-artifact.bin"
+    orphan.write_bytes(b"orphan")
+    with pytest.raises(ValueError, match="corruption or orphans"):
+        _execute_shard(
+            plan_path, shard["shard_id"], gate, tmp_path / "outputs",
+            "fixture:backend", claim_id="nested-orphan", backend_loader=loader,
+        )
+    assert backend_loaded is False
+
+
+def test_stable_staging_preserves_verified_prefix_and_resumes_exact_suffix(
+    tmp_path: Path,
+) -> None:
+    plan, plan_path, gate = _resolved_plan(tmp_path)
+    shard = _find_shard(
+        plan, seed=runner.SEEDS[0], arm="c_post_trained",
+        task="openbookqa", value=0.0, stage=runner.STAGE_E1_2,
+    )
+    output = tmp_path / "outputs"
+    first_sample_rows = 28 * 16
+
+    def interrupted_backend(request):
+        result = _backend_for(plan, shard)(request)
+        source = result["rows"]
+
+        def interrupted_rows():
+            for index, row in enumerate(source):
+                if index == first_sample_rows + 1:
+                    raise RuntimeError("synthetic stream interruption")
+                yield row
+
+        return {**result, "rows": interrupted_rows()}
+
+    with pytest.raises(RuntimeError, match="synthetic stream interruption"):
+        _execute_shard(
+            plan_path, shard["shard_id"], gate, output,
+            "fixture:backend", claim_id="stable-resume",
+            backend_loader=lambda _spec: interrupted_backend,
+        )
+    output_dir = output / shard["output_relative"]
+    staging = runner._capture_staging_path(output_dir)
+    state = runner._inspect_capture_staging(output_dir, plan, shard)
+    assert staging.is_dir() and not output_dir.exists()
+    assert state["cursor"]["completed_logical_rows"] == first_sample_rows
+    assert state["cursor"]["next_row_ordinal"] == 0
+    assert state["cursor"]["completed_sample_count"] == 1
+    first_sample = sorted(state["expected_streams"])[0]
+    first_chunk = staging / "capture_chunks" / first_sample / "chunk-000000.parquet"
+    first_receipt = staging / "capture_chunks" / first_sample / runner._chunk_receipt_name(0)
+    immutable_hashes = {
+        "chunk": runner.sha256_file(first_chunk),
+        "receipt": runner.sha256_file(first_receipt),
+    }
+
+    stable_attestation_path = staging / "backend_attestation.json"
+    stable_attestation_bytes = stable_attestation_path.read_bytes()
+    premodel_loads = 0
+
+    def attestation_must_not_load(_spec):
+        nonlocal premodel_loads
+        premodel_loads += 1
+        return pytest.fail("invalid stable attestation must precede backend load")
+
+    tampered_cases = []
+    membership = json.loads(stable_attestation_bytes)
+    membership["attestation"]["membership_sha256"] = "0" * 64
+    tampered_cases.append(membership)
+    runtime_asset = json.loads(stable_attestation_bytes)
+    runtime_asset["attestation"]["runtime_assets"]["receiver"][
+        "tree_sha256"
+    ] = "0" * 64
+    tampered_cases.append(runtime_asset)
+    projector = json.loads(stable_attestation_bytes)
+    projector["attestation"]["projector_load"]["records"][0][
+        "missing_keys"
+    ] = ["tampered"]
+    tampered_cases.append(projector)
+    expected_rows = json.loads(stable_attestation_bytes)
+    expected_rows["attestation"]["expected_long_form_rows"]["sum"] += 1
+    tampered_cases.append(expected_rows)
+    unknown_key = json.loads(stable_attestation_bytes)
+    unknown_key["attestation"]["unknown_schema_extension"] = True
+    tampered_cases.append(unknown_key)
+    for tampered_attestation in tampered_cases:
+        stable_attestation_path.write_bytes(
+            runner.canonical_json_bytes(tampered_attestation)
+        )
+        with pytest.raises(ValueError, match="stable backend"):
+            _execute_shard(
+                plan_path, shard["shard_id"], gate, output,
+                "fixture:backend", claim_id="stable-resume",
+                backend_loader=attestation_must_not_load,
+            )
+    assert premodel_loads == 0
+    stable_attestation_path.write_bytes(stable_attestation_bytes)
+
+    original_chunk = first_chunk.read_bytes()
+    first_chunk.write_bytes(original_chunk + b"corruption")
+    backend_loads = 0
+
+    def must_not_load(_spec):
+        nonlocal backend_loads
+        backend_loads += 1
+        return pytest.fail("corrupt staging must fail before backend load")
+
+    with pytest.raises((ValueError, OSError), match="capture staging|Parquet|parquet"):
+        _execute_shard(
+            plan_path, shard["shard_id"], gate, output,
+            "fixture:backend", claim_id="stable-resume",
+            backend_loader=must_not_load,
+        )
+    assert backend_loads == 0 and first_chunk.exists()
+    first_chunk.write_bytes(original_chunk)
+
+    orphan = first_chunk.parent / "orphan.bin"
+    orphan.write_bytes(b"orphan")
+    with pytest.raises(ValueError, match="corruption or orphans"):
+        _execute_shard(
+            plan_path, shard["shard_id"], gate, output,
+            "fixture:backend", claim_id="stable-resume",
+            backend_loader=must_not_load,
+        )
+    assert backend_loads == 0 and first_chunk.exists()
+    orphan.unlink()
+
+    observed_cursors = []
+
+    def resumed_backend(request):
+        observed_cursors.append(dict(request["resume_cursor"]))
+        return _backend_for(plan, shard)(request)
+
+    result = _execute_shard(
+        plan_path, shard["shard_id"], gate, output,
+        "fixture:backend", claim_id="stable-resume",
+        backend_loader=lambda _spec: resumed_backend,
+    )
+    assert result["status"] == "GO"
+    assert len(observed_cursors) == 1
+    assert observed_cursors[0]["completed_logical_rows"] == first_sample_rows
+    assert observed_cursors[0]["next_sample_sha256"] == sorted(
+        state["expected_streams"]
+    )[1]
+    assert runner.sha256_file(
+        output_dir / "capture_chunks" / first_sample / "chunk-000000.parquet"
+    ) == immutable_hashes["chunk"]
+    assert runner.sha256_file(
+        output_dir / "capture_chunks" / first_sample
+        / runner._chunk_receipt_name(0)
+    ) == immutable_hashes["receipt"]
+    assert not staging.exists()
+    verified = runner.verify_capture_artifacts(output_dir, plan)
+    assert verified["status"] == "GO"
+
+
+def test_multichunk_sample_resumes_at_4096_and_matches_clean_semantic_stream(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    from script.analysis.fpct_e1_streaming_verify import (
+        SampleRowStream,
+        canonical_endpoint_id,
+        semantic_row_bytes,
+    )
+
+    query_count = runner.PARQUET_BATCH_ROWS + 1
+    item = {
+        "sample_sha256": "1" * 64,
+        "content_group_sha256": "2" * 64,
+        "provenance": {
+            "input_sha256": "3" * 64,
+            "alignment_sha256": "4" * 64,
+            "labels_sha256": "5" * 64,
+            "gold_response_sha256": "6" * 64,
+        },
+        "answer_queries": [
+            {
+                "query_position": index,
+                "target_position": index + 1,
+                "target_token_id": 1000 + index,
+            }
+            for index in range(query_count)
+        ],
+        "certified_parents": [{
+            "parent_position": 7,
+            "candidate_count": 2,
+            "prior": [0.6, 0.4],
+            "candidate_indices": [10, 11, -1, -1],
+            "candidate_valid_mask": [True, True, False, False],
+            "candidate_slot_weights": [0.6, 0.4, 0.0, 0.0],
+            "topology": "competing_overlap",
+            "statistical_weight": 1.0,
+        }],
+    }
+    schema_sha = "a" * 64
+    shard = {
+        "shard_id": "synthetic-multichunk-shard",
+        "seed": runner.SEEDS[0],
+        "checkpoint_arm": "c_post_trained",
+        "inference_operator": "c_post",
+        "cell": "Y_CC",
+        "task": "openbookqa",
+        "lambda_value": 0.0,
+        "checkpoint_tree_sha256": "b" * 64,
+        "checkpoint_id": "synthetic-checkpoint",
+        "membership_sha256": "c" * 64,
+        "output_relative": "synthetic/multichunk",
+    }
+    runtime_stream = SampleRowStream(
+        item, num_layers=1, num_query_heads=1, num_kv_heads=1,
+        endpoint_id=canonical_endpoint_id(
+            shard["seed"], shard["checkpoint_arm"],
+            shard["inference_operator"], shard["cell"], shard["task"], 0.0,
+        ),
+        schema_sha256=schema_sha,
+    )
+    template_stream = SampleRowStream(
+        item, num_layers=1, num_query_heads=1, num_kv_heads=1,
+        endpoint_id=canonical_endpoint_id(
+            0, "input_geometry", "input_geometry", "INPUT_LOCK",
+            shard["task"], 0.0,
+        ),
+        schema_sha256=schema_sha,
+    )
+    template_digest = hashlib.sha256()
+    for identity in template_stream.iter_rows():
+        template_digest.update(semantic_row_bytes(identity))
+    shard["expected_row_template"] = {
+        "count": runtime_stream.row_count,
+        "semantic_stream_sha256": template_digest.hexdigest(),
+        "schema_sha256": schema_sha,
+        "physical_chunk_rows": runner.PARQUET_BATCH_ROWS,
+        "ordinal_order": "sample_sha256,row_ordinal",
+    }
+    plan = {
+        "plan_sha256": "d" * 64,
+        "runtime_lock": {
+            "execution_sha": "e" * 40,
+            "image_digest": FAKE_IMAGE,
+        },
+        "input_lock": {"prepared": {
+            "streaming_contract": {"schema_sha256": schema_sha},
+            "runtime_assets": {
+                role: {
+                    "model_id": role, "resolved_path": f"/models/{role}",
+                    "tree_sha256": value, "file_count": 1, "bytes": 2,
+                }
+                for role, value in {"receiver": "7" * 64, "sender": "8" * 64}.items()
+            },
+            "task_contract": {"openbookqa": {
+                "expected_long_form_rows": {
+                    "count": 1, "sum": runtime_stream.row_count,
+                },
+            }},
+        }},
+        "group_contract": {"openbookqa": [{
+            "content_group_sha256": item["content_group_sha256"],
+            "sample_sha256": [item["sample_sha256"]],
+        }]},
+        "instrumentation_gate": {"status": "GO"},
+        "checkpoints": [{
+            "checkpoint_id": "synthetic-checkpoint",
+            "final": {"files": [
+                {"relative": "projector_0.json", "sha256": "9" * 64},
+                {"relative": "projector_0.pt", "sha256": "f" * 64},
+            ]},
+        }],
+        "shards": [shard],
+    }
+    monkeypatch.setattr(
+        runner, "_capture_sample_streams",
+        lambda *_args, **_kwargs: (
+            {item["sample_sha256"]: runtime_stream},
+            {item["sample_sha256"]: template_stream},
+        ),
+    )
+    rows = [_row(shard, runtime_stream.row_at(index)) for index in range(runtime_stream.row_count)]
+    claim = {"claim_id": "synthetic", "attempt": 1}
+
+    def attestation(cursor):
+        return {
+            **_fixture_stable_attestation(plan, shard),
+            "resume_cursor_sha256": cursor["cursor_sha256"],
+            "resume_completed_logical_rows": cursor["completed_logical_rows"],
+            "resume_next_sample_sha256": cursor["next_sample_sha256"],
+            "resume_next_row_ordinal": cursor["next_row_ordinal"],
+        }
+
+    def prefix_channel(cursor, *, observed_sha=None):
+        observed = (
+            cursor["partial_sample_backend_prefix_sha256"]
+            if observed_sha is None else observed_sha
+        )
+        return {
+            "schema_version": 1,
+            "protocol_id": runner.CAPTURE_STAGING_PROTOCOL_ID,
+            "cursor_sha256": cursor["cursor_sha256"],
+            "expected_row_count": cursor[
+                "partial_sample_backend_prefix_row_count"
+            ],
+            "expected_backend_projection_sha256": cursor[
+                "partial_sample_backend_prefix_sha256"
+            ],
+            "status": "GO_EXACT_PREFIX_MATCH",
+            "observed_row_count": cursor[
+                "partial_sample_backend_prefix_row_count"
+            ],
+            "observed_backend_projection_sha256": observed,
+            "exact_match": observed
+            == cursor["partial_sample_backend_prefix_sha256"],
+        }
+
+    interrupted_output = tmp_path / "interrupted"
+    initial = runner._inspect_capture_staging(
+        interrupted_output, plan, shard, create=True,
+    )["cursor"]
+
+    def interrupted_rows():
+        for index, row in enumerate(rows):
+            yield row
+            if index == runner.PARQUET_BATCH_ROWS:
+                raise RuntimeError("interrupt after chunk zero plus one row")
+
+    with pytest.raises(RuntimeError, match="interrupt after chunk zero"):
+        runner.write_capture_artifacts(
+            interrupted_rows(), interrupted_output, shard, plan,
+            attestation(initial), plan["instrumentation_gate"], claim, None,
+            expected_resume_cursor=initial,
+            resume_prefix_verification=prefix_channel(initial),
+        )
+    resumed = runner._inspect_capture_staging(
+        interrupted_output, plan, shard,
+    )
+    assert resumed["cursor"]["next_sample_sha256"] == item["sample_sha256"]
+    assert resumed["cursor"]["next_row_ordinal"] == runner.PARQUET_BATCH_ROWS
+    assert resumed["cursor"]["completed_logical_rows"] == runner.PARQUET_BATCH_ROWS
+    staged_chunk = (
+        resumed["root"] / "capture_chunks" / item["sample_sha256"]
+        / "chunk-000000.parquet"
+    )
+    chunk_zero_sha = runner.sha256_file(staged_chunk)
+    with pytest.raises(ValueError, match="recomputed prefix differs"):
+        runner.write_capture_artifacts(
+            iter(rows[runner.PARQUET_BATCH_ROWS:]),
+            interrupted_output, shard, plan, attestation(resumed["cursor"]),
+            plan["instrumentation_gate"], {**claim, "attempt": 2}, None,
+            expected_resume_cursor=resumed["cursor"],
+            resume_prefix_verification=prefix_channel(
+                resumed["cursor"], observed_sha="0" * 64,
+            ),
+        )
+    assert runner.sha256_file(staged_chunk) == chunk_zero_sha
+    resumed_manifest = runner.write_capture_artifacts(
+        iter(rows[runner.PARQUET_BATCH_ROWS:]),
+        interrupted_output, shard, plan, attestation(resumed["cursor"]),
+        plan["instrumentation_gate"], {**claim, "attempt": 2}, None,
+        expected_resume_cursor=resumed["cursor"],
+        resume_prefix_verification=prefix_channel(resumed["cursor"]),
+    )
+    assert runner.sha256_file(
+        interrupted_output / "capture_chunks" / item["sample_sha256"]
+        / "chunk-000000.parquet"
+    ) == chunk_zero_sha
+
+    clean_output = tmp_path / "clean"
+    clean_cursor = runner._inspect_capture_staging(
+        clean_output, plan, shard, create=True,
+    )["cursor"]
+    clean_manifest = runner.write_capture_artifacts(
+        iter(rows), clean_output, shard, plan, attestation(clean_cursor),
+        plan["instrumentation_gate"], claim, None,
+        expected_resume_cursor=clean_cursor,
+        resume_prefix_verification=prefix_channel(clean_cursor),
+    )
+    assert (
+        resumed_manifest["streaming_receipt"]["semantic_stream_sha256"]
+        == clean_manifest["streaming_receipt"]["semantic_stream_sha256"]
+    )
+    assert runner.verify_capture_artifacts(interrupted_output, plan)["status"] == "GO"
+    assert runner.verify_capture_artifacts(clean_output, plan)["status"] == "GO"
+
+    orphan_output = tmp_path / "orphan-recovery"
+    orphan_cursor = runner._inspect_capture_staging(
+        orphan_output, plan, shard, create=True,
+    )["cursor"]
+
+    def fail_after_hardlink(stage, _record):
+        if stage == "after_chunk_hardlink_before_receipt":
+            raise RuntimeError("injected post-hardlink crash")
+
+    with pytest.raises(RuntimeError, match="post-hardlink crash"):
+        runner.write_capture_artifacts(
+            iter(rows), orphan_output, shard, plan, attestation(orphan_cursor),
+            plan["instrumentation_gate"], claim, None,
+            expected_resume_cursor=orphan_cursor,
+            resume_prefix_verification=prefix_channel(orphan_cursor),
+            failure_injector=fail_after_hardlink,
+        )
+    orphan_staging = runner._capture_staging_path(orphan_output)
+    uncommitted = (
+        orphan_staging / "capture_chunks" / item["sample_sha256"]
+        / "chunk-000000.parquet"
+    )
+    assert uncommitted.is_file()
+    second_orphan = uncommitted.with_name("chunk-000001.parquet")
+    second_orphan.write_bytes(uncommitted.read_bytes())
+    orphan_attestation = orphan_staging / "backend_attestation.json"
+    first_orphan_sha = runner.sha256_file(uncommitted)
+    second_orphan_sha = runner.sha256_file(second_orphan)
+    orphan_attestation_sha = runner.sha256_file(orphan_attestation)
+    with pytest.raises(ValueError, match="chunk/receipt prefix"):
+        runner._inspect_capture_staging(orphan_output, plan, shard)
+    assert runner.sha256_file(uncommitted) == first_orphan_sha
+    assert runner.sha256_file(second_orphan) == second_orphan_sha
+    assert runner.sha256_file(orphan_attestation) == orphan_attestation_sha
+    second_orphan.unlink()
+    repaired = runner._inspect_capture_staging(
+        orphan_output, plan, shard,
+    )
+    assert repaired["cursor"]["completed_logical_rows"] == 0
+    assert repaired["cursor"]["next_row_ordinal"] == 0
+    assert not uncommitted.exists()
+
+
+@pytest.mark.parametrize(
+    "relative",
+    (
+        "capture_staging_identity.json",
+        "backend_attestation.json",
+        "capture_chunks/sample/chunk-000000.receipt.json",
+        "capture_chunks/sample/chunk_manifest.json",
+        "capture_manifest.json",
+    ),
+)
+def test_metadata_hardlink_crash_temp_never_enters_stable_tree(
+    tmp_path: Path, relative: str,
+) -> None:
+    stable = tmp_path / "stable"
+    working = tmp_path / "sibling-work"
+    path = stable / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    working.mkdir()
+    payload = runner.canonical_json_bytes({
+        "artifact": relative, "immutable": True,
+    })
+    observed = []
+
+    def crash(stage, record):
+        assert stage == "after_metadata_hardlink_before_temp_cleanup"
+        artifact = Path(record["artifact_path"])
+        temporary = Path(record["temporary_path"])
+        assert artifact == path
+        assert temporary.is_file() and artifact.is_file()
+        assert stable not in temporary.parents
+        observed.append((artifact, temporary))
+        raise RuntimeError("synthetic metadata post-hardlink crash")
+
+    with pytest.raises(RuntimeError, match="metadata post-hardlink crash"):
+        runner._write_once(
+            path, payload, temporary_root=working, failure_injector=crash,
+        )
+    assert observed and path.read_bytes() == payload
+    assert not any(
+        child.name.startswith(".") or child.suffix == ".tmp"
+        for child in stable.rglob("*")
+    )
+    runner._write_once(path, payload, temporary_root=working)
+    assert path.read_bytes() == payload
+
+
+def test_write_once_rejects_same_byte_symlink_destination(tmp_path: Path) -> None:
+    stable = tmp_path / "stable"
+    stable.mkdir()
+    working = tmp_path / "work"
+    working.mkdir()
+    external = tmp_path / "external.json"
+    payload = runner.canonical_json_bytes({"same": "bytes"})
+    external.write_bytes(payload)
+    destination = stable / "capture_manifest.json"
+    destination.symlink_to(external)
+    with pytest.raises(ValueError, match="not a regular file"):
+        runner._write_once(destination, payload, temporary_root=working)
+    assert destination.is_symlink() and external.read_bytes() == payload
 
 
 def test_nonmechanical_claim_is_rejected_and_active_lease_is_exclusive(tmp_path: Path) -> None:
@@ -1083,7 +2116,9 @@ def test_verify_all_closes_exactly_36_endpoints_and_full_grid(tmp_path: Path, mo
             {
                 "shard_id": shard["shard_id"],
                 "lambda_value": shard["lambda_value"],
-                "parquet_sha256": _sha("parquet:" + shard["shard_id"]),
+                "semantic_stream_sha256": _sha("semantic:" + shard["shard_id"]),
+                "sample_manifest_tree_sha256": _sha("chunks:" + shard["shard_id"]),
+                "parquet_chunk_count": 1,
                 "row_key_sha256": _sha("keys:" + shard["shard_id"]),
                 "row_count": 1,
                 "capture_manifest_sha256": _sha("manifest:" + shard["shard_id"]),
@@ -1148,8 +2183,8 @@ def test_mounted_byte_receipt_binds_bundle_manifest_and_observed_configmaps(
     tmp_path: Path,
 ) -> None:
     bundle_manifest = {
-        "schema_version": 1,
-        "protocol_id": "fpct_e1_k8s_lock_bundle_v1",
+        "schema_version": runner.K8S_LOCK_SCHEMA_VERSION,
+        "protocol_id": runner.K8S_LOCK_PROTOCOL_ID,
         "status": "FROZEN_NOT_APPLIED",
         "execution_sha": "a" * 40,
         "plan_sha256": "b" * 64,
@@ -1172,8 +2207,8 @@ def test_mounted_byte_receipt_binds_bundle_manifest_and_observed_configmaps(
     bundle_path = tmp_path / "bundle.json"
     bundle_path.write_bytes(runner.canonical_json_bytes(bundle_manifest))
     receipt = {
-        "schema_version": 1,
-        "protocol_id": "fpct_e1_k8s_lock_bundle_v1",
+        "schema_version": runner.K8S_LOCK_SCHEMA_VERSION,
+        "protocol_id": runner.K8S_LOCK_PROTOCOL_ID,
         "status": "VERIFIED_MOUNTED_KEY_BYTES",
         "execution_sha": bundle_manifest["execution_sha"],
         "plan_sha256": bundle_manifest["plan_sha256"],
@@ -1209,8 +2244,8 @@ def test_finalized_mounted_byte_receipt_binds_closure_and_artifact_tree(
     tmp_path: Path,
 ) -> None:
     bundle_manifest = {
-        "schema_version": 1,
-        "protocol_id": "fpct_e1_k8s_finalized_lock_bundle_v1",
+        "schema_version": runner.K8S_LOCK_SCHEMA_VERSION,
+        "protocol_id": runner.K8S_FINALIZED_LOCK_PROTOCOL_ID,
         "status": "FROZEN_FINALIZED_NOT_APPLIED",
         "execution_sha": "a" * 40,
         "plan_sha256": "b" * 64,
@@ -1232,8 +2267,8 @@ def test_finalized_mounted_byte_receipt_binds_closure_and_artifact_tree(
     bundle_path = tmp_path / "finalized-bundle.json"
     bundle_path.write_bytes(runner.canonical_json_bytes(bundle_manifest))
     receipt = {
-        "schema_version": 1,
-        "protocol_id": "fpct_e1_k8s_finalized_lock_bundle_v1",
+        "schema_version": runner.K8S_LOCK_SCHEMA_VERSION,
+        "protocol_id": runner.K8S_FINALIZED_LOCK_PROTOCOL_ID,
         "status": "VERIFIED_FINALIZED_MOUNTED_KEY_BYTES",
         "execution_sha": bundle_manifest["execution_sha"],
         "plan_sha256": bundle_manifest["plan_sha256"],

@@ -99,6 +99,58 @@ def test_canonical_isolated_bootstrap_succeeds(tmp_path: Path) -> None:
     }
 
 
+def test_protected_open_classifier_exempts_only_active_netdisk_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from script.runtime import fpct_bootstrap
+
+    sealed = Path("/netdisk/fpct/runs/run-a/source_snapshot")
+    monkeypatch.setattr(fpct_bootstrap, "_ACTIVE_REPO", sealed)
+    monkeypatch.setattr(fpct_bootstrap, "_PROTECTED_OPENS", [])
+    fpct_bootstrap._audit_hook(
+        "open", (str(sealed / "rosetta/model/aligner.py"), "r", 0)
+    )
+    fpct_bootstrap._audit_hook(
+        "open", (str(sealed / "script/experiment/runner.py"), "r", 0)
+    )
+    fpct_bootstrap._audit_hook(
+        "open", (str(sealed / "../e0-design/dev.json"), "r", 0)
+    )
+    fpct_bootstrap._audit_hook(
+        "open", ("/netdisk/model-cache/Qwen3/config.json", "r", 0)
+    )
+    assert fpct_bootstrap._PROTECTED_OPENS == [
+        str(sealed / "../e0-design/dev.json"),
+        "/netdisk/model-cache/Qwen3/config.json",
+    ]
+
+
+def test_provenance_classifier_preverifies_immutable_image_lane(
+    tmp_path: Path,
+) -> None:
+    from script.runtime import fpct_bootstrap
+
+    image_root = (tmp_path / "immutable-image").resolve()
+    image_root.mkdir()
+    (image_root / "source.py").write_text("VALUE = 1\n", encoding="utf-8")
+    payload = {
+        "schema_version": 1,
+        "head": "a" * 40,
+        "branch": "research/fpct-e1-mechanism-audit",
+        "upstream": "a" * 40,
+        "tree_sha256": fpct_bootstrap._source_tree_sha(image_root),
+    }
+    (image_root / fpct_bootstrap.IMAGE_PROVENANCE_NAME).write_text(
+        json.dumps(payload, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    kind, record = fpct_bootstrap._classify_and_preverify_provenance(image_root)
+    assert kind == "immutable_image"
+    assert record is not None
+    assert record["source"] == "immutable_image_provenance"
+    assert record["tree_sha256"] == payload["tree_sha256"]
+
+
 def test_canonical_synthetic_exact_identity_probe(tmp_path: Path) -> None:
     probe, _ = _success(tmp_path)
     assert probe["eligible_parents"] > 0

@@ -470,3 +470,17 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - `616448=28×16×1376` 是精确 logical row product，不是 duplicate runtime emission。预注册 `262144` 是累计 logical-row memory guard；Parquet physical batch/row-group 是独立的 `4096`。
 - 输出目录实测为空：0 input sidecar/manifest、0 raw topology、0 plan/runtime probe/ConfigMap、0 model/checkpoint load、0 forward、0 GPU/K8s、0 training、0 scientific result。E1-pilot 未 render/tokenize/align/run/read。
 - 当前状态=`INCONCLUSIVE_RESOURCE_CEILING / REVIEW REQUIRED`；本 run 不 resume/reuse。不得自动提高 ceiling、截断 rows、删除超限样本或把 ceiling 静默改称 chunk size。只有人工前瞻批准的新 protocol/schema 与全新 execution 才可继续；E1-2/E1-3 当前 blocked。
+
+### 2026-07-26 FPCT-E1 A4 streaming pre-natural experiment lock
+
+- 批准：用户在新自然 input-lock 与任何 model output 之前批准 `APPROVED_PROSPECTIVE_AMENDMENT_E1_A4_STREAMING`，用 representation-preserving deterministic bounded streaming 替换 A3 cumulative per-sample row list。
+- 科学不变量：保留完整 logical-row universe、原 15-field key、全部 metrics/weights/topology/prior/mask/estimands、operator、checkpoints、centered-λ grid 与 E0-design；physical chunk rows=`4096`。
+- 历史边界：`744a943...`、`d1698177...`、`612697df...` 仍为 abandoned/non-reusable，不得 resume、复用 partial artifacts 或原地修补重跑。
+- 新产物：`FPCT_E1_STREAMING_AMENDMENT.md`、`e1_streaming_contract.json`、`e1_streaming_schema.json`、streaming verifier/synthetic-gate code 及 input-lock/runtime/analyzer 的 bounded-streaming 消费链。
+- Synthetic gate=`GO`：reference row key/权重/topology/aggregate、ordinal identity、chunk partition、semantic replay、atomic no-overwrite、crash/resume 与 bounded RSS checks 全部成立，`whole_table_materialization_detected=false`；测试=`395 passed in 4020.78s`。
+- Gate artifact SHA256=`42b6c98fd5f27a49e258bae4b79ff3c4673c9144465a3c43f9a672d228c82df4`，evidence SHA256=`d22bb1997234dd0c895f1b819e9cbf3bb1102633502f482cbb7b2d4d4ecc8e43`；amendment/contract/schema SHA256=`2fd6412a5533ecc4085e52a81e514425ae5fe6ffa64ec47ebbd7bc9669a20c74` / `919d7c9955c749d2d3603a2356701c65e5b552d22b8ab8cc23c91ea7246e6f22` / `5d389e81f87a18e02889204f055e61c9a7fed8957e8d990f9642558700a39618`。
+- Full-schema baseline=`4480 rows / 2 chunks / 147111936 B peak RSS`；stress=`1000384 rows / 245 chunks / 192376832 B peak RSS`；阈值=`283295744 B`（canonical row bound=`2078 B`，allocator/buffer allowance=`136183808 B`），故 bounded-RSS hard gate 通过。
+- A4 instrumentation re-attestation=`GO`：`110 passed`，gamma query variance=`0.19730721414089203`，parity/synthetic/hard-gate SHA256=`d7e78e5e8b54aa2ae21e105b53ad5cbdc8b52d78b6e422c36bdeed919d40c2f3` / `7524fb2ce873dde3450ad12ec26e39d6497f0f99fd9fe755edcfafda44c2ab40` / `0cd401328c5942f51a21f98a3418eb3a18c08a489c6a5cc8c99ef6775b1d6b3e`；historical v1/A3 evidence 未覆盖。
+- Gate 外 project CPU-safe complement=`449 passed, 2 deselected`；两项 deselected 是只接受旧 R2l/R2m frozen tree identity 的历史 guards，在 A4 后继分支上按设计 fail-closed。Gate+complement 共 `844 passed`，没有把这两项历史身份检查伪报为 A4 通过。
+- 执行 firewall：synthetic GO 以前禁止新自然数据；clean pushed A4 以前禁止新 snapshot/run；streaming CPU input-lock GO 以前禁止 runtime/checkpoint/plan 与 E1-2；E1-3 只能在 finalized E1-2 后执行。
+- 当前计数：A4 授权后新 natural lookup/render/tokenize/alignment=`0`，pretrained model/checkpoint forward=`0`，GPU/Kubernetes/training=`0`；clean pushed A4 commit、successor snapshot/run root 和 CPU input lock 均仍 `PENDING/NOT STARTED`；E1-pilot=`SEALED / NOT RUN / NOT READ`，confirmatory 仍 sealed。

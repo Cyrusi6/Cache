@@ -119,9 +119,31 @@ def _sources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     runtime_path = tmp_path / "runtime.json"
     runtime_raw = _write_json(runtime_path, runtime)
     plan = {
-        "schema_version": 2,
+        "schema_version": bundle.PLAN_SCHEMA_VERSION,
         "protocol_id": bundle.PLAN_PROTOCOL_ID,
         "status": "PREPARED_NO_MODEL_LOAD",
+        "a4_operative_lock": {
+            "status": "GO_NEW_A4_SUCCESSOR_DAG_ONLY",
+            "protocol_id": bundle.A4_PROTOCOL_ID,
+            "historical_execution_resume_allowed": False,
+            "historical_artifact_reuse_allowed": False,
+            "execution_authorization": {
+                "a4_successor_input_lock_operative": True,
+                "a4_successor_dag_operative": True,
+                "requires_streaming_input_lock_go": True,
+                "historical_attempt_resume_allowed": False,
+                "e1_pilot_forward_or_outcome": False,
+                "training": False,
+            },
+        },
+        "input_lock": {
+            "prepared": {
+                "status": bundle.INPUT_LOCK_STATUS,
+                "protocol_id": bundle.INPUT_LOCK_PROTOCOL_ID,
+                "manifest": {"logical_path": "input_lock://e1_input_lock_manifest.json"},
+                "streaming_contract": {"protocol_id": bundle.A4_PROTOCOL_ID},
+            }
+        },
         "runtime_lock": {
             "execution_sha": EXECUTION_SHA,
             "image_digest": IMAGE_DIGEST,
@@ -327,6 +349,24 @@ def test_source_sha_or_runtime_identity_mismatch_fails_before_bundle(
     with pytest.raises(ValueError, match="runtime probe byte SHA"):
         bundle.build_lock_bundle(
             plan_path=plan,
+            instrumentation_gate_path=gate,
+            runtime_probe_path=runtime,
+            source_snapshot_receipt_path=source_receipt,
+            output_dir=tmp_path / "bundle",
+        )
+
+
+def test_historical_or_unlocked_dag_cannot_build_a4_configmaps(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plan_path, gate, runtime, source_receipt = _sources(tmp_path, monkeypatch)
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    plan["a4_operative_lock"]["historical_execution_resume_allowed"] = True
+    plan["plan_sha256"] = bundle._plan_hash(plan)
+    _write_json(plan_path, plan)
+    with pytest.raises(ValueError, match="new-execution-only A4"):
+        bundle.build_lock_bundle(
+            plan_path=plan_path,
             instrumentation_gate_path=gate,
             runtime_probe_path=runtime,
             source_snapshot_receipt_path=source_receipt,

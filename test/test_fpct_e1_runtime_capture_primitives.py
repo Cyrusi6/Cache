@@ -8,7 +8,10 @@ from torch import nn
 from transformers import Qwen3Config, Qwen3ForCausalLM
 from transformers.cache_utils import DynamicCache
 
-from rosetta.model.fpct_instrumentation import teacher_forced_query_mask
+from rosetta.model.fpct_instrumentation import (
+    FPCTCaptureAccumulator,
+    teacher_forced_query_mask,
+)
 from rosetta.model.wrapper import RosettaModel
 
 
@@ -32,6 +35,9 @@ PRIMITIVE_KEYS = {
     "parent_position",
     "candidate_count",
     "prior",
+    "runtime_source_indices",
+    "candidate_valid_mask",
+    "candidate_slot_weights",
     "gamma",
     *GEOMETRY_KEYS,
     "candidate_logit_range",
@@ -74,10 +80,13 @@ def _store_fixture_sidecar(
     wrapper: RosettaModel, *, with_geometry: bool
 ) -> None:
     generator = torch.Generator().manual_seed(8101)
-    key = torch.randn(1, 2, 4, 2, 8, generator=generator)
-    value = torch.randn(1, 2, 4, 2, 8, generator=generator)
+    key = torch.randn(1, 2, 4, 4, 8, generator=generator)
+    value = torch.randn(1, 2, 4, 4, 8, generator=generator)
     prior = torch.tensor(
-        [[[0.6, 0.4], [1.0, 0.0], [0.25, 0.75], [1.0, 0.0]]]
+        [[[0.6, 0.4, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0], [0.25, 0.75, 0.0, 0.0], [1.0, 0.0, 0.0, 0.0]]]
+    )
+    source_indices = torch.tensor(
+        [[[11, 12, -1, -1], [13, -1, -1, -1], [14, 15, -1, -1], [16, -1, -1, -1]]]
     )
     wrapper._store_fpct_sidecar(
         0,
@@ -86,6 +95,7 @@ def _store_fixture_sidecar(
         value,
         prior,
         prior > 0,
+        source_indices=source_indices,
         capture_geometry=_geometry(4) if with_geometry else None,
     )
 
@@ -113,8 +123,37 @@ def _captured(operator: str) -> tuple[dict, torch.Tensor]:
     compact = capture.layers[0].primitive_chunks[0]
     assert compact["index"].shape[1] == 4
     assert compact["gamma"].ndim == compact["prior"].ndim == 2
-    assert compact["gamma"].shape[-1] == 2
+    assert compact["gamma"].shape[-1] == 4
+    assert compact["source_indices"].shape == compact["valid"].shape
+    assert compact["source_indices_certified"] is True
     return wrapper.end_fpct_capture(), output.logits
+
+
+class _CollectingPrimitiveSink:
+    def __init__(self) -> None:
+        self.chunks: list[dict] = []
+        self.aborted = False
+        self.finalized = False
+
+    def write_primitive_chunk(self, chunk) -> None:
+        assert not self.aborted
+        assert not self.finalized
+        self.chunks.append(chunk)
+
+    def finalize(self) -> dict:
+        assert not self.aborted
+        self.finalized = True
+        sizes = [int(chunk["index"].shape[0]) for chunk in self.chunks]
+        return {
+            "complete": True,
+            "row_count": sum(sizes),
+            "chunk_count": len(sizes),
+            "max_chunk_rows": max(sizes),
+            "sink_kind": "synthetic_collecting_sink",
+        }
+
+    def abort(self) -> None:
+        self.aborted = True
 
 
 @pytest.mark.parametrize("operator", ["c_post", "f"])
@@ -189,6 +228,9 @@ def test_bounded_long_form_primitives_have_complete_contract(operator: str) -> N
     assert all(row["kv_head"] == row["query_head"] // 2 for row in rows)
     for row in rows:
         assert row["candidate_count"] == 2
+        assert len(row["runtime_source_indices"]) == 4
+        assert row["candidate_valid_mask"] == [True, True, False, False]
+        assert row["runtime_source_indices"][2:] == [-1, -1]
         assert math.isclose(sum(row["prior"]), 1.0, abs_tol=1e-6)
         assert math.isclose(sum(row["gamma"]), 1.0, abs_tol=1e-6)
         assert 0.0 <= row["parent_attention_mass"] <= 1.0
@@ -219,6 +261,151 @@ def test_long_form_row_ceiling_fails_closed_before_cpu_materialization() -> None
     assert capture.layers[0].primitive_chunks == []
     with pytest.raises(RuntimeError, match="failed closed"):
         wrapper.end_fpct_capture()
+
+
+def test_exact_streaming_capture_uses_bounded_sink_without_report_row_list() -> None:
+    wrapper = RosettaModel([_qwen()], fpct_operator="f")
+    _store_fixture_sidecar(wrapper, with_geometry=True)
+    input_ids = torch.tensor([[4, 5, 6, 7]])
+    sink = _CollectingPrimitiveSink()
+    wrapper.begin_fpct_capture(
+        "teacher_forced_response",
+        query_mask=teacher_forced_query_mask(input_ids),
+        expected_long_form_rows=16,
+        primitive_sink=sink,
+        primitive_chunk_rows=3,
+        detail_mode="aggregate_only",
+    )
+    output = wrapper._base_model_forward_with_fpct(
+        input_ids=input_ids,
+        attention_mask=torch.ones_like(input_ids),
+        labels=input_ids,
+        past_key_values=DynamicCache(),
+        use_cache=True,
+        return_dict=True,
+    )
+    capture = wrapper._fpct_capture
+    assert capture is not None
+    assert capture.layers[0].primitive_chunks == []
+    assert capture.layers[0].query_chunks == []
+    report = wrapper.end_fpct_capture()
+
+    assert torch.isfinite(output.logits).all()
+    assert [int(chunk["index"].shape[0]) for chunk in sink.chunks] == [3, 3, 3, 3, 3, 1]
+    assert {chunk["layer"] for chunk in sink.chunks} == {0}
+    indices = torch.cat([chunk["index"] for chunk in sink.chunks], dim=0)
+    assert indices.tolist() == sorted(indices.tolist())
+    assert sink.finalized is True
+    assert sink.aborted is False
+    assert report["long_form_contract_version"] == 2
+    assert report["long_form_row_count"] == 16
+    assert report["expected_long_form_rows"] == 16
+    assert report["primitive_chunk_rows"] == 3
+    assert report["detail_mode"] == "aggregate_only"
+    assert report["long_form_stream"]["row_count"] == 16
+    assert "long_form_primitives" not in report
+    assert "query_summaries" not in report["layers"]["0"]
+    assert "parent_summaries" not in report["layers"]["0"]
+
+
+def test_exact_streaming_count_mismatch_and_overflow_fail_closed() -> None:
+    ids = torch.tensor([[4, 5, 6, 7]])
+
+    short_wrapper = RosettaModel([_qwen()], fpct_operator="f")
+    _store_fixture_sidecar(short_wrapper, with_geometry=True)
+    short_sink = _CollectingPrimitiveSink()
+    short_wrapper.begin_fpct_capture(
+        "teacher_forced_response",
+        query_mask=teacher_forced_query_mask(ids),
+        expected_long_form_rows=17,
+        primitive_sink=short_sink,
+        detail_mode="aggregate_only",
+    )
+    short_wrapper._base_model_forward_with_fpct(
+        input_ids=ids,
+        attention_mask=torch.ones_like(ids),
+        labels=ids,
+        past_key_values=DynamicCache(),
+        use_cache=True,
+        return_dict=True,
+    )
+    with pytest.raises(RuntimeError, match="exact logical row count mismatch"):
+        short_wrapper.end_fpct_capture()
+    assert short_sink.aborted is True
+    assert short_sink.finalized is False
+
+    overflow_wrapper = RosettaModel([_qwen()], fpct_operator="f")
+    _store_fixture_sidecar(overflow_wrapper, with_geometry=True)
+    overflow_sink = _CollectingPrimitiveSink()
+    overflow_wrapper.begin_fpct_capture(
+        "teacher_forced_response",
+        query_mask=teacher_forced_query_mask(ids),
+        expected_long_form_rows=15,
+        primitive_sink=overflow_sink,
+        detail_mode="aggregate_only",
+    )
+    with pytest.raises(RuntimeError, match="row ceiling exceeded"):
+        overflow_wrapper._base_model_forward_with_fpct(
+            input_ids=ids,
+            attention_mask=torch.ones_like(ids),
+            labels=ids,
+            past_key_values=DynamicCache(),
+            use_cache=True,
+            return_dict=True,
+        )
+    assert overflow_sink.chunks == []
+    assert overflow_sink.aborted is True
+
+
+@pytest.mark.parametrize("invalid", [0, -1, True, 1.5])
+def test_exact_streaming_contract_rejects_invalid_counts(invalid) -> None:
+    wrapper = RosettaModel([_qwen()], fpct_operator="f")
+    with pytest.raises(ValueError, match="expected_long_form_rows"):
+        wrapper.begin_fpct_capture(
+            "prefill",
+            expected_long_form_rows=invalid,
+            primitive_sink=_CollectingPrimitiveSink(),
+            detail_mode="aggregate_only",
+        )
+
+
+def test_streaming_contract_rejects_missing_sink_and_oversized_chunk() -> None:
+    wrapper = RosettaModel([_qwen()], fpct_operator="f")
+    with pytest.raises(ValueError, match="requires a primitive sink"):
+        wrapper.begin_fpct_capture(
+            "prefill", expected_long_form_rows=1, detail_mode="aggregate_only"
+        )
+    with pytest.raises(ValueError, match=r"\[1, 4096\]"):
+        wrapper.begin_fpct_capture(
+            "prefill",
+            expected_long_form_rows=1,
+            primitive_sink=_CollectingPrimitiveSink(),
+            primitive_chunk_rows=4097,
+            detail_mode="aggregate_only",
+        )
+
+
+def test_streaming_exact_count_is_not_capped_by_the_legacy_memory_guard() -> None:
+    sink = _CollectingPrimitiveSink()
+    capture = FPCTCaptureAccumulator(
+        "prefill",
+        expected_long_form_rows=1_000_000,
+        primitive_sink=sink,
+        detail_mode="aggregate_only",
+    )
+    assert capture.expected_long_form_rows == 1_000_000
+    assert capture.max_long_form_rows == 1_000_000
+    capture._abort_sink()
+    assert sink.aborted is True
+
+    with pytest.raises(ValueError, match="legacy row ceiling"):
+        FPCTCaptureAccumulator(
+            "prefill",
+            max_long_form_rows=1_000_000,
+            expected_long_form_rows=1_000_000,
+            primitive_sink=_CollectingPrimitiveSink(),
+            detail_mode="aggregate_only",
+        )
 
 
 @pytest.mark.parametrize("invalid", [0, -1, True, 1.5])

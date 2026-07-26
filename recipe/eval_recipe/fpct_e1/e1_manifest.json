@@ -1,19 +1,20 @@
 {
-  "schema_version": 5,
-  "protocol_id": "fpct_e1_mechanism_audit_v5_post_resource_ceiling_record",
-  "supersedes_after_pre_artifact_resource_ceiling_failure": "fpct_e1_mechanism_audit_v4",
+  "schema_version": 6,
+  "protocol_id": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming",
+  "supersedes_after_human_approved_streaming_amendment": "fpct_e1_mechanism_audit_v5_post_resource_ceiling_record",
   "historical_supersession_chain": [
     "fpct_e1_mechanism_audit_v1",
     "fpct_e1_mechanism_audit_v2",
     "fpct_e1_mechanism_audit_v3",
-    "fpct_e1_mechanism_audit_v4"
+    "fpct_e1_mechanism_audit_v4",
+    "fpct_e1_mechanism_audit_v5_post_resource_ceiling_record"
   ],
   "created_at": "2026-07-26T00:00:00+08:00",
   "branch": "research/fpct-e1-mechanism-audit",
   "base_commit": "613958af38fad27e1ea933ccc0dda6d1af5cce89",
   "classification": "EXPLORATORY_MECHANISM_AUDIT_NOT_CONFIRMATORY",
-  "current_stage": "COMMIT_A3_E0_DESIGN_CPU_INPUT_LOCK",
-  "current_status": "INCONCLUSIVE_RESOURCE_CEILING_REVIEW_REQUIRED",
+  "current_stage": "COMMIT_A4_CLEAN_PUSH_PENDING_AFTER_SYNTHETIC_GO",
+  "current_status": "A4_SYNTHETIC_HARD_GATE_GO_CLEAN_PUSH_AND_INPUT_LOCK_PENDING",
   "e0_read_only": {
     "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
     "result_document": {
@@ -47,6 +48,79 @@
     "role": "exploratory mechanism pilot",
     "confirmatory_eligibility": false,
     "prospective_before_e1_pilot_forward_or_outcome": true
+  },
+  "approved_a4_streaming_amendment": {
+    "approval_id": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A4_STREAMING",
+    "approved_at": "2026-07-26",
+    "classification": "ENGINEERING_ONLY_REPRESENTATION_PRESERVING",
+    "protocol_document": "FPCT_E1_STREAMING_AMENDMENT.md",
+    "protocol_document_sha256": "2fd6412a5533ecc4085e52a81e514425ae5fe6ffa64ec47ebbd7bc9669a20c74",
+    "contract": "recipe/eval_recipe/fpct_e1/e1_streaming_contract.json",
+    "contract_sha256": "919d7c9955c749d2d3603a2356701c65e5b552d22b8ab8cc23c91ea7246e6f22",
+    "schema": "recipe/eval_recipe/fpct_e1/e1_streaming_schema.json",
+    "schema_sha256": "5d389e81f87a18e02889204f055e61c9a7fed8957e8d990f9642558700a39618",
+    "complete_logical_row_universe_preserved": true,
+    "physical_chunk_rows": 4096,
+    "old_execution_612697df_remains_abandoned": true,
+    "old_attempt_artifact_reuse_allowed": false,
+    "operator_alignment_split_checkpoint_lambda_estimand_changed": false,
+    "e1_pilot_remains_fully_sealed": true
+  },
+  "a4_synthetic_hard_gate": {
+    "status": "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE",
+    "path": "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json",
+    "sha256": "42b6c98fd5f27a49e258bae4b79ff3c4673c9144465a3c43f9a672d228c82df4",
+    "evidence_sha256": "d22bb1997234dd0c895f1b819e9cbf3bb1102633502f482cbb7b2d4d4ecc8e43",
+    "targeted_tests": {
+      "passed": 395,
+      "failed": 0,
+      "duration_seconds": 4020.78,
+      "cuda_visible_devices": ""
+    },
+    "project_cpu_safe_complement": {
+      "passed": 449,
+      "failed": 0,
+      "deselected": 2,
+      "gate_plus_complement_passed": 844,
+      "deselected_historical_guards": [
+        "test/test_fpct_gpu_r2l_protocol.py::test_r2l_protocol_diff_is_inside_function_allowlist",
+        "test/test_fpct_gpu_r2m_config_validator.py::test_r2m_candidate_lock_passes_full_validator"
+      ],
+      "deselection_reason": "Both tests attest historical R2l/R2m frozen tree identity and intentionally fail closed on the later A4 successor tree; they are not A4 runtime regressions."
+    },
+    "full_schema_two_chunk_baseline": {
+      "logical_rows": 4480,
+      "chunk_count": 2,
+      "peak_rss_bytes": 147111936
+    },
+    "full_schema_million_row_stress": {
+      "logical_rows": 1000384,
+      "chunk_count": 245,
+      "peak_rss_bytes": 192376832
+    },
+    "bounded_rss_contract": {
+      "canonical_full_schema_row_bound_bytes": 2078,
+      "allocator_and_buffer_allowance_bytes": 136183808,
+      "threshold_bytes": 283295744,
+      "passed": true
+    },
+    "checks": {
+      "aggregate_partition_equivalence": true,
+      "atomic_no_overwrite": true,
+      "bounded_peak_rss": true,
+      "chunk_partition_semantic_equivalence": true,
+      "crash_resume_equivalence": true,
+      "row_key_reference_equivalence": true,
+      "semantic_stream_replay_equal": true,
+      "topology_reference_equivalence": true,
+      "weights_reference_equivalence": true,
+      "whole_table_materialization_detected": false
+    },
+    "all_hard_gate_conditions_satisfied": true,
+    "tracked_source_sha256_record": "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json#/evidence/tracked_source_sha256",
+    "natural_data_accessed": false,
+    "clean_pushed_a4_commit": "PENDING",
+    "successor_input_lock": "PENDING_CONDITIONAL_AFTER_CLEAN_PUSH_AND_FRESH_SNAPSHOT"
   },
     "data_split_lock": {
         "path": "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json",
@@ -94,7 +168,7 @@
     "e0_design": {
       "source": "historical frozen calibration development groups",
       "role": "instrumentation-validated mechanism audit, topology audit, and centered-lambda sweep",
-      "status": "POPULATION_OPEN_HISTORICALLY_BUT_EXECUTION_BLOCKED_HUMAN_REVIEW_REQUIRED"
+      "status": "AUTHORIZED_ONLY_FOR_NEW_A4_CPU_INPUT_LOCK_AFTER_SYNTHETIC_GATE_GO"
     },
     "e1_pilot": {
       "source": "support-fit-only certified groups",
@@ -123,6 +197,21 @@
       "prospective_root_cause_and_single_operator_freeze",
       "separate_authorization_required_before_e1_pilot"
     ]
+  },
+  "a4_execution_order": {
+    "operative": true,
+    "order": [
+      "protocol_v6_schema_v6_implementation_and_synthetic_cpu_hard_gate",
+      "clean_pushed_commit_A4",
+      "new_git_archive_source_receipt_run_uid_and_run_root",
+      "cpu_e0_design_compact_geometry_lock_from_first_sample",
+      "cpu_e0_design_streaming_input_lock_and_receipt",
+      "conditional_runtime_probe_checkpoint_tree_plan_and_configmap_lock",
+      "conditional_E1_2_C_post_then_F_endpoints",
+      "conditional_finalized_E1_2_then_E1_3_centered_lambda"
+    ],
+    "input_lock_go_required_before_runtime_or_checkpoint_load": true,
+    "e1_pilot_consumed": false
   },
     "instrumentation_contract": {
     "explicit_capture_lifecycle": true,
@@ -188,6 +277,27 @@
             "rosetta/model/wrapper.py": "9d08af9ced794e15e4c0b7c7921a12529646576153e61c9e47a78e6c8abc0415",
             "script/analysis/fpct_e1_instrumentation_gate.py": "18d77b1a1cebae17572916b41d964160fc46b6527647551dff010dd6a77dbb9e",
             "test/test_fpct_instrumentation.py": "09e4b91a4b35d1fd9cae37c97077b32d966b18ae09c0d03a98aac8176952406d"
+        },
+        "a4_reattestation": {
+            "path": "recipe/eval_recipe/fpct_e1/e1_instrumentation_hard_gate_a4.json",
+            "sha256": "0cd401328c5942f51a21f98a3418eb3a18c08a489c6a5cc8c99ef6775b1d6b3e",
+            "status": "GO_PROSPECTIVE_A4_REATTESTATION",
+            "historical_v1_artifacts_overwritten": false,
+            "parity": {
+                "path": "recipe/eval_recipe/fpct_e1/e1_instrumentation_parity_a4.json",
+                "sha256": "d7e78e5e8b54aa2ae21e105b53ad5cbdc8b52d78b6e422c36bdeed919d40c2f3"
+            },
+            "synthetic_query_variance": {
+                "path": "recipe/eval_recipe/fpct_e1/e1_synthetic_query_variance_a4.json",
+                "sha256": "7524fb2ce873dde3450ad12ec26e39d6497f0f99fd9fe755edcfafda44c2ab40",
+                "gamma_query_variance": 0.19730721414089203
+            },
+            "targeted_tests": {
+                "passed": 110,
+                "failed": 0
+            },
+            "required_checks": 6,
+            "all_required_checks": true
         }
     },
     "mechanism_audit": {
@@ -253,6 +363,22 @@
             "certified_partition_taxonomy_candidate_permutation_invariant": true,
             "taxonomy_unresolved_fail_closed": true
         },
+        "a4_offline_contract": {
+            "record_scope": "OPERATIVE_A4_TRACKED_BY_SYNTHETIC_GATE",
+            "schema": {
+                "path": "recipe/eval_recipe/fpct_e1/e1_mechanism_schema.json",
+                "sha256": "1a0e2d86ea01f1205181ee519f75adee0e6285dd7c3499b579c2c3102c275c27"
+            },
+            "runner": {
+                "path": "script/analysis/fpct_e1_mechanism_audit.py",
+                "sha256": "08a39718fdf40c69b6b9550340bdd1f84a1f67bfb52f5e4699900507e64bf781"
+            },
+            "test": {
+                "path": "test/test_fpct_e1_mechanism_audit.py",
+                "sha256": "89b968171f4577bf9991e3aba3921fea3ad9ab30deb6ff25b7f22d2a84963ac9"
+            },
+            "complete_tracked_source_closure": "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json#/evidence/tracked_source_sha256"
+        },
         "performance_go_gate": false,
     "operator_selection_allowed": false
   },
@@ -283,9 +409,19 @@
     "fixed_checkpoint_evidence_class": "mechanistic headroom diagnostic, not matched-training or confirmatory evidence"
   },
   "execution_lock_contract": {
-    "status": "POST_MULTI_TASK_NATURAL_ALIGNMENT_PRE_ARTIFACT_RESOURCE_CEILING_REVIEW_REQUIRED",
-    "natural_e0_design_output_accessed": true,
-    "usable_natural_audit_artifact_accessed": false,
+    "historical_attempt_state": {
+      "status": "THREE_ATTEMPTS_ABANDONED_WITHOUT_SCIENTIFIC_RESULT",
+      "natural_e0_design_alignment_accessed_in_historical_attempts": true,
+      "usable_natural_audit_artifact_accessed": false
+    },
+    "a4_successor_state": {
+      "status": "SYNTHETIC_GATE_GO_CLEAN_PUSH_AND_FRESH_INPUT_LOCK_PENDING",
+      "natural_e0_design_accessed": false,
+      "model_or_checkpoint_loaded": false,
+      "gpu_or_kubernetes_used": false,
+      "training": false,
+      "e1_pilot_consumed": false
+    },
     "superseded_execution_attempt": {
       "execution_sha": "744a943ea804dfebe4e6d3cba756b6a89763002f",
       "status": "ABANDONED_BEFORE_NATURAL_DATA",
@@ -338,10 +474,10 @@
       "artifact_reuse_allowed": false,
       "scientific_result": false,
       "automatic_ceiling_or_representation_amendment_allowed": false,
-      "successor_execution_sha": "HUMAN_REVIEW_REQUIRED_NOT_ASSIGNED"
+      "successor_execution_sha": "PENDING_CLEAN_PUSHED_A4_COMMIT"
     },
     "source_snapshot": {
-      "construction": "a future human-approved clean pushed successor execution commit git archive; superseded/failed 744a943, d1698177, and 612697df archives are never reused",
+      "construction": "the clean pushed A4 successor commit git archive created only after synthetic GO; superseded/failed 744a943, d1698177, and 612697df archives are never reused",
       "receipt": "commit SHA + Git tree OID + ls-tree mode/blob/path + archive bytes + mounted-tree SHA",
       "live_worktree_mount_forbidden": true,
       "k8s_mount_read_only": true
@@ -349,7 +485,11 @@
     "input_lock": {
       "population": "E0-design only: ai2-arc 128, openbookqa 70, mmlu-redux 128",
       "row_formula": "answer_query_count * certified_parent_count * 28 * 16",
-      "per_sample_ceiling": 262144,
+      "historical_cumulative_representation_ceiling_non_operative": 262144,
+      "operative_representation": "deterministic_sample_local_ordinal_stream",
+      "logical_row_ceiling": null,
+      "physical_chunk_rows": 4096,
+      "complete_logical_universe_required": true,
       "task_distribution": ["count", "sum", "min", "p50", "p95", "max", "argmax"],
       "quantile_method": "nearest rank: sorted[ceil(p*n)-1]",
       "e1_pilot_consumed": false
@@ -361,10 +501,11 @@
       "same_execution_chunk_reinterpretation_allowed": false,
       "observed_value_based_ceiling_increase_allowed": false,
       "sample_drop_truncation_or_row_subsampling_allowed": false,
-      "downstream_execution_allowed": false,
-      "human_prospective_amendment_required": true,
+      "downstream_execution_allowed": "CONDITIONAL_ONLY_AFTER_SYNTHETIC_GATE_A4_PUSH_NEW_SNAPSHOT_AND_SUCCESSOR_INPUT_LOCK_GO",
+      "human_prospective_amendment_required": false,
       "recommended_candidate": "representation-preserving deterministic bounded streaming with exact logical-row coverage and chunk-partition equivalence",
-      "recommendation_is_approved": false
+      "recommendation_is_approved": true,
+      "approval_id": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A4_STREAMING"
     },
     "checkpoint_contract": {
       "loaded_trees": "six immutable final projector trees",
@@ -412,6 +553,25 @@
       "lambda_zero": "real F-runtime exact-collapse control",
       "lambda_one": "reused E1-2 F endpoint"
     },
+    "a4_stage_graph": {
+      "status": "OPERATIVE_CONDITIONAL_SUCCESSOR_GRAPH",
+      "operative": true,
+      "pre_natural_requirements": [
+        "all synthetic hard gates GO",
+        "clean A4 commit pushed and local/upstream equal",
+        "new immutable source snapshot and empty run root"
+      ],
+      "input_lock_requirements": [
+        "compact geometry Pass A complete",
+        "streaming attestation Pass B complete",
+        "streaming input-lock receipt status GO"
+      ],
+      "runtime_checkpoint_plan_authorized_only_after_input_lock_go": true,
+      "e1_2_authorized_only_after_input_lock_go": true,
+      "e1_3_authorized_only_after_e1_2_finalized": true,
+      "e1_pilot_consumed": false,
+      "historical_attempt_resume_or_artifact_reuse_allowed": false
+    },
     "baseline_ownership": {
       "cpost_fields_runtime_backend_may_report": false,
       "executor_mechanical_join_required": true,
@@ -434,6 +594,13 @@
       "gpu_per_shard": 1,
       "maximum_parallel_shards_on_node": 2
     },
+    "a4_implementation_and_test_sha256": {
+      "record_scope": "OPERATIVE_A4_COMPLETE_TRACKED_SOURCE_CLOSURE",
+      "gate_path": "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json",
+      "gate_sha256": "42b6c98fd5f27a49e258bae4b79ff3c4673c9144465a3c43f9a672d228c82df4",
+      "tracked_source_map": "#/evidence/tracked_source_sha256"
+    },
+    "implementation_and_test_sha256_record_scope": "HISTORICAL_A3_PRE_A4_RECORD_PRESERVED_VERBATIM",
     "implementation_and_test_sha256": {
       "script/analysis/fpct_e1_mechanism_audit.py": "c1ab3fd21612eca55aac66a3d43a9725947824fa9fc49dbfac2c2168fb01d635",
       "script/experiment/fpct_e1_capture_runner.py": "2dc12d66524560e8494648b4554b7cf98b060da875ba1bc1658bdca63d1a40cb",
@@ -452,6 +619,7 @@
       "test/test_fpct_e1_runtime_probe.py": "1f60d91da2be0131f2bdc7cd7139c12b78380d69f8b553acb85245433f5a8100",
       "test/test_fpct_e1_runtime_probe_k8s.py": "0fb4ca0512be609f89850fcd74d0b998a7de5474345e96f35a5e7d0cd0c43c98"
     },
+    "operational_closure_tests_record_scope": "HISTORICAL_A3_PRE_A4_RECORD_PRESERVED_VERBATIM",
     "operational_closure_tests": {
       "suite": "fpct_e1_predata_15_file_suite",
       "passed": 213,
@@ -464,9 +632,9 @@
   },
   "authorization": {
     "instrumentation_hard_gate": true,
-    "e0_design_input_lock_rerun": "BLOCKED_HUMAN_REVIEW_REQUIRED",
-    "e0_design_mechanism_audit": "BLOCKED_HUMAN_REVIEW_REQUIRED",
-    "e0_design_centered_lambda_sweep": "BLOCKED_HUMAN_REVIEW_REQUIRED",
+    "e0_design_input_lock_rerun": "CONDITIONALLY_AUTHORIZED_ONLY_AFTER_CLEAN_PUSHED_A4_SNAPSHOT",
+    "e0_design_mechanism_audit": "CONDITIONALLY_AUTHORIZED_ONLY_AFTER_SUCCESSOR_INPUT_LOCK_GO",
+    "e0_design_centered_lambda_sweep": "CONDITIONALLY_AUTHORIZED_ONLY_AFTER_E1_2_FINALIZED",
     "new_training": false,
     "additional_e0_seeds": false,
     "e1_pilot_forward_or_outcome": false,
@@ -474,6 +642,14 @@
     "native_null_or_g": false,
     "cross_pair": false,
     "36_run_confirmatory": false
+  },
+  "execution_authorization": {
+    "a4_successor_input_lock_operative": true,
+    "a4_successor_dag_operative": true,
+    "requires_streaming_input_lock_go": true,
+    "historical_attempt_resume_allowed": false,
+    "e1_pilot_forward_or_outcome": false,
+    "training": false
   },
   "claim_boundary": [
     "Instrumentation correctness is not real-data mechanism activation.",

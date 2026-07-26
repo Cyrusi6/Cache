@@ -13,12 +13,58 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import importlib
 import json
 import math
 import os
+import re
+import shutil
+import stat
+import sys
 import tempfile
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any, Iterator, Mapping, Sequence
+
+
+def _early_main_bootstrap_guard() -> None:
+    """Reject non-sealed CLI execution before importing project modules."""
+
+    if __name__ != "__main__":
+        return
+    try:
+        root_index = sys.argv.index("--source-snapshot-root") + 1
+        root = Path(sys.argv[root_index])
+    except (IndexError, ValueError) as exc:
+        raise RuntimeError(
+            "formal A4 prepare requires --source-snapshot-root under bootstrap"
+        ) from exc
+    if not root.is_absolute() or root.resolve(strict=True) != root:
+        raise RuntimeError("formal A4 prepare source snapshot must be a realpath")
+    bootstrap = sys.modules.get("fpct_bootstrap")
+    if bootstrap is None:
+        try:
+            bootstrap = importlib.import_module("fpct_bootstrap")
+        except ModuleNotFoundError:
+            bootstrap = None
+    if bootstrap is None:
+        raise RuntimeError(
+            "formal A4 prepare requires canonical python -I fpct_bootstrap.py"
+        )
+    bootstrap_path = Path(str(getattr(bootstrap, "__file__", ""))).absolute()
+    expected_bootstrap = root / "script/runtime/fpct_bootstrap.py"
+    if (
+        bootstrap_path.is_symlink()
+        or not bootstrap_path.is_file()
+        or bootstrap_path.resolve(strict=True) != expected_bootstrap
+        or sys.flags.isolated != 1
+        or sys.flags.ignore_environment != 1
+    ):
+        raise RuntimeError("active fpct bootstrap module is outside the snapshot")
+    target = root / "script/experiment/fpct_e1_prepare_input_lock.py"
+    bootstrap.require_active(target=target)
+
+
+_early_main_bootstrap_guard()
 
 import yaml
 
@@ -46,13 +92,306 @@ from script.experiment.fpct_e1_runtime_backend import (
     feature_provenance,
     topology_contract,
 )
+from script.analysis.fpct_e1_streaming_verify import (
+    PARQUET_MANIFEST_NAME,
+    PHYSICAL_CHUNK_ROWS,
+    SampleRowStream,
+    attest_ordered_sample_streams,
+    canonical_endpoint_id,
+    canonical_json_bytes as streaming_canonical_json_bytes,
+    iter_verified_parquet_rows,
+    logical_row_count,
+    validate_streaming_schema_artifact,
+    verify_parquet_stream_artifact,
+    write_parquet_stream_artifact,
+)
 
 
-SCHEMA_VERSION = 1
-PROTOCOL_ID = "fpct_e1_e0_design_input_lock_v1"
+SCHEMA_VERSION = 2
+PROTOCOL_ID = "fpct_e1_e0_design_input_lock_v2_streaming"
 EXPECTED_RECEIVER_LAYERS = 28
 EXPECTED_QUERY_HEADS = 16
-MAX_LONG_FORM_ROWS_PER_SAMPLE = 262144
+HISTORICAL_MAX_LONG_FORM_ROWS_PER_SAMPLE = 262144
+A4_PROTOCOL_ID = "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+A4_STREAMING_SCHEMA_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/e1_streaming_schema.json"
+)
+A4_SYNTHETIC_GATE_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json"
+)
+SOURCE_SNAPSHOT_RECEIPT_NAME = ".fpct_e1_source_snapshot_receipt.json"
+INPUT_LOCK_ROOT_NAME = "input_lock"
+RUN_UID_TEMPLATE = "fpct-e1-a4-streaming-{prefix}-v1"
+RUN_ROOT_TEMPLATE = "fpct-e1-a4-{prefix}-v1"
+HISTORICAL_EXECUTION_PREFIXES = frozenset(("744a943", "d1698177", "612697df"))
+EXECUTION_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
+BLOCKED_RECEIPT_NAME = "A4_INPUT_LOCK_BLOCKED.json"
+RUN_IDENTITY_NAME = "a4_input_lock_execution_identity.json"
+
+SEALED_PREPARE_SOURCE_CLOSURE = {
+    "capture_runner": Path("script/experiment/fpct_e1_capture_runner.py"),
+    "runtime_backend": Path("script/experiment/fpct_e1_runtime_backend.py"),
+    "streaming_verify": Path("script/analysis/fpct_e1_streaming_verify.py"),
+    "streaming_gate": Path("script/analysis/fpct_e1_streaming_synthetic_gate.py"),
+    "source_snapshot_lock": Path(
+        "script/experiment/fpct_e1_source_snapshot_lock.py"
+    ),
+}
+SEALED_PREPARE_MODULE_NAMES = {
+    "capture_runner": "script.experiment.fpct_e1_capture_runner",
+    "runtime_backend": "script.experiment.fpct_e1_runtime_backend",
+    "streaming_verify": "script.analysis.fpct_e1_streaming_verify",
+    "streaming_gate": "script.analysis.fpct_e1_streaming_synthetic_gate",
+    "source_snapshot_lock": "script.experiment.fpct_e1_source_snapshot_lock",
+}
+_TEST_ONLY_SEALED_PREPARE_MARKER = object()
+
+
+def _canonical_regular_file(path: Path, label: str) -> Path:
+    """Return one non-aliased regular file or fail before following a link."""
+
+    absolute = path.absolute()
+    try:
+        mode = absolute.lstat().st_mode
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"{label} is missing") from exc
+    if not stat.S_ISREG(mode) or absolute.is_symlink():
+        raise RuntimeError(f"{label} must be a non-symlink regular file")
+    if absolute.resolve(strict=True) != absolute:
+        raise RuntimeError(f"{label} must use its canonical real path")
+    return absolute
+
+
+def _canonical_real_directory(path: Path, label: str) -> Path:
+    """Return one non-aliased directory without accepting a symlink root."""
+
+    absolute = path.absolute()
+    try:
+        mode = absolute.lstat().st_mode
+    except FileNotFoundError as exc:
+        raise RuntimeError(f"{label} is missing") from exc
+    if not stat.S_ISDIR(mode) or absolute.is_symlink():
+        raise RuntimeError(f"{label} must be a non-symlink directory")
+    if absolute.resolve(strict=True) != absolute:
+        raise RuntimeError(f"{label} must use its canonical real path")
+    return absolute
+
+
+def _preflight_producer_file(path: Path, label: str) -> None:
+    """Require a canonical parent and an absent/canonical regular final."""
+
+    absolute = path.absolute()
+    _canonical_real_directory(absolute.parent, f"{label} parent")
+    try:
+        mode = absolute.lstat().st_mode
+    except FileNotFoundError:
+        return
+    if (
+        not stat.S_ISREG(mode)
+        or absolute.is_symlink()
+        or absolute.resolve(strict=True) != absolute
+    ):
+        raise RuntimeError(f"{label} must be absent or a canonical regular file")
+
+
+def _ensure_producer_directory(path: Path, label: str) -> Path:
+    """Preflight parent/path before creating exactly one producer directory."""
+
+    absolute = path.absolute()
+    _canonical_real_directory(absolute.parent, f"{label} parent")
+    try:
+        absolute.lstat()
+    except FileNotFoundError:
+        absolute.mkdir(parents=False, exist_ok=False)
+    return _canonical_real_directory(absolute, label)
+
+
+def _verified_test_sealed_prepare_sentinel(
+    source_snapshot_root: Path, execution_sha: str
+) -> tuple[object, str, str]:
+    """Mint the explicit unit-test-only bypass for non-I/O prepare tests.
+
+    The production CLI never accepts or constructs this value.  Requiring the
+    live pytest marker prevents ordinary library callers from silently opting
+    out of the sealed-import contract.
+    """
+
+    if "PYTEST_CURRENT_TEST" not in os.environ:
+        raise RuntimeError("test-only sealed-prepare sentinel requires pytest")
+    return (
+        _TEST_ONLY_SEALED_PREPARE_MARKER,
+        str(source_snapshot_root.absolute()),
+        execution_sha,
+    )
+
+
+def _require_sealed_prepare_execution(
+    *,
+    repo_root: Path,
+    source_snapshot_root: Path,
+    execution_sha: str,
+    test_sentinel: tuple[object, str, str] | None = None,
+) -> dict[str, Any]:
+    """Bind this process and its prepare closure to the immutable snapshot.
+
+    This gate runs before tokenizer resolution, dataset loading, rendering, or
+    alignment.  Production accepts only ``python -I fpct_bootstrap.py``'s
+    same-process sentinel; direct execution and hostile ``PYTHONPATH`` shims
+    fail closed.  Unit tests may pass the explicit pytest-only sentinel above.
+    """
+
+    snapshot = _canonical_real_directory(
+        source_snapshot_root, "sealed prepare source snapshot"
+    )
+    if repo_root.absolute() != snapshot:
+        raise RuntimeError("sealed prepare repo root differs from source snapshot")
+    if test_sentinel is not None:
+        expected = (
+            _TEST_ONLY_SEALED_PREPARE_MARKER,
+            str(snapshot),
+            execution_sha,
+        )
+        if "PYTEST_CURRENT_TEST" not in os.environ or test_sentinel != expected:
+            raise RuntimeError("invalid test-only sealed-prepare sentinel")
+        return {
+            "protocol_id": "fpct_e1_a4_test_only_sealed_prepare_v1",
+            "repo_root": str(snapshot),
+            "execution_sha": execution_sha,
+            "pytest_verified_test_sentinel": True,
+            "production_eligible": False,
+        }
+
+    target = _canonical_regular_file(
+        snapshot / "script/experiment/fpct_e1_prepare_input_lock.py",
+        "sealed prepare formal target",
+    )
+    bootstrap_path = _canonical_regular_file(
+        snapshot / "script/runtime/fpct_bootstrap.py",
+        "sealed prepare bootstrap",
+    )
+    bootstrap = sys.modules.get("fpct_bootstrap")
+    if bootstrap is None:
+        try:
+            bootstrap = importlib.import_module("fpct_bootstrap")
+        except ModuleNotFoundError:
+            bootstrap = None
+    if bootstrap is None:
+        raise RuntimeError(
+            "formal A4 prepare requires canonical python -I fpct_bootstrap.py"
+        )
+    bootstrap_origin = _canonical_regular_file(
+        Path(str(getattr(bootstrap, "__file__", ""))),
+        "active fpct bootstrap module",
+    )
+    if bootstrap_origin != bootstrap_path:
+        raise RuntimeError("active fpct bootstrap module is outside the snapshot")
+    try:
+        attestation = bootstrap.require_active(target=target)
+    except Exception as exc:
+        raise RuntimeError(
+            "formal A4 prepare requires the active bootstrap sentinel"
+        ) from exc
+    if not isinstance(attestation, Mapping):
+        raise RuntimeError("sealed prepare bootstrap attestation is malformed")
+    if (
+        attestation.get("repo_root") != str(snapshot)
+        or attestation.get("target") != str(target)
+        or attestation.get("protected_data_opens_before_target") != []
+        or attestation.get("python", {}).get("flags", {}).get("isolated") != 1
+        or attestation.get("python", {}).get("flags", {}).get("ignore_environment")
+        != 1
+    ):
+        raise RuntimeError("sealed prepare bootstrap identity/flags differ")
+    git_record = attestation.get("git", {})
+    if (
+        git_record.get("head") != execution_sha
+        or git_record.get("clean") is not True
+        or git_record.get("source") != "fpct_e1_source_snapshot_receipt"
+    ):
+        raise RuntimeError("sealed prepare snapshot Git provenance differs")
+    mandatory = attestation.get("mandatory_modules", {})
+    formal = mandatory.get("formal_target", {})
+    if (
+        Path(str(formal.get("file", ""))).absolute() != target
+        or formal.get("sha256") != sha256_file(target)
+    ):
+        raise RuntimeError("sealed prepare formal-target SHA/origin differs")
+    for key, record in mandatory.items():
+        origin = _canonical_regular_file(
+            Path(str(record.get("file", ""))), f"sealed mandatory module {key}"
+        )
+        try:
+            origin.relative_to(snapshot)
+        except ValueError as exc:
+            raise RuntimeError(
+                f"sealed mandatory module {key} is outside the snapshot"
+            ) from exc
+        if record.get("sha256") != sha256_file(origin):
+            raise RuntimeError(f"sealed mandatory module {key} SHA changed")
+
+    closure: dict[str, dict[str, Any]] = {}
+    for key, module_name in SEALED_PREPARE_MODULE_NAMES.items():
+        module = importlib.import_module(module_name)
+        expected_path = _canonical_regular_file(
+            snapshot / SEALED_PREPARE_SOURCE_CLOSURE[key],
+            f"sealed prepare closure source {key}",
+        )
+        actual_path = _canonical_regular_file(
+            Path(str(getattr(module, "__file__", ""))),
+            f"loaded prepare closure module {key}",
+        )
+        if actual_path != expected_path:
+            raise RuntimeError(f"loaded prepare closure module {key} origin differs")
+        closure[key] = {
+            "module": module_name,
+            "path": str(actual_path),
+            "sha256": sha256_file(actual_path),
+        }
+
+    # A foreign project module is not an allowed dependency even if the named
+    # prepare modules above happen to be correct.
+    for name, module in tuple(sys.modules.items()):
+        if not (name == "rosetta" or name.startswith(("rosetta.", "script."))):
+            continue
+        raw_origin = getattr(module, "__file__", None)
+        if raw_origin is None:
+            continue
+        origin = _canonical_regular_file(
+            Path(str(raw_origin)), f"loaded project module {name}"
+        )
+        try:
+            origin.relative_to(snapshot)
+        except ValueError as exc:
+            raise RuntimeError(
+                f"loaded project module {name} is outside the snapshot"
+            ) from exc
+
+    return {
+        "protocol_id": "fpct_e1_a4_sealed_prepare_execution_v1",
+        "repo_root": str(snapshot),
+        "execution_sha": execution_sha,
+        "bootstrap": {
+            "path": str(bootstrap_path),
+            "sha256": sha256_file(bootstrap_path),
+        },
+        "formal_target": {
+            "path": str(target),
+            "sha256": sha256_file(target),
+        },
+        "stable_fingerprint_sha256": attestation.get(
+            "stable_fingerprint_sha256"
+        ),
+        "source_snapshot_tree_sha256": git_record.get("tree_sha256"),
+        "source_snapshot_receipt_sha256": git_record.get("receipt_sha256"),
+        "mandatory_module_sha256": {
+            key: record["sha256"] for key, record in sorted(mandatory.items())
+        },
+        "prepare_closure": closure,
+        "python_isolated": True,
+        "python_environment_ignored": True,
+        "pytest_verified_test_sentinel": False,
+        "production_eligible": True,
+    }
 
 
 def canonical_json_bytes(value: Any) -> bytes:
@@ -62,18 +401,50 @@ def canonical_json_bytes(value: Any) -> bytes:
     ).encode("utf-8")
 
 
-def atomic_json(path: Path, value: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+def _fsync_directory(path: Path) -> None:
+    descriptor = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
+def publish_bytes_no_overwrite(path: Path, payload: bytes) -> str:
+    """Publish immutable bytes atomically and verify any concurrent winner.
+
+    ``rename``/``replace`` is deliberately forbidden here because it can replace
+    a scientifically different winner.  A same-filesystem hard link supplies
+    the no-overwrite atomicity.  If another process wins, its bytes must be
+    identical before this invocation is allowed to treat the artifact as
+    complete.  A unique O_EXCL temporary makes crash debris unambiguous.
+    """
+
+    path = path.absolute()
+    _preflight_producer_file(path, "immutable JSON producer final")
+    descriptor, temporary_text = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temporary = Path(temporary_text)
     try:
         with os.fdopen(descriptor, "wb") as handle:
-            handle.write(canonical_json_bytes(value))
+            handle.write(payload)
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(temporary, path)
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            if not path.is_file() or path.read_bytes() != payload:
+                raise RuntimeError(
+                    f"immutable artifact winner bytes differ: {path}"
+                )
+        _fsync_directory(path.parent)
     finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+        temporary.unlink(missing_ok=True)
+    return hashlib.sha256(payload).hexdigest()
+
+
+def atomic_json(path: Path, value: Any) -> None:
+    publish_bytes_no_overwrite(path, canonical_json_bytes(value))
 
 
 def nested_sha256(value: Any) -> str:
@@ -136,7 +507,17 @@ def answer_query_contract(labels: Sequence[Any]) -> list[dict[str, int]]:
 
 def certified_parent_contract(
     topology: Mapping[int, Mapping[str, Any]],
+    *,
+    source_indices: Sequence[Sequence[Any]] | None = None,
+    source_weights: Sequence[Sequence[Any]] | None = None,
 ) -> list[dict[str, Any]]:
+    if (source_indices is None) != (source_weights is None):
+        raise ValueError("candidate indices and weights must be supplied together")
+    if source_indices is not None and (
+        len(source_indices) != len(source_weights)  # type: ignore[arg-type]
+        or any(parent >= len(source_indices) for parent in topology)
+    ):
+        raise ValueError("candidate geometry differs from topology parent universe")
     parents = []
     for parent, record in sorted(topology.items()):
         count = int(record["candidate_count"])
@@ -144,14 +525,42 @@ def certified_parent_contract(
             continue
         if not record["within_instruction"]:
             raise ValueError("response parent entered include_response=false input lock")
-        parents.append(
-            {
-                "parent_position": int(parent),
-                "candidate_count": count,
-                "prior": [float(value) for value in record["prior"]],
-                "topology": record["topology"],
-            }
-        )
+        output = {
+            "parent_position": int(parent),
+            "candidate_count": count,
+            "prior": [float(value) for value in record["prior"]],
+            "topology": record["topology"],
+            "statistical_weight": 1.0,
+        }
+        if source_indices is not None and source_weights is not None:
+            indices = [int(value) for value in source_indices[parent]]
+            weights = [float(value) for value in source_weights[parent]]
+            if len(indices) != 4 or len(weights) != 4:
+                raise ValueError("certified candidate geometry must have four slots")
+            valid = [index >= 0 and math.isfinite(weight) and weight > 0 for index, weight in zip(indices, weights)]
+            legal_indices = [index for index, is_valid in zip(indices, valid) if is_valid]
+            legal_weights = [weight for weight, is_valid in zip(weights, valid) if is_valid]
+            if (
+                len(legal_indices) != count
+                or len(set(legal_indices)) != count
+                or any(
+                    (not is_valid and (index != -1 or weight != 0.0))
+                    for index, weight, is_valid in zip(indices, weights, valid)
+                )
+                or any(
+                    not math.isclose(left, right, abs_tol=2e-5, rel_tol=0)
+                    for left, right in zip(legal_weights, output["prior"])
+                )
+            ):
+                raise ValueError("certified candidate geometry differs from prior")
+            output.update(
+                {
+                    "candidate_indices": indices,
+                    "candidate_valid_mask": valid,
+                    "candidate_slot_weights": weights,
+                }
+            )
+        parents.append(output)
     if not parents:
         raise ValueError("certified E0-design sample contains no runtime m>=2 parent")
     return parents
@@ -468,12 +877,12 @@ def expected_long_form_rows(
     )
     if any(isinstance(value, bool) or int(value) != value or value <= 0 for value in values):
         raise ValueError("long-form row factors must be positive integers")
-    count = int(answer_query_count * certified_parent_count * num_layers * num_query_heads)
-    if count > MAX_LONG_FORM_ROWS_PER_SAMPLE:
-        raise ValueError(
-            f"input-lock sample exceeds long-form row ceiling: {count} > {MAX_LONG_FORM_ROWS_PER_SAMPLE}"
-        )
-    return count
+    return logical_row_count(
+        num_layers=int(num_layers),
+        num_query_heads=int(num_query_heads),
+        answer_query_count=int(answer_query_count),
+        certified_parent_count=int(certified_parent_count),
+    )
 
 
 def expected_long_form_row_volume(
@@ -484,7 +893,7 @@ def expected_long_form_row_volume(
     if not items:
         raise ValueError("cannot freeze an empty task row-volume contract")
     ordered = sorted(int(item["expected_long_form_rows"]) for item in items)
-    if any(value <= 0 or value > MAX_LONG_FORM_ROWS_PER_SAMPLE for value in ordered):
+    if any(value <= 0 for value in ordered):
         raise ValueError("task row-volume contains an invalid per-sample count")
     count = len(ordered)
 
@@ -498,7 +907,10 @@ def expected_long_form_row_volume(
     )
     return {
         "formula": "num_layers*num_query_heads*answer_query_count*certified_parent_count",
-        "sample_ceiling": MAX_LONG_FORM_ROWS_PER_SAMPLE,
+        "historical_cumulative_sample_ceiling": HISTORICAL_MAX_LONG_FORM_ROWS_PER_SAMPLE,
+        "historical_ceiling_operative": False,
+        "physical_chunk_rows": PHYSICAL_CHUNK_ROWS,
+        "chunk_count": sum(math.ceil(value / PHYSICAL_CHUNK_ROWS) for value in ordered),
         "count": count,
         "sum": sum(ordered),
         "min": ordered[0],
@@ -542,6 +954,72 @@ def row_template_attestation(
     if count == 0:
         raise ValueError("input lock row template universe is empty")
     return {"count": count, "sha256": digest.hexdigest()}
+
+
+def iter_streaming_row_templates(
+    items: Sequence[Mapping[str, Any]],
+    *,
+    task: str,
+    num_layers: int,
+    num_query_heads: int,
+    num_kv_heads: int,
+    schema_sha256: str,
+) -> Iterator[SampleRowStream]:
+    """Yield compact sample-local ordinal streams in frozen sample order.
+
+    The historical ``row_template_records`` helper remains test-only.  This
+    production iterator never constructs or sorts an ``N_s``-sized list.
+    """
+
+    endpoint = canonical_endpoint_id(
+        0, "input_geometry", "input_geometry", "INPUT_LOCK", task, 0.0
+    )
+    for item in sorted(
+        items, key=lambda value: (value["sample_sha256"], value["content_group_sha256"])
+    ):
+        if item.get("task") != task:
+            raise ValueError("streaming row-template task identity mismatch")
+        yield SampleRowStream(
+            item,
+            num_layers=num_layers,
+            num_query_heads=num_query_heads,
+            num_kv_heads=num_kv_heads,
+            endpoint_id=endpoint,
+            schema_sha256=schema_sha256,
+        )
+
+
+def streaming_row_template_attestation(
+    items: Sequence[Mapping[str, Any]],
+    *,
+    task: str,
+    num_layers: int,
+    num_query_heads: int,
+    num_kv_heads: int,
+    schema_sha256: str,
+) -> dict[str, Any]:
+    """Attest the exact logical row stream without materializing the table."""
+
+    value = attest_ordered_sample_streams(
+        iter_streaming_row_templates(
+            items,
+            task=task,
+            num_layers=num_layers,
+            num_query_heads=num_query_heads,
+            num_kv_heads=num_kv_heads,
+            schema_sha256=schema_sha256,
+        )
+    )
+    return {
+        "count": value["logical_row_count"],
+        "semantic_stream_sha256": value["semantic_stream_sha256"],
+        "schema_sha256": value["schema_sha256"],
+        "physical_chunk_rows": PHYSICAL_CHUNK_ROWS,
+        "sample_count": value["sample_count"],
+        "first_sample_sha256": value["first_sample_sha256"],
+        "last_sample_sha256": value["last_sample_sha256"],
+        "ordinal_order": "sample_sha256,row_ordinal",
+    }
 
 
 def _config_dimensions(receiver_path: Path) -> dict[str, int]:
@@ -661,17 +1139,1525 @@ def portable_runtime_asset_tree(record: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def prepare_input_lock(
+def _generic_asset_tree(path: Path) -> dict[str, Any]:
+    """Hash a local input tree without following an unrecorded path alias."""
+
+    requested = path.absolute()
+    resolved = requested.resolve(strict=True)
+    if not resolved.is_dir():
+        raise ValueError(f"input asset root is not a directory: {requested}")
+    records: list[dict[str, Any]] = []
+    for candidate in sorted(resolved.rglob("*")):
+        relative = candidate.relative_to(resolved).as_posix()
+        if candidate.is_symlink():
+            target_text = os.readlink(candidate)
+            target = candidate.resolve(strict=True)
+            if target.is_dir():
+                raise ValueError(
+                    f"input asset tree contains a directory symlink: {relative}"
+                )
+            records.append(
+                {
+                    "relative_path": relative,
+                    "kind": "symlink_file",
+                    "symlink_target": target_text,
+                    "bytes": target.stat().st_size,
+                    "sha256": sha256_file(target),
+                }
+            )
+        elif candidate.is_file():
+            records.append(
+                {
+                    "relative_path": relative,
+                    "kind": "file",
+                    "symlink_target": None,
+                    "bytes": candidate.stat().st_size,
+                    "sha256": sha256_file(candidate),
+                }
+            )
+    if not records:
+        raise ValueError(f"input asset tree contains no files: {requested}")
+    portable = {"files": records}
+    return {
+        "requested_path": str(requested),
+        "resolved_path": str(resolved),
+        "files": records,
+        "file_count": len(records),
+        "bytes": sum(int(record["bytes"]) for record in records),
+        "tree_sha256": nested_sha256(portable),
+    }
+
+
+def input_asset_state(
+    *,
+    repo_root: Path,
+    e0_data_root: Path,
+    runtime_assets: Mapping[str, Mapping[str, Any]],
+    source_snapshot_verification: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Derive a before/after digest for every input consulted by this lock."""
+
+    tracked_relatives = (
+        A4_STREAMING_SCHEMA_RELATIVE,
+        A4_SYNTHETIC_GATE_RELATIVE,
+        Path("recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"),
+        E0_DEV_MANIFEST_RELATIVE,
+        Path("recipe/eval_recipe/fpct_e0/rendered/eval_2026072201_Y_FF_ai2-arc.yaml"),
+    )
+    tracked = []
+    for relative in tracked_relatives:
+        path = repo_root / relative
+        if not path.is_file():
+            raise FileNotFoundError(path)
+        tracked.append(
+            {
+                "relative_path": relative.as_posix(),
+                "bytes": path.stat().st_size,
+                "sha256": sha256_file(path),
+            }
+        )
+    portable_runtime = {
+        role: portable_runtime_asset_tree(record)
+        for role, record in sorted(runtime_assets.items())
+    }
+    payload = {
+        "tracked_source_assets": tracked,
+        "e0_data_assets": _generic_asset_tree(e0_data_root),
+        "runtime_assets": portable_runtime,
+        "source_snapshot_verification": dict(source_snapshot_verification),
+    }
+    return {**payload, "aggregate_sha256": nested_sha256(payload)}
+
+
+def validate_a4_execution_identity(
+    *,
+    execution_sha: str,
+    source_snapshot_root: Path,
+    source_snapshot_receipt: Path,
+    run_uid: str,
+    run_root: Path,
+    output_root: Path,
+    output_sidecar_name: str = "e0_design_input_sidecar.pt",
+    output_manifest_name: str = "e0_design_input_manifest.json",
+    sealed_prepare_execution: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Bind input lock to one clean successor snapshot and never an old run."""
+
+    if not EXECUTION_SHA_PATTERN.fullmatch(execution_sha):
+        raise ValueError("execution_sha must be one lowercase 40-character Git SHA")
+    prefix = execution_sha[:8]
+    if any(execution_sha.startswith(old) for old in HISTORICAL_EXECUTION_PREFIXES):
+        raise ValueError("historical abandoned execution identity is forbidden")
+    if run_uid != RUN_UID_TEMPLATE.format(prefix=prefix):
+        raise ValueError("run_uid does not match the A4 execution SHA")
+    run_root_absolute = run_root.absolute()
+    if (
+        not run_root_absolute.is_dir()
+        or run_root_absolute.is_symlink()
+        or run_root_absolute.resolve(strict=True) != run_root_absolute
+    ):
+        raise ValueError("A4 run root must be an existing non-symlink directory")
+    if run_root_absolute.name != RUN_ROOT_TEMPLATE.format(prefix=prefix):
+        raise ValueError("run root basename does not match the A4 execution SHA")
+    if any(old in str(run_root_absolute) for old in HISTORICAL_EXECUTION_PREFIXES):
+        raise ValueError("run root aliases a historical abandoned execution")
+    snapshot = source_snapshot_root.absolute()
+    if (
+        snapshot != run_root_absolute / "source_snapshot"
+        or snapshot.is_symlink()
+        or snapshot.resolve(strict=True) != snapshot
+    ):
+        raise ValueError("source snapshot must be the non-aliased A4 run-root snapshot")
+    receipt = source_snapshot_receipt.absolute()
+    if receipt != snapshot / SOURCE_SNAPSHOT_RECEIPT_NAME:
+        raise ValueError("source snapshot receipt path is not canonical")
+    output = output_root.absolute()
+    if output != run_root_absolute / INPUT_LOCK_ROOT_NAME or output.is_symlink():
+        raise ValueError("input-lock output must be the canonical A4 input root")
+    downstream_root_names = {"raw", "runtime", "locks", "k8s"}
+    allowed_run_entries = {
+        "source_snapshot",
+        INPUT_LOCK_ROOT_NAME,
+        *downstream_root_names,
+    }
+    unexpected = sorted(
+        path.name for path in run_root_absolute.iterdir()
+        if path.name not in allowed_run_entries
+    )
+    if unexpected:
+        raise ValueError(f"new A4 run root contains unapproved state: {unexpected}")
+    for name in downstream_root_names:
+        candidate = run_root_absolute / name
+        if candidate.exists() and (
+            not candidate.is_dir()
+            or candidate.is_symlink()
+            or any(candidate.iterdir())
+        ):
+            raise ValueError(f"pre-input-lock downstream root is not empty: {name}")
+
+    from script.experiment.fpct_e1_source_snapshot_lock import (
+        verify_source_snapshot_receipt,
+    )
+
+    source_verification = verify_source_snapshot_receipt(
+        receipt, snapshot, execution_sha
+    )
+    if sealed_prepare_execution is not None:
+        if (
+            sealed_prepare_execution.get("repo_root") != str(snapshot)
+            or sealed_prepare_execution.get("execution_sha") != execution_sha
+            or sealed_prepare_execution.get("production_eligible") not in {
+                True,
+                False,
+            }
+        ):
+            raise ValueError("sealed prepare execution attestation is inconsistent")
+    identity = {
+        "schema_version": 1,
+        "protocol_id": "fpct_e1_a4_input_lock_execution_identity_v1",
+        "execution_sha": execution_sha,
+        "execution_prefix": prefix,
+        "run_uid": run_uid,
+        "run_root": str(run_root_absolute),
+        "source_snapshot_root": str(snapshot),
+        "source_snapshot_receipt": {
+            "path": str(receipt),
+            "bytes": receipt.stat().st_size,
+            "file_sha256": sha256_file(receipt),
+            "verification": source_verification,
+        },
+        "input_lock_root": str(output),
+        "empty_downstream_roots_verified": sorted(downstream_root_names),
+        "historical_execution_resume_allowed": False,
+        "historical_artifact_reuse_allowed": False,
+    }
+    if sealed_prepare_execution is not None:
+        identity["sealed_prepare_execution"] = dict(sealed_prepare_execution)
+    output = _ensure_producer_directory(output, "A4 input-lock output root")
+    identity_path = output / RUN_IDENTITY_NAME
+    blocked_path = output / BLOCKED_RECEIPT_NAME
+    _preflight_producer_file(identity_path, "A4 execution identity final")
+    _preflight_producer_file(blocked_path, "A4 blocked receipt final")
+    if blocked_path.exists():
+        raise RuntimeError("A4 run is terminally blocked; use a new run identity")
+    existing = sorted(path.name for path in output.iterdir())
+    if existing and not identity_path.is_file():
+        raise ValueError("nonempty A4 input root lacks its immutable identity")
+    allowed_resume_entries = {
+        RUN_IDENTITY_NAME,
+        "input_geometry_samples.parquet",
+        "input_geometry_manifest.json",
+        "input_geometry_receipt.json",
+        "row_templates",
+        "input_row_template_chunk_index.json",
+        "streaming_input_lock_receipt.json",
+        output_sidecar_name,
+        output_manifest_name,
+    }
+    unexpected_output = sorted(
+        name
+        for name in existing
+        if name not in allowed_resume_entries and not (
+            name.startswith(".") and name.endswith(".tmp")
+        )
+    )
+    if unexpected_output:
+        raise ValueError(
+            f"A4 input root contains unbound artifact state: {unexpected_output}"
+        )
+    atomic_json(identity_path, identity)
+    return {**identity, "identity_sha256": sha256_file(identity_path)}
+
+
+def _raw_topology_compact_metadata(
+    rows: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Retain complete parent-level structural identity without raw model data."""
+
+    compact_rows = [
+        {
+            "parent_position": int(row["parent_position"]),
+            "raw_candidate_count": int(row["raw_candidate_count"]),
+            "runtime_candidate_count": int(row["runtime_candidate_count"]),
+            "raw_candidate_indices": [int(value) for value in row["raw_candidate_indices"]],
+            "runtime_candidate_indices": [int(value) for value in row["runtime_candidate_indices"]],
+            "raw_weights": [float(value) for value in row["raw_weights"]],
+            "runtime_weights": [float(value) for value in row["runtime_weights"]],
+            "certified": bool(row["certified"]),
+            "certification_reason": str(row["certification_reason"]),
+            "taxonomy": str(row["taxonomy"]),
+            "span_geometry_sha256": str(row["span_geometry_sha256"]),
+        }
+        for row in rows
+    ]
+    if len({row["parent_position"] for row in compact_rows}) != len(compact_rows):
+        raise ValueError("raw topology compact metadata has duplicate parents")
+    return {
+        "row_count": len(compact_rows),
+        "rows": compact_rows,
+        "compact_rows_sha256": nested_sha256(compact_rows),
+        "full_ledger_sha256": nested_sha256(list(rows)),
+        "contains_model_output": False,
+    }
+
+
+def expanded_row_absence_proof(payload: Mapping[str, Any]) -> dict[str, Any]:
+    """Mechanically prove the torch sidecar contains compact geometry only."""
+
+    forbidden_keys = {"row_ordinal", "logical_row_id", "endpoint_row_id"}
+    occurrences: list[str] = []
+
+    def visit(value: Any, path: str) -> None:
+        if isinstance(value, Mapping):
+            for key, child in value.items():
+                child_path = f"{path}.{key}" if path else str(key)
+                if key in forbidden_keys:
+                    occurrences.append(child_path)
+                visit(child, child_path)
+        elif isinstance(value, (list, tuple)):
+            for index, child in enumerate(value):
+                visit(child, f"{path}[{index}]")
+
+    visit(payload, "")
+    items = payload.get("items")
+    if not isinstance(items, list) or not items:
+        raise ValueError("compact sidecar has no semantic items")
+    for item in items:
+        if (
+            len(item.get("answer_queries", [])) != int(item.get("Q_s", -1))
+            or len(item.get("certified_parents", [])) != int(item.get("P_s", -1))
+            or int(item.get("N_s", -1))
+            != int(item.get("Q_s", 0))
+            * int(item.get("P_s", 0))
+            * EXPECTED_RECEIVER_LAYERS
+            * EXPECTED_QUERY_HEADS
+        ):
+            raise ValueError("compact sidecar geometry factors are inconsistent")
+    if occurrences:
+        raise ValueError("compact sidecar contains expanded logical-row identities")
+    return {
+        "expanded_logical_rows_present": False,
+        "expanded_identity_key_occurrences": 0,
+        "compact_item_count": len(items),
+        "proof_method": "recursive_key_scan_plus_exact_Q_s_P_s_N_s_factorization",
+    }
+
+
+def _write_compact_geometry_parquet(path: Path, rows: Sequence[Mapping[str, Any]]) -> None:
+    """Atomically publish compact geometry; never overwrite a prior winner."""
+
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    path = path.absolute()
+    _preflight_producer_file(path, "compact geometry Parquet final")
+    descriptor, temporary_text = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    os.close(descriptor)
+    temporary = Path(temporary_text)
+    try:
+        # Compact Pass-A has 326 rows, nevertheless its physical buffer is
+        # explicitly bounded by the same production chunk maximum.
+        writer = None
+        try:
+            for first in range(0, len(rows), PHYSICAL_CHUNK_ROWS):
+                batch = pa.Table.from_pylist(
+                    [dict(row) for row in rows[first : first + PHYSICAL_CHUNK_ROWS]]
+                )
+                if writer is None:
+                    writer = pq.ParquetWriter(temporary, batch.schema)
+                writer.write_table(batch, row_group_size=PHYSICAL_CHUNK_ROWS)
+        finally:
+            if writer is not None:
+                writer.close()
+        if writer is None:
+            raise ValueError("compact geometry universe is empty")
+        with temporary.open("rb") as handle:
+            os.fsync(handle.fileno())
+        try:
+            os.link(temporary, path)
+        except FileExistsError:
+            if not path.is_file() or sha256_file(path) != sha256_file(temporary):
+                raise RuntimeError("immutable compact geometry winner bytes differ")
+            if path.stat().st_size != temporary.stat().st_size:
+                raise RuntimeError("immutable compact geometry winner size differs")
+        _fsync_directory(path.parent)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _iter_compact_geometry_rows(path: Path) -> Iterator[dict[str, Any]]:
+    """Boundedly replay Pass-A rows without ``read_table``/whole-table APIs."""
+
+    import pyarrow.parquet as pq
+
+    parquet = pq.ParquetFile(path)
+    for batch in parquet.iter_batches(batch_size=PHYSICAL_CHUNK_ROWS):
+        if batch.num_rows > PHYSICAL_CHUNK_ROWS:
+            raise RuntimeError("compact geometry replay exceeded physical bound")
+        names = batch.schema.names
+        for row_index in range(batch.num_rows):
+            row = {
+                name: batch.column(column_index)[row_index].as_py()
+                for column_index, name in enumerate(names)
+            }
+            canonical_json_bytes(row)
+            yield row
+
+
+def _geometry_row(item: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "schema_version": 6,
+        "protocol_id": A4_PROTOCOL_ID,
+        "task": item["task"],
+        "sample_sha256": item["sample_sha256"],
+        "content_group_sha256": item["content_group_sha256"],
+        "item_semantic_sha256": item["item_semantic_sha256"],
+        "provenance": dict(item["provenance"]),
+        "answer_queries": [dict(value) for value in item["answer_queries"]],
+        "certified_parents": [dict(value) for value in item["certified_parents"]],
+        "Q_s": int(item["Q_s"]),
+        "P_s": int(item["P_s"]),
+        "N_s": int(item["N_s"]),
+        "answer_query_sequence_sha256": item["answer_query_sequence_sha256"],
+        "parent_sequence_sha256": item["parent_sequence_sha256"],
+        "raw_topology_compact_sha256": item["raw_topology_compact_sha256"],
+        "raw_topology_compact": dict(item["raw_topology_compact"]),
+        "expected_chunk_count": int(item["expected_chunk_count"]),
+    }
+
+
+def _verified_geometry_rows(
+    *,
+    samples_path: Path,
+    manifest_path: Path,
+    schema_sha256: str,
+) -> Iterator[dict[str, Any]]:
+    """Verify the immutable Pass-A artifact and yield its sole Pass-B input."""
+
+    if not samples_path.is_file() or not manifest_path.is_file():
+        raise FileNotFoundError("A4 compact geometry artifact is incomplete")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if (
+        manifest.get("protocol_id") != A4_PROTOCOL_ID
+        or manifest.get("artifact_type") != "input_geometry_manifest"
+        or manifest.get("schema_sha256") != schema_sha256
+        or manifest.get("samples_parquet_sha256") != sha256_file(samples_path)
+        or manifest.get("samples_parquet_bytes") != samples_path.stat().st_size
+    ):
+        raise RuntimeError("A4 compact geometry provenance differs")
+    digest = hashlib.sha256()
+    count = 0
+    previous: str | None = None
+    for row in _iter_compact_geometry_rows(samples_path):
+        sample = str(row.get("sample_sha256"))
+        if previous is not None and sample <= previous:
+            raise RuntimeError("compact geometry sample order is nonmonotonic")
+        if nested_sha256(row.get("raw_topology_compact")) != row.get(
+            "raw_topology_compact_sha256"
+        ):
+            raise RuntimeError("compact geometry raw-topology metadata changed")
+        digest.update(canonical_json_bytes(row))
+        previous = sample
+        count += 1
+        yield row
+    if (
+        count != manifest.get("sample_count")
+        or digest.hexdigest() != manifest.get("geometry_semantic_stream_sha256")
+    ):
+        raise RuntimeError("compact geometry bounded replay differs from manifest")
+
+
+def _global_row_volume(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    observed = expected_long_form_row_volume(items)
+    return {
+        "count": observed["count"],
+        "sum": observed["sum"],
+        "min": observed["min"],
+        "p50": observed["p50"],
+        "p95": observed["p95"],
+        "max": observed["max"],
+        "argmax_sample_sha256": observed["argmax"]["sample_sha256"],
+        "argmax_content_group_sha256": observed["argmax"][
+            "content_group_sha256"
+        ],
+    }
+
+
+def _write_geometry_lock(
+    *,
+    output_dir: Path,
+    items: Sequence[Mapping[str, Any]],
+    schema_sha256: str,
+    synthetic_gate: Mapping[str, Any],
+    input_assets_before: Mapping[str, Any],
+    input_assets_after: Mapping[str, Any],
+    execution_identity: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Write Pass-A compact geometry and fail closed on disk/inode preflight."""
+
+    output_dir = _canonical_real_directory(output_dir, "A4 input-lock root")
+    input_assets_equal = input_assets_before == input_assets_after
+    observed_counts = {
+        task: sum(item.get("task") == task for item in items) for task in TASKS
+    }
+    if observed_counts != TASK_GROUP_COUNTS or len(items) != sum(TASK_GROUP_COUNTS.values()):
+        raise ValueError("A4 geometry lock population differs from 128/70/128")
+
+    if not input_assets_equal:
+        raise RuntimeError("input assets changed between before/after lock hashes")
+    samples_path = output_dir / "input_geometry_samples.parquet"
+    manifest_path = output_dir / "input_geometry_manifest.json"
+    receipt_path = output_dir / "input_geometry_receipt.json"
+    for path, label in (
+        (samples_path, "compact geometry Parquet final"),
+        (manifest_path, "compact geometry manifest final"),
+        (receipt_path, "compact geometry receipt final"),
+    ):
+        _preflight_producer_file(path, label)
+    geometry_rows = sorted(
+        (_geometry_row(item) for item in items),
+        key=lambda row: (row["sample_sha256"], row["content_group_sha256"]),
+    )
+    if len({row["sample_sha256"] for row in geometry_rows}) != len(geometry_rows):
+        raise ValueError("A4 compact geometry contains duplicate samples")
+    geometry_digest = hashlib.sha256()
+    for row in geometry_rows:
+        geometry_digest.update(canonical_json_bytes(row))
+    geometry_semantic_sha256 = geometry_digest.hexdigest()
+    sample_sequence_sha256 = nested_sha256(
+        [
+            [
+                row["sample_sha256"],
+                row["content_group_sha256"],
+                row["item_semantic_sha256"],
+                row["raw_topology_compact_sha256"],
+            ]
+            for row in geometry_rows
+        ]
+    )
+    total_rows = sum(int(row["N_s"]) for row in geometry_rows)
+    bytes_per_row = synthetic_gate.get("estimated_physical_bytes_per_row")
+    if (
+        isinstance(bytes_per_row, bool)
+        or not isinstance(bytes_per_row, int)
+        or bytes_per_row <= 0
+    ):
+        raise ValueError("synthetic gate lacks a positive physical byte estimate")
+    estimated_disk_bytes = total_rows * bytes_per_row
+    estimated_inode_count = (
+        sum(int(row["expected_chunk_count"]) for row in geometry_rows)
+        + 3 * len(geometry_rows)
+        + 12
+    )
+    disk = shutil.disk_usage(output_dir)
+    stat = os.statvfs(output_dir)
+    free_inodes = int(stat.f_favail)
+    disk_ok = int(disk.free) >= estimated_disk_bytes
+    inode_ok = free_inodes >= estimated_inode_count
+    # Preflight precedes publication, so a failed run can never leave a GO
+    # geometry artifact or receipt behind.
+    if not disk_ok or not inode_ok:
+        failed = []
+        if not disk_ok:
+            failed.append("disk_preflight")
+        if not inode_ok:
+            failed.append("inode_preflight")
+        raise RuntimeError("A4_PREFLIGHT_FAILED:" + ",".join(failed))
+
+    if receipt_path.exists() and (not samples_path.exists() or not manifest_path.exists()):
+        raise RuntimeError("compact geometry receipt exists without its prerequisites")
+    if manifest_path.exists() and not samples_path.exists():
+        raise RuntimeError("compact geometry manifest exists without its Parquet")
+    if samples_path.exists():
+        replayed_without_manifest = list(_iter_compact_geometry_rows(samples_path))
+        if replayed_without_manifest != geometry_rows:
+            raise RuntimeError("crash-resume compact geometry Parquet differs")
+    else:
+        _write_compact_geometry_parquet(samples_path, geometry_rows)
+    manifest = {
+        "schema_version": 6,
+        "protocol_id": A4_PROTOCOL_ID,
+        "artifact_type": "input_geometry_manifest",
+        "population": "e0_design",
+        "task_group_counts": dict(TASK_GROUP_COUNTS),
+        "sample_count": len(items),
+        "samples_parquet": samples_path.name,
+        "samples_parquet_sha256": sha256_file(samples_path),
+        "samples_parquet_bytes": samples_path.stat().st_size,
+        "schema_sha256": schema_sha256,
+        "sample_sequence_sha256": sample_sequence_sha256,
+        "geometry_semantic_stream_sha256": geometry_semantic_sha256,
+        "row_volume": _global_row_volume(items),
+        "estimated_physical_rows": total_rows,
+        "estimated_disk_bytes": estimated_disk_bytes,
+        "estimated_inode_count": estimated_inode_count,
+        "estimated_inode_formula": (
+            "chunk_files + 3*sample_count(sample_dir+chunk_manifest+execution_binding) "
+            "+ 12 root/final/temporary artifacts"
+        ),
+        "disk_preflight_passed": disk_ok,
+        "inode_preflight_passed": inode_ok,
+        "execution_identity_sha256": execution_identity["identity_sha256"],
+        "input_asset_state_sha256": input_assets_after["aggregate_sha256"],
+    }
+    if manifest_path.exists():
+        if json.loads(manifest_path.read_text(encoding="utf-8")) != manifest:
+            raise RuntimeError("crash-resume compact geometry manifest differs")
+    else:
+        validate_streaming_schema_artifact(manifest)
+        atomic_json(manifest_path, manifest)
+    replayed = list(
+        _verified_geometry_rows(
+            samples_path=samples_path,
+            manifest_path=manifest_path,
+            schema_sha256=schema_sha256,
+        )
+    )
+    if replayed != geometry_rows:
+        raise RuntimeError("published compact geometry failed bounded replay")
+    receipt = {
+        "schema_version": 6,
+        "protocol_id": A4_PROTOCOL_ID,
+        "artifact_type": "input_geometry_receipt",
+        "status": "GO",
+        "manifest_sha256": sha256_file(manifest_path),
+        "schema_sha256": schema_sha256,
+        "sample_count": len(items),
+        "expanded_logical_rows_materialized": False,
+        "task_counts_exact_128_70_128": True,
+        "input_assets_unchanged_during_lock": input_assets_equal,
+        "input_asset_state_before_sha256": input_assets_before["aggregate_sha256"],
+        "input_asset_state_after_sha256": input_assets_after["aggregate_sha256"],
+        "input_asset_state_sha256": input_assets_after["aggregate_sha256"],
+        "execution_identity_sha256": execution_identity["identity_sha256"],
+        "bounded_geometry_replay_equal": True,
+        "pass_b_geometry_source_only": "verified_input_geometry_samples.parquet",
+        "e1_pilot_consumed": False,
+        "model_or_checkpoint_loaded": False,
+        "gpu_or_kubernetes_used": False,
+    }
+    if receipt_path.exists():
+        if json.loads(receipt_path.read_text(encoding="utf-8")) != receipt:
+            raise RuntimeError("crash-resume compact geometry receipt differs")
+    else:
+        validate_streaming_schema_artifact(receipt)
+        atomic_json(receipt_path, receipt)
+    return {
+        "manifest": {
+            "path": str(manifest_path),
+            "sha256": sha256_file(manifest_path),
+            "bytes": manifest_path.stat().st_size,
+        },
+        "samples": {
+            "path": str(samples_path),
+            "sha256": sha256_file(samples_path),
+            "bytes": samples_path.stat().st_size,
+        },
+        "receipt": {
+            "path": str(receipt_path),
+            "sha256": sha256_file(receipt_path),
+            "bytes": receipt_path.stat().st_size,
+        },
+        "row_volume": manifest["row_volume"],
+        "estimated_disk_bytes": estimated_disk_bytes,
+        "estimated_inode_count": estimated_inode_count,
+    }
+
+
+def _write_streaming_template_lock(
+    *,
+    output_dir: Path,
+    dimensions: Mapping[str, int],
+    schema_sha256: str,
+    geometry_lock: Mapping[str, Any],
+    execution_identity: Mapping[str, Any],
+    input_assets_before_sha256: str,
+    input_assets_after_sha256: str,
+    synthetic_gate_path: Path,
+    synthetic_gate: Mapping[str, Any],
+    verify_only: bool = False,
+) -> dict[str, Any]:
+    """Pass B from verified immutable Pass-A Parquet, never in-memory items."""
+
+    output_dir = _canonical_real_directory(output_dir, "A4 input-lock root")
+    input_assets_equal = (
+        isinstance(input_assets_before_sha256, str)
+        and len(input_assets_before_sha256) == 64
+        and input_assets_before_sha256 == input_assets_after_sha256
+    )
+    if not input_assets_equal:
+        raise RuntimeError("Pass B input-asset before/after SHAs differ")
+
+    index_path = output_dir / "input_row_template_chunk_index.json"
+    receipt_path = output_dir / "streaming_input_lock_receipt.json"
+    row_template_root = output_dir / "row_templates"
+    for path, label in (
+        (index_path, "global row-template chunk index"),
+        (receipt_path, "global streaming input-lock receipt"),
+    ):
+        _preflight_producer_file(path, label)
+    geometry_samples = Path(str(geometry_lock["samples"]["path"]))
+    geometry_manifest = Path(str(geometry_lock["manifest"]["path"]))
+    if geometry_samples.parent != output_dir or geometry_manifest.parent != output_dir:
+        raise RuntimeError("Pass B geometry lock path is not canonical")
+    _canonical_regular_file(geometry_samples, "Pass B geometry Parquet")
+    _canonical_regular_file(geometry_manifest, "Pass B geometry manifest")
+    if (
+        geometry_lock["samples"]["sha256"] != sha256_file(geometry_samples)
+        or geometry_lock["manifest"]["sha256"] != sha256_file(geometry_manifest)
+    ):
+        raise RuntimeError("Pass B geometry lock SHA is not immutable")
+    geometry_rows = list(
+        _verified_geometry_rows(
+            samples_path=geometry_samples,
+            manifest_path=geometry_manifest,
+            schema_sha256=schema_sha256,
+        )
+    )
+    if verify_only:
+        _canonical_real_directory(
+            row_template_root, "completed row-template root"
+        )
+        _canonical_regular_file(index_path, "completed global chunk index")
+        _canonical_regular_file(receipt_path, "completed streaming receipt")
+    else:
+        row_template_root = _ensure_producer_directory(
+            row_template_root, "row-template producer root"
+        )
+    if receipt_path.exists() and not index_path.exists():
+        raise RuntimeError("A4 streaming receipt exists without its chunk index")
+    records: list[dict[str, Any]] = []
+    emitted = 0
+    generated_digest = hashlib.sha256()
+    replay_digest = hashlib.sha256()
+    expected = 0
+    observed_counts = {task: 0 for task in TASKS}
+    expected_sample_roots = {str(item["sample_sha256"]) for item in geometry_rows}
+    unexpected_roots = [
+        entry.name
+        for entry in row_template_root.iterdir()
+        if entry.name not in expected_sample_roots
+    ]
+    if unexpected_roots:
+        raise RuntimeError("row-template root contains an unreferenced sample artifact")
+
+    # Scan every pre-existing sample root and every deterministic final/temp
+    # before the first binding/chunk is written.  A hostile later sample can
+    # therefore never be discovered only after earlier samples were published.
+    for item in geometry_rows:
+        candidate_root = row_template_root / str(item["sample_sha256"])
+        try:
+            candidate_root.lstat()
+        except FileNotFoundError:
+            continue
+        candidate_root = _canonical_real_directory(
+            candidate_root, "pre-existing sample stream producer root"
+        )
+        candidate_stream = SampleRowStream(
+            item,
+            num_layers=int(dimensions["num_hidden_layers"]),
+            num_query_heads=int(dimensions["num_attention_heads"]),
+            num_kv_heads=int(dimensions["num_key_value_heads"]),
+            endpoint_id=canonical_endpoint_id(
+                0, "input_geometry", "input_geometry", "INPUT_LOCK", item["task"], 0.0
+            ),
+            schema_sha256=schema_sha256,
+        )
+        allowed_names = {"execution_binding.json", PARQUET_MANIFEST_NAME}
+        for chunk_index in range(
+            math.ceil(candidate_stream.row_count / PHYSICAL_CHUNK_ROWS)
+        ):
+            allowed_names.add(f"chunk_{chunk_index:08d}.parquet")
+        for entry in candidate_root.iterdir():
+            if entry.name not in allowed_names and not (
+                entry.name == f".{PARQUET_MANIFEST_NAME}.tmp"
+                or re.fullmatch(r"\.chunk_[0-9]{8}\.parquet\.tmp", entry.name)
+            ):
+                raise RuntimeError("sample stream contains an unreferenced artifact")
+            _preflight_producer_file(entry, "pre-existing sample producer artifact")
+
+    for item in geometry_rows:
+        if item.get("task") not in observed_counts:
+            raise ValueError("A4 geometry contains an unexpected task")
+        observed_counts[item["task"]] += 1
+        stream = SampleRowStream(
+            item,
+            num_layers=int(dimensions["num_hidden_layers"]),
+            num_query_heads=int(dimensions["num_attention_heads"]),
+            num_kv_heads=int(dimensions["num_key_value_heads"]),
+            endpoint_id=canonical_endpoint_id(
+                0,
+                "input_geometry",
+                "input_geometry",
+                "INPUT_LOCK",
+                item["task"],
+                0.0,
+            ),
+            schema_sha256=schema_sha256,
+        )
+        if stream.row_count != int(item["N_s"]):
+            raise ValueError("compact geometry N_s differs from ordinal stream")
+        sample_root = output_dir / "row_templates" / item["sample_sha256"]
+        if verify_only:
+            sample_root = _canonical_real_directory(
+                sample_root, "completed sample stream root"
+            )
+        else:
+            sample_root = _ensure_producer_directory(
+                sample_root, "sample stream producer root"
+            )
+        binding_path = sample_root / "execution_binding.json"
+        binding = {
+            "schema_version": 1,
+            "protocol_id": "fpct_e1_a4_sample_stream_execution_binding_v1",
+            "execution_identity_sha256": execution_identity["identity_sha256"],
+            "sample_sha256": item["sample_sha256"],
+            "item_semantic_sha256": item["item_semantic_sha256"],
+            "historical_artifact_reuse_allowed": False,
+        }
+        manifest_path = sample_root / PARQUET_MANIFEST_NAME
+        if not verify_only:
+            producer_paths = [
+                binding_path,
+                manifest_path,
+                sample_root / f".{PARQUET_MANIFEST_NAME}.tmp",
+            ]
+            for chunk_index in range(
+                math.ceil(stream.row_count / PHYSICAL_CHUNK_ROWS)
+            ):
+                chunk_name = f"chunk_{chunk_index:08d}.parquet"
+                producer_paths.extend(
+                    (sample_root / chunk_name, sample_root / f".{chunk_name}.tmp")
+                )
+            for path in producer_paths:
+                _preflight_producer_file(path, "sample stream producer artifact")
+        if verify_only:
+            _canonical_regular_file(
+                binding_path, "completed sample execution binding"
+            )
+            if not binding_path.is_file():
+                raise RuntimeError("completed sample stream lacks execution binding")
+            if json.loads(binding_path.read_text(encoding="utf-8")) != binding:
+                raise RuntimeError("completed sample execution binding changed")
+        else:
+            if sample_root.exists() and not binding_path.exists() and any(
+                sample_root.iterdir()
+            ):
+                raise RuntimeError("sample stream has unbound pre-existing artifacts")
+            atomic_json(binding_path, binding)
+        if verify_only:
+            _canonical_regular_file(
+                manifest_path, "completed sample chunk manifest"
+            )
+            if not manifest_path.is_file():
+                raise RuntimeError("completed sample stream lacks chunk manifest")
+            result = verify_parquet_stream_artifact(manifest_path, stream)
+        else:
+            try:
+                result = write_parquet_stream_artifact(sample_root, stream)
+            except FileExistsError:
+                # A concurrent immutable winner is acceptable only after complete
+                # semantic/physical verification against the frozen stream.
+                result = verify_parquet_stream_artifact(manifest_path, stream)
+        verified = verify_parquet_stream_artifact(manifest_path, stream)
+        if result != verified:
+            raise ValueError("A4 Parquet write/replay receipts differ")
+        physical_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        expected_sample_files = {
+            binding_path.name,
+            manifest_path.name,
+            *{
+                str(record["relative_path"])
+                for record in physical_manifest.get("chunks", [])
+            },
+        }
+        observed_sample_files = {
+            path.name for path in sample_root.iterdir() if path.is_file()
+        }
+        observed_sample_dirs = [path.name for path in sample_root.iterdir() if path.is_dir()]
+        observed_sample_symlinks = [
+            path.name for path in sample_root.iterdir() if path.is_symlink()
+        ]
+        if (
+            observed_sample_files != expected_sample_files
+            or observed_sample_dirs
+            or observed_sample_symlinks
+        ):
+            raise RuntimeError("sample stream contains an unreferenced artifact")
+        for row in stream.iter_rows():
+            generated_digest.update(streaming_canonical_json_bytes(row))
+        replay_count = 0
+        for row in iter_verified_parquet_rows(manifest_path, stream):
+            replay_digest.update(streaming_canonical_json_bytes(row))
+            replay_count += 1
+        if replay_count != stream.row_count:
+            raise ValueError("A4 physical replay count differs from N_s")
+        expected += stream.row_count
+        emitted += int(verified["emitted_logical_rows"])
+        records.append(
+            {
+                "task": item["task"],
+                "sample_sha256": item["sample_sha256"],
+                "content_group_sha256": item["content_group_sha256"],
+                "manifest_relative_path": str(manifest_path.relative_to(output_dir)),
+                "manifest_sha256": sha256_file(manifest_path),
+                "manifest_bytes": manifest_path.stat().st_size,
+                "expected_logical_rows": stream.row_count,
+                "emitted_logical_rows": verified["emitted_logical_rows"],
+                "chunk_count": verified["chunk_count"],
+                "semantic_stream_sha256": verified["semantic_stream_sha256"],
+                "item_semantic_sha256": item["item_semantic_sha256"],
+                "raw_topology_compact_sha256": item[
+                    "raw_topology_compact_sha256"
+                ],
+                "execution_binding_relative_path": str(
+                    binding_path.relative_to(output_dir)
+                ),
+                "execution_binding_sha256": sha256_file(binding_path),
+            }
+        )
+    if observed_counts != TASK_GROUP_COUNTS or len(records) != sum(
+        TASK_GROUP_COUNTS.values()
+    ):
+        raise ValueError("A4 streaming lock population differs from 128/70/128")
+    row_template_root = output_dir / "row_templates"
+    observed_sample_roots = {
+        path.name
+        for path in row_template_root.iterdir()
+        if path.is_dir() and not path.is_symlink()
+    }
+    expected_sample_roots = {record["sample_sha256"] for record in records}
+    non_directory_entries = [
+        path.name
+        for path in row_template_root.iterdir()
+        if not path.is_dir() or path.is_symlink()
+    ]
+    if observed_sample_roots != expected_sample_roots or non_directory_entries:
+        raise RuntimeError("row-template root contains an unreferenced sample artifact")
+    semantic_sha256 = generated_digest.hexdigest()
+    replay_sha256 = replay_digest.hexdigest()
+    if expected != emitted or semantic_sha256 != replay_sha256:
+        raise RuntimeError("A4 logical row emission/replay is not representation-preserving")
+    index = {
+        "schema_version": 6,
+        "protocol_id": A4_PROTOCOL_ID,
+        "artifact_type": "chunk_manifest_index",
+        "population": "e0_design",
+        "physical_chunk_rows": PHYSICAL_CHUNK_ROWS,
+        "sample_count": len(records),
+        "expected_logical_rows": expected,
+        "emitted_logical_rows": emitted,
+        "semantic_stream_sha256": semantic_sha256,
+        "schema_sha256": schema_sha256,
+        "records": records,
+        "pass_b_geometry_source": {
+            "path": str(geometry_samples),
+            "sha256": sha256_file(geometry_samples),
+            "manifest_path": str(geometry_manifest),
+            "manifest_sha256": sha256_file(geometry_manifest),
+            "sole_geometry_input": True,
+        },
+        "execution_identity_sha256": execution_identity["identity_sha256"],
+    }
+    if index_path.exists():
+        existing_index = json.loads(index_path.read_text(encoding="utf-8"))
+        if existing_index != index:
+            raise RuntimeError("existing A4 chunk index differs from deterministic replay")
+    elif verify_only:
+        raise RuntimeError("completed A4 streaming lock lacks its chunk index")
+    else:
+        validate_streaming_schema_artifact(index)
+        atomic_json(index_path, index)
+    synthetic_checks = synthetic_gate.get("checks", {})
+    required_synthetic = (
+        "row_key_reference_equivalence",
+        "weights_reference_equivalence",
+        "topology_reference_equivalence",
+        "chunk_partition_semantic_equivalence",
+        "aggregate_partition_equivalence",
+        "bounded_peak_rss",
+        "atomic_no_overwrite",
+        "crash_resume_equivalence",
+    )
+    if any(synthetic_checks.get(name) is not True for name in required_synthetic):
+        raise ValueError("A4 tracked synthetic gate lacks a required GO check")
+    receipt = {
+        "schema_version": 6,
+        "protocol_id": A4_PROTOCOL_ID,
+        "artifact_type": "streaming_input_lock_receipt",
+        "status": "GO",
+        "protocol_and_schema_versioned": True,
+        "old_attempt_artifact_reused": False,
+        "e1_pilot_consumed": False,
+        "model_or_checkpoint_loaded": False,
+        "gpu_or_kubernetes_used": False,
+        "expected_logical_rows_eq_emitted": True,
+        "ordinal_first_eq_zero": True,
+        "ordinal_last_eq_expected_minus_one": True,
+        "ordinal_ranges_contiguous": True,
+        "missing_rows": 0,
+        "duplicate_rows": 0,
+        "overlapping_chunks": 0,
+        "row_key_reference_equivalence": True,
+        "weights_reference_equivalence": True,
+        "topology_reference_equivalence": True,
+        "semantic_stream_replay_equal": True,
+        "chunk_partition_semantic_equivalence": True,
+        "aggregate_partition_equivalence": True,
+        "bounded_peak_rss": True,
+        "whole_table_materialization_detected": False,
+        "atomic_no_overwrite": True,
+        "crash_resume_equivalence": True,
+        "raw_topology_complete": True,
+        "task_counts_exact_128_70_128": True,
+        "input_assets_unchanged_during_lock": input_assets_equal,
+        "input_asset_state_before_sha256": input_assets_before_sha256,
+        "input_asset_state_after_sha256": input_assets_after_sha256,
+        "pass_b_consumed_verified_geometry_only": True,
+        "expanded_logical_rows_in_compact_sidecar": False,
+        "execution_identity_sha256": execution_identity["identity_sha256"],
+        "geometry_manifest_sha256": geometry_lock["manifest"]["sha256"],
+        "chunk_manifest_index_sha256": sha256_file(index_path),
+        "semantic_stream_sha256": semantic_sha256,
+        "schema_sha256": schema_sha256,
+        "rss_lock_sha256": sha256_file(synthetic_gate_path),
+    }
+    if receipt_path.exists():
+        existing_receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+        if existing_receipt != receipt:
+            raise RuntimeError("existing A4 streaming receipt changed")
+    elif verify_only:
+        raise RuntimeError("completed A4 streaming lock lacks its receipt")
+    else:
+        validate_streaming_schema_artifact(receipt)
+        atomic_json(receipt_path, receipt)
+    return {
+        "index": {
+            "path": str(index_path),
+            "sha256": sha256_file(index_path),
+            "bytes": index_path.stat().st_size,
+        },
+        "receipt": {
+            "path": str(receipt_path),
+            "sha256": sha256_file(receipt_path),
+            "bytes": receipt_path.stat().st_size,
+        },
+        "expected_logical_rows": expected,
+        "emitted_logical_rows": emitted,
+        "semantic_stream_sha256": semantic_sha256,
+    }
+
+
+def _verify_completed_file_record(
+    record: Mapping[str, Any], expected_path: Path, label: str
+) -> None:
+    """Fail closed unless one recorded immutable file is still byte-identical."""
+
+    if not isinstance(record, Mapping):
+        raise RuntimeError(f"completed {label} is missing")
+    expected_path = _canonical_regular_file(expected_path, f"completed {label}")
+    recorded_path = Path(str(record.get("path", ""))).absolute()
+    if (
+        recorded_path != expected_path.absolute()
+        or record.get("sha256") != sha256_file(expected_path)
+        or record.get("bytes") != expected_path.stat().st_size
+    ):
+        raise RuntimeError(f"completed {label} path/SHA/size changed")
+
+
+def _clean_owned_completed_crash_debris(
+    output_root: Path, *, output_sidecar_name: str, output_manifest_name: str
+) -> None:
+    """Remove only deterministic producer-owned temporaries from a GO root.
+
+    This is debris collection, never artifact repair: final files are neither
+    created nor replaced.  Unknown dot-files and symlinks remain visible to the
+    later exact-set checks and therefore fail closed.
+    """
+
+    root_finals = {
+        RUN_IDENTITY_NAME,
+        "input_geometry_samples.parquet",
+        "input_geometry_manifest.json",
+        "input_geometry_receipt.json",
+        "input_row_template_chunk_index.json",
+        "streaming_input_lock_receipt.json",
+        output_sidecar_name,
+        output_manifest_name,
+    }
+
+    def owned(name: str, finals: Sequence[str]) -> bool:
+        return any(
+            name == f".{final}.tmp"
+            or re.fullmatch(
+                rf"\.{re.escape(final)}\.[A-Za-z0-9_-]{{6,32}}\.tmp", name
+            )
+            is not None
+            for final in finals
+        )
+
+    cleaned_roots: set[Path] = set()
+    for path in output_root.iterdir():
+        if owned(path.name, tuple(root_finals)):
+            if not path.is_file() or path.is_symlink():
+                raise RuntimeError("owned crash-debris path is not a regular file")
+            path.unlink()
+            cleaned_roots.add(output_root)
+    row_templates = output_root / "row_templates"
+    if row_templates.is_dir() and not row_templates.is_symlink():
+        for sample_root in row_templates.iterdir():
+            if (
+                not sample_root.is_dir()
+                or sample_root.is_symlink()
+                or re.fullmatch(r"[0-9a-f]{64}", sample_root.name) is None
+            ):
+                continue
+            sample_finals = {
+                "execution_binding.json",
+                PARQUET_MANIFEST_NAME,
+                *{
+                    path.name
+                    for path in sample_root.glob("chunk_*.parquet")
+                    if path.is_file() and not path.is_symlink()
+                },
+            }
+            for path in sample_root.iterdir():
+                if owned(path.name, tuple(sample_finals)) or re.fullmatch(
+                    r"\.chunk_[0-9]{6}\.parquet\.tmp", path.name
+                ):
+                    if not path.is_file() or path.is_symlink():
+                        raise RuntimeError(
+                            "owned sample crash-debris path is not a regular file"
+                        )
+                    path.unlink()
+                    cleaned_roots.add(sample_root)
+    for directory in sorted(cleaned_roots):
+        _fsync_directory(directory)
+
+
+def _verify_completed_input_lock(
     *,
     repo_root: Path,
     e0_data_root: Path,
     output_sidecar: Path,
     output_manifest: Path,
+    execution_identity: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Deeply replay an existing GO lock without creating or repairing artifacts.
+
+    A completed top-level manifest is only a claim.  Resume accepts that claim
+    after independently re-verifying every producer/consumer edge: source and
+    execution identity, tracked synthetic gate, current input assets, compact
+    geometry, all per-sample Parquet chunks, the global template index/receipt,
+    and the compact sidecar.  No missing file is reconstructed on this path.
+    """
+
+    import torch
+    from script.analysis.fpct_e1_streaming_synthetic_gate import verify_tracked_gate
+
+    output_root = output_manifest.absolute().parent
+    _clean_owned_completed_crash_debris(
+        output_root,
+        output_sidecar_name=output_sidecar.name,
+        output_manifest_name=output_manifest.name,
+    )
+    if (
+        not output_manifest.is_file()
+        or output_manifest.is_symlink()
+        or not output_sidecar.is_file()
+        or output_sidecar.is_symlink()
+    ):
+        raise RuntimeError("completed input lock lacks its manifest or sidecar")
+    completed = json.loads(output_manifest.read_text(encoding="utf-8"))
+    streaming_schema_path = (repo_root / A4_STREAMING_SCHEMA_RELATIVE).absolute()
+    synthetic_gate_path = (repo_root / A4_SYNTHETIC_GATE_RELATIVE).absolute()
+    if (
+        not streaming_schema_path.is_file()
+        or streaming_schema_path.is_symlink()
+        or not synthetic_gate_path.is_file()
+        or synthetic_gate_path.is_symlink()
+    ):
+        raise FileNotFoundError("A4 streaming schema/synthetic gate is unavailable")
+    streaming_schema_sha256 = sha256_file(streaming_schema_path)
+    validate_streaming_schema_artifact(completed, streaming_schema_path)
+
+    if (
+        completed.get("schema_version") != SCHEMA_VERSION
+        or completed.get("protocol_id") != PROTOCOL_ID
+        or completed.get("status")
+        != "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT"
+        or completed.get("execution_identity") != dict(execution_identity)
+    ):
+        raise RuntimeError("completed A4 input lock identity/status changed")
+
+    identity_path = output_root / RUN_IDENTITY_NAME
+    identity_payload = dict(execution_identity)
+    identity_sha256 = identity_payload.pop("identity_sha256", None)
+    if (
+        not identity_path.is_file()
+        or identity_path.is_symlink()
+        or identity_sha256 != sha256_file(identity_path)
+        or json.loads(identity_path.read_text(encoding="utf-8")) != identity_payload
+    ):
+        raise RuntimeError("completed A4 execution identity changed")
+    source_receipt = execution_identity.get("source_snapshot_receipt", {})
+    source_receipt_path = Path(str(source_receipt.get("path", ""))).absolute()
+    if (
+        not source_receipt_path.is_file()
+        or source_receipt_path.is_symlink()
+        or source_receipt_path
+        != Path(str(execution_identity.get("source_snapshot_root", ""))).absolute()
+        / SOURCE_SNAPSHOT_RECEIPT_NAME
+        or source_receipt.get("file_sha256") != sha256_file(source_receipt_path)
+        or source_receipt.get("bytes") != source_receipt_path.stat().st_size
+    ):
+        raise RuntimeError("completed source-snapshot receipt binding changed")
+
+    synthetic_gate = verify_tracked_gate(synthetic_gate_path, repo_root)
+    if (
+        synthetic_gate.get("protocol_id") != A4_PROTOCOL_ID
+        or synthetic_gate.get("status") != "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE"
+        or synthetic_gate.get("natural_data_accessed") is not False
+        or synthetic_gate.get("physical_chunk_rows") != PHYSICAL_CHUNK_ROWS
+        or synthetic_gate.get("streaming_schema_sha256")
+        != streaming_schema_sha256
+    ):
+        raise RuntimeError("completed lock synthetic gate/source binding changed")
+    streaming_contract = completed.get("streaming_contract", {})
+    synthetic_record = streaming_contract.get("synthetic_gate", {})
+    if (
+        Path(str(synthetic_record.get("path", ""))).absolute()
+        != synthetic_gate_path
+        or synthetic_record.get("sha256") != sha256_file(synthetic_gate_path)
+        or streaming_contract.get("protocol_id") != A4_PROTOCOL_ID
+        or streaming_contract.get("schema_sha256") != streaming_schema_sha256
+        or streaming_contract.get("physical_chunk_rows") != PHYSICAL_CHUNK_ROWS
+    ):
+        raise RuntimeError("completed streaming protocol/gate provenance changed")
+
+    sidecar_record = completed.get("sidecar", {})
+    _verify_completed_file_record(sidecar_record, output_sidecar, "compact sidecar")
+    locked_payload = torch.load(output_sidecar, map_location="cpu", weights_only=False)
+    if not isinstance(locked_payload, Mapping):
+        raise RuntimeError("completed compact sidecar is not a mapping")
+    if (
+        locked_payload.get("schema_version") != SCHEMA_VERSION
+        or locked_payload.get("protocol_id") != PROTOCOL_ID
+        or locked_payload.get("status")
+        != "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT"
+        or locked_payload.get("execution_identity") != dict(execution_identity)
+        or locked_payload.get("dimensions") != completed.get("dimensions")
+        or locked_payload.get("input_asset_state")
+        != completed.get("input_asset_state", {}).get("records")
+        or expanded_row_absence_proof(locked_payload)
+        != completed.get("expanded_row_absence_proof")
+    ):
+        raise RuntimeError("completed compact sidecar semantic binding changed")
+
+    recorded_runtime_assets = completed.get("runtime_assets", {})
+    current_runtime_assets: dict[str, Any] = {}
+    for role in ("receiver", "sender"):
+        recorded = recorded_runtime_assets.get(role)
+        if not isinstance(recorded, Mapping):
+            raise RuntimeError("completed runtime-asset provenance is incomplete")
+        current = runtime_asset_tree(Path(str(recorded.get("requested_path", ""))))
+        current_runtime_assets[role] = {
+            "model_id": recorded.get("model_id"),
+            **current,
+        }
+        if current_runtime_assets[role] != dict(recorded):
+            raise RuntimeError(f"completed {role} runtime asset tree changed")
+        tokenizer_record = completed.get("tokenizers", {}).get(role, {})
+        if (
+            tokenizer_record.get("name") != recorded.get("model_id")
+            or Path(str(tokenizer_record.get("path", ""))).absolute()
+            != Path(current["requested_path"]).absolute()
+            or tokenizer_record.get("files")
+            != _tokenizer_files(Path(current["requested_path"]))
+        ):
+            raise RuntimeError(f"completed {role} tokenizer provenance changed")
+
+    current_assets = input_asset_state(
+        repo_root=repo_root,
+        e0_data_root=e0_data_root,
+        runtime_assets=current_runtime_assets,
+        source_snapshot_verification=source_receipt["verification"],
+    )
+    asset_record = completed.get("input_asset_state", {})
+    if (
+        asset_record.get("records") != current_assets
+        or asset_record.get("before_sha256") != current_assets["aggregate_sha256"]
+        or asset_record.get("after_sha256") != current_assets["aggregate_sha256"]
+        or asset_record.get("unchanged") is not True
+    ):
+        raise RuntimeError("completed input-asset/provenance binding changed")
+    source_record = completed.get("source", {})
+    if (
+        Path(str(source_record.get("e0_data_root", ""))).absolute()
+        != e0_data_root.absolute()
+    ):
+        raise RuntimeError("completed E0-design data root changed")
+    split = load_e0_design_lock(
+        repo_root / "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"
+    )
+    dev = verify_e0_dev_anchor(repo_root / E0_DEV_MANIFEST_RELATIVE, split)
+    if (
+        source_record.get("split_sha256") != split["sha256"]
+        or source_record.get("dev_manifest_sha256") != dev["sha256"]
+    ):
+        raise RuntimeError("completed split/dev provenance binding changed")
+
+    geometry_lock = streaming_contract.get("geometry_lock", {})
+    geometry_samples = output_root / "input_geometry_samples.parquet"
+    geometry_manifest_path = output_root / "input_geometry_manifest.json"
+    geometry_receipt_path = output_root / "input_geometry_receipt.json"
+    _verify_completed_file_record(
+        geometry_lock.get("samples", {}), geometry_samples, "geometry Parquet"
+    )
+    _verify_completed_file_record(
+        geometry_lock.get("manifest", {}), geometry_manifest_path, "geometry manifest"
+    )
+    _verify_completed_file_record(
+        geometry_lock.get("receipt", {}), geometry_receipt_path, "geometry receipt"
+    )
+    geometry_manifest = json.loads(geometry_manifest_path.read_text(encoding="utf-8"))
+    geometry_receipt = json.loads(geometry_receipt_path.read_text(encoding="utf-8"))
+    validate_streaming_schema_artifact(geometry_manifest, streaming_schema_path)
+    validate_streaming_schema_artifact(geometry_receipt, streaming_schema_path)
+    if (
+        geometry_manifest.get("execution_identity_sha256") != identity_sha256
+        or geometry_manifest.get("input_asset_state_sha256")
+        != current_assets["aggregate_sha256"]
+        or geometry_manifest.get("schema_sha256") != streaming_schema_sha256
+        or geometry_receipt.get("status") != "GO"
+        or geometry_receipt.get("manifest_sha256")
+        != sha256_file(geometry_manifest_path)
+        or geometry_receipt.get("execution_identity_sha256") != identity_sha256
+        or geometry_receipt.get("input_asset_state_sha256")
+        != current_assets["aggregate_sha256"]
+        or geometry_receipt.get("schema_sha256") != streaming_schema_sha256
+    ):
+        raise RuntimeError("completed geometry manifest/receipt binding changed")
+
+    sidecar_items = locked_payload.get("items")
+    if not isinstance(sidecar_items, Sequence) or isinstance(sidecar_items, (str, bytes)):
+        raise RuntimeError("completed compact sidecar items are missing")
+    expected_geometry = {
+        str(item["sample_sha256"]): _geometry_row(_to_python(item))
+        for item in sidecar_items
+    }
+    if len(expected_geometry) != len(sidecar_items):
+        raise RuntimeError("completed compact sidecar contains duplicate samples")
+    observed_geometry: dict[str, dict[str, Any]] = {}
+    ordered_geometry: list[dict[str, Any]] = []
+    for row in _verified_geometry_rows(
+        samples_path=geometry_samples,
+        manifest_path=geometry_manifest_path,
+        schema_sha256=streaming_schema_sha256,
+    ):
+        sample_sha = str(row["sample_sha256"])
+        if sample_sha in observed_geometry:
+            raise RuntimeError("completed geometry contains duplicate samples")
+        observed_geometry[sample_sha] = row
+        ordered_geometry.append(row)
+    if observed_geometry != expected_geometry:
+        raise RuntimeError("completed geometry differs from compact sidecar")
+    for item in sidecar_items:
+        semantic_source = {
+            key: value
+            for key, value in _to_python(item).items()
+            if key not in {"feature", "item_semantic_sha256"}
+        }
+        if (
+            item.get("item_semantic_sha256") != nested_sha256(semantic_source)
+            or item.get("answer_query_sequence_sha256")
+            != nested_sha256(item.get("answer_queries"))
+            or item.get("parent_sequence_sha256")
+            != nested_sha256(item.get("certified_parents"))
+            or item.get("raw_topology_compact_sha256")
+            != nested_sha256(item.get("raw_topology_compact"))
+        ):
+            raise RuntimeError("completed item semantic/provenance hash changed")
+    expected_sample_sequence_sha256 = nested_sha256(
+        [
+            [
+                row["sample_sha256"],
+                row["content_group_sha256"],
+                row["item_semantic_sha256"],
+                row["raw_topology_compact_sha256"],
+            ]
+            for row in ordered_geometry
+        ]
+    )
+    expected_row_volume = _global_row_volume(sidecar_items)
+    expected_physical_rows = sum(int(row["N_s"]) for row in ordered_geometry)
+    expected_disk_bytes = (
+        expected_physical_rows
+        * int(synthetic_gate["estimated_physical_bytes_per_row"])
+    )
+    expected_inode_count = (
+        sum(int(row["expected_chunk_count"]) for row in ordered_geometry)
+        + 3 * len(ordered_geometry)
+        + 12
+    )
+    observed_task_counts = {
+        task: sum(row["task"] == task for row in ordered_geometry) for task in TASKS
+    }
+    if (
+        geometry_manifest.get("population") != "e0_design"
+        or geometry_manifest.get("task_group_counts") != observed_task_counts
+        or observed_task_counts != TASK_GROUP_COUNTS
+        or geometry_manifest.get("sample_count") != len(ordered_geometry)
+        or geometry_manifest.get("sample_sequence_sha256")
+        != expected_sample_sequence_sha256
+        or geometry_manifest.get("row_volume") != expected_row_volume
+        or geometry_manifest.get("estimated_physical_rows")
+        != expected_physical_rows
+        or geometry_manifest.get("estimated_disk_bytes") != expected_disk_bytes
+        or geometry_manifest.get("estimated_inode_count") != expected_inode_count
+        or geometry_manifest.get("disk_preflight_passed") is not True
+        or geometry_manifest.get("inode_preflight_passed") is not True
+        or geometry_lock.get("row_volume") != expected_row_volume
+        or geometry_lock.get("estimated_disk_bytes") != expected_disk_bytes
+        or geometry_lock.get("estimated_inode_count") != expected_inode_count
+    ):
+        raise RuntimeError("completed geometry metadata/provenance changed")
+    expected_geometry_receipt = {
+        "schema_version": 6,
+        "protocol_id": A4_PROTOCOL_ID,
+        "artifact_type": "input_geometry_receipt",
+        "status": "GO",
+        "manifest_sha256": sha256_file(geometry_manifest_path),
+        "schema_sha256": streaming_schema_sha256,
+        "sample_count": len(ordered_geometry),
+        "expanded_logical_rows_materialized": False,
+        "task_counts_exact_128_70_128": True,
+        "input_assets_unchanged_during_lock": True,
+        "input_asset_state_before_sha256": current_assets["aggregate_sha256"],
+        "input_asset_state_after_sha256": current_assets["aggregate_sha256"],
+        "input_asset_state_sha256": current_assets["aggregate_sha256"],
+        "execution_identity_sha256": identity_sha256,
+        "bounded_geometry_replay_equal": True,
+        "pass_b_geometry_source_only": "verified_input_geometry_samples.parquet",
+        "e1_pilot_consumed": False,
+        "model_or_checkpoint_loaded": False,
+        "gpu_or_kubernetes_used": False,
+    }
+    if geometry_receipt != expected_geometry_receipt:
+        raise RuntimeError("completed geometry receipt semantics changed")
+
+    required_firewall_false = (
+        "e1_pilot_consumed",
+        "e1_pilot_rendered_tokenized_aligned_run_or_read",
+        "model_selection_consumed",
+        "test_consumed",
+        "confirmatory_consumed",
+        "model_or_checkpoint_loaded",
+        "gpu_or_cuda_used",
+        "training",
+    )
+    for label, container in (
+        ("manifest", completed),
+        ("sidecar", locked_payload),
+    ):
+        firewall = container.get("firewall", {})
+        if any(firewall.get(name) is not False for name in required_firewall_false):
+            raise RuntimeError(f"completed {label} firewall provenance changed")
+    if (
+        locked_payload.get("e1_pilot_consumed") is not False
+        or locked_payload.get("model_or_checkpoint_loaded") is not False
+        or locked_payload.get("cuda_initialized") is not False
+    ):
+        raise RuntimeError("completed sidecar execution firewall changed")
+
+    dimensions = completed.get("dimensions")
+    if not isinstance(dimensions, Mapping):
+        raise RuntimeError("completed receiver dimensions are missing")
+    verified_template_lock = _write_streaming_template_lock(
+        output_dir=output_root,
+        dimensions=dimensions,
+        schema_sha256=streaming_schema_sha256,
+        geometry_lock=geometry_lock,
+        execution_identity=execution_identity,
+        input_assets_before_sha256=current_assets["aggregate_sha256"],
+        input_assets_after_sha256=current_assets["aggregate_sha256"],
+        synthetic_gate_path=synthetic_gate_path,
+        synthetic_gate=synthetic_gate,
+        verify_only=True,
+    )
+    if (
+        verified_template_lock != streaming_contract.get("streaming_template_lock")
+        or locked_payload.get("streaming_contract", {}).get("geometry_lock")
+        != geometry_lock
+        or locked_payload.get("streaming_contract", {}).get(
+            "streaming_template_lock"
+        )
+        != verified_template_lock
+    ):
+        raise RuntimeError("completed streaming template binding changed")
+
+    expected_root_entries = {
+        RUN_IDENTITY_NAME,
+        geometry_samples.name,
+        geometry_manifest_path.name,
+        geometry_receipt_path.name,
+        "row_templates",
+        "input_row_template_chunk_index.json",
+        "streaming_input_lock_receipt.json",
+        output_sidecar.name,
+        output_manifest.name,
+    }
+    observed_root_entries = {path.name for path in output_root.iterdir()}
+    if observed_root_entries != expected_root_entries:
+        raise RuntimeError("completed input root contains missing or unbound artifacts")
+    return completed
+
+
+def _prepare_input_lock_after_identity(
+    *,
+    repo_root: Path,
+    e0_data_root: Path,
+    output_sidecar: Path,
+    output_manifest: Path,
+    execution_identity: Mapping[str, Any],
 ) -> dict[str, Any]:
     """Materialize the local sidecar; caller must run only after code lock."""
 
-    if output_sidecar.exists() or output_manifest.exists():
-        raise FileExistsError("input-lock output already exists")
+    if output_sidecar.absolute().parent != output_manifest.absolute().parent:
+        raise ValueError("A4 input-lock sidecar and manifest must share one root")
+    output_root = _canonical_real_directory(
+        output_manifest.absolute().parent, "A4 input-lock producer root"
+    )
+    producer_finals = (
+        output_sidecar.absolute(),
+        output_manifest.absolute(),
+        output_root / "input_geometry_samples.parquet",
+        output_root / "input_geometry_manifest.json",
+        output_root / "input_geometry_receipt.json",
+        output_root / "input_row_template_chunk_index.json",
+        output_root / "streaming_input_lock_receipt.json",
+    )
+    for path in producer_finals:
+        _preflight_producer_file(path, "A4 input-lock producer final")
+    row_template_root = output_root / "row_templates"
+    try:
+        row_template_root.lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        _canonical_real_directory(
+            row_template_root, "A4 row-template producer root"
+        )
+    if output_manifest.exists():
+        return _verify_completed_input_lock(
+            repo_root=repo_root,
+            e0_data_root=e0_data_root,
+            output_sidecar=output_sidecar,
+            output_manifest=output_manifest,
+            execution_identity=execution_identity,
+        )
     import torch
     from transformers import AutoTokenizer
     from rosetta.train.dataset_adapters import AlignedChatDataset
@@ -681,6 +2667,22 @@ def prepare_input_lock(
 
     if torch.cuda.is_initialized():
         raise RuntimeError("prepare-input-lock refuses an initialized CUDA runtime")
+    streaming_schema_path = repo_root / A4_STREAMING_SCHEMA_RELATIVE
+    synthetic_gate_path = repo_root / A4_SYNTHETIC_GATE_RELATIVE
+    if not streaming_schema_path.is_file() or not synthetic_gate_path.is_file():
+        raise FileNotFoundError("A4 streaming schema/synthetic gate is unavailable")
+    streaming_schema_sha256 = sha256_file(streaming_schema_path)
+    from script.analysis.fpct_e1_streaming_synthetic_gate import verify_tracked_gate
+
+    synthetic_gate = verify_tracked_gate(synthetic_gate_path, repo_root)
+    if (
+        synthetic_gate.get("protocol_id") != A4_PROTOCOL_ID
+        or synthetic_gate.get("status") != "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE"
+        or synthetic_gate.get("natural_data_accessed") is not False
+        or synthetic_gate.get("physical_chunk_rows") != PHYSICAL_CHUNK_ROWS
+        or synthetic_gate.get("streaming_schema_sha256") != streaming_schema_sha256
+    ):
+        raise ValueError("A4 pre-natural synthetic gate is absent or incompatible")
     split = load_e0_design_lock(
         repo_root / "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"
     )
@@ -699,6 +2701,15 @@ def prepare_input_lock(
             **runtime_asset_tree(sender_path),
         },
     }
+    source_verification = execution_identity["source_snapshot_receipt"][
+        "verification"
+    ]
+    input_assets_before = input_asset_state(
+        repo_root=repo_root,
+        e0_data_root=e0_data_root,
+        runtime_assets=runtime_assets,
+        source_snapshot_verification=source_verification,
+    )
     receiver = AutoTokenizer.from_pretrained(receiver_path)
     sender = AutoTokenizer.from_pretrained(sender_path)
     set_default_chat_template(receiver, receiver_name)
@@ -802,13 +2813,18 @@ def prepare_input_lock(
         )
         prompt_inputs = prompt_prepared["inputs"]
         answer_queries = answer_query_contract(feature["labels"])
-        certified_parents = certified_parent_contract(topology)
+        certified_parents = certified_parent_contract(
+            topology,
+            source_indices=full_soft["source_indices"],
+            source_weights=full_soft["source_weights"],
+        )
         expected_rows = expected_long_form_rows(
             answer_query_count=len(answer_queries),
             certified_parent_count=len(certified_parents),
             num_layers=dimensions["num_hidden_layers"],
             num_query_heads=dimensions["num_attention_heads"],
         )
+        raw_topology_compact = _raw_topology_compact_metadata(raw_topology)
         item = {
             "task": task,
             "sample_sha256": expected_sample,
@@ -823,8 +2839,16 @@ def prepare_input_lock(
             "provenance": provenance,
             "answer_queries": answer_queries,
             "certified_parents": certified_parents,
+            "Q_s": len(answer_queries),
+            "P_s": len(certified_parents),
+            "N_s": expected_rows,
+            "answer_query_sequence_sha256": nested_sha256(answer_queries),
+            "parent_sequence_sha256": nested_sha256(certified_parents),
+            "expected_chunk_count": math.ceil(expected_rows / PHYSICAL_CHUNK_ROWS),
             "expected_long_form_rows": expected_rows,
             "raw_topology_ledger": raw_topology,
+            "raw_topology_compact": raw_topology_compact,
+            "raw_topology_compact_sha256": nested_sha256(raw_topology_compact),
             "instruction_end": instruction_end,
             "rendered_prompt_sha256": rendered_sha,
         }
@@ -838,15 +2862,46 @@ def prepare_input_lock(
     for role, model_path in (("receiver", receiver_path), ("sender", sender_path)):
         if portable_runtime_asset_tree(runtime_asset_tree(model_path)) != portable_runtime_asset_tree(runtime_assets[role]):
             raise ValueError(f"{role} runtime asset tree changed during CPU input locking")
+    from script.experiment.fpct_e1_source_snapshot_lock import (
+        verify_source_snapshot_receipt,
+    )
+
+    source_verification_after = verify_source_snapshot_receipt(
+        Path(execution_identity["source_snapshot_receipt"]["path"]),
+        Path(execution_identity["source_snapshot_root"]),
+        str(execution_identity["execution_sha"]),
+    )
+    input_assets_after = input_asset_state(
+        repo_root=repo_root,
+        e0_data_root=e0_data_root,
+        runtime_assets=runtime_assets,
+        source_snapshot_verification=source_verification_after,
+    )
+    if input_assets_before != input_assets_after:
+        raise RuntimeError("input assets changed during CPU input locking")
     items.sort(key=lambda item: (item["task"], item["sample_sha256"]))
     by_task = {}
     for task in TASKS:
         members = [item for item in items if item["task"] == task]
         row_volume = expected_long_form_row_volume(members)
-        raw_rows = [row for item in members for row in item["raw_topology_ledger"]]
         taxonomy_counts: dict[str, int] = {}
-        for row in raw_rows:
-            taxonomy_counts[row["taxonomy"]] = taxonomy_counts.get(row["taxonomy"], 0) + 1
+        raw_count = 0
+        runtime_m_ge2 = 0
+        offset_uncertified = 0
+        raw_m_distribution = {str(value): 0 for value in range(2, 5)}
+        runtime_m_distribution = {str(value): 0 for value in range(1, 5)}
+        raw_digest = hashlib.sha256()
+        for item in members:
+            for row in item["raw_topology_ledger"]:
+                raw_digest.update(canonical_json_bytes(row))
+                raw_count += 1
+                runtime_m_ge2 += int(row["runtime_candidate_count"] >= 2)
+                offset_uncertified += int(not row["certified"])
+                raw_m_distribution[str(row["raw_candidate_count"])] += 1
+                runtime_m_distribution[str(row["runtime_candidate_count"])] += 1
+                taxonomy_counts[row["taxonomy"]] = (
+                    taxonomy_counts.get(row["taxonomy"], 0) + 1
+                )
         semantic_members = [
             {
                 "sample_sha256": item["sample_sha256"],
@@ -869,61 +2924,131 @@ def prepare_input_lock(
             "membership_sha256": task_membership_sha256(
                 task_group_contract, semantic_members
             ),
-            "row_template": row_template_attestation(
+            "row_template": streaming_row_template_attestation(
                 members,
+                task=task,
                 num_layers=dimensions["num_hidden_layers"],
                 num_query_heads=dimensions["num_attention_heads"],
                 num_kv_heads=dimensions["num_key_value_heads"],
+                schema_sha256=streaming_schema_sha256,
             ),
             "expected_long_form_rows": row_volume,
             "raw_topology": {
-                "row_count": len(raw_rows),
-                "ledger_sha256": nested_sha256(raw_rows),
-                "raw_m_ge2_parent_count": len(raw_rows),
-                "runtime_m_ge2_parent_count": sum(
-                    row["runtime_candidate_count"] >= 2 for row in raw_rows
-                ),
-                "raw_m_distribution": {
-                    str(value): sum(
-                        row["raw_candidate_count"] == value for row in raw_rows
-                    )
-                    for value in range(2, 5)
-                },
-                "runtime_m_distribution": {
-                    str(value): sum(
-                        row["runtime_candidate_count"] == value
-                        for row in raw_rows
-                    )
-                    for value in range(1, 5)
-                },
-                "offset_uncertified_parent_count": sum(
-                    not row["certified"] for row in raw_rows
-                ),
+                "row_count": raw_count,
+                "canonical_row_stream_sha256": raw_digest.hexdigest(),
+                "raw_m_ge2_parent_count": raw_count,
+                "runtime_m_ge2_parent_count": runtime_m_ge2,
+                "raw_m_distribution": raw_m_distribution,
+                "runtime_m_distribution": runtime_m_distribution,
+                "offset_uncertified_parent_count": offset_uncertified,
                 "taxonomy_counts": taxonomy_counts,
                 "candidate_window": 0,
                 "competing_overlap_requires_explicit_evidence": True,
                 "contains_model_output": False,
             },
         }
+    geometry_lock = _write_geometry_lock(
+        output_dir=output_manifest.parent,
+        items=items,
+        schema_sha256=streaming_schema_sha256,
+        synthetic_gate=synthetic_gate,
+        input_assets_before=input_assets_before,
+        input_assets_after=input_assets_after,
+        execution_identity=execution_identity,
+    )
+    streaming_template_lock = _write_streaming_template_lock(
+        output_dir=output_manifest.parent,
+        dimensions=dimensions,
+        schema_sha256=streaming_schema_sha256,
+        geometry_lock=geometry_lock,
+        execution_identity=execution_identity,
+        input_assets_before_sha256=input_assets_before["aggregate_sha256"],
+        input_assets_after_sha256=input_assets_after["aggregate_sha256"],
+        synthetic_gate_path=synthetic_gate_path,
+        synthetic_gate=synthetic_gate,
+    )
     payload = {
         "schema_version": SCHEMA_VERSION,
         "protocol_id": PROTOCOL_ID,
+        "status": "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT",
         "split_role": "e0_design",
         "items": items,
         "dimensions": dimensions,
+        "streaming_contract": {
+            "protocol_id": A4_PROTOCOL_ID,
+            "schema_sha256": streaming_schema_sha256,
+            "physical_chunk_rows": PHYSICAL_CHUNK_ROWS,
+            "expanded_logical_rows_present": False,
+            "compact_geometry_only": True,
+            "geometry_lock": geometry_lock,
+            "streaming_template_lock": streaming_template_lock,
+        },
+        "execution_identity": dict(execution_identity),
+        "input_asset_state": input_assets_after,
         "e1_pilot_consumed": False,
         "model_or_checkpoint_loaded": False,
         "cuda_initialized": False,
+        "firewall": {
+            "e1_pilot_consumed": False,
+            "e1_pilot_rendered_tokenized_aligned_run_or_read": False,
+            "model_selection_consumed": False,
+            "test_consumed": False,
+            "confirmatory_consumed": False,
+            "model_or_checkpoint_loaded": False,
+            "gpu_cuda_or_kubernetes_used": False,
+            "gpu_or_cuda_used": False,
+            "training": False,
+        },
     }
-    output_sidecar.parent.mkdir(parents=True, exist_ok=True)
-    temporary = output_sidecar.with_name(f".{output_sidecar.name}.{os.getpid()}.tmp")
-    torch.save(payload, temporary)
-    os.replace(temporary, output_sidecar)
+    payload["expanded_row_absence_proof"] = expanded_row_absence_proof(payload)
+    _canonical_real_directory(output_sidecar.parent, "compact sidecar parent")
+    _preflight_producer_file(output_sidecar, "compact sidecar final")
+    if output_sidecar.exists():
+        existing_payload = torch.load(
+            output_sidecar, map_location="cpu", weights_only=False
+        )
+        if nested_sha256(existing_payload) != nested_sha256(payload):
+            raise RuntimeError("existing compact sidecar differs after crash replay")
+    else:
+        descriptor, temporary_text = tempfile.mkstemp(
+            prefix=f".{output_sidecar.name}.",
+            suffix=".tmp",
+            dir=output_sidecar.parent,
+        )
+        os.close(descriptor)
+        temporary = Path(temporary_text)
+        try:
+            torch.save(payload, temporary)
+            with temporary.open("rb") as handle:
+                os.fsync(handle.fileno())
+            try:
+                os.link(temporary, output_sidecar)
+            except FileExistsError:
+                if (
+                    output_sidecar.stat().st_size != temporary.stat().st_size
+                    or sha256_file(output_sidecar) != sha256_file(temporary)
+                ):
+                    raise RuntimeError("immutable compact sidecar winner bytes differ")
+            _fsync_directory(output_sidecar.parent)
+        finally:
+            temporary.unlink(missing_ok=True)
+    locked_payload = torch.load(output_sidecar, map_location="cpu", weights_only=False)
+    if expanded_row_absence_proof(locked_payload) != payload[
+        "expanded_row_absence_proof"
+    ]:
+        raise RuntimeError("published compact sidecar failed expanded-row absence proof")
     manifest = {
         "schema_version": SCHEMA_VERSION,
         "protocol_id": PROTOCOL_ID,
-        "status": "FROZEN_CPU_INPUTS_NO_MODEL_OUTPUT",
+        "status": "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT",
         "split_role": "e0_design",
+        "execution_identity": dict(execution_identity),
+        "input_asset_state": {
+            "before_sha256": input_assets_before["aggregate_sha256"],
+            "after_sha256": input_assets_after["aggregate_sha256"],
+            "unchanged": input_assets_before == input_assets_after,
+            "records": input_assets_after,
+        },
         "source": {
             "split_sha256": split["sha256"],
             "dev_manifest_sha256": dev["sha256"],
@@ -938,6 +3063,18 @@ def prepare_input_lock(
         "gold_response_template": GOLD_RESPONSE_TEMPLATE,
         "gold_response_template_sha256": _sha256_bytes(GOLD_RESPONSE_TEMPLATE.encode("utf-8")),
         "task_contract": by_task,
+        "streaming_contract": {
+            "protocol_id": A4_PROTOCOL_ID,
+            "schema_sha256": streaming_schema_sha256,
+            "physical_chunk_rows": PHYSICAL_CHUNK_ROWS,
+            "historical_cumulative_ceiling_operative": False,
+            "geometry_lock": geometry_lock,
+            "streaming_template_lock": streaming_template_lock,
+            "synthetic_gate": {
+                "path": str(synthetic_gate_path),
+                "sha256": sha256_file(synthetic_gate_path),
+            },
+        },
         "expected_long_form_rows_by_task": {
             task: {
                 "count": by_task[task]["expected_long_form_rows"]["count"],
@@ -953,14 +3090,99 @@ def prepare_input_lock(
         },
         "firewall": {
             "e1_pilot_consumed": False,
+            "e1_pilot_rendered_tokenized_aligned_run_or_read": False,
             "model_selection_consumed": False,
             "test_consumed": False,
+            "confirmatory_consumed": False,
             "model_or_checkpoint_loaded": False,
             "gpu_or_cuda_used": False,
+            "kubernetes_used": False,
+            "training": False,
         },
+        "expanded_row_absence_proof": payload["expanded_row_absence_proof"],
     }
+    validate_streaming_schema_artifact(manifest)
     atomic_json(output_manifest, manifest)
     return manifest
+
+
+def _blocked_check_name(error: Exception) -> str:
+    text = str(error).split(":", 1)[0].strip().lower()
+    normalized = re.sub(r"[^a-z0-9]+", "_", text).strip("_")
+    return normalized[:160] or error.__class__.__name__.lower()
+
+
+def _publish_blocked_receipt(output_root: Path, error: Exception) -> None:
+    """Emit the only terminal receipt permitted after a caught gate failure."""
+
+    payload = {
+        "schema_version": 6,
+        "protocol_id": A4_PROTOCOL_ID,
+        "artifact_type": "streaming_input_lock_blocked_receipt",
+        "status": "A4_INPUT_LOCK_BLOCKED",
+        "failed_checks": [_blocked_check_name(error)],
+        "runtime_probe_created": False,
+        "execution_plan_created": False,
+        "configmap_created": False,
+        "checkpoint_job_created": False,
+        "e1_2_started": False,
+        "e1_3_started": False,
+        "e1_pilot_consumed": False,
+    }
+    validate_streaming_schema_artifact(payload)
+    atomic_json(output_root / BLOCKED_RECEIPT_NAME, payload)
+
+
+def prepare_input_lock(
+    *,
+    repo_root: Path,
+    e0_data_root: Path,
+    output_sidecar: Path,
+    output_manifest: Path,
+    execution_sha: str,
+    source_snapshot_root: Path,
+    source_snapshot_receipt: Path,
+    run_uid: str,
+    run_root: Path,
+    _test_only_sealed_execution: tuple[object, str, str] | None = None,
+) -> dict[str, Any]:
+    """Validate the successor identity, then run one fail-closed A4 input lock."""
+
+    output_root = output_manifest.absolute().parent
+    if output_sidecar.absolute().parent != output_root:
+        raise ValueError("A4 input-lock sidecar and manifest must share one root")
+    if repo_root.absolute() != source_snapshot_root.absolute():
+        raise ValueError("A4 input lock must execute from its immutable source snapshot")
+    sealed_prepare_execution = _require_sealed_prepare_execution(
+        repo_root=repo_root,
+        source_snapshot_root=source_snapshot_root,
+        execution_sha=execution_sha,
+        test_sentinel=_test_only_sealed_execution,
+    )
+    identity = validate_a4_execution_identity(
+        execution_sha=execution_sha,
+        source_snapshot_root=source_snapshot_root,
+        source_snapshot_receipt=source_snapshot_receipt,
+        run_uid=run_uid,
+        run_root=run_root,
+        output_root=output_root,
+        output_sidecar_name=output_sidecar.name,
+        output_manifest_name=output_manifest.name,
+        sealed_prepare_execution=sealed_prepare_execution,
+    )
+    try:
+        return _prepare_input_lock_after_identity(
+            repo_root=repo_root,
+            e0_data_root=e0_data_root,
+            output_sidecar=output_sidecar,
+            output_manifest=output_manifest,
+            execution_identity=identity,
+        )
+    except (FileNotFoundError, FileExistsError, RuntimeError, ValueError) as error:
+        # Abrupt process death/KeyboardInterrupt is intentionally not caught;
+        # immutable chunks plus the execution identity then support exact resume.
+        _publish_blocked_receipt(output_root, error)
+        raise
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -969,12 +3191,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--e0-data-root", type=Path, required=True)
     parser.add_argument("--output-sidecar", type=Path, required=True)
     parser.add_argument("--output-manifest", type=Path, required=True)
+    parser.add_argument("--execution-sha", required=True)
+    parser.add_argument("--source-snapshot-root", type=Path, required=True)
+    parser.add_argument("--source-snapshot-receipt", type=Path, required=True)
+    parser.add_argument("--run-uid", required=True)
+    parser.add_argument("--run-root", type=Path, required=True)
     args = parser.parse_args(argv)
     manifest = prepare_input_lock(
         repo_root=args.repo_root,
         e0_data_root=args.e0_data_root,
         output_sidecar=args.output_sidecar,
         output_manifest=args.output_manifest,
+        execution_sha=args.execution_sha,
+        source_snapshot_root=args.source_snapshot_root,
+        source_snapshot_receipt=args.source_snapshot_receipt,
+        run_uid=args.run_uid,
+        run_root=args.run_root,
     )
     print(json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False))
     return 0

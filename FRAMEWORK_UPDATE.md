@@ -1535,3 +1535,38 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 合同解释：`616448=28×16×1376`，来自冻结 Cartesian row universe，不是 duplicate emission。`262144` 是 engineering memory-integrity guard 而非科学阈值，但 v4 将其实现为累计 logical-row ceiling；physical Parquet batch/row-group 另为 `4096`，故不能事后静默重解释。
 - 产物边界：A3 run root 的 input/raw/plan/runtime/K8s directories 为空；0 usable artifact、0 model/checkpoint load、0 forward、0 GPU/Kubernetes、0 training、0 E1-pilot/confirmatory outcome。
 - 验证与结论：三个独立只读审计均判定不得自动提高上限、截行、丢样本或原地 chunk 化。Execution `612697df...`=`INCONCLUSIVE_RESOURCE_CEILING / ABANDONED`，禁止 resume/reuse；E1-2/E1-3 停止。推荐但尚未批准的 successor 是保持全部 logical rows 的 deterministic bounded streaming 新版协议，并从新 commit/snapshot/run root 全量重启。
+
+### 2026-07-26 FPCT-E1 A4 representation-preserving deterministic bounded streaming
+
+#### 研究目标
+
+在不改变 E1 的 logical-row universe、row key、权重、机制指标、operator、checkpoint、λ grid 或 E0-design 的前提下，用有界、可恢复的确定性流式表示替换 A3 的每样本累计大列表，使资源 guard 检验物理记忆而不删除科学 estimand。
+
+#### 核心改动
+
+- 新增 `FPCT_E1_STREAMING_AMENDMENT.md`、`e1_streaming_contract.json` 和 `e1_streaming_schema.json`，冻结 v6 logical identity、ordinal bijection、semantic hash、chunk manifest 和 crash/resume 合同。
+- production physical chunk size 固定为 `4096`；每个 chunk atomic no-overwrite，并以 row count、interval、byte SHA 与 semantic SHA 验证完整性。
+- 新增 streaming verifier 与 synthetic gate runner；input-lock 先写 compact geometry，再流式物化 immutable row-template chunks，runtime 通过 bounded primitive spool 产生 rows，analyzer 用 deterministic two-pass reduction，不构造整表 Python list。
+- 保留原 15-field logical key，添加由 endpoint、sample、ordinal 及 logical key 确定的 machine-checkable identity；chunk 边界不参与科学语义。
+- `744a943...`、`d1698177...`、`612697df...` 保持 abandoned/non-reusable；A4 必须使用新 clean pushed commit、snapshot、run UID 和 root，不得 resume 历史 partial state。
+
+#### 实验配置
+
+- 当前仅授权 CPU synthetic 数据和随机 tiny tensor；禁止新的自然 tokenizer/alignment、model/checkpoint load、GPU、Kubernetes 或 training。
+- Synthetic hard gate 覆盖 reference equivalence、完整 ordinal/identity、百万级 logical-row stress、bounded peak RSS、atomic no-overwrite、interruption/resume、tamper/corruption fail-closed 和 deterministic aggregate reduction。
+- 执行顺序冻结为：synthetic gate GO → clean commit/push A4 → 全新 snapshot/run root → 从首样本执行 streaming CPU input lock → 条件式 E1-2 → finalized E1-2 后才可 E1-3。
+- E1-pilot 继续 `SEALED / NOT RUN / NOT READ`，不参与 A4 input lock，也不具有 confirmatory eligibility。
+
+#### 验证结果
+
+- A4 pre-natural synthetic hard gate=`GO`：`395 passed in 4020.78s`；gate artifact SHA256=`42b6c98fd5f27a49e258bae4b79ff3c4673c9144465a3c43f9a672d228c82df4`，evidence SHA256=`d22bb1997234dd0c895f1b819e9cbf3bb1102633502f482cbb7b2d4d4ecc8e43`。
+- Normative SHA256 为 amendment=`2fd6412a5533ecc4085e52a81e514425ae5fe6ffa64ec47ebbd7bc9669a20c74`、contract=`919d7c9955c749d2d3603a2356701c65e5b552d22b8ab8cc23c91ea7246e6f22`、schema=`5d389e81f87a18e02889204f055e61c9a7fed8957e8d990f9642558700a39618`。
+- Full-schema baseline=`4480 rows / 2 chunks / 147111936 B peak RSS`；million-row stress=`1000384 rows / 245 chunks / 192376832 B peak RSS`。冻结 RSS threshold=`283295744 B`，由 baseline 加 `2078 B` canonical-row bound 与 `136183808 B` allocator/buffer allowance 前瞻推导；stress 通过。
+- 十项 checks 全部通过：row-key/weights/topology/reference aggregate、chunk partition、semantic replay、atomic no-overwrite、crash/resume、bounded RSS；`whole_table_materialization_detected=false`。
+- A4 instrumentation re-attestation=`GO`：`110 passed`、gamma query variance=`0.19730721414089203`；parity/synthetic/hard-gate SHA256=`d7e78e5e8b54aa2ae21e105b53ad5cbdc8b52d78b6e422c36bdeed919d40c2f3` / `7524fb2ce873dde3450ad12ec26e39d6497f0f99fd9fe755edcfafda44c2ab40` / `0cd401328c5942f51a21f98a3418eb3a18c08a489c6a5cc8c99ef6775b1d6b3e`。Historical v1/A3 记录原样保留。
+- Gate 外 project CPU-safe complement=`449 passed, 2 deselected`；两项 deselected 是绑定旧 R2l/R2m tree/diff identity 的历史 fail-closed guards，不适用于修改了 FPCT production path 的 A4 后继分支。Gate+complement 共 `844 passed`；Route1 两项在 repo-local basetemp 下包含并通过。
+- 截至本条目，A4 授权后的新自然数据/model/GPU/training 计数均为 0；历史 A3 自然 input-lock 事实保持不变。
+
+#### 结论与下一步
+
+A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution SHA 仍未产生。只有 clean push 后才能创建全新 snapshot/run root，并从第一个 E0-design 样本重建 input lock；input-lock GO 前不得运行 runtime/checkpoint/plan 或 E1-2，E1-3 仍须等待 finalized E1-2。

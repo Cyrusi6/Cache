@@ -10,15 +10,16 @@ import importlib.util
 import inspect
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import platform
+import re
 import runpy
+import stat
 import subprocess
 import sys
 import sysconfig
 from types import ModuleType
 from typing import Any, Iterable
-
 
 class BootstrapError(RuntimeError):
     pass
@@ -31,6 +32,11 @@ _ACTIVE_TARGET: Path | None = None
 _PRE_ATTESTATION: dict[str, Any] | None = None
 _LOADED_BY_KEY: dict[str, ModuleType] = {}
 _PROTECTED_OPENS: list[str] = []
+_ACTIVE_PROVENANCE_KIND: str | None = None
+_PREVERIFIED_RUNTIME_GIT: dict[str, Any] | None = None
+
+SOURCE_SNAPSHOT_RECEIPT_NAME = ".fpct_e1_source_snapshot_receipt.json"
+IMAGE_PROVENANCE_NAME = ".fpct_image_provenance.json"
 
 MANDATORY_MODULES = {
     "rosetta": "rosetta",
@@ -117,23 +123,401 @@ def _git(repo: Path, *args: str, allow_failure: bool = False) -> str | None:
     return result.stdout.strip()
 
 
+def _snapshot_canonical_json_bytes(value: Any) -> bytes:
+    return (
+        json.dumps(
+            value,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+            allow_nan=False,
+        )
+        + "\n"
+    ).encode("utf-8")
+
+
+def _snapshot_safe_path(value: Any) -> str:
+    if not isinstance(value, str) or not value or "\x00" in value:
+        raise BootstrapError("snapshot receipt contains a malformed path")
+    path = PurePosixPath(value)
+    if path.is_absolute() or any(part in {"", ".", ".."} for part in path.parts):
+        raise BootstrapError("snapshot receipt contains an unsafe path")
+    if str(path) != value:
+        raise BootstrapError("snapshot receipt path is not canonical")
+    return value
+
+
+def _stdlib_verify_source_snapshot(repo: Path) -> dict[str, Any]:
+    """Verify the portable git-archive receipt using only stdlib code.
+
+    This is intentionally self-contained: importing a verifier from the source
+    tree before that tree is authenticated would make the verification
+    circular.  No snapshot project module may be imported before this returns.
+    """
+
+    receipt_path = repo / SOURCE_SNAPSHOT_RECEIPT_NAME
+    try:
+        receipt_mode = receipt_path.lstat().st_mode
+    except FileNotFoundError as exc:
+        raise BootstrapError("immutable source snapshot receipt missing") from exc
+    if (
+        not stat.S_ISREG(receipt_mode)
+        or receipt_path.is_symlink()
+        or receipt_path.resolve(strict=True) != receipt_path
+    ):
+        raise BootstrapError("immutable source snapshot receipt is not canonical")
+
+    def no_duplicate_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        output: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in output:
+                raise BootstrapError("source snapshot receipt has duplicate JSON keys")
+            output[key] = value
+        return output
+
+    try:
+        receipt = json.loads(
+            receipt_path.read_text(encoding="utf-8"),
+            object_pairs_hook=no_duplicate_pairs,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise BootstrapError("source snapshot receipt is unreadable") from exc
+    expected_top = {
+        "schema_version",
+        "protocol_id",
+        "status",
+        "execution_sha",
+        "dirty",
+        "portable_root",
+        "repo",
+        "git_entries",
+        "git_entries_canonical_sha256",
+        "snapshot",
+        "construction",
+        "receipt_sha256",
+    }
+    execution_sha = receipt.get("execution_sha")
+    if (
+        not isinstance(receipt, dict)
+        or set(receipt) != expected_top
+        or receipt.get("schema_version") != 1
+        or receipt.get("protocol_id") != "fpct_e1_source_snapshot_lock_v1"
+        or receipt.get("status") != "GO_IMMUTABLE_GIT_ARCHIVE"
+        or not isinstance(execution_sha, str)
+        or re.fullmatch(r"[0-9a-f]{40}", execution_sha) is None
+        or receipt.get("dirty") is not False
+        or receipt.get("portable_root") != "."
+    ):
+        raise BootstrapError("source snapshot receipt identity/status differs")
+    receipt_without_hash = dict(receipt)
+    recorded_receipt_sha = receipt_without_hash.pop("receipt_sha256", None)
+    actual_receipt_sha = _sha256_bytes(
+        _snapshot_canonical_json_bytes(receipt_without_hash)
+    )
+    if recorded_receipt_sha != actual_receipt_sha:
+        raise BootstrapError("source snapshot receipt self-hash differs")
+
+    raw_entries = receipt.get("git_entries")
+    if not isinstance(raw_entries, list) or not raw_entries:
+        raise BootstrapError("source snapshot receipt has no Git entries")
+    git_entries: list[dict[str, Any]] = []
+    previous: str | None = None
+    entry_fields = {"path", "mode", "object_type", "object_id", "bytes", "sha256"}
+    for raw in raw_entries:
+        if not isinstance(raw, dict) or set(raw) != entry_fields:
+            raise BootstrapError("source snapshot receipt entry schema differs")
+        path = _snapshot_safe_path(raw["path"])
+        if previous is not None and path <= previous:
+            raise BootstrapError("source snapshot receipt entries are not sorted")
+        previous = path
+        size = raw["bytes"]
+        if (
+            raw["mode"] not in {"100644", "100755", "120000"}
+            or raw["object_type"] != "blob"
+            or re.fullmatch(r"[0-9a-f]{40,64}", str(raw["object_id"])) is None
+            or isinstance(size, bool)
+            or not isinstance(size, int)
+            or size < 0
+            or re.fullmatch(r"[0-9a-f]{64}", str(raw["sha256"])) is None
+        ):
+            raise BootstrapError("source snapshot receipt entry identity differs")
+        git_entries.append(dict(raw))
+    entries_sha = _sha256_bytes(_snapshot_canonical_json_bytes(git_entries))
+    repo_record = receipt.get("repo")
+    if (
+        receipt.get("git_entries_canonical_sha256") != entries_sha
+        or not isinstance(repo_record, dict)
+        or set(repo_record)
+        != {
+            "head",
+            "dirty",
+            "git_tree_oid",
+            "object_format",
+            "ls_tree_entry_count",
+            "ls_tree_canonical_sha256",
+        }
+        or repo_record.get("head") != execution_sha
+        or repo_record.get("dirty") is not False
+        or repo_record.get("ls_tree_entry_count") != len(git_entries)
+        or repo_record.get("ls_tree_canonical_sha256") != entries_sha
+        or re.fullmatch(r"[0-9a-f]{40,64}", str(repo_record.get("git_tree_oid")))
+        is None
+    ):
+        raise BootstrapError("source snapshot receipt Git tree differs")
+
+    expected = {
+        row["path"]: {
+            "path": row["path"],
+            "mode": row["mode"],
+            "kind": "symlink" if row["mode"] == "120000" else "file",
+            "bytes": row["bytes"],
+            "sha256": row["sha256"],
+        }
+        for row in git_entries
+    }
+    expected_directories: set[str] = set()
+    for relative in expected:
+        parent = PurePosixPath(relative).parent
+        while str(parent) != ".":
+            expected_directories.add(str(parent))
+            parent = parent.parent
+    actual: dict[str, dict[str, Any]] = {}
+    actual_directories: set[str] = set()
+    stack = [repo]
+    while stack:
+        directory = stack.pop()
+        for entry in os.scandir(directory):
+            path = Path(entry.path)
+            relative = _snapshot_safe_path(path.relative_to(repo).as_posix())
+            if relative == receipt_path.name:
+                if not entry.is_file(follow_symlinks=False) or entry.is_symlink():
+                    raise BootstrapError("snapshot receipt is not a regular file")
+                continue
+            if entry.is_symlink():
+                target = os.readlink(path)
+                if os.path.isabs(target):
+                    raise BootstrapError("snapshot symlink has an absolute target")
+                resolved = (path.parent / target).resolve(strict=False)
+                try:
+                    resolved.relative_to(repo)
+                except ValueError as exc:
+                    raise BootstrapError("snapshot symlink escapes source root") from exc
+                payload = os.fsencode(target)
+                actual[relative] = {
+                    "path": relative,
+                    "mode": "120000",
+                    "kind": "symlink",
+                    "bytes": len(payload),
+                    "sha256": _sha256_bytes(payload),
+                }
+            elif entry.is_dir(follow_symlinks=False):
+                actual_directories.add(relative)
+                stack.append(path)
+            elif entry.is_file(follow_symlinks=False):
+                metadata = entry.stat(follow_symlinks=False)
+                permissions = stat.S_IMODE(metadata.st_mode)
+                if metadata.st_nlink != 1 or permissions & 0o7000:
+                    raise BootstrapError("snapshot file link/mode safety differs")
+                actual[relative] = {
+                    "path": relative,
+                    "mode": "100755" if permissions & 0o111 else "100644",
+                    "kind": "file",
+                    "bytes": metadata.st_size,
+                    "sha256": sha256_file(path),
+                }
+            else:
+                raise BootstrapError("snapshot contains a special filesystem entry")
+    if actual_directories != expected_directories or actual != expected:
+        raise BootstrapError("immutable source snapshot tree differs from receipt")
+    mounted = [actual[path] for path in sorted(actual)]
+    snapshot_record = receipt.get("snapshot")
+    observed = {
+        "mounted_tree_canonical_sha256": _sha256_bytes(
+            _snapshot_canonical_json_bytes(mounted)
+        ),
+        "file_count": sum(row["kind"] == "file" for row in mounted),
+        "symlink_count": sum(row["kind"] == "symlink" for row in mounted),
+        "entry_count": len(mounted),
+        "total_bytes": sum(int(row["bytes"]) for row in mounted),
+    }
+    if (
+        not isinstance(snapshot_record, dict)
+        or snapshot_record.get("receipt_relative_path") != receipt_path.name
+        or snapshot_record.get("portable_root") != "."
+        or any(snapshot_record.get(key) != value for key, value in observed.items())
+        or any(
+            snapshot_record.get(key) is not True
+            for key in ("exact_git_archive_content", "no_extra_paths", "no_symlink_escape")
+        )
+        or receipt.get("construction")
+        != {
+            "source": "git archive <execution_sha>",
+            "git_ls_tree": "git ls-tree -r -z --full-tree --long <execution_sha>",
+            "manual_copy_allowed": False,
+            "worktree_clean_required": True,
+        }
+    ):
+        raise BootstrapError("source snapshot mounted-tree attestation differs")
+    return {
+        "head": execution_sha,
+        "branch": "sealed_git_archive_snapshot",
+        "upstream": execution_sha,
+        "clean": True,
+        "status": "",
+        "source": "fpct_e1_source_snapshot_receipt",
+        "tree_sha256": observed["mounted_tree_canonical_sha256"],
+        "git_tree_oid": repo_record["git_tree_oid"],
+        "receipt_sha256": recorded_receipt_sha,
+    }
+
+
+def _lstat_mode(path: Path, label: str) -> int | None:
+    """Return a path's own mode without following a provenance symlink."""
+
+    try:
+        return path.lstat().st_mode
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        raise BootstrapError(f"cannot classify {label}") from exc
+
+
+def _require_canonical_regular_marker(path: Path, label: str) -> None:
+    mode = _lstat_mode(path, label)
+    if mode is None:
+        raise BootstrapError(f"{label} missing")
+    if stat.S_ISLNK(mode) or not stat.S_ISREG(mode):
+        raise BootstrapError(f"{label} is not a canonical regular file")
+    try:
+        resolved = path.resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise BootstrapError(f"{label} is not canonical") from exc
+    if resolved != path:
+        raise BootstrapError(f"{label} is not canonical")
+
+
+def _preverify_git_worktree_marker(repo: Path) -> None:
+    """Accept Git mode only for an unaliased, working Git administrative path."""
+
+    marker = repo / ".git"
+    mode = _lstat_mode(marker, "Git worktree marker")
+    if mode is None:
+        raise BootstrapError("Git worktree marker missing")
+    if stat.S_ISLNK(mode) or not (stat.S_ISREG(mode) or stat.S_ISDIR(mode)):
+        raise BootstrapError("Git worktree marker is not canonical")
+    try:
+        if marker.resolve(strict=True) != marker:
+            raise BootstrapError("Git worktree marker is not canonical")
+    except (OSError, RuntimeError) as exc:
+        raise BootstrapError("Git worktree marker is not canonical") from exc
+    if _git(repo, "rev-parse", "--is-inside-work-tree") != "true":
+        raise BootstrapError("repo root is not a Git worktree")
+    top = _git(repo, "rev-parse", "--show-toplevel")
+    try:
+        top_path = Path(str(top)).resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        raise BootstrapError("Git worktree root is not canonical") from exc
+    if top_path != repo:
+        raise BootstrapError("repo root differs from canonical Git worktree root")
+
+
+def _stdlib_verify_image_provenance(repo: Path) -> dict[str, Any]:
+    """Preverify the legacy immutable-image marker before project imports."""
+
+    marker = repo / IMAGE_PROVENANCE_NAME
+    _require_canonical_regular_marker(marker, "immutable image provenance marker")
+
+    def no_duplicate_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        output: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in output:
+                raise BootstrapError(
+                    "immutable image provenance has duplicate JSON keys"
+                )
+            output[key] = value
+        return output
+
+    try:
+        payload = json.loads(
+            marker.read_text(encoding="utf-8"),
+            object_pairs_hook=no_duplicate_pairs,
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise BootstrapError("immutable image provenance is unreadable") from exc
+    required = {"schema_version", "head", "branch", "upstream", "tree_sha256"}
+    if (
+        not isinstance(payload, dict)
+        or not required.issubset(payload)
+        or payload.get("schema_version") != 1
+        or any(
+            not isinstance(payload.get(key), str) or not payload.get(key)
+            for key in ("head", "branch", "upstream", "tree_sha256")
+        )
+        or re.fullmatch(r"[0-9a-f]{64}", payload["tree_sha256"]) is None
+    ):
+        raise BootstrapError("incomplete immutable image provenance")
+    actual_tree = _source_tree_sha(repo, exclude={marker.name})
+    if actual_tree != payload["tree_sha256"]:
+        raise BootstrapError("immutable image source tree hash mismatch")
+    return {
+        "head": payload["head"],
+        "branch": payload["branch"],
+        "upstream": payload["upstream"],
+        "clean": True,
+        "status": "",
+        "source": "immutable_image_provenance",
+        "tree_sha256": actual_tree,
+    }
+
+
+def _classify_and_preverify_provenance(
+    repo: Path,
+) -> tuple[str, dict[str, Any] | None]:
+    """Choose one repository provenance lane before source is importable.
+
+    A real Git administrative path selects the live-worktree lane.  Without
+    Git, path existence is determined with ``lstat`` so broken symlinks and
+    special files cannot masquerade as an absent marker.  Exactly one regular,
+    canonical marker must then authenticate the complete tree before any
+    project directory is added to ``sys.path``.
+    """
+
+    git_marker = repo / ".git"
+    if _lstat_mode(git_marker, "Git worktree marker") is not None:
+        _preverify_git_worktree_marker(repo)
+        return "git_worktree", None
+
+    marker_paths = {
+        "source_snapshot": repo / SOURCE_SNAPSHOT_RECEIPT_NAME,
+        "immutable_image": repo / IMAGE_PROVENANCE_NAME,
+    }
+    present = [
+        (kind, path)
+        for kind, path in marker_paths.items()
+        if _lstat_mode(path, f"{kind} provenance marker") is not None
+    ]
+    if len(present) != 1:
+        raise BootstrapError(
+            "non-Git source root requires exactly one provenance marker"
+        )
+    kind, marker = present[0]
+    _require_canonical_regular_marker(marker, f"{kind} provenance marker")
+    if kind == "source_snapshot":
+        return kind, _stdlib_verify_source_snapshot(repo)
+    return kind, _stdlib_verify_image_provenance(repo)
+
+
 def _git_runtime_record(repo: Path) -> dict[str, Any]:
     """Use real Git locally and an immutable build record inside the image."""
 
-    image_record = repo / ".fpct_image_provenance.json"
-    if image_record.is_file() and not (repo / ".git").exists():
-        payload = json.loads(image_record.read_text(encoding="utf-8"))
-        required = {"head", "branch", "upstream", "tree_sha256"}
-        if not required.issubset(payload):
-            raise BootstrapError("incomplete immutable image provenance")
-        actual_tree = _source_tree_sha(repo, exclude={image_record.name})
-        if actual_tree != payload["tree_sha256"]:
-            raise BootstrapError("immutable image source tree hash mismatch")
-        return {
-            "head": payload["head"], "branch": payload["branch"],
-            "upstream": payload["upstream"], "clean": True, "status": "",
-            "source": "immutable_image_provenance", "tree_sha256": actual_tree,
-        }
+    if _ACTIVE_PROVENANCE_KIND in {"source_snapshot", "immutable_image"}:
+        if _ACTIVE_REPO != repo or _PREVERIFIED_RUNTIME_GIT is None:
+            raise BootstrapError(
+                "non-Git source was not stdlib-verified before import sealing"
+            )
+        return dict(_PREVERIFIED_RUNTIME_GIT)
+    if _ACTIVE_PROVENANCE_KIND != "git_worktree":
+        raise BootstrapError("repository provenance was not classified")
     return {
         "head": _git(repo, "rev-parse", "HEAD"),
         "branch": _git(repo, "branch", "--show-current"),
@@ -166,8 +550,21 @@ def _audit_hook(event: str, args: tuple[Any, ...]) -> None:
         value = os.fsdecode(raw)
     except Exception:
         return
-    if value.startswith("/netdisk/"):
-        _PROTECTED_OPENS.append(value)
+    if not value.startswith("/netdisk/"):
+        return
+    # Formal source snapshots commonly live on /netdisk as well.  Reading the
+    # already-selected immutable source closure is not natural-data access;
+    # every canonical path outside that exact root (including ``../`` escapes
+    # and sibling datasets/model caches) remains protected and is recorded.
+    if _ACTIVE_REPO is not None:
+        try:
+            candidate = Path(value).resolve(strict=False)
+            candidate.relative_to(_ACTIVE_REPO)
+        except (OSError, RuntimeError, ValueError):
+            pass
+        else:
+            return
+    _PROTECTED_OPENS.append(value)
 
 
 def _module_origin(module: ModuleType) -> Path | None:
@@ -338,7 +735,11 @@ def _stable_sys_path(repo: Path) -> list[str]:
                 )
             entries = sorted(item.name for item in path.iterdir())
             allowed = {"_remote_module_non_scriptable.py", "__pycache__"}
-            if set(entries) != allowed:
+            allowed_without_cache = {"_remote_module_non_scriptable.py"}
+            if frozenset(entries) not in {
+                frozenset(allowed),
+                frozenset(allowed_without_cache),
+            }:
                 raise BootstrapError(
                     f"unexpected ephemeral sys.path payload: {path}: {entries}"
                 )
@@ -346,13 +747,16 @@ def _stable_sys_path(repo: Path) -> list[str]:
             if not source.is_file():
                 raise BootstrapError("generated torch remote-module source missing")
             cached = path / "__pycache__"
-            if not cached.is_dir() or any(
-                item.is_dir()
-                or not item.name.startswith("_remote_module_non_scriptable.")
-                or item.suffix != ".pyc"
-                for item in cached.iterdir()
-            ):
-                raise BootstrapError("unexpected generated remote-module cache")
+            if cached.exists():
+                if not cached.is_dir() or any(
+                    item.is_dir()
+                    or not item.name.startswith("_remote_module_non_scriptable.")
+                    or item.suffix != ".pyc"
+                    for item in cached.iterdir()
+                ):
+                    raise BootstrapError("unexpected generated remote-module cache")
+            elif not sys.dont_write_bytecode:
+                raise BootstrapError("generated remote-module cache is missing")
             marker = (
                 "/tmp/<torch-remote-module-sha256="
                 f"{sha256_file(source)}>"
@@ -527,8 +931,8 @@ def _parse_args(argv: Iterable[str] | None = None) -> argparse.Namespace:
 
 
 def main(argv: Iterable[str] | None = None) -> int:
-    global _ACTIVE_REPO, _ACTIVE_SENTINEL, _ACTIVE_TARGET
-    global _LOADED_BY_KEY, _PRE_ATTESTATION
+    global _ACTIVE_PROVENANCE_KIND, _ACTIVE_REPO, _ACTIVE_SENTINEL, _ACTIVE_TARGET
+    global _LOADED_BY_KEY, _PRE_ATTESTATION, _PREVERIFIED_RUNTIME_GIT
 
     args = _parse_args(argv)
     repo = _real_absolute(args.repo_root, "repo root")
@@ -552,13 +956,26 @@ def main(argv: Iterable[str] | None = None) -> int:
     if "fpct_bootstrap" in sys.modules:
         raise BootstrapError("bootstrap alias already present")
 
+    # Provenance classification still precedes every sys.path mutation and
+    # project import.  Basic invocation/package-shape checks above are inert
+    # filesystem checks and give malformed launchers a precise hard failure.
+    provenance_kind, preverified_runtime_git = (
+        _classify_and_preverify_provenance(repo)
+    )
+    if provenance_kind == "source_snapshot":
+        # The bootstrap runs as ``__main__`` and has no pyc write.  Disable all
+        # later project import caches before sealing a git-archive snapshot.
+        sys.dont_write_bytecode = True
+
     os.environ.pop("PYTHONPATH", None)
     os.environ.pop("PYTHONHOME", None)
+    _ACTIVE_REPO = repo
+    _ACTIVE_PROVENANCE_KIND = provenance_kind
+    _PREVERIFIED_RUNTIME_GIT = preverified_runtime_git
     sys.addaudithook(_audit_hook)
     sys.path.insert(0, str(repo))
     importlib.invalidate_caches()
 
-    _ACTIVE_REPO = repo
     _ACTIVE_TARGET = target
     _ACTIVE_SENTINEL = _SENTINEL
     sys.modules["fpct_bootstrap"] = sys.modules[__name__]

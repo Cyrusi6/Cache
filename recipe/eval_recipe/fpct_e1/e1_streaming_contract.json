@@ -1,0 +1,433 @@
+{
+  "schema_version": 6,
+  "protocol_id": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming",
+  "approval": {
+    "approval_id": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A4_STREAMING",
+    "approved_at": "2026-07-26",
+    "prospective": true,
+    "classification": "ENGINEERING_ONLY_REPRESENTATION_PRESERVING",
+    "current_phase": "PRE_NATURAL_IMPLEMENTATION_AND_SYNTHETIC_GATES",
+    "successor_input_lock_condition": "synthetic_gate_GO_and_clean_pushed_A4_snapshot",
+    "runtime_checkpoint_plan_e1_2_condition": "successor_streaming_input_lock_GO",
+    "e1_3_condition": "E1_2_finalized",
+    "training_authorized": false
+  },
+  "historical_execution": {
+    "execution_sha": "612697dfc44ab46699728b8d2de0a6fce980a889",
+    "status": "INCONCLUSIVE_RESOURCE_CEILING",
+    "lifecycle": "ABANDONED",
+    "resume_allowed": false,
+    "artifact_reuse_allowed": false,
+    "scientific_result": false,
+    "retroactive_pass_interpretation_allowed": false,
+    "observed_logical_rows_for_incident_record_only": 616448,
+    "historical_cumulative_logical_row_ceiling": 262144,
+    "observed_value_may_select_new_ceiling": false
+  },
+  "prior_attempt_reuse": {
+    "forbidden_execution_prefixes": [
+      "744a943",
+      "d1698177",
+      "612697df"
+    ],
+    "artifact_or_partial_state_reuse_allowed": false,
+    "successor_requires_new_protocol_schema_commit_snapshot_uid_root_plan_and_receipts": true,
+    "successor_restarts_cpu_e0_design_input_lock_from_beginning": true
+  },
+  "scientific_invariants": {
+    "logical_cartesian_row_universe_preserved": true,
+    "existing_row_key_preserved": true,
+    "candidate_prior_mask_topology_preserved": true,
+    "row_statistical_weights_preserved": true,
+    "endpoints_preserved": [
+      "C_post",
+      "F"
+    ],
+    "estimands_preserved": [
+      "teacher_forced_delta_gold_logp",
+      "end_task_accuracy",
+      "correctness_flip",
+      "all_preregistered_mechanism_metrics",
+      "all_preregistered_aggregates"
+    ],
+    "checkpoint_operator_and_lambda_grid_preserved": true,
+    "checkpoint_design": "3 frozen E0 seeds x {C_post-trained, F-trained}",
+    "inference_cells": [
+      "Y_CC",
+      "Y_CF",
+      "Y_FC",
+      "Y_FF"
+    ],
+    "centered_lambda_grid": [
+      0.0,
+      0.25,
+      0.5,
+      1.0,
+      2.0
+    ],
+    "e0_design_population_preserved": true,
+    "e1_pilot_sealed": true,
+    "confirmatory_sealed": true,
+    "operator_selection_authorized": false,
+    "training_authorized": false
+  },
+  "not_approved": [
+    "increase_262144_based_on_observed_616448",
+    "reinterpret_or_resume_old_execution_in_place",
+    "drop_or_sample_samples_parents_queries_layers_heads_candidates_or_rows",
+    "truncate_or_early_stop",
+    "filter_topology_to_reduce_volume",
+    "change_alignment_sanitizer_candidate_order_prior_mask_operator_threshold_split_checkpoint_lambda_endpoint_or_estimand",
+    "load_model_or_checkpoint_before_successor_input_lock_go",
+    "create_runtime_probe_plan_configmap_or_checkpoint_job_before_successor_input_lock_go",
+    "render_tokenize_align_run_or_read_e1_pilot",
+    "access_model_selection_test_confirmatory_or_phase2a_outcomes"
+  ],
+  "logical_geometry": {
+    "num_layers": 28,
+    "num_query_heads": 16,
+    "answer_query_count_symbol": "Q_s",
+    "certified_parent_count_symbol": "P_s",
+    "logical_row_count_formula": "N_s = 28 * 16 * Q_s * P_s",
+    "sequence_contract": "Preserve input-lock answer_queries and certified_parents array order exactly.",
+    "ordinal_formula": "r = (((layer * 16 + query_head) * Q_s + query_idx) * P_s + parent_idx)",
+    "inverse": {
+      "parent_idx": "r % P_s",
+      "x0": "r // P_s",
+      "query_idx": "x0 % Q_s",
+      "x1": "x0 // Q_s",
+      "query_head": "x1 % 16",
+      "layer": "x1 // 16"
+    },
+    "ranges": {
+      "layer": "0 <= layer < 28",
+      "query_head": "0 <= query_head < 16",
+      "query_idx": "0 <= query_idx < Q_s",
+      "parent_idx": "0 <= parent_idx < P_s",
+      "row_ordinal": "0 <= row_ordinal < N_s"
+    },
+    "forward_inverse_bijective_required": true,
+    "row_ordinal_is_physical_locator_only": true
+  },
+  "row_identity": {
+    "existing_row_key_columns_in_order": [
+      "sample_sha256",
+      "content_group_sha256",
+      "input_sha256",
+      "alignment_sha256",
+      "labels_sha256",
+      "gold_response_sha256",
+      "layer",
+      "query_head",
+      "kv_head",
+      "query_position",
+      "target_position",
+      "target_token_id",
+      "parent_position",
+      "candidate_count",
+      "topology"
+    ],
+    "row_ordinal_in_existing_row_key": false,
+    "kv_head_formula": "floor(query_head / (Hq / Hkv))",
+    "canonical_json": "UTF-8 compact JSON, sorted object keys, finite values only, no trailing LF",
+    "logical_row_id_domain": "fpct-e1-a4-logical-row-id-v1",
+    "logical_row_id_formula": "SHA256(UTF8(domain) || NUL || canonical_json(existing_row_key_array))",
+    "endpoint_id_formula": "canonical_json([seed, checkpoint_arm, inference_operator, cell, task, lambda_value])",
+    "endpoint_row_id_formula": "SHA256(UTF8(endpoint_id) || NUL || ASCII(logical_row_id))",
+    "hash_encoding": "lowercase_hex_sha256",
+    "logical_row_id_independent_of": [
+      "endpoint_id",
+      "seed",
+      "checkpoint",
+      "lambda",
+      "chunk_partition",
+      "physical_file",
+      "run_uid"
+    ]
+  },
+  "physical_chunking": {
+    "production_physical_chunk_rows": 4096,
+    "range_formula": "[chunk_index*4096, min((chunk_index+1)*4096, N_s))",
+    "smaller_chunks_allowed_only_in_synthetic_tests": true,
+    "production_chunk_larger_than_4096_allowed": false,
+    "chunk_manifest_required_columns": [
+      "sample_sha256",
+      "chunk_index",
+      "first_row_ordinal",
+      "end_row_ordinal_exclusive",
+      "row_count",
+      "first_logical_row_id",
+      "last_logical_row_id",
+      "canonical_row_stream_sha256",
+      "physical_file_sha256",
+      "physical_file_bytes",
+      "schema_sha256"
+    ],
+    "coverage_checks": [
+      "first_range_starts_at_zero",
+      "adjacent_ranges_exactly_contiguous",
+      "last_range_ends_at_N_s",
+      "no_overlapping_ranges",
+      "no_missing_ranges",
+      "sum_row_count_equals_N_s"
+    ]
+  },
+  "semantic_hashing": {
+    "semantic_stream_order": [
+      "sample_sha256_ascending",
+      "row_ordinal_ascending"
+    ],
+    "semantic_row_excludes": [
+      "physical_path",
+      "chunk_index",
+      "row_group_metadata",
+      "physical_file_sha256",
+      "run_local_metadata"
+    ],
+    "semantic_stream_formula": "incremental SHA256 over canonical semantic-row bytes followed by LF in frozen ordinal order",
+    "chunk_boundary_independent": true,
+    "physical_file_sha_recorded": true,
+    "physical_file_sha_is_partition_equivalence_target": false,
+    "semantic_equivalence_requires": [
+      "decoded_logical_row_sequence",
+      "logical_row_count",
+      "logical_row_ids",
+      "semantic_stream_sha256",
+      "metric_values",
+      "statistical_weights",
+      "topology",
+      "endpoint_identity",
+      "formal_aggregates",
+      "estimands"
+    ]
+  },
+  "deterministic_reduction": {
+    "sample_order": "sample_sha256 ascending",
+    "within_sample_order": "row_ordinal ascending",
+    "parallel_merge_before_formal_reduction": true,
+    "shard_or_chunk_completion_order_may_affect_result": false,
+    "content_group_task_and_cross_task_weights_unchanged": true,
+    "chunk_local_summary_role": "integrity_diagnostic_only"
+  },
+  "passes": {
+    "A_compact_geometry_lock": {
+      "expanded_logical_rows_allowed": false,
+      "per_sample_fields": [
+        "task",
+        "sample_and_content_group_hashes",
+        "provenance_hashes",
+        "answer_queries",
+        "certified_parents",
+        "Q_s",
+        "P_s",
+        "N_s",
+        "answer_query_sequence_sha256",
+        "parent_sequence_sha256",
+        "raw_topology_compact_metadata",
+        "expected_chunk_count"
+      ],
+      "outputs": [
+        "input_geometry_manifest.json",
+        "input_geometry_samples.parquet",
+        "input_geometry_receipt.json"
+      ],
+      "volume_statistics": [
+        "count",
+        "sum",
+        "min",
+        "p50",
+        "p95",
+        "max",
+        "argmax",
+        "estimated_physical_rows",
+        "estimated_disk_requirement",
+        "estimated_inode_requirement"
+      ],
+      "disk_and_inode_preflight_required": true
+    },
+    "B_streaming_attestation_materialization": {
+      "input": "immutable compact geometry lock",
+      "ordinal_order_required": true,
+      "max_expanded_rows_in_memory": 4096,
+      "memory_complexity": "O(Q_s + P_s + physical_chunk_rows)",
+      "cartesian_memory_complexity_forbidden": "O(28 * 16 * Q_s * P_s)",
+      "expanded_logical_rows_in_compact_sidecar_allowed": false,
+      "monolithic_compact_sidecar_requires_bounded_rss_proof": true
+    }
+  },
+  "synthetic_pre_natural_gates": {
+    "natural_e0_design_access_before_all_gates_go": false,
+    "reference_equivalence_matrix": {
+      "Q": [
+        1,
+        2,
+        3
+      ],
+      "P": [
+        1,
+        2,
+        4
+      ],
+      "L": [
+        1,
+        2,
+        28
+      ],
+      "Hq_over_Hkv": [
+        1,
+        2,
+        4
+      ],
+      "required_equalities": [
+        "row_key_multiset",
+        "row_values",
+        "weights",
+        "topology",
+        "kv_head_mapping",
+        "endpoint_identity",
+        "semantic_stream_hash_after_canonical_ordinal_replay",
+        "formal_aggregate"
+      ]
+    },
+    "chunk_partition_sizes": [
+      1,
+      7,
+      257,
+      4096,
+      8192
+    ],
+    "chunk_partition_semantics": "Synthetic logical partitions only; every physical Parquet writer batch/file remains <=4096, including an 8192 logical partition split into bounded sub-batches.",
+    "chunk_partition_required_equalities": [
+      "semantic_stream_sha256",
+      "logical_row_ids",
+      "logical_row_count",
+      "metrics",
+      "formal_aggregates"
+    ],
+    "stress": {
+      "minimum_logical_rows": 1000000,
+      "logical_row_ceiling_allowed": false,
+      "million_row_python_list_allowed": false,
+      "ordinal_coverage_exact": true,
+      "semantic_hash_reproducible": true
+    },
+    "rss_lock": {
+      "status": "PRE_NATURAL_SYNTHETIC_OBJECTIVE_LOCK_REQUIRED",
+      "threshold_bytes": null,
+      "baseline_case": "smallest 28*16*Q*P spanning at least two 4096-row chunks",
+      "stress_case": "smallest 28*16*Q*P >= 1000000",
+      "objective_threshold_formula": "baseline_peak_rss_bytes + 16 * 4096 * max_canonical_full_schema_row_bytes",
+      "bounded_rule": "stress_peak_rss_bytes <= threshold_bytes",
+      "estimated_physical_bytes_per_row_rule": "smallest power of two >= max_canonical_full_schema_row_bytes",
+      "evidence_sha256_rule": "SHA256(canonical LF-framed evidence object only); excludes the containing gate and evidence_sha256 field",
+      "buffer_copy_multiplier": 16,
+      "must_precede_successor_natural_e0_design_access": true,
+      "must_freeze": [
+        "environment_identity",
+        "schema_sha256",
+        "production_chunk_rows_4096",
+        "measurement_method",
+        "synthetic_case_definitions",
+        "measured_peak_rss_values",
+        "objective_threshold_derivation",
+        "threshold_bytes",
+        "evidence_sha256"
+      ],
+      "may_use_observed_natural_616448": false,
+      "natural_input_lock_blocked_until_locked": true
+    },
+    "corruption_rejections": [
+      "missing_chunk",
+      "duplicate_chunk",
+      "overlapping_ordinal_ranges",
+      "ordinal_gap",
+      "row_mutation",
+      "row_reordered_within_range",
+      "wrong_sample_hash",
+      "wrong_endpoint",
+      "wrong_schema",
+      "wrong_expected_N_s",
+      "wrong_chunk_sha",
+      "wrong_semantic_stream_sha"
+    ],
+    "crash_points": [
+      "partial_chunk_temporary_file",
+      "before_parquet_close",
+      "before_artifact_rename",
+      "before_manifest_write",
+      "before_manifest_rename"
+    ],
+    "crash_resume_requirements": [
+      "temporary_files_are_not_valid_artifacts",
+      "completed_immutable_chunks_are_not_rewritten",
+      "incomplete_chunk_restarts_at_range_start",
+      "no_final_duplicate_or_missing_row",
+      "final_semantic_sha_equals_clean_execution"
+    ],
+    "forbidden_whole_table_paths": [
+      "list(all_logical_rows)",
+      "pyarrow.read_table(full_artifact)",
+      "to_pylist(full_artifact)",
+      "read_text(large_jsonl)",
+      "pandas.read_parquet(full_artifact)"
+    ]
+  },
+  "input_lock_hard_gate": {
+    "failure_status": "A4_INPUT_LOCK_BLOCKED",
+    "all_boolean_checks_must_be_true": [
+      "protocol_and_schema_versioned",
+      "expected_logical_rows_eq_emitted",
+      "ordinal_first_eq_zero",
+      "ordinal_last_eq_expected_minus_one",
+      "ordinal_ranges_contiguous",
+      "row_key_reference_equivalence",
+      "weights_reference_equivalence",
+      "topology_reference_equivalence",
+      "semantic_stream_replay_equal",
+      "chunk_partition_semantic_equivalence",
+      "aggregate_partition_equivalence",
+      "bounded_peak_rss",
+      "atomic_no_overwrite",
+      "crash_resume_equivalence",
+      "raw_topology_complete",
+      "task_counts_exact_128_70_128",
+      "input_assets_unchanged_during_lock"
+    ],
+    "all_boolean_checks_must_be_false": [
+      "old_attempt_artifact_reused",
+      "e1_pilot_consumed",
+      "model_or_checkpoint_loaded",
+      "gpu_or_kubernetes_used",
+      "whole_table_materialization_detected"
+    ],
+    "all_integer_checks_must_equal_zero": [
+      "missing_rows",
+      "duplicate_rows",
+      "overlapping_chunks"
+    ],
+    "failure_forbids": [
+      "runtime_probe",
+      "execution_plan",
+      "configmap",
+      "checkpoint_job",
+      "e1_2",
+      "e1_3"
+    ]
+  },
+  "data_firewall": {
+    "authorized_natural_population_after_synthetic_gate": "E0-design only",
+    "e0_design_counts": {
+      "ai2-arc": 128,
+      "openbookqa": 70,
+      "mmlu-redux": 128
+    },
+    "e1_pilot": "SEALED_NOT_RENDERED_NOT_TOKENIZED_NOT_ALIGNED_NOT_RUN_NOT_READ",
+    "model_selection_test_confirmatory": "SEALED_NOT_AUTHORIZED"
+  },
+  "downstream_dependency": {
+    "new_dag_and_receipts_required": true,
+    "historical_dag_operational": false,
+    "input_lock_go_required_before_runtime_probe_or_e1_2": true,
+    "deep_verified_finalized_e1_2_required_before_e1_3": true
+  }
+}

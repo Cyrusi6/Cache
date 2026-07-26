@@ -23,10 +23,14 @@ import yaml
 from script.experiment.fpct_e1_runtime_probe import validate_runtime_probe
 
 
-SCHEMA_VERSION = 1
-PROTOCOL_ID = "fpct_e1_k8s_lock_bundle_v1"
-FINALIZED_PROTOCOL_ID = "fpct_e1_k8s_finalized_lock_bundle_v1"
-PLAN_PROTOCOL_ID = "fpct_e1_e0_design_capture_v2"
+SCHEMA_VERSION = 2
+PROTOCOL_ID = "fpct_e1_k8s_lock_bundle_v2_a4_streaming"
+FINALIZED_PROTOCOL_ID = "fpct_e1_k8s_finalized_lock_bundle_v2_a4_streaming"
+PLAN_SCHEMA_VERSION = 6
+PLAN_PROTOCOL_ID = "fpct_e1_e0_design_capture_v6_representation_preserving_streaming"
+A4_PROTOCOL_ID = "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+INPUT_LOCK_PROTOCOL_ID = "fpct_e1_e0_design_input_lock_v2_streaming"
+INPUT_LOCK_STATUS = "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT"
 GATE_ID = "fpct_e1_instrumentation_hard_gate_v1"
 REQUIRED_GATE_CHECKS = {
     "formula_oracles",
@@ -88,6 +92,31 @@ def _source_record(path: Path, raw: bytes, mounted_key: str) -> dict[str, Any]:
     }
 
 
+def _require_a4_operative_plan(plan: Mapping[str, Any]) -> None:
+    operative = plan.get("a4_operative_lock", {})
+    authorization = operative.get("execution_authorization", {})
+    expected_authorization = {
+        "a4_successor_input_lock_operative": True,
+        "a4_successor_dag_operative": True,
+        "requires_streaming_input_lock_go": True,
+        "historical_attempt_resume_allowed": False,
+        "e1_pilot_forward_or_outcome": False,
+        "training": False,
+    }
+    prepared = plan.get("input_lock", {}).get("prepared", {})
+    if (
+        operative.get("status") != "GO_NEW_A4_SUCCESSOR_DAG_ONLY"
+        or operative.get("protocol_id") != A4_PROTOCOL_ID
+        or operative.get("historical_execution_resume_allowed") is not False
+        or operative.get("historical_artifact_reuse_allowed") is not False
+        or authorization != expected_authorization
+        or prepared.get("status") != INPUT_LOCK_STATUS
+        or prepared.get("streaming_contract", {}).get("protocol_id") != A4_PROTOCOL_ID
+        or prepared.get("manifest", {}).get("logical_path", "").endswith("__PREPARED_INPUT_LOCK_MANIFEST__")
+    ):
+        raise ValueError("frozen plan lacks an operative new-execution-only A4 input lock")
+
+
 def validate_frozen_sources(
     *,
     plan_path: Path,
@@ -102,7 +131,7 @@ def validate_frozen_sources(
     runtime_raw, runtime = _read_json_bytes(runtime_probe_path)
     source_receipt_raw, source_receipt = _read_json_bytes(source_snapshot_receipt_path)
     if (
-        plan.get("schema_version") != 2
+        plan.get("schema_version") != PLAN_SCHEMA_VERSION
         or plan.get("protocol_id") != PLAN_PROTOCOL_ID
         or plan.get("status") != "PREPARED_NO_MODEL_LOAD"
         or plan.get("plan_sha256") != _plan_hash(plan)
@@ -113,6 +142,7 @@ def validate_frozen_sources(
     gate_lock = plan.get("instrumentation_gate")
     if not all(isinstance(value, Mapping) for value in (runtime_lock, source_snapshot, gate_lock)):
         raise ValueError("frozen plan lacks runtime/source/gate locks")
+    _require_a4_operative_plan(plan)
     execution_sha = str(runtime_lock.get("execution_sha", ""))
     image_digest = str(runtime_lock.get("image_digest", ""))
     tree_sha = str(source_snapshot.get("canonical_tree_sha256", ""))
@@ -464,12 +494,13 @@ def validate_finalized_sources(
     receipt_raw, receipt = _read_json_bytes(finalized_receipt_path)
     stage_raw, stage_manifest = _read_json_bytes(stage_manifest_path)
     if (
-        plan.get("schema_version") != 2
+        plan.get("schema_version") != PLAN_SCHEMA_VERSION
         or plan.get("protocol_id") != PLAN_PROTOCOL_ID
         or plan.get("status") != "PREPARED_NO_MODEL_LOAD"
         or plan.get("plan_sha256") != _plan_hash(plan)
     ):
         raise ValueError("frozen capture plan identity/self-hash mismatch")
+    _require_a4_operative_plan(plan)
     plan_sha = plan["plan_sha256"]
     runtime_lock = plan.get("runtime_lock")
     if not isinstance(runtime_lock, Mapping) or not EXECUTION_SHA.fullmatch(

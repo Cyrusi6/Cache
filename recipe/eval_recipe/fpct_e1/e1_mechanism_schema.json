@@ -1,6 +1,6 @@
 {
-  "schema_version": 1,
-  "protocol_id": "fpct_e1_e0_design_mechanism_audit_v1",
+  "schema_version": 6,
+  "protocol_id": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming",
   "status": "prospective_unexecuted",
   "scientific_role": "E0-design teacher-forced mechanism audit and centered-lambda operator sweep",
   "data_firewall": {
@@ -62,7 +62,7 @@
     "taxonomy_unresolved": "m>=2 geometry that satisfies none of the frozen positive rules; ordinary soft-span partial coverage, multiple overlaps, or failure of the partition rule alone is never evidence of competition"
   },
   "raw_topology_audit": {
-    "source": "frozen fpct_e1_e0_design_input_lock_v1 sidecar only",
+    "source": "frozen successor fpct_e1_e0_design_input_lock_v2_streaming sidecar with operative A4 GO receipt only; historical v1 artifacts are rejected",
     "grain": "task x sample x raw pre-sanitizer parent with m>=2",
     "model_output_free": true,
     "runtime_functional_rows_separate": true,
@@ -119,7 +119,7 @@
     "serialization_contract": "JSONL is written row-wise and Parquet in fixed 4096-row batches; only raw m>=2 topology rows are serialized and no raw KV/logit tensor is retained"
   },
   "input_row": {
-        "grain": "seed x checkpoint arm x inference operator x task x sample x answer query x layer x query head x parent x lambda",
+        "grain": "seed x checkpoint arm x inference operator x task x sample x answer query x layer x query head x parent x lambda; each row additionally carries its sample-local Cartesian row_ordinal",
     "required_columns": [
       "schema_version",
       "split_role",
@@ -143,9 +143,17 @@
       "parent_position",
       "candidate_count",
       "topology",
-      "lambda_value",
-      "prior",
-      "gamma",
+      "row_ordinal",
+      "logical_row_id",
+      "endpoint_id",
+      "endpoint_row_id",
+    "lambda_value",
+    "prior",
+    "candidate_indices",
+    "candidate_valid_mask",
+    "candidate_slot_weights",
+    "statistical_weight",
+    "gamma",
       "source_d_k",
       "source_d_v",
       "source_energy_k",
@@ -164,11 +172,41 @@
             "end_task_correct",
             "cpost_end_task_correct"
         ],
-        "array_contract": "prior and gamma contain exactly candidate_count finite nonnegative values and each sums to one when candidate_count > 0",
+  "array_contract": "candidate_indices/candidate_valid_mask/candidate_slot_weights preserve all four frozen sanitizer slots in original order; invalid slots are exactly (-1,false,0); prior and gamma contain exactly candidate_count legal finite nonnegative values and each sums to one; statistical_weight is positive finite",
         "position_contract": "target_position = query_position + 1",
         "candidate_contract": "functional rows contain certified runtime parents only, so 2 <= candidate_count <= 4",
         "head_contract": "query_head is Hq; kv_head=floor(query_head/(Hq/Hkv)); source/fused D and energy are full head-by-feature Frobenius scalars repeated over query heads because sender and receiver heads have no semantic one-to-one map",
-        "baseline_join": "cpost fields are mechanically joined by the executor on seed/checkpoint arm/task/sample/query/target/target_token_id plus input/alignment/labels hashes; a runtime backend may not self-report them"
+        "baseline_join": "cpost fields are mechanically joined by the executor on seed/checkpoint arm/task/sample/query/target/target_token_id plus input/alignment/labels hashes; a runtime backend may not self-report them",
+        "logical_row_identity": {
+          "existing_key_columns_in_order": [
+            "sample_sha256",
+            "content_group_sha256",
+            "input_sha256",
+            "alignment_sha256",
+            "labels_sha256",
+            "gold_response_sha256",
+            "layer",
+            "query_head",
+            "kv_head",
+            "query_position",
+            "target_position",
+            "target_token_id",
+            "parent_position",
+            "candidate_count",
+            "topology"
+          ],
+          "identity_columns_appended_in_order": [
+            "row_ordinal",
+            "logical_row_id",
+            "endpoint_id",
+            "endpoint_row_id"
+          ],
+          "row_ordinal_formula": "(((layer*Hq+query_head)*Q_s+query_idx)*P_s+parent_idx)",
+          "logical_row_id": "SHA256(UTF8('fpct-e1-a4-logical-row-id-v1') || NUL || compact canonical JSON(existing key array))",
+          "endpoint_id": "compact canonical JSON([seed,checkpoint_arm,inference_operator,cell,task,lambda_value])",
+          "endpoint_row_id": "SHA256(UTF8(endpoint_id) || NUL || ASCII lowerhex logical_row_id)",
+          "row_ordinal_is_physical_locator_only": true
+        }
   },
   "derived_metrics": {
     "gamma_kl_prior": "sum_j gamma_j log(gamma_j/A_j)",
@@ -186,15 +224,19 @@
         "end_task_accuracy_flip": "end_task_correct != cpost_end_task_correct"
   },
   "bounded_streaming_execution": {
-    "stage_input": "one deterministic merged Parquet whose shard blocks are ordered by canonical shard_id and whose rows are strictly frozen-row-key ordered within each shard",
+    "stage_input": "immutable endpoint chunks may complete in any order; every decoded row is first validated and staged in a disk-backed unique index",
     "reader": "ParquetFile.iter_batches with 4096 rows per batch; no whole-file read_table/to_pylist/read_text materialization",
-    "derivation_chunk": "one partition x sample, where partition=(seed,checkpoint_arm,inference_operator,cell,task,lambda_value)",
-    "hard_max_rows_per_partition_sample": 262144,
+    "formal_passes": 2,
+    "pass_one": "validate schema, row identities, endpoint/sample ordinal uniqueness, and complete Cartesian coverage while spilling individual rows to SQLite",
+    "pass_two": "read endpoint_id, sample_sha256, row_ordinal ascending and update all formal floating accumulators in that exact order",
+    "logical_row_ceiling": null,
+    "cumulative_sample_row_list": false,
+    "test_only_in_memory_reference": "prepare_rows/_finish_prepared_rows may be used only for small synthetic fixtures and never by the formal analyzer",
     "hard_max_stage_partitions": 108,
     "hard_max_distinct_samples_and_content_groups": 326,
-    "hard_max_partition_sample_chunks": 35208,
     "detail_output": "bounded partition fragments followed by deterministic k-way merge into 4096-row Parquet row groups",
-    "aggregate_output": "per-sample bounded reductions are combined in deterministic sample order; parent geometry consistency is enforced by a disk-backed unique index",
+    "aggregate_output": "floating sums follow the formal logical order; row/query/group identity and parent-geometry consistency use disk-backed unique indices, while sample and unique-parent counts are derived from the proved Cartesian ordinal order",
+    "chunk_completion_order_affects_formal_reduction": false,
     "verification": "re-read only input columns from frozen detail Parquet, independently rerun the same bounded derivation, and require byte-size plus SHA256 equality for every formal artifact",
     "spill_contract": "temporary local spill only; removed on success or failure; no raw KV, logits, predictions, model, or checkpoint object is retained"
   },
@@ -202,22 +244,9 @@
     "e1_mechanism_rows.parquet": {
       "role": "validated and derived long-form rows",
       "sort_order": [
-        "seed",
-        "checkpoint_arm",
-        "inference_operator",
-        "task",
+        "endpoint_id",
         "sample_sha256",
-        "content_group_sha256",
-                "lambda_value",
-                "layer",
-                "query_head",
-                "query_position",
-                "parent_position",
-                "kv_head",
-                "target_position",
-                "target_token_id",
-                "candidate_count",
-                "topology"
+        "row_ordinal"
       ]
     },
     "e1_mechanism_summary.json": {

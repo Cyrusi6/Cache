@@ -15,8 +15,11 @@ from script.analysis.fpct_e1_mechanism_audit import (
     LAMBDA_GRID,
     INPUT_COLUMNS,
     OUTPUT_COLUMNS,
+    PROTOCOL_ID,
+    SCHEMA_VERSION,
     GammaQueryAccumulator,
     _csv_bytes,
+    attach_stream_identity,
     build_summary,
     causal_gold_log_probs,
     centered_candidates,
@@ -401,10 +404,24 @@ def test_raw_topology_sidecar_export_is_separate_hashed_and_reproducible(
     sidecar = tmp_path / "input_lock.pt"
     torch.save(
         {
-            "protocol_id": "fpct_e1_e0_design_input_lock_v1",
+            "schema_version": 2,
+            "protocol_id": "fpct_e1_e0_design_input_lock_v2_streaming",
+            "status": "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT",
             "split_role": "e0_design",
-            "e1_pilot_consumed": False,
-            "model_or_checkpoint_loaded": False,
+            "firewall": {
+                "e1_pilot_consumed": False,
+                "model_selection_consumed": False,
+                "test_consumed": False,
+                "model_or_checkpoint_loaded": False,
+                "gpu_or_cuda_used": False,
+            },
+            "streaming_contract": {
+                "protocol_id": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming",
+                "physical_chunk_rows": 4096,
+                "expanded_logical_rows_present": False,
+                "geometry_lock": {},
+                "streaming_template_lock": {},
+            },
             "items": [
                 {
                     "task": "ai2-arc",
@@ -546,6 +563,84 @@ def test_prepare_rows_computes_answer_query_variance() -> None:
     assert all(row["posterior_top1_changed"] for row in prepared)
 
 
+def test_a4_row_identity_and_ordinal_contract_is_fail_closed(tmp_path: Path) -> None:
+    rows = [
+        row
+        for row in synthetic_rows()
+        if row["cell"] == "Y_CF" and row["lambda_value"] == 1.0
+    ]
+    assert [row["row_ordinal"] for row in rows] == [0, 1]
+
+    broken_logical = copy.deepcopy(rows[0])
+    broken_logical["logical_row_id"] = "0" * 64
+    with pytest.raises(ValueError, match="logical_row_id"):
+        validate_and_derive_row(broken_logical)
+
+    broken_endpoint = copy.deepcopy(rows[0])
+    broken_endpoint["endpoint_id"] = "[]"
+    with pytest.raises(ValueError, match="endpoint_id"):
+        validate_and_derive_row(broken_endpoint)
+
+    broken_endpoint_row = copy.deepcopy(rows[0])
+    broken_endpoint_row["endpoint_row_id"] = "0" * 64
+    with pytest.raises(ValueError, match="endpoint_row_id"):
+        validate_and_derive_row(broken_endpoint_row)
+
+    duplicate = [attach_stream_identity(rows[0], 0), attach_stream_identity(rows[1], 0)]
+    with pytest.raises(ValueError, match="duplicate endpoint row"):
+        write_artifacts(duplicate, tmp_path / "duplicate")
+
+    gap = [attach_stream_identity(rows[0], 0), attach_stream_identity(rows[1], 2)]
+    with pytest.raises(ValueError, match="not contiguous"):
+        write_artifacts(gap, tmp_path / "gap")
+
+    reordered = [attach_stream_identity(rows[0], 1), attach_stream_identity(rows[1], 0)]
+    with pytest.raises(ValueError, match="Cartesian order"):
+        write_artifacts(reordered, tmp_path / "reordered")
+
+
+def test_a4_formal_reduction_is_input_completion_order_invariant(
+    tmp_path: Path,
+) -> None:
+    rows = synthetic_rows()
+    first = tmp_path / "first"
+    reversed_completion = tmp_path / "reversed"
+    first_summary = write_artifacts(rows, first)
+    second_summary = write_artifacts(reversed(rows), reversed_completion)
+    assert first_summary == second_summary
+    for filename in (
+        "e1_mechanism_rows.parquet",
+        "e1_mechanism_summary.json",
+        "e1_layer_head_summary.csv",
+        "e1_projector_contraction.csv",
+        "e1_candidate_topology.csv",
+        "e1_centered_lambda_summary.csv",
+    ):
+        assert (first / filename).read_bytes() == (
+            reversed_completion / filename
+        ).read_bytes()
+
+
+def test_a4_mechanism_schema_freezes_stream_identity_and_two_pass_reducer() -> None:
+    schema = json.loads(
+        Path("recipe/eval_recipe/fpct_e1/e1_mechanism_schema.json").read_text()
+    )
+    assert schema["schema_version"] == SCHEMA_VERSION == 6
+    assert schema["protocol_id"] == PROTOCOL_ID
+    required = schema["input_row"]["required_columns"]
+    assert required[required.index("topology") + 1 : required.index("lambda_value")] == [
+        "row_ordinal",
+        "logical_row_id",
+        "endpoint_id",
+        "endpoint_row_id",
+    ]
+    execution = schema["bounded_streaming_execution"]
+    assert execution["formal_passes"] == 2
+    assert execution["logical_row_ceiling"] is None
+    assert execution["cumulative_sample_row_list"] is False
+    assert execution["chunk_completion_order_affects_formal_reduction"] is False
+
+
 def test_response_logp_and_end_task_accuracy_are_not_parent_head_weighted(
     tmp_path: Path,
 ) -> None:
@@ -555,11 +650,13 @@ def test_response_logp_and_end_task_accuracy_are_not_parent_head_weighted(
         if row["cell"] == "Y_CF" and row["lambda_value"] == 1.0
     ]
     duplicated = []
-    for row in base:
-        duplicated.append(row)
+    for query_index, row in enumerate(
+        sorted(base, key=lambda value: value["query_position"])
+    ):
+        duplicated.append(attach_stream_identity(row, query_index * 2))
         copy_row = copy.deepcopy(row)
         copy_row["parent_position"] += 1
-        duplicated.append(copy_row)
+        duplicated.append(attach_stream_identity(copy_row, query_index * 2 + 1))
     summary = write_artifacts(duplicated, tmp_path)
     primary = summary["primary_teacher_forced_gold_logp"]
     assert len(primary) == 1
@@ -601,7 +698,9 @@ def test_bounded_streaming_matches_in_memory_numerical_semantics(
                 row = copy.deepcopy(original)
                 row["sample_sha256"] = sample
                 row["content_group_sha256"] = group
-                streamed.append(row)
+                streamed.append(
+                    attach_stream_identity(row, int(row["row_ordinal"]))
+                )
 
     merged = tmp_path / "merged-stage.parquet"
     pq.write_table(
@@ -657,7 +756,7 @@ def test_functional_stage_is_bounded_beyond_one_parquet_batch(
         for parent_position in range(4097):
             row = copy.deepcopy(base)
             row["parent_position"] = parent_position
-            yield row
+            yield attach_stream_identity(row, parent_position)
 
     output = tmp_path / "bounded"
     summary = write_artifacts(rows(), output)
@@ -678,3 +777,9 @@ def test_functional_analyzer_source_has_no_unbounded_reader_api() -> None:
     ).read_text(encoding="utf-8")
     for forbidden in (".read_text(", "pq.read_table(", ".to_pylist("):
         assert forbidden not in source
+    assert "MAX_LONG_FORM_ROWS_PER_SAMPLE" not in source
+    formal = source[
+        source.index("def write_artifacts(") : source.index("RAW_BOUNDARY_REASONS")
+    ]
+    for forbidden in ("current_rows", "_finish_prepared_rows("):
+        assert forbidden not in formal

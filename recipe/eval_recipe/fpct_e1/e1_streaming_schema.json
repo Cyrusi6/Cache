@@ -1,0 +1,1216 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cache.local/schema/fpct/e1/streaming/v6",
+  "title": "FPCT-E1 A4 representation-preserving streaming artifacts",
+  "description": "Strict schemas for compact geometry, logical-row identities, deterministic physical chunks, and A4 input-lock receipts.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/inputGeometryManifest"
+    },
+    {
+      "$ref": "#/$defs/inputGeometryReceipt"
+    },
+    {
+      "$ref": "#/$defs/chunkManifest"
+    },
+    {
+      "$ref": "#/$defs/chunkManifestIndex"
+    },
+    {
+      "$ref": "#/$defs/streamingInputLockReceipt"
+    },
+    {
+      "$ref": "#/$defs/streamingInputLockBlockedReceipt"
+    },
+    {
+      "$ref": "#/$defs/syntheticRssLock"
+    },
+    {
+      "$ref": "#/$defs/inputLockManifest"
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "nonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "positiveInteger": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "protocolHeader": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "protocol_id"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 6
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        }
+      }
+    },
+    "answerQuery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "query_position",
+        "target_position",
+        "target_token_id"
+      ],
+      "properties": {
+        "query_position": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "target_position": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "target_token_id": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        }
+      }
+    },
+    "certifiedParent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parent_position",
+        "candidate_count",
+        "prior",
+        "candidate_indices",
+        "candidate_valid_mask",
+        "candidate_slot_weights",
+        "statistical_weight",
+        "topology"
+      ],
+      "properties": {
+        "parent_position": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "candidate_count": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4
+        },
+        "prior": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "items": {
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 1.0
+          }
+        },
+        "candidate_indices": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"type": "integer", "minimum": -1}
+        },
+        "candidate_valid_mask": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"type": "boolean"}
+        },
+        "candidate_slot_weights": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+        },
+        "statistical_weight": {
+          "type": "number",
+          "exclusiveMinimum": 0.0
+        },
+        "topology": {
+          "enum": [
+            "partition_compositional",
+            "competing_overlap",
+            "boundary_fallback",
+            "neighbor_expansion",
+            "taxonomy_unresolved"
+          ]
+        }
+      }
+    },
+    "provenanceHashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "input_sha256",
+        "alignment_sha256",
+        "labels_sha256",
+        "gold_response_sha256"
+      ],
+      "properties": {
+        "input_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "alignment_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "labels_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "gold_response_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "logicalRowIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sample_sha256",
+        "content_group_sha256",
+        "input_sha256",
+        "alignment_sha256",
+        "labels_sha256",
+        "gold_response_sha256",
+        "layer",
+        "query_head",
+        "kv_head",
+        "query_position",
+        "target_position",
+        "target_token_id",
+        "parent_position",
+        "candidate_count",
+        "topology",
+        "row_ordinal",
+        "logical_row_id",
+        "endpoint_id",
+        "endpoint_row_id"
+      ],
+      "properties": {
+        "sample_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "content_group_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "alignment_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "labels_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "gold_response_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "layer": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 27
+        },
+        "query_head": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "kv_head": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "query_position": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "target_position": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "target_token_id": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "parent_position": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "candidate_count": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4
+        },
+        "topology": {
+          "enum": [
+            "partition_compositional",
+            "competing_overlap",
+            "boundary_fallback",
+            "neighbor_expansion",
+            "taxonomy_unresolved"
+          ]
+        },
+        "row_ordinal": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "logical_row_id": {
+          "$ref": "#/$defs/sha256"
+        },
+        "endpoint_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "endpoint_row_id": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "geometrySample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "task",
+        "sample_sha256",
+        "content_group_sha256",
+        "item_semantic_sha256",
+        "provenance",
+        "answer_queries",
+        "certified_parents",
+        "Q_s",
+        "P_s",
+        "N_s",
+        "answer_query_sequence_sha256",
+        "parent_sequence_sha256",
+        "raw_topology_compact_sha256",
+        "raw_topology_compact",
+        "expected_chunk_count"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 6
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        },
+        "task": {
+          "enum": [
+            "ai2-arc",
+            "openbookqa",
+            "mmlu-redux"
+          ]
+        },
+        "sample_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "content_group_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "item_semantic_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenanceHashes"
+        },
+        "answer_queries": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/answerQuery"
+          }
+        },
+        "certified_parents": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/certifiedParent"
+          }
+        },
+        "Q_s": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "P_s": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "N_s": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "answer_query_sequence_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "parent_sequence_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "raw_topology_compact_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "raw_topology_compact": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "expected_chunk_count": {
+          "$ref": "#/$defs/positiveInteger"
+        }
+      }
+    },
+    "rowVolume": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "sum",
+        "min",
+        "p50",
+        "p95",
+        "max",
+        "argmax_sample_sha256",
+        "argmax_content_group_sha256"
+      ],
+      "properties": {
+        "count": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "sum": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "min": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "p50": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "p95": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "max": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "argmax_sample_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "argmax_content_group_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "inputGeometryManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "population",
+        "task_group_counts",
+        "sample_count",
+        "samples_parquet",
+        "samples_parquet_sha256",
+        "samples_parquet_bytes",
+        "schema_sha256",
+        "sample_sequence_sha256",
+        "geometry_semantic_stream_sha256",
+        "row_volume",
+        "estimated_physical_rows",
+        "estimated_disk_bytes",
+        "estimated_inode_count",
+        "estimated_inode_formula",
+        "disk_preflight_passed",
+        "inode_preflight_passed",
+        "execution_identity_sha256",
+        "input_asset_state_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 6
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        },
+        "artifact_type": {
+          "const": "input_geometry_manifest"
+        },
+        "population": {
+          "const": "e0_design"
+        },
+        "task_group_counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ai2-arc",
+            "openbookqa",
+            "mmlu-redux"
+          ],
+          "properties": {
+            "ai2-arc": {
+              "const": 128
+            },
+            "openbookqa": {
+              "const": 70
+            },
+            "mmlu-redux": {
+              "const": 128
+            }
+          }
+        },
+        "sample_count": {
+          "const": 326
+        },
+        "samples_parquet": {
+          "type": "string",
+          "pattern": "^[^/].*\\.parquet$"
+        },
+        "samples_parquet_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "samples_parquet_bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sample_sequence_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "geometry_semantic_stream_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "row_volume": {
+          "$ref": "#/$defs/rowVolume"
+        },
+        "estimated_physical_rows": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "estimated_disk_bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "estimated_inode_count": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "estimated_inode_formula": {
+          "type": "string",
+          "minLength": 1
+        },
+        "disk_preflight_passed": {
+          "const": true
+        },
+        "inode_preflight_passed": {
+          "const": true
+        },
+        "execution_identity_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_asset_state_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "inputGeometryReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "status",
+        "manifest_sha256",
+        "schema_sha256",
+        "sample_count",
+        "expanded_logical_rows_materialized",
+        "task_counts_exact_128_70_128",
+        "input_assets_unchanged_during_lock",
+        "input_asset_state_before_sha256",
+        "input_asset_state_after_sha256",
+        "input_asset_state_sha256",
+        "execution_identity_sha256",
+        "bounded_geometry_replay_equal",
+        "pass_b_geometry_source_only",
+        "e1_pilot_consumed",
+        "model_or_checkpoint_loaded",
+        "gpu_or_kubernetes_used"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 6
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        },
+        "artifact_type": {
+          "const": "input_geometry_receipt"
+        },
+        "status": {
+          "const": "GO"
+        },
+        "manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sample_count": {
+          "const": 326
+        },
+        "expanded_logical_rows_materialized": {
+          "const": false
+        },
+        "task_counts_exact_128_70_128": {
+          "const": true
+        },
+        "input_assets_unchanged_during_lock": {
+          "const": true
+        },
+        "input_asset_state_before_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_asset_state_after_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_asset_state_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "execution_identity_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bounded_geometry_replay_equal": {
+          "const": true
+        },
+        "pass_b_geometry_source_only": {
+          "const": "verified_input_geometry_samples.parquet"
+        },
+        "e1_pilot_consumed": {
+          "const": false
+        },
+        "model_or_checkpoint_loaded": {
+          "const": false
+        },
+        "gpu_or_kubernetes_used": {
+          "const": false
+        }
+      }
+    },
+    "chunkManifestRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "sample_sha256",
+        "chunk_index",
+        "first_row_ordinal",
+        "end_row_ordinal_exclusive",
+        "row_count",
+        "first_logical_row_id",
+        "last_logical_row_id",
+        "canonical_row_stream_sha256",
+        "relative_path",
+        "physical_file_sha256",
+        "physical_file_bytes",
+        "schema_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 6
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        },
+        "sample_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "chunk_index": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "first_row_ordinal": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "end_row_ordinal_exclusive": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "row_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096
+        },
+        "first_logical_row_id": {
+          "$ref": "#/$defs/sha256"
+        },
+        "last_logical_row_id": {
+          "$ref": "#/$defs/sha256"
+        },
+        "canonical_row_stream_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "relative_path": {
+          "type": "string",
+          "pattern": "^[^/]+(?:/[^/]+)*$"
+        },
+        "physical_file_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "physical_file_bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "chunkManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "sample_sha256",
+        "expected_logical_rows",
+        "physical_chunk_rows",
+        "chunks",
+        "semantic_stream_sha256",
+        "missing_rows",
+        "duplicate_rows",
+        "overlapping_chunks",
+        "ordinal_ranges_contiguous"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 6
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        },
+        "artifact_type": {
+          "const": "chunk_manifest"
+        },
+        "sample_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "expected_logical_rows": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "physical_chunk_rows": {
+          "const": 4096
+        },
+        "chunks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/chunkManifestRow"
+          }
+        },
+        "semantic_stream_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "missing_rows": {
+          "const": 0
+        },
+        "duplicate_rows": {
+          "const": 0
+        },
+        "overlapping_chunks": {
+          "const": 0
+        },
+        "ordinal_ranges_contiguous": {
+          "const": true
+        }
+      }
+    },
+    "chunkManifestIndexRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task", "sample_sha256", "content_group_sha256",
+        "manifest_relative_path", "manifest_sha256", "manifest_bytes",
+        "expected_logical_rows", "emitted_logical_rows", "chunk_count",
+        "semantic_stream_sha256", "item_semantic_sha256",
+        "raw_topology_compact_sha256", "execution_binding_relative_path",
+        "execution_binding_sha256"
+      ],
+      "properties": {
+        "task": {"enum": ["ai2-arc", "openbookqa", "mmlu-redux"]},
+        "sample_sha256": {"$ref": "#/$defs/sha256"},
+        "content_group_sha256": {"$ref": "#/$defs/sha256"},
+        "manifest_relative_path": {"type": "string", "minLength": 1},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "manifest_bytes": {"$ref": "#/$defs/positiveInteger"},
+        "expected_logical_rows": {"$ref": "#/$defs/positiveInteger"},
+        "emitted_logical_rows": {"$ref": "#/$defs/positiveInteger"},
+        "chunk_count": {"$ref": "#/$defs/positiveInteger"},
+        "semantic_stream_sha256": {"$ref": "#/$defs/sha256"},
+        "item_semantic_sha256": {"$ref": "#/$defs/sha256"},
+        "raw_topology_compact_sha256": {"$ref": "#/$defs/sha256"},
+        "execution_binding_relative_path": {"type": "string", "minLength": 1},
+        "execution_binding_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "chunkManifestIndex": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "protocol_id", "artifact_type", "population",
+        "physical_chunk_rows", "sample_count", "expected_logical_rows",
+        "emitted_logical_rows", "semantic_stream_sha256", "schema_sha256",
+        "records", "pass_b_geometry_source", "execution_identity_sha256"
+      ],
+      "properties": {
+        "schema_version": {"const": 6},
+        "protocol_id": {"const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"},
+        "artifact_type": {"const": "chunk_manifest_index"},
+        "population": {"const": "e0_design"},
+        "physical_chunk_rows": {"const": 4096},
+        "sample_count": {"const": 326},
+        "expected_logical_rows": {"$ref": "#/$defs/positiveInteger"},
+        "emitted_logical_rows": {"$ref": "#/$defs/positiveInteger"},
+        "semantic_stream_sha256": {"$ref": "#/$defs/sha256"},
+        "schema_sha256": {"$ref": "#/$defs/sha256"},
+        "records": {
+          "type": "array", "minItems": 326, "maxItems": 326,
+          "items": {"$ref": "#/$defs/chunkManifestIndexRecord"}
+        },
+        "pass_b_geometry_source": {
+          "type": "object", "additionalProperties": false,
+          "required": ["path", "sha256", "manifest_path", "manifest_sha256", "sole_geometry_input"],
+          "properties": {
+            "path": {"type": "string", "minLength": 1},
+            "sha256": {"$ref": "#/$defs/sha256"},
+            "manifest_path": {"type": "string", "minLength": 1},
+            "manifest_sha256": {"$ref": "#/$defs/sha256"},
+            "sole_geometry_input": {"const": true}
+          }
+        },
+        "execution_identity_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "streamingInputLockReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "status",
+        "protocol_and_schema_versioned",
+        "old_attempt_artifact_reused",
+        "e1_pilot_consumed",
+        "model_or_checkpoint_loaded",
+        "gpu_or_kubernetes_used",
+        "expected_logical_rows_eq_emitted",
+        "ordinal_first_eq_zero",
+        "ordinal_last_eq_expected_minus_one",
+        "ordinal_ranges_contiguous",
+        "missing_rows",
+        "duplicate_rows",
+        "overlapping_chunks",
+        "row_key_reference_equivalence",
+        "weights_reference_equivalence",
+        "topology_reference_equivalence",
+        "semantic_stream_replay_equal",
+        "chunk_partition_semantic_equivalence",
+        "aggregate_partition_equivalence",
+        "bounded_peak_rss",
+        "whole_table_materialization_detected",
+        "atomic_no_overwrite",
+        "crash_resume_equivalence",
+        "raw_topology_complete",
+        "task_counts_exact_128_70_128",
+        "input_assets_unchanged_during_lock",
+        "input_asset_state_before_sha256",
+        "input_asset_state_after_sha256",
+        "pass_b_consumed_verified_geometry_only",
+        "expanded_logical_rows_in_compact_sidecar",
+        "execution_identity_sha256",
+        "geometry_manifest_sha256",
+        "chunk_manifest_index_sha256",
+        "semantic_stream_sha256",
+        "schema_sha256",
+        "rss_lock_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 6
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        },
+        "artifact_type": {
+          "const": "streaming_input_lock_receipt"
+        },
+        "status": {
+          "const": "GO"
+        },
+        "protocol_and_schema_versioned": {
+          "const": true
+        },
+        "old_attempt_artifact_reused": {
+          "const": false
+        },
+        "e1_pilot_consumed": {
+          "const": false
+        },
+        "model_or_checkpoint_loaded": {
+          "const": false
+        },
+        "gpu_or_kubernetes_used": {
+          "const": false
+        },
+        "expected_logical_rows_eq_emitted": {
+          "const": true
+        },
+        "ordinal_first_eq_zero": {
+          "const": true
+        },
+        "ordinal_last_eq_expected_minus_one": {
+          "const": true
+        },
+        "ordinal_ranges_contiguous": {
+          "const": true
+        },
+        "missing_rows": {
+          "const": 0
+        },
+        "duplicate_rows": {
+          "const": 0
+        },
+        "overlapping_chunks": {
+          "const": 0
+        },
+        "row_key_reference_equivalence": {
+          "const": true
+        },
+        "weights_reference_equivalence": {
+          "const": true
+        },
+        "topology_reference_equivalence": {
+          "const": true
+        },
+        "semantic_stream_replay_equal": {
+          "const": true
+        },
+        "chunk_partition_semantic_equivalence": {
+          "const": true
+        },
+        "aggregate_partition_equivalence": {
+          "const": true
+        },
+        "bounded_peak_rss": {
+          "const": true
+        },
+        "whole_table_materialization_detected": {
+          "const": false
+        },
+        "atomic_no_overwrite": {
+          "const": true
+        },
+        "crash_resume_equivalence": {
+          "const": true
+        },
+        "raw_topology_complete": {
+          "const": true
+        },
+        "task_counts_exact_128_70_128": {
+          "const": true
+        },
+        "input_assets_unchanged_during_lock": {
+          "const": true
+        },
+        "input_asset_state_before_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_asset_state_after_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "pass_b_consumed_verified_geometry_only": {
+          "const": true
+        },
+        "expanded_logical_rows_in_compact_sidecar": {
+          "const": false
+        },
+        "execution_identity_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "geometry_manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "chunk_manifest_index_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "semantic_stream_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "rss_lock_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "streamingInputLockBlockedReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "status",
+        "failed_checks",
+        "runtime_probe_created",
+        "execution_plan_created",
+        "configmap_created",
+        "checkpoint_job_created",
+        "e1_2_started",
+        "e1_3_started",
+        "e1_pilot_consumed"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 6
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        },
+        "artifact_type": {
+          "const": "streaming_input_lock_blocked_receipt"
+        },
+        "status": {
+          "const": "A4_INPUT_LOCK_BLOCKED"
+        },
+        "failed_checks": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "runtime_probe_created": {
+          "const": false
+        },
+        "execution_plan_created": {
+          "const": false
+        },
+        "configmap_created": {
+          "const": false
+        },
+        "checkpoint_job_created": {
+          "const": false
+        },
+        "e1_2_started": {
+          "const": false
+        },
+        "e1_3_started": {
+          "const": false
+        },
+        "e1_pilot_consumed": {
+          "const": false
+        }
+      }
+    },
+    "inputLockManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version", "protocol_id", "status", "split_role",
+        "execution_identity", "input_asset_state", "source", "tokenizers",
+        "runtime_assets", "dimensions", "gold_response_template",
+        "gold_response_template_sha256", "task_contract", "streaming_contract",
+        "expected_long_form_rows_by_task", "item_count", "sidecar", "firewall",
+        "expanded_row_absence_proof"
+      ],
+      "properties": {
+        "schema_version": {"const": 2},
+        "protocol_id": {"const": "fpct_e1_e0_design_input_lock_v2_streaming"},
+        "status": {"const": "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT"},
+        "split_role": {"const": "e0_design"},
+        "execution_identity": {"type": "object"},
+        "input_asset_state": {"type": "object"},
+        "source": {"type": "object"},
+        "tokenizers": {"type": "object"},
+        "runtime_assets": {"type": "object"},
+        "dimensions": {
+          "type": "object", "additionalProperties": false,
+          "required": ["num_hidden_layers", "num_attention_heads", "num_key_value_heads"],
+          "properties": {
+            "num_hidden_layers": {"const": 28},
+            "num_attention_heads": {"const": 16},
+            "num_key_value_heads": {"const": 8}
+          }
+        },
+        "gold_response_template": {"const": "The correct answer is {answer}."},
+        "gold_response_template_sha256": {"$ref": "#/$defs/sha256"},
+        "task_contract": {"type": "object"},
+        "streaming_contract": {"type": "object"},
+        "expected_long_form_rows_by_task": {"type": "object"},
+        "item_count": {"const": 326},
+        "sidecar": {
+          "type": "object", "additionalProperties": false,
+          "required": ["path", "bytes", "sha256"],
+          "properties": {
+            "path": {"type": "string", "minLength": 1},
+            "bytes": {"$ref": "#/$defs/positiveInteger"},
+            "sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "firewall": {"type": "object"},
+        "expanded_row_absence_proof": {"type": "object"}
+      }
+    },
+    "syntheticRssLock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "status",
+        "natural_data_accessed",
+        "observed_natural_616448_used",
+        "environment_identity_sha256",
+        "streaming_schema_sha256",
+        "mechanism_schema_sha256",
+        "physical_chunk_rows",
+        "measurement_method",
+        "synthetic_cases",
+        "objective_threshold_derivation",
+        "threshold_bytes",
+        "estimated_physical_bytes_per_row",
+        "checks",
+        "whole_table_materialization_detected",
+        "locked_before_successor_natural_input",
+        "evidence",
+        "evidence_sha256"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 6
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        },
+        "artifact_type": {
+          "const": "synthetic_streaming_hard_gate"
+        },
+        "status": {
+          "const": "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE"
+        },
+        "natural_data_accessed": {
+          "const": false
+        },
+        "observed_natural_616448_used": {
+          "const": false
+        },
+        "environment_identity_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "streaming_schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "mechanism_schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "physical_chunk_rows": {
+          "const": 4096
+        },
+        "measurement_method": {
+          "type": "string",
+          "minLength": 1
+        },
+        "synthetic_cases": {
+          "type": "array",
+          "minItems": 1,
+          "contains": {
+            "type": "object",
+            "required": [
+              "logical_rows"
+            ],
+            "properties": {
+              "logical_rows": {
+                "type": "integer",
+                "minimum": 1000000
+              }
+            }
+          },
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "case_id",
+              "logical_rows",
+              "peak_rss_bytes",
+              "emitted_rows",
+              "semantic_stream_sha256"
+            ],
+            "properties": {
+              "case_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "logical_rows": {
+                "$ref": "#/$defs/positiveInteger"
+              },
+              "peak_rss_bytes": {
+                "$ref": "#/$defs/positiveInteger"
+              },
+              "emitted_rows": {
+                "$ref": "#/$defs/positiveInteger"
+              },
+              "semantic_stream_sha256": {
+                "$ref": "#/$defs/sha256"
+              }
+            }
+          }
+        },
+        "objective_threshold_derivation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "threshold_bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "estimated_physical_bytes_per_row": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "checks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "row_key_reference_equivalence",
+            "weights_reference_equivalence",
+            "topology_reference_equivalence",
+            "semantic_stream_replay_equal",
+            "chunk_partition_semantic_equivalence",
+            "aggregate_partition_equivalence",
+            "bounded_peak_rss",
+            "whole_table_materialization_detected",
+            "atomic_no_overwrite",
+            "crash_resume_equivalence"
+          ],
+          "properties": {
+            "row_key_reference_equivalence": {"const": true},
+            "weights_reference_equivalence": {"const": true},
+            "topology_reference_equivalence": {"const": true},
+            "semantic_stream_replay_equal": {"const": true},
+            "chunk_partition_semantic_equivalence": {"const": true},
+            "aggregate_partition_equivalence": {"const": true},
+            "bounded_peak_rss": {"const": true},
+            "whole_table_materialization_detected": {"const": false},
+            "atomic_no_overwrite": {"const": true},
+            "crash_resume_equivalence": {"const": true}
+          }
+        },
+        "whole_table_materialization_detected": {
+          "const": false
+        },
+        "locked_before_successor_natural_input": {
+          "const": true
+        },
+        "evidence": {
+          "type": "object"
+        },
+        "evidence_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

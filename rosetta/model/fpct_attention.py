@@ -42,6 +42,8 @@ class FPCTSidecarSegment:
     value: Tensor  # [B,Hkv,N,K,D]
     prior: Tensor  # [B,N,K]
     valid: Tensor  # [B,N,K]
+    source_indices: Optional[Tensor] = None  # [B,N,K], original tokenizer slots
+    source_indices_certified: bool = False
     max_slots_hint: Optional[int] = None
     source_length_hint: Optional[int] = None
     prior_sha256: Optional[str] = None
@@ -63,6 +65,15 @@ class FPCTSidecarSegment:
             raise ValueError("sidecar prior/valid shape mismatch")
         if self.certified and self.prior.dtype != torch.float32:
             raise ValueError("FPCT canonical prior must be float32")
+        if self.source_indices is not None:
+            if self.source_indices.shape != self.prior.shape:
+                raise ValueError("sidecar source_indices must match [B,N,K]")
+            if self.source_indices.dtype != torch.long:
+                raise ValueError("sidecar source_indices must be int64")
+            if self.source_indices.device != self.key.device:
+                raise ValueError("sidecar source_indices and candidates must share a device")
+        if self.source_indices_certified and self.source_indices is None:
+            raise ValueError("certified source-index identity requires source_indices")
         if self.max_slots_hint is not None and self.max_slots_hint < 0:
             raise ValueError("max_slots_hint must be non-negative")
         if self.source_length_hint is not None and self.source_length_hint < 0:
@@ -114,6 +125,8 @@ class FPCTPackedMemory:
     active: Tensor
     parent_index: Tensor
     candidate_index: Tensor
+    source_index: Tensor
+    source_indices_certified: bool
     log_prior: Tensor
     row_offsets: Tensor
     expanded_slots: Tensor
@@ -536,6 +549,25 @@ def pack_fpct_memory(
     parent_value = torch.gather(value, 2, parent_gather)
     packed_key = parent_key
     packed_value = parent_value
+    source_index_blocks = []
+    for segment in segments:
+        if segment.source_indices is None:
+            fallback = torch.arange(
+                segment.key.shape[3], device=key.device, dtype=torch.long
+            )[None, None, :].expand(b, segment.key.shape[2], -1)
+            source_index_blocks.append(fallback.reshape(b, -1))
+        else:
+            source_index_blocks.append(
+                segment.source_indices.to(device=key.device, dtype=torch.long).reshape(b, -1)
+            )
+    flat_source_indices = (
+        source_index_blocks[0]
+        if len(source_index_blocks) == 1
+        else torch.cat(source_index_blocks, dim=1)
+    )
+    gathered_source_index = torch.gather(
+        flat_source_indices, 1, layout.safe_candidate_flat_index
+    )
     if not replicated_collapse:
         candidate_keys = [
             (
@@ -649,6 +681,11 @@ def pack_fpct_memory(
         packed_mask,
         torch.full_like(packed_mask, -torch.inf),
     )
+    packed_source_index = torch.where(
+        active & layout.use_candidate,
+        gathered_source_index,
+        torch.full_like(gathered_source_index, -1),
+    )
     return FPCTPackedMemory(
         key=packed_key,
         value=packed_value,
@@ -656,6 +693,10 @@ def pack_fpct_memory(
         active=active,
         parent_index=layout.parent_index,
         candidate_index=layout.candidate_index,
+        source_index=packed_source_index,
+        source_indices_certified=all(
+            segment.source_indices_certified for segment in segments
+        ),
         log_prior=log_prior,
         row_offsets=layout.row_offsets,
         expanded_slots=layout.expanded_slots,
@@ -1174,6 +1215,8 @@ def fpct_mechanism_diagnostics(
         "candidate_mask": candidate,
         "parent_index": packed.parent_index,
         "candidate_index": packed.candidate_index,
+        "source_index": packed.source_index,
+        "source_indices_certified": packed.source_indices_certified,
         "top_k": packed.top_k,
         "num_key_value_heads": hkv,
         "source_length": source_length,
