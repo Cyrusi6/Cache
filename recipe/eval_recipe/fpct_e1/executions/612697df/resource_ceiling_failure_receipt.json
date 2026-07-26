@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_pre_artifact_resource_ceiling_failure_v1",
+  "status": "ABANDONED_AFTER_MULTI_TASK_NATURAL_ALIGNMENT_PRE_ARTIFACT_RESOURCE_CEILING_FAILURE",
+  "reason_code": "E1_INPUT_LOCK_PER_SAMPLE_LONG_FORM_ROWS_EXCEED_PREREGISTERED_CEILING",
+  "execution_sha": "612697dfc44ab46699728b8d2de0a6fce980a889",
+  "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-612697df-v1",
+  "source_snapshot": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-612697df-v1/source_snapshot",
+    "git_tree_oid": "163a4eca92e74aef9af6e19806115bd918da871e",
+    "mounted_tree_canonical_sha256": "c55a1d968e8dc5cfecd77ddbddef3c1ecc15f9ccf97689d5cad80fade1f71edc",
+    "entry_count": 614,
+    "total_bytes": 23121427
+  },
+  "source_receipt": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-612697df-v1/source_snapshot/.fpct_e1_source_snapshot_receipt.json",
+    "bytes": 152430,
+    "file_sha256": "3e5720a3277c1c26d523069f7f6199e3385635379dfc3eafd80e638816fd1c6b",
+    "receipt_payload_sha256": "192938430674564af825ea05604d8cf7366b003991fd5e00375ac6a8fffda8cc",
+    "status": "GO_IMMUTABLE_GIT_ARCHIVE"
+  },
+  "natural_processing": {
+    "population": "E0-design only",
+    "dataset_input_lookup": true,
+    "local_tokenizers_resolved": [
+      "Qwen/Qwen3-0.6B",
+      "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    ],
+    "tokenization": true,
+    "alignment": true,
+    "raw_topology_computation": true,
+    "observed_tasks_in_process_output_at_least": [
+      "ai2-arc",
+      "openbookqa",
+      "mmlu-redux"
+    ],
+    "exact_completed_task_set": "UNKNOWN_NOT_MATERIALIZED",
+    "processed_sample_count": "UNKNOWN_NOT_MATERIALIZED",
+    "processed_row_count": "UNKNOWN_NOT_MATERIALIZED",
+    "failing_sample_or_content_group_hash": "UNKNOWN_NOT_MATERIALIZED",
+    "e1_pilot_rendered_tokenized_aligned_or_read": false
+  },
+  "failure": {
+    "error_class": "ValueError",
+    "message": "input-lock sample exceeds long-form row ceiling: 616448 > 262144",
+    "stack": [
+      "script/experiment/fpct_e1_prepare_input_lock.py:806 prepare_input_lock",
+      "script/experiment/fpct_e1_prepare_input_lock.py:473 expected_long_form_rows"
+    ],
+    "observed_logical_rows": 616448,
+    "preregistered_per_sample_ceiling": 262144,
+    "row_formula": "answer_query_count * certified_parent_count * 28 * 16",
+    "factorization": "616448 = 28 * 16 * 1376",
+    "diagnosis": "The exact Cartesian long-form row universe for at least one natural E0-design sample exceeds the prospectively frozen cumulative logical-row ceiling; this is not duplicate runtime emission.",
+    "ceiling_role": "prospectively frozen engineering memory-integrity guard, not a scientific effect threshold",
+    "scientific_threshold_operator_split_or_estimand_changed": false
+  },
+  "artifact_firewall": {
+    "input_sidecar": false,
+    "input_manifest": false,
+    "raw_topology_artifact": false,
+    "capture_plan": false,
+    "runtime_probe": false,
+    "configmap": false,
+    "model_or_checkpoint_load": false,
+    "model_forward": false,
+    "gpu_or_kubernetes": false,
+    "training": false,
+    "e1_pilot_outcome": false,
+    "confirmatory_outcome": false,
+    "scientific_result": false
+  },
+  "decision_boundary": {
+    "current_classification": "INCONCLUSIVE_RESOURCE_CEILING_REVIEW_REQUIRED",
+    "resume_allowed": false,
+    "artifact_reuse_allowed": false,
+    "automatic_ceiling_increase_allowed": false,
+    "automatic_chunk_reinterpretation_allowed": false,
+    "sample_drop_truncation_or_row_subsampling_allowed": false,
+    "downstream_e1_2_or_e1_3_allowed": false,
+    "human_prospective_amendment_required": true,
+    "successor_execution_sha": "HUMAN_REVIEW_REQUIRED_NOT_ASSIGNED"
+  },
+  "review_options": {
+    "stop": "Keep 262144 as the cumulative logical-row ceiling and stop this E1 representation as engineering INCONCLUSIVE.",
+    "representation_preserving_streaming": "Prospectively version the protocol/schema and preserve every logical row while deterministically streaming physical chunks; requires a new commit, source snapshot, run root, and full rerun.",
+    "objective_analytic_ceiling": "Prospectively derive a new bound from frozen model/template length limits with a worst-case memory proof; it must not be selected from the observed 616448 value."
+  }
+}

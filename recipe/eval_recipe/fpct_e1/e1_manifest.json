@@ -1,18 +1,19 @@
 {
-  "schema_version": 4,
-  "protocol_id": "fpct_e1_mechanism_audit_v4",
-  "supersedes_after_pre_artifact_integrity_failure": "fpct_e1_mechanism_audit_v3",
+  "schema_version": 5,
+  "protocol_id": "fpct_e1_mechanism_audit_v5_post_resource_ceiling_record",
+  "supersedes_after_pre_artifact_resource_ceiling_failure": "fpct_e1_mechanism_audit_v4",
   "historical_supersession_chain": [
     "fpct_e1_mechanism_audit_v1",
     "fpct_e1_mechanism_audit_v2",
-    "fpct_e1_mechanism_audit_v3"
+    "fpct_e1_mechanism_audit_v3",
+    "fpct_e1_mechanism_audit_v4"
   ],
   "created_at": "2026-07-26T00:00:00+08:00",
   "branch": "research/fpct-e1-mechanism-audit",
   "base_commit": "613958af38fad27e1ea933ccc0dda6d1af5cce89",
   "classification": "EXPLORATORY_MECHANISM_AUDIT_NOT_CONFIRMATORY",
-  "current_stage": "COMMIT_A3_TOPOLOGY_PERMUTATION_CORRECTION",
-  "current_status": "PROSPECTIVE_CORRECTNESS_FIX_PENDING_CLEAN_PUSHED_EXECUTION_COMMIT",
+  "current_stage": "COMMIT_A3_E0_DESIGN_CPU_INPUT_LOCK",
+  "current_status": "INCONCLUSIVE_RESOURCE_CEILING_REVIEW_REQUIRED",
   "e0_read_only": {
     "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
     "result_document": {
@@ -93,7 +94,7 @@
     "e0_design": {
       "source": "historical frozen calibration development groups",
       "role": "instrumentation-validated mechanism audit, topology audit, and centered-lambda sweep",
-      "status": "OPEN_FOR_E1_DIAGNOSTICS"
+      "status": "POPULATION_OPEN_HISTORICALLY_BUT_EXECUTION_BLOCKED_HUMAN_REVIEW_REQUIRED"
     },
     "e1_pilot": {
       "source": "support-fit-only certified groups",
@@ -111,14 +112,18 @@
       "status": "SEALED_NOT_AUTHORIZED"
     }
   },
-  "execution_order": [
-    "E1-0_protocol_and_split_lock",
-    "E1-1_instrumentation_hard_gate",
-    "E1-2_e0_design_mechanism_topology_audit",
-    "E1-3_e0_design_centered_lambda_sweep",
-    "prospective_root_cause_and_single_operator_freeze",
-    "separate_authorization_required_before_e1_pilot"
-  ],
+  "execution_order": {
+    "status": "HISTORICAL_V4_NON_OPERATIVE_BLOCKED_HUMAN_REVIEW",
+    "operative": false,
+    "historical_order": [
+      "E1-0_protocol_and_split_lock",
+      "E1-1_instrumentation_hard_gate",
+      "E1-2_e0_design_mechanism_topology_audit",
+      "E1-3_e0_design_centered_lambda_sweep",
+      "prospective_root_cause_and_single_operator_freeze",
+      "separate_authorization_required_before_e1_pilot"
+    ]
+  },
     "instrumentation_contract": {
     "explicit_capture_lifecycle": true,
     "capture_modes": [
@@ -278,7 +283,7 @@
     "fixed_checkpoint_evidence_class": "mechanistic headroom diagnostic, not matched-training or confirmatory evidence"
   },
   "execution_lock_contract": {
-    "status": "POST_NATURAL_ALIGNMENT_PRE_ARTIFACT_CORRECTNESS_FIX_PENDING_CLEAN_PUSHED_EXECUTION_COMMIT",
+    "status": "POST_MULTI_TASK_NATURAL_ALIGNMENT_PRE_ARTIFACT_RESOURCE_CEILING_REVIEW_REQUIRED",
     "natural_e0_design_output_accessed": true,
     "usable_natural_audit_artifact_accessed": false,
     "superseded_execution_attempt": {
@@ -294,7 +299,7 @@
       "resume_allowed": false,
       "artifact_reuse_allowed": false,
       "scientific_result": false,
-      "successor_execution_sha": "PENDING_CLEAN_PUSHED_EXECUTION_COMMIT"
+      "successor_execution_sha": "d1698177e60455a42731165b88a66374b8826718"
     },
     "failed_execution_attempt": {
       "execution_sha": "d1698177e60455a42731165b88a66374b8826718",
@@ -310,10 +315,33 @@
       "resume_allowed": false,
       "artifact_reuse_allowed": false,
       "scientific_result": false,
-      "successor_execution_sha": "PENDING_CLEAN_PUSHED_EXECUTION_COMMIT"
+      "successor_execution_sha": "612697dfc44ab46699728b8d2de0a6fce980a889"
+    },
+    "resource_ceiling_failed_execution_attempt": {
+      "execution_sha": "612697dfc44ab46699728b8d2de0a6fce980a889",
+      "status": "INCONCLUSIVE_RESOURCE_CEILING",
+      "lifecycle": "ABANDONED_AFTER_MULTI_TASK_NATURAL_ALIGNMENT_PRE_ARTIFACT_RESOURCE_CEILING_FAILURE",
+      "receipt": "recipe/eval_recipe/fpct_e1/executions/612697df/resource_ceiling_failure_receipt.json",
+      "receipt_sha256": "c7aed0d20801fa769d6ec8c3c1a8a35aa9e7f52d1fd95663ca1a9fc888b37a01",
+      "reason_code": "E1_INPUT_LOCK_PER_SAMPLE_LONG_FORM_ROWS_EXCEED_PREREGISTERED_CEILING",
+      "natural_tokenization_alignment_and_raw_topology": true,
+      "observed_logical_rows": 616448,
+      "preregistered_per_sample_ceiling": 262144,
+      "processed_sample_and_row_counts": "UNKNOWN_NOT_MATERIALIZED",
+      "artifact_count": 0,
+      "model_or_checkpoint_load": false,
+      "model_forward": false,
+      "gpu_or_kubernetes": false,
+      "training": false,
+      "e1_pilot_consumed": false,
+      "resume_allowed": false,
+      "artifact_reuse_allowed": false,
+      "scientific_result": false,
+      "automatic_ceiling_or_representation_amendment_allowed": false,
+      "successor_execution_sha": "HUMAN_REVIEW_REQUIRED_NOT_ASSIGNED"
     },
     "source_snapshot": {
-      "construction": "clean pushed successor execution commit git archive; superseded 744a943 and failed d1698177 archives are never reused",
+      "construction": "a future human-approved clean pushed successor execution commit git archive; superseded/failed 744a943, d1698177, and 612697df archives are never reused",
       "receipt": "commit SHA + Git tree OID + ls-tree mode/blob/path + archive bytes + mounted-tree SHA",
       "live_worktree_mount_forbidden": true,
       "k8s_mount_read_only": true
@@ -325,6 +353,18 @@
       "task_distribution": ["count", "sum", "min", "p50", "p95", "max", "argmax"],
       "quantile_method": "nearest rank: sorted[ceil(p*n)-1]",
       "e1_pilot_consumed": false
+    },
+    "post_resource_ceiling_review": {
+      "ceiling_role": "engineering memory-integrity guard, not scientific effect threshold",
+      "operative_v4_semantics": "cumulative logical rows per sample",
+      "separate_physical_parquet_batch_rows": 4096,
+      "same_execution_chunk_reinterpretation_allowed": false,
+      "observed_value_based_ceiling_increase_allowed": false,
+      "sample_drop_truncation_or_row_subsampling_allowed": false,
+      "downstream_execution_allowed": false,
+      "human_prospective_amendment_required": true,
+      "recommended_candidate": "representation-preserving deterministic bounded streaming with exact logical-row coverage and chunk-partition equivalence",
+      "recommendation_is_approved": false
     },
     "checkpoint_contract": {
       "loaded_trees": "six immutable final projector trees",
@@ -361,6 +401,8 @@
       "recoverable_exclusive_claim_lease": true
     },
     "stage_graph": {
+      "status": "HISTORICAL_V4_NON_OPERATIVE_BLOCKED_HUMAN_REVIEW",
+      "operative": false,
       "cpost_baseline_shards": 18,
       "factorized_endpoint_shards": 18,
       "endpoint_closure_shards": 36,
@@ -376,6 +418,8 @@
       "replicated_collapse_is_diagnostic_not_fourth_arm": true
     },
     "immutable_k8s_locks": {
+      "status": "HISTORICAL_V4_NON_OPERATIVE_BLOCKED_HUMAN_REVIEW",
+      "operative": false,
       "initial_and_finalized_configmaps_immutable": true,
       "configmap_size_strictly_less_than_bytes": 1048576,
       "mounted_byte_verification_required": true,
@@ -420,8 +464,9 @@
   },
   "authorization": {
     "instrumentation_hard_gate": true,
-    "e0_design_mechanism_audit": "conditional on instrumentation GO",
-    "e0_design_centered_lambda_sweep": "conditional on mechanism audit completion",
+    "e0_design_input_lock_rerun": "BLOCKED_HUMAN_REVIEW_REQUIRED",
+    "e0_design_mechanism_audit": "BLOCKED_HUMAN_REVIEW_REQUIRED",
+    "e0_design_centered_lambda_sweep": "BLOCKED_HUMAN_REVIEW_REQUIRED",
     "new_training": false,
     "additional_e0_seeds": false,
     "e1_pilot_forward_or_outcome": false,

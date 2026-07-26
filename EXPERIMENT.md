@@ -462,3 +462,11 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 输出目录实测为空：0 input sidecar/manifest、0 raw artifact/plan/runtime probe/ConfigMap、0 model/checkpoint load、0 forward、0 GPU/K8s/training、0 scientific result。D169 标为 `INCONCLUSIVE_INTEGRITY_FAILURE`，不 resume/reuse。
 - 独立代码审计确认 sanitizer 以 span order 认证，旧 classifier 却以 top-k slot order cursor 覆盖。最小 A3 修复只排序 derived intersections；candidate records、indices、weights、A 与 slot-0 语义不动。Mechanism tests=`22 passed`，15-file=`213 passed`，all-FPCT=`402 passed`，项目 CPU-safe full suite=`641 passed`。
 - 下一次只允许从新 clean/pushed A3 建全新 snapshot/run root 后，从 CPU input lock 开始全量重跑；任何 d169 partial state 均不得进入后续分析。
+
+### 2026-07-26 FPCT-E1 A3 pre-artifact resource-ceiling failure
+
+- Execution=`612697dfc44ab46699728b8d2de0a6fce980a889`；run root=`/netdisk/lijunsi/fpct-e1/fpct-e1-612697df-v1`。Source git tree=`163a4eca...`、mounted tree SHA256=`c55a1d96...`、receipt file SHA256=`3e5720a3...`，均验证通过。
+- CPU input lock 只处理 E0-design，自然 lookup/tokenization/alignment 日志至少覆盖 ARC、OpenBookQA 与 MMLU-Redux；在 artifact 写出前抛出 `ValueError: input-lock sample exceeds long-form row ceiling: 616448 > 262144`。精确 completed task set、processed sample/row count 与 failing group hash=`UNKNOWN_NOT_MATERIALIZED`。
+- `616448=28×16×1376` 是精确 logical row product，不是 duplicate runtime emission。预注册 `262144` 是累计 logical-row memory guard；Parquet physical batch/row-group 是独立的 `4096`。
+- 输出目录实测为空：0 input sidecar/manifest、0 raw topology、0 plan/runtime probe/ConfigMap、0 model/checkpoint load、0 forward、0 GPU/K8s、0 training、0 scientific result。E1-pilot 未 render/tokenize/align/run/read。
+- 当前状态=`INCONCLUSIVE_RESOURCE_CEILING / REVIEW REQUIRED`；本 run 不 resume/reuse。不得自动提高 ceiling、截断 rows、删除超限样本或把 ceiling 静默改称 chunk size。只有人工前瞻批准的新 protocol/schema 与全新 execution 才可继续；E1-2/E1-3 当前 blocked。

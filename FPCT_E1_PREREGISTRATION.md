@@ -3,7 +3,7 @@
 > 研究线：`research/fpct-e1-mechanism-audit`
 > 基线提交：`613958af38fad27e1ea933ccc0dda6d1af5cce89`
 > 预注册日期：2026-07-26（Asia/Shanghai）
-> 当前资源边界：只允许阶段 0、instrumentation hard gate、E0-design mechanism audit 与 E0-design centered-λ sweep；不训练，不运行或读取 E1-pilot，不释放 confirmatory 数据。
+> 当前资源边界：A3 input lock 已因预注册 resource ceiling fail-closed；只允许记录、验证与人工 review。E1-2/E1-3 execution 当前 blocked；不训练，不运行或读取 E1-pilot，不释放 confirmatory 数据。
 
 ## 1. 科学动机与不可回改边界
 
@@ -76,7 +76,7 @@ rank_hash = SHA256(
 
 | 层 | 来源与数量 | 当前用途 | 当前状态 |
 |---|---|---|---|
-| E0-design | 已使用的 calibration groups：ARC 128、OpenBookQA 70、MMLU-Redux 128 | instrumentation 验证后的 full mechanism audit、topology audit、centered-λ sweep 与路线诊断 | `OPEN FOR E1 DIAGNOSTICS`；已是历史 development outcome |
+| E0-design | 已使用的 calibration groups：ARC 128、OpenBookQA 70、MMLU-Redux 128 | instrumentation 验证后的 full mechanism audit、topology audit、centered-λ sweep 与路线诊断 | `PARTIALLY ACCESSED / BLOCKED PENDING HUMAN REVIEW`；A3 input lock fail-closed 后不得自动重跑 |
 | E1-pilot | support-fit-only certified groups：ARC 128、OpenBookQA 70、MMLU-Redux 128 | 未来单一已冻结 operator 的 exploratory mechanism pilot | `SEALED / NOT RUN / NOT READ`；不得用于当前实现、阈值、路线或 operator 选择 |
 | Confirmatory | 原 model-selection、test 与正式 seed universe | 未来独立正式确认 | `SEALED / NOT AUTHORIZED` |
 
@@ -94,6 +94,8 @@ E1-0 protocol + split lock
 ```
 
 任何 hard gate 失败都停止后续步骤。不得跳过 instrumentation 直接解释旧 probe，也不得先查看 E1-pilot 再选择 operator。
+
+截至 §7.1 记录的 A3 resource-ceiling event，上述顺序已在 E1-2 input lock 处停止；它描述研究依赖而非当前执行授权。E1-2/E1-3 只有在新的人工 prospective amendment、commit 与 execution lock 完成后才可能恢复。
 
 ## 6. E1-1：mechanism instrumentation hard gate
 
@@ -176,9 +178,11 @@ metrics = model.end_fpct_capture()
 
 冻结数值合同沿用 reference operator 的预数据规则：float64 `atol=1e-10, rtol=1e-8`，float32 `atol=2e-5, rtol=2e-5`；序列化的 centered-`lambda=0` 行按 float32 tolerance 验证，invalid probability/gradient 必须精确为 0。真实 random-small Qwen3 eager + `DynamicCache` 集成 oracle 中，`F(lambda=0)` 与 C_post、默认 `F` 与显式 `F(lambda=1)` 均要求 bitwise identical。
 
-## 7. 自然输出前的 execution/provenance lock
+## 7. 自然输出前的 execution/provenance lock（v4 historical contract；当前不可执行）
 
-任何 successor E0-design tokenizer/alignment、pretrained model forward 或 correctness output 之前，必须先完成并 push successor Commit A3。Commit A3 冻结本文、schema、manifest、consolidated gate、科学代码、executor、K8s render-only templates 与 tests；原 `744a943...` 与 failed `d1698177...` 均禁止作为 execution SHA。之后的唯一允许顺序是：
+本节记录 `744a943...`、`d1698177...` 与 `612697df...` 三次 attempt 当时的前瞻执行合同，供 provenance 审计；在 §7.1 的 A3 resource-ceiling failure 后，它不再构成当前授权。任何旧的“唯一允许顺序”、K8s DAG、resource 或 successor A3 表述均已被 fail-closed 事件停止；未来必须先有人工批准的新 protocol/schema，再重新冻结执行图。
+
+在 v4 attempt 启动时，任何 successor E0-design tokenizer/alignment、pretrained model forward 或 correctness output 之前，必须先完成并 push successor Commit A3。Commit A3 冻结本文、schema、manifest、consolidated gate、科学代码、executor、K8s render-only templates 与 tests；原 `744a943...` 与 failed `d1698177...` 均禁止作为 execution SHA。当时冻结、现已失效的顺序是：
 
 2026-07-26 的前瞻性 operational-closure 复核发生在任何 dataset row lookup、自然 tokenization/alignment、runtime probe 或模型输出之前。原 execution SHA `744a943ea804dfebe4e6d3cba756b6a89763002f` 因 runtime-probe renderer、mounted ConfigMap receipt 消费与只读路径闭包尚不完整而被标记为 `ABANDONED_BEFORE_NATURAL_DATA`；它不是科学 NO-GO，禁止 resume 或复用任何 artifact。只有包含本节新增硬门的后继 clean/pushed execution commit 才能成为实际 source snapshot。
 
@@ -218,6 +222,26 @@ Capture 与 probe 容器使用 read-only root filesystem，所有 HOME/XDG/HF/To
 唯一允许的 A3 correctness fix 是：在 certified taxonomy 内仅排序派生 `intersections` 后验证 disjoint complete cover。Candidate records、source indices、weights、prior `A`、origin 与 slot-0 fallback 顺序不得重排；sanitizer、alignment、operator、threshold、split、checkpoint 与科学假设全部 byte/语义保持不变。Synthetic all-permutation 与 raw-ledger permuted-slot 回归必须在新 commit 前通过；新 execution 必须全新 snapshot/run root 并从 CPU input lock 起完整重跑。
 
 任何 successor Commit A3 中的 operator、alignment、training/evaluation、threshold、input、schema 或 analysis code 变更都会使 execution plan 失效；不得在看到自然输出后原地修补继续。Commit B 只能记录执行 receipts 和状态，K8s 始终运行 successor Commit A3 snapshot。
+
+### 7.1 A3 资源上限事件与待批准边界
+
+Clean/pushed A3 execution `612697dfc44ab46699728b8d2de0a6fce980a889` 使用全新 source snapshot 与 run root `/netdisk/lijunsi/fpct-e1/fpct-e1-612697df-v1` 重启 CPU input lock。Source receipt 与 mounted tree 验证通过；随后只在 E0-design population 上发生自然 dataset lookup、Qwen3/TinyLlama tokenization、alignment 与 raw-topology computation。程序在写出任何 input sidecar、manifest 或 raw topology artifact 前，按本预注册的精确公式计算出至少一个样本的 logical rows=`616448`，触发：
+
+```text
+ValueError: input-lock sample exceeds long-form row ceiling: 616448 > 262144
+```
+
+`616448=28×16×1376`，因此该事件来自完整 `answer queries × certified parents × layers × query heads` Cartesian row universe，而不是 duplicate runtime emission。精确已完成 task 集、sample/row count 与失败 content-group hash未物化，保持 `UNKNOWN_NOT_MATERIALIZED`，不得猜测。该 attempt 的 input/raw/plan/runtime directories 均为空；没有模型或 checkpoint load、forward、GPU/Kubernetes、训练、E1-pilot 或 confirmatory outcome。
+
+本节是透明的 post-incident record，不修改原 `262144` 合同。该数值虽是 engineering memory-integrity guard、不是科学 effect threshold，但 v4 operative contract 明确把它实现为每样本累计 logical-row ceiling；另一个 `4096` 才是冻结的 Parquet physical batch/row-group。因此：
+
+- execution `612697df...` 标记为 `INCONCLUSIVE_RESOURCE_CEILING / ABANDONED`，不得 resume 或复用；
+- 不得根据已观测的 `616448` 自动提高 ceiling；
+- 不得把 `262144` 在同一 execution 中静默重解释为 physical chunk size；
+- 不得截断、抽样 logical rows，或删除超限样本；
+- E1-2 pretrained audit、E1-3 centered-λ sweep 与所有下游阶段停止。
+
+若继续，必须先取得人工明确的 prospective amendment，并建立新 protocol/schema、clean commit、source snapshot 与 run root。当前推荐但尚未批准的方案是 representation-preserving streaming：保留全部 logical row keys、数值、权重、endpoints 与聚合，只改变确定性的 physical materialization/chunking；同时验证 exact total-row coverage/uniqueness、不同 chunk partition 的 artifact/aggregate 等价和真正 bounded streaming。另一合法选项是保留原 ceiling 并停止；若改用 objective analytic ceiling，则必须由冻结 template/model length bounds 与最坏内存证明推导，不能由 `616448` 事后取整。Successor execution 目前为 `HUMAN_REVIEW_REQUIRED_NOT_ASSIGNED`。
 
 ## 8. E1-2：E0-design full mechanism/topology audit
 
@@ -371,7 +395,7 @@ lambda in {0, 0.25, 0.5, 1, 2}
 
 每个 λ 都报告 teacher-forced `Delta logp(y*)`、accuracy、flip、KL/TV、query variance/top-1 change、parent mass、Jensen gap、output delta，以及按 seed/task/checkpoint-arm/topology/layer/head 的分解。排序、聚合和所有 λ 必须同时报告，不得只保留表现最好的 λ。
 
-执行图冻结为依赖安全的四步：先运行 18 个 C_post baseline shards 并写 completion marker；再运行 18 个 F endpoint shards；36 个 endpoint 全部 closure 后必须完成 bounded analyzer、stage manifest 与 immutable `FINALIZED_E1_2` receipt；只有该 receipt 在 render 时经过 deep verification 并以只读 ConfigMap/hostPath 挂载，才运行 `3 × 2 × 4 additional F lambdas × 3 = 72` 个 E1-3 shards。`λ=1` 复用 E1-2 F endpoint；`λ=0` 必须作为真实 F runtime control 执行，不能用 C_post artifact 代替。最终 closure 包含全部 108 shards。阶段内可并行，禁止跨阶段并行；自然输出后如需修改 successor Commit A3 代码，本 execution 直接失效，不得原地 patch/rerun。
+原 v4 执行图曾冻结为依赖安全的四步：先运行 18 个 C_post baseline shards 并写 completion marker；再运行 18 个 F endpoint shards；36 个 endpoint 全部 closure 后必须完成 bounded analyzer、stage manifest 与 immutable `FINALIZED_E1_2` receipt；只有该 receipt 在 render 时经过 deep verification并以只读 ConfigMap/hostPath 挂载，才运行 `3 × 2 × 4 additional F lambdas × 3 = 72` 个 E1-3 shards。`λ=1` 复用 E1-2 F endpoint；`λ=0` 必须作为真实 F runtime control 执行，不能用 C_post artifact 代替。最终 closure 包含全部 108 shards。该图现为 historical/non-operative：`612697df...` 在 input lock 已 fail-closed，未创建 plan/ConfigMap/Job；未经新人工 amendment 不得启动其中任何 shard。
 
 本 sweep 是 fixed-checkpoint response-surface diagnostic，不是训练结果。阶段 3 结束后才允许基于 E0-design 证据形成 root-cause record；任何新 operator 只能通过新的 prospective amendment 选择一个因素并冻结。该 amendment 必须早于 E1-pilot forward/outcome。
 

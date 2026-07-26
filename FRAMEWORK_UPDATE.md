@@ -1527,3 +1527,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 根因与改动：sanitizer 按 span order 认证合法 partition，而 classifier 错误要求 top-k slot order 已等于 span order。A3 只对派生 intersections 排序后检查无缝覆盖，不重排 candidate/index/weight/A/origin，不改 sanitizer、alignment、operator、threshold、split 或 hypothesis。
 - 验证：两候选反序、三候选六种全排列及 raw-ledger `[1,0]` end-to-end regression 均通过，candidate slot 同步保持；mechanism audit=`22 passed`，15-file=`213 passed`，all-FPCT=`402 passed`，项目 CPU-safe full suite=`641 passed`；未再次读取自然数据。
 - 结论：d169=`INCONCLUSIVE_INTEGRITY_FAILURE` 且永久禁止 resume/reuse。只有全新 clean/pushed A3 SHA、snapshot 与 run root 可以从 CPU input lock 完整重跑；E1-pilot/confirmatory继续sealed。
+
+### 2026-07-26 FPCT-E1 A3 input-volume resource ceiling
+
+- 研究目标：从 clean/pushed A3 `612697df...` 的 immutable snapshot 全量重做 E0-design CPU input/topology lock，并在任何模型输出前验证冻结的 long-form memory contract。
+- 执行事实：source snapshot/receipt 验证通过；CPU-only input lock 在 ARC、OpenBookQA 与 MMLU-Redux 的 E0-design lookup/tokenization/alignment 过程中，对至少一个样本计算出 logical rows=`616448`，超过预注册每样本累计上限 `262144`，在 artifact 写出前 fail-closed。精确 processed sample/row/hash 未物化，不猜测。
+- 合同解释：`616448=28×16×1376`，来自冻结 Cartesian row universe，不是 duplicate emission。`262144` 是 engineering memory-integrity guard 而非科学阈值，但 v4 将其实现为累计 logical-row ceiling；physical Parquet batch/row-group 另为 `4096`，故不能事后静默重解释。
+- 产物边界：A3 run root 的 input/raw/plan/runtime/K8s directories 为空；0 usable artifact、0 model/checkpoint load、0 forward、0 GPU/Kubernetes、0 training、0 E1-pilot/confirmatory outcome。
+- 验证与结论：三个独立只读审计均判定不得自动提高上限、截行、丢样本或原地 chunk 化。Execution `612697df...`=`INCONCLUSIVE_RESOURCE_CEILING / ABANDONED`，禁止 resume/reuse；E1-2/E1-3 停止。推荐但尚未批准的 successor 是保持全部 logical rows 的 deterministic bounded streaming 新版协议，并从新 commit/snapshot/run root 全量重启。
