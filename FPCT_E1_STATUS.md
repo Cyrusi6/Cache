@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：E1-0 protocol/data firewall locking
+> 当前阶段：E1-1 instrumentation hard gate complete
 > 当前状态：`GO`
-> 下一步：E1-1 instrumentation hard gate
+> 下一步：E1-2 execution adapter lock, then E0-design mechanism audit
 > 更新时间：2026-07-26（Asia/Shanghai）
 
 ## 隔离身份
@@ -34,8 +34,8 @@
 | 阶段 | 状态 | 依赖 | 允许资源 | 决策/边界 |
 |---|---|---|---|---|
 | E1-0 protocol + split lock | `GO` | E0 result commit `613958a...` + human amendment | 文档、hash-only data lock | E0 readonly；E1-pilot sealed；confirmatory sealed |
-| E1-1 instrumentation hard gate | `AUTHORIZED / NOT STARTED` | E1-0 GO | synthetic tensor + parity tests；按主任务授权执行 | 必须通过 oracle、ON/OFF parity、cross-query variance 与 multi-step accumulation |
-| E1-2 E0-design mechanism/topology audit | `CONDITIONAL / NOT STARTED` | E1-1 GO | E0 checkpoints；无训练 | 仅 E0-design；full teacher-forced answer audit；无性能 GO |
+| E1-1 instrumentation hard gate | `GO` | E1-0 GO | synthetic tensor + random Qwen parity | `82 passed`；ON/OFF bitwise；cross-query variance>0；multi-step累计成立 |
+| E1-2 E0-design mechanism/topology audit | `AUTHORIZED / ADAPTER LOCK PENDING` | E1-1 GO + executor capability/hash lock | E0 checkpoints；无训练 | 仅 E0-design；full teacher-forced answer audit；无性能 GO |
 | E1-3 E0-design centered-λ sweep | `CONDITIONAL / NOT STARTED` | E1-2 complete | E0 checkpoints；无训练 | grid `{0,0.25,0.5,1,2}`；same-state diagnostic |
 | E1 root-cause/operator freeze | `NOT AUTHORIZED` | E1-3 complete + frozen report | protocol only | 只允许前瞻选择一个因素；必须早于 E1-pilot outcome |
 | E1-pilot | `SEALED / NOT RUN / NOT READ` | 新 operator amendment + 单独执行授权 | 未授权 | exploratory only；永无 confirmatory eligibility |
@@ -43,7 +43,7 @@
 
 ## Instrumentation hard gate
 
-进入 E1-2 前必须全部满足：
+E1-1 已满足：
 
 - formula/synthetic oracles 全部通过；
 - instrumentation ON/OFF 对 logits、loss、generation 与 cache 等价；
@@ -51,6 +51,12 @@
 - 多 decode step 累计不被最后一个 forward 覆盖；
 - invalid probability/gradient 精确为 0；
 - no NaN/Inf，capture 不改变 model output。
+
+冻结证据：
+
+- `FPCT_E1_INSTRUMENTATION_REPORT.md`；
+- `recipe/eval_recipe/fpct_e1/e1_instrumentation_parity.json`，SHA256=`00fb8403f1376eb0a3d4ccf498a6c7230a313aec7259f661553ca0e164a2d1fc`；
+- `recipe/eval_recipe/fpct_e1/e1_synthetic_query_variance.json`，SHA256=`f652ee99f8bce508b3f35953b10ad11ad4046ab0f868bf93fc08a82bb6ef14b2`。
 
 失败则 E1-1=`BLOCKED`，E1-2/3 不得运行。
 

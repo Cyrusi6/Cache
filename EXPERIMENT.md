@@ -428,3 +428,11 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - E1-pilot 按 domain-separated SHA256 排序锁定 ARC 128、OpenBookQA 70、MMLU-Redux 128；E0-design 同规模，两者交集为 0。652-row manifest SHA256=`030b4236ed9bec82b145227259733b32a8c76af63adf2fa0f1282e3638b5b11d`。
 - 当前执行顺序冻结为 instrumentation hard gate → E0-design mechanism/topology audit → E0-design centered-λ sweep。Grid=`{0,0.25,0.5,1,2}`，λ0=C_post、λ1=F。
 - 本阶段只运行 CPU/hash-only locker 与 synthetic unit test（`2 passed`）；未运行 tokenizer/model forward、GPU、训练或 E1-pilot，confirmatory outcome 未访问。
+
+### 2026-07-26 FPCT-E1 instrumentation hard gate
+
+- 修复旧 probe 的两项根本缺陷：显式 begin/end capture 取代 last-forward overwrite；query variance 改为跨 eligible answer queries 的 Welford，而非单次 decode `q_length=1` 方差。
+- Teacher-forced mask 固定为 query `t` 预测 `labels[t+1]`，只纳入 shifted label 非 `-100` 的 response positions；prompt/invisible candidate 不进入统计。
+- Random Qwen3 eager + DynamicCache 的 instrumentation OFF/ON logits、loss、cache bitwise equal；三步 greedy decode logits/cache/tokens均相同。
+- Synthetic query-changing variance=`0.1973072141`、top1 change=true；identical candidates 的 KL/TV/Jensen 均精确为0；capture不保存raw KV。
+- Instrumentation + E1 oracle + Qwen/reference/production targeted suite=`82 passed`。E1-1=`GO`；尚未加载 E0 pretrained checkpoint、运行自然 audit、GPU或训练。

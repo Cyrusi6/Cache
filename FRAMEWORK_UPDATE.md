@@ -1494,3 +1494,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 数据配置：E0-design=`128/70/128` calibration groups；E1-pilot=`128/70/128` support-fit-only certified groups，domain=`fpct-e1-pilot-v1\0`，两者 intersection=0；model-selection/test/formal seeds 继续 sealed。
 - 验证结果：split byte-identical rerun；652 rows；source/ledger SHA、E0 artifact per-file SHA、JSON syntax 与 intersections 全部通过；split test=`2 passed`；`git diff --check` clean。
 - 结论：E1-0=`GO` only to instrumentation hard gate。E1-pilot=`SEALED / NOT RUN / NOT READ`；禁止在 mechanism audit 与 centered-λ sweep 冻结前选择或训练新 operator。
+
+### 2026-07-26 FPCT-E1 显式机制采集与 centered-λ oracle
+
+- 研究目标：使 gamma query variance、KL/TV 与top1变化真正覆盖完整answer query和多次decode forward，同时证明采集支路不改变模型行为。
+- 核心改动：新增无raw-KV的Welford capture模块；wrapper显式begin/end生命周期与causal-shift query mask；attention diagnostics增加TV和紧凑payload；新增random-Qwen parity exporter及E0-design-only mechanism/centered-λ schema与独立aggregator。
+- 数值合同：λ grid=`{0,.25,.5,1,2}`；native与children共享global denominator；λ0=C_post、λ1=F；invalid probability/gradient exact zero；unresolved topology不强行归为competing。
+- 验证结果：targeted=`82 passed`；teacher logits/loss/cache和三步greedy logits/cache/token bitwise equal；synthetic variance=`0.1973072141`；identical KL/TV/Jensen=0。
+- 结论：E1-1=`GO`。真实 E0-design audit 仍须先锁定capture executor、source/fused geometry、parent mass和gold-logp row contract；E1-pilot/confirmatory继续sealed。

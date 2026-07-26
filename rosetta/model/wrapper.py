@@ -3,7 +3,7 @@ The ensemble of multiple standard transformers LLM models, with automatic kv-cac
 """
 
 from contextlib import nullcontext
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Mapping, Optional, Union
 import torch
 from torch import nn
 from torch.profiler import record_function
@@ -29,6 +29,10 @@ from rosetta.model.fpct_attention import (
     pack_fpct_memory,
 )
 from rosetta.model.sampling import sample_token
+from rosetta.model.fpct_instrumentation import (
+    FPCTCaptureAccumulator,
+    teacher_forced_query_mask,
+)
 from transformers.utils import ModelOutput
 
 
@@ -121,6 +125,7 @@ class RosettaModel(nn.Module):
         self.fpct_instrumentation = bool(fpct_instrumentation)
         self._fpct_mechanism_metrics: Dict[str, torch.Tensor] = {}
         self._fpct_layer_metrics: Dict[int, Dict[str, torch.Tensor]] = {}
+        self._fpct_capture: Optional[FPCTCaptureAccumulator] = None
         self._fpct_input_prior_sha256: Optional[str] = None
         self.fpct_collapse_to_parent_bypass = bool(
             fpct_collapse_to_parent_bypass
@@ -163,6 +168,38 @@ class RosettaModel(nn.Module):
         if self.fpct_instrumentation:
             config["instrumentation"] = True
         return config
+
+    @property
+    def fpct_capture_active(self) -> bool:
+        return self._fpct_capture is not None
+
+    def begin_fpct_capture(
+        self,
+        mode: str = "teacher_forced_response",
+        *,
+        metadata: Optional[Mapping[str, Any]] = None,
+        query_mask: Optional[torch.Tensor] = None,
+    ) -> None:
+        """Begin an explicit multi-forward query-time instrumentation capture."""
+
+        if self._fpct_capture is not None:
+            raise RuntimeError("an FPCT capture is already active")
+        self._fpct_capture = FPCTCaptureAccumulator(
+            mode, metadata=metadata, query_mask=query_mask
+        )
+
+    @staticmethod
+    def fpct_teacher_forced_query_mask(labels: torch.Tensor) -> torch.Tensor:
+        return teacher_forced_query_mask(labels)
+
+    def end_fpct_capture(self) -> Dict[str, Any]:
+        """Finalize and clear the active capture, returning JSON-safe summaries."""
+
+        if self._fpct_capture is None:
+            raise RuntimeError("no FPCT capture is active")
+        capture = self._fpct_capture
+        self._fpct_capture = None
+        return capture.finalize()
 
     @property
     def device(self):
@@ -302,6 +339,7 @@ class RosettaModel(nn.Module):
         fpct_replicated_collapse: bool = False,
         fpct_metric_sink: Optional[Dict[str, torch.Tensor]] = None,
         fpct_layer_metric_sink: Optional[Dict[int, Dict[str, torch.Tensor]]] = None,
+        fpct_capture_sink: Optional[FPCTCaptureAccumulator] = None,
         fpct_collapse_to_parent_bypass: bool = False,
         fpct_profile_scopes: bool = False,
         fpct_attention_trace_sink: Optional[
@@ -431,9 +469,21 @@ class RosettaModel(nn.Module):
                         hierarchical_parent_key = base_key_states
                         hierarchical_parent_value = base_value_states
                         hierarchical_parent_mask = parent_attention_mask
-                if fpct_metric_sink is not None and packed is not None:
+                if (
+                    fpct_metric_sink is not None or fpct_capture_sink is not None
+                ) and packed is not None:
                     with _fpct_scope(fpct_profile_scopes, "fpct.diagnostics"):
-                        metrics = fpct_mechanism_diagnostics(query_states, packed)
+                        if fpct_capture_sink is None:
+                            metrics = fpct_mechanism_diagnostics(
+                                query_states, packed
+                            )
+                            capture_payload = None
+                        else:
+                            metrics, capture_payload = fpct_mechanism_diagnostics(
+                                query_states,
+                                packed,
+                                return_capture_payload=True,
+                            )
                         replicated = pack_fpct_memory(
                             base_key_states,
                             base_value_states,
@@ -458,6 +508,11 @@ class RosettaModel(nn.Module):
                     detached_metrics = {
                         name: value.detach() for name, value in metrics.items()
                     }
+                    if fpct_capture_sink is not None:
+                        assert capture_payload is not None
+                        fpct_capture_sink.update(
+                            self.layer_idx, detached_metrics, capture_payload
+                        )
                     if fpct_layer_metric_sink is not None:
                         layer_bucket = fpct_layer_metric_sink.setdefault(
                             self.layer_idx, {}
@@ -477,24 +532,30 @@ class RosettaModel(nn.Module):
                                 layer_bucket.get(count_key, torch.zeros_like(value))
                                 + torch.ones_like(value)
                             )
-                    for name, value in detached_metrics.items():
-                        sum_key, max_key, count_key = (
-                            f"{name}/sum", f"{name}/max", f"{name}/count"
-                        )
-                        fpct_metric_sink[sum_key] = (
-                            fpct_metric_sink.get(sum_key, torch.zeros_like(value)) + value
-                        )
-                        fpct_metric_sink[max_key] = torch.maximum(
-                            fpct_metric_sink.get(max_key, value), value
-                        )
-                        fpct_metric_sink[count_key] = (
-                            fpct_metric_sink.get(count_key, torch.zeros_like(value))
-                            + torch.ones_like(value)
-                        )
-                        fpct_metric_sink[name] = (
-                            fpct_metric_sink[sum_key]
-                            / fpct_metric_sink[count_key].clamp_min(1)
-                        )
+                    if fpct_metric_sink is not None:
+                        for name, value in detached_metrics.items():
+                            sum_key, max_key, count_key = (
+                                f"{name}/sum", f"{name}/max", f"{name}/count"
+                            )
+                            fpct_metric_sink[sum_key] = (
+                                fpct_metric_sink.get(
+                                    sum_key, torch.zeros_like(value)
+                                )
+                                + value
+                            )
+                            fpct_metric_sink[max_key] = torch.maximum(
+                                fpct_metric_sink.get(max_key, value), value
+                            )
+                            fpct_metric_sink[count_key] = (
+                                fpct_metric_sink.get(
+                                    count_key, torch.zeros_like(value)
+                                )
+                                + torch.ones_like(value)
+                            )
+                            fpct_metric_sink[name] = (
+                                fpct_metric_sink[sum_key]
+                                / fpct_metric_sink[count_key].clamp_min(1)
+                            )
 
             if self.config._attn_implementation != "eager":
                 raise RuntimeError("FPCT R2 requires eager attention at runtime")
@@ -670,6 +731,7 @@ class RosettaModel(nn.Module):
                 fpct_layer_metric_sink=(
                     self._fpct_layer_metrics if self.fpct_instrumentation else None
                 ),
+                fpct_capture_sink=self._fpct_capture,
                 fpct_collapse_to_parent_bypass=(
                     self.fpct_operator == "c_post"
                     or self.fpct_collapse_to_parent_bypass

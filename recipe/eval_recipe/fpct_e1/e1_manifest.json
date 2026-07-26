@@ -5,7 +5,7 @@
   "branch": "research/fpct-e1-mechanism-audit",
   "base_commit": "613958af38fad27e1ea933ccc0dda6d1af5cce89",
   "classification": "EXPLORATORY_MECHANISM_AUDIT_NOT_CONFIRMATORY",
-  "current_stage": "E1-0",
+    "current_stage": "E1-1",
   "current_status": "GO",
   "e0_read_only": {
     "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
@@ -113,7 +113,7 @@
     "prospective_root_cause_and_single_operator_freeze",
     "separate_authorization_required_before_e1_pilot"
   ],
-  "instrumentation_contract": {
+    "instrumentation_contract": {
     "explicit_capture_lifecycle": true,
     "capture_modes": [
       "prefill",
@@ -139,16 +139,42 @@
     ],
     "parity_target_preference": "bitwise_equal",
     "natural_output_before_parity_gate": false,
-    "hard_gate": [
+        "hard_gate": [
       "all formula and synthetic oracles pass",
       "instrumentation ON and OFF are equivalent",
       "synthetic query-changing gamma_query_variance > 0",
       "multi-step accumulation is not overwritten by the final forward",
       "invalid candidate probability and gradient are exactly zero",
-      "no NaN or Inf"
-    ]
-  },
-  "mechanism_audit": {
+            "no NaN or Inf"
+        ],
+        "decision": "GO",
+        "evidence": {
+            "report": "FPCT_E1_INSTRUMENTATION_REPORT.md",
+            "parity": {
+                "path": "recipe/eval_recipe/fpct_e1/e1_instrumentation_parity.json",
+                "sha256": "00fb8403f1376eb0a3d4ccf498a6c7230a313aec7259f661553ca0e164a2d1fc",
+                "status": "GO"
+            },
+            "synthetic_query_variance": {
+                "path": "recipe/eval_recipe/fpct_e1/e1_synthetic_query_variance.json",
+                "sha256": "f652ee99f8bce508b3f35953b10ad11ad4046ab0f868bf93fc08a82bb6ef14b2",
+                "status": "GO",
+                "gamma_query_variance": 0.19730721414089203
+            },
+            "targeted_tests": {
+                "passed": 82,
+                "failed": 0
+            }
+        },
+        "implementation_sha256": {
+            "rosetta/model/fpct_instrumentation.py": "89084c8311e9517cf40ad8413014c562cbafb687edcabd53c8bd4ecc19753844",
+            "rosetta/model/fpct_attention.py": "f3eb35f09d45c9e5b60f8d84029d41764afbd22fa1eed8098727fc923cd4cbf8",
+            "rosetta/model/wrapper.py": "3fa8d397ec0d22015519d3beb05ab244a4f5b8205dc5c58df1211a2edc989bf3",
+            "script/analysis/fpct_e1_instrumentation_gate.py": "18d77b1a1cebae17572916b41d964160fc46b6527647551dff010dd6a77dbb9e",
+            "test/test_fpct_instrumentation.py": "09e4b91a4b35d1fd9cae37c97077b32d966b18ae09c0d03a98aac8176952406d"
+        }
+    },
+    "mechanism_audit": {
     "population": "E0-design only",
     "training_allowed": false,
     "checkpoint_count": 6,
@@ -175,14 +201,31 @@
       "r_K": "D_K_fused / (D_K_source + epsilon)",
       "r_V": "D_V_fused / (D_V_source + epsilon)"
     },
-    "topology_strata": [
+        "topology_strata": [
       "partition_compositional",
       "competing_overlap",
       "boundary_fallback",
       "neighbor_expansion",
       "taxonomy_unresolved"
-    ],
-    "performance_go_gate": false,
+        ],
+        "offline_contract": {
+            "schema": {
+                "path": "recipe/eval_recipe/fpct_e1/e1_mechanism_schema.json",
+                "sha256": "b6911f3d9c5954602631dace29ebc0de074575205933b5e427c918c2ab02b2cd"
+            },
+            "runner": {
+                "path": "script/analysis/fpct_e1_mechanism_audit.py",
+                "sha256": "29b7e6042bf490cacce7b00f57935fe800e9d471cd70d97c00ecf86be43a0f2d"
+            },
+            "test": {
+                "path": "test/test_fpct_e1_mechanism_audit.py",
+                "sha256": "caf72cf194af14947c6a47b766d2b451d9ab7a0f885e290ec7754832316608e6",
+                "passed": 13
+            },
+            "native_and_children_share_global_denominator": true,
+            "taxonomy_unresolved_fail_closed": true
+        },
+        "performance_go_gate": false,
     "operator_selection_allowed": false
   },
   "centered_lambda_contract": {

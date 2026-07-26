@@ -1,0 +1,156 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_e0_design_mechanism_audit_v1",
+  "status": "prospective_unexecuted",
+  "scientific_role": "E0-design teacher-forced mechanism audit and centered-lambda operator sweep",
+  "data_firewall": {
+    "allowed_split_role": "e0_design",
+    "e1_pilot": "sealed_not_read_not_run",
+    "model_selection": "sealed",
+    "test": "sealed"
+  },
+  "checkpoint_cells": {
+    "c_post_trained+c_post": "Y_CC",
+    "c_post_trained+f": "Y_CF",
+    "f_trained+c_post": "Y_FC",
+    "f_trained+f": "Y_FF"
+  },
+  "teacher_forcing": {
+    "causal_shift": "logits[:, t, :] score labels[:, t + 1]",
+    "eligible_target": "labels[:, t + 1] != -100",
+    "primary_metric": "delta_gold_logp = gold_logp(lambda) - cpost_gold_logp"
+  },
+  "centered_lambda": {
+    "grid": [
+      0.0,
+      0.25,
+      0.5,
+      1.0,
+      2.0
+    ],
+    "key_formula": "K_lambda_ij = Kbar_i + lambda * (K_ij - Kbar_i)",
+    "value_formula": "V_lambda_ij = Vbar_i + lambda * (V_ij - Vbar_i)",
+    "prior_mean": "Kbar_i = sum_j A_ij K_ij; Vbar_i = sum_j A_ij V_ij",
+    "global_denominator": "all valid ordinary native atoms and all legal transported child atoms share one global attention softmax denominator",
+    "lambda_zero_contract": "lambda=0 factorized global attention is C_post exactly, including when ordinary native atoms share the same global denominator, because all child atoms equal their prior mean and sum_j A_ij=1",
+    "lambda_one_contract": "lambda=1 is the unmodified F operator",
+    "selection_role": "E0-design root-cause localization only; it cannot establish E1-pilot performance"
+  },
+  "topology_classes": [
+    "not_applicable",
+    "partition_compositional",
+    "competing_overlap",
+    "boundary_fallback",
+    "neighbor_expansion",
+    "taxonomy_unresolved"
+  ],
+  "topology_decision_contract": {
+    "partition_compositional": "positive-length candidate intersections form a disjoint ordered complete cover of the receiver span",
+    "competing_overlap": "multiple candidates each overlap the receiver and an independent upstream determination explicitly certifies them as alternative explanations",
+    "boundary_fallback": "boundary, fallback, malformed, or special-token geometry is explicitly present",
+    "neighbor_expansion": "at least one candidate is explicitly introduced by the candidate window rather than direct span overlap",
+    "taxonomy_unresolved": "m>=2 geometry that satisfies none of the explicit rules; failure of the partition rule alone is never evidence of competition"
+  },
+  "input_row": {
+    "grain": "seed x checkpoint arm x inference operator x task x sample x answer query x layer x head x parent x lambda",
+    "required_columns": [
+      "schema_version",
+      "split_role",
+      "seed",
+      "checkpoint_arm",
+      "inference_operator",
+      "cell",
+      "task",
+      "sample_sha256",
+      "content_group_sha256",
+      "layer",
+      "head",
+      "query_position",
+      "target_position",
+      "parent_position",
+      "candidate_count",
+      "topology",
+      "lambda_value",
+      "prior",
+      "gamma",
+      "source_d_k",
+      "source_d_v",
+      "source_energy_k",
+      "source_energy_v",
+      "fused_d_k",
+      "fused_d_v",
+      "fused_energy_k",
+      "fused_energy_v",
+      "candidate_logit_range",
+      "candidate_logit_variance",
+      "jensen_gap",
+      "parent_attention_mass",
+      "output_delta_l2",
+      "gold_logp",
+      "cpost_gold_logp",
+      "prediction_correct",
+      "cpost_prediction_correct"
+    ],
+    "array_contract": "prior and gamma contain exactly candidate_count finite nonnegative values and each sums to one when candidate_count > 0",
+    "position_contract": "target_position = query_position + 1"
+  },
+  "derived_metrics": {
+    "gamma_kl_prior": "sum_j gamma_j log(gamma_j/A_j)",
+    "gamma_tv_prior": "0.5 * sum_j abs(gamma_j-A_j)",
+    "gamma_query_variance": "mean_j Var over distinct eligible answer query positions of gamma_tij",
+    "posterior_top1_changed": "posterior argmax differs across eligible answer query positions",
+    "normalized_source_d_k": "source_d_k/(source_energy_k+1e-12)",
+    "normalized_source_d_v": "source_d_v/(source_energy_v+1e-12)",
+    "normalized_fused_d_k": "fused_d_k/(fused_energy_k+1e-12)",
+    "normalized_fused_d_v": "fused_d_v/(fused_energy_v+1e-12)",
+    "projector_retention_k": "fused_d_k/(source_d_k+1e-12)",
+    "projector_retention_v": "fused_d_v/(source_d_v+1e-12)",
+    "delta_gold_logp": "gold_logp-cpost_gold_logp"
+  },
+  "artifacts": {
+    "e1_mechanism_rows.parquet": {
+      "role": "validated and derived long-form rows",
+      "sort_order": [
+        "seed",
+        "checkpoint_arm",
+        "inference_operator",
+        "task",
+        "content_group_sha256",
+        "sample_sha256",
+        "lambda_value",
+        "layer",
+        "head",
+        "query_position",
+        "parent_position"
+      ]
+    },
+    "e1_mechanism_summary.json": {
+      "role": "task/cell/lambda summary and integrity ledger"
+    },
+    "e1_layer_head_summary.csv": {
+      "role": "equal-row mechanism decomposition by layer and head"
+    },
+    "e1_projector_contraction.csv": {
+      "role": "deduplicated parent-level source-to-fused dispersion retention"
+    },
+    "e1_candidate_topology.csv": {
+      "role": "topology-stratified opportunity and functional effects"
+    },
+    "e1_centered_lambda_summary.csv": {
+      "role": "same-checkpoint centered-lambda dose-response"
+    }
+  },
+  "numerical_contract": {
+    "float64_atol": 1e-10,
+    "float64_rtol": 1e-08,
+    "float32_atol": 2e-05,
+    "float32_rtol": 2e-05,
+    "lambda_zero_row_tolerance": 2e-05,
+    "invalid_probability_and_gradient": "exact_zero"
+  },
+  "claim_boundary": [
+    "Candidate count or dispersion proves structural opportunity only.",
+    "A nonzero centered-lambda response on E0-design identifies headroom but is not an E1-pilot performance result.",
+    "No E1-pilot, model-selection, or test output may be consumed by this protocol."
+  ]
+}

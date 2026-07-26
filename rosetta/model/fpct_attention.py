@@ -92,6 +92,7 @@ class FPCTPackedMemory:
     extra_slots: Tensor
     parent_equivalent: Tensor
     all_parent_equivalent: Tensor
+    top_k: int
 
 
 @dataclass(frozen=True)
@@ -608,6 +609,7 @@ def pack_fpct_memory(
         extra_slots=layout.extra_slots,
         parent_equivalent=parent_equivalent,
         all_parent_equivalent=parent_equivalent.all(dim=-1),
+        top_k=layout.top_k,
     )
 
 
@@ -857,7 +859,9 @@ def fpct_qwen_hierarchical_attention_forward(
 def fpct_mechanism_diagnostics(
     query: Tensor,
     packed: FPCTPackedMemory,
-) -> dict[str, Tensor]:
+    *,
+    return_capture_payload: bool = False,
+) -> dict[str, Tensor] | tuple[dict[str, Tensor], dict[str, object]]:
     """Aggregate query-time mechanism diagnostics without retaining raw KV."""
 
     b, hq, q_length, d = query.shape
@@ -949,6 +953,13 @@ def fpct_mechanism_diagnostics(
     )
     kl_parent = torch.zeros_like(count)
     kl_parent.scatter_add_(3, parent_index, kl_atom)
+    tv_atom = torch.where(
+        candidate,
+        0.5 * (gamma - prior).abs(),
+        torch.zeros_like(gamma),
+    )
+    tv_parent = torch.zeros_like(count)
+    tv_parent.scatter_add_(3, parent_index, tv_atom)
     prior_raw_mean = torch.zeros_like(count)
     prior_raw_mean.scatter_add_(
         3, parent_index, torch.where(candidate, prior * raw_logits, zeros)
@@ -1014,8 +1025,9 @@ def fpct_mechanism_diagnostics(
         expanded = torch.broadcast_to(mask, value.shape)
         return torch.where(expanded, value, torch.zeros_like(value)).sum() / expanded.sum().clamp_min(1)
 
-    return {
+    metrics = {
         "gamma_kl_prior": masked_mean(kl_parent, parent_valid),
+        "gamma_tv_prior": masked_mean(tv_parent, parent_valid),
         "gamma_query_variance": masked_mean(
             gamma_query_variance, gamma_query_mask
         ),
@@ -1031,4 +1043,21 @@ def fpct_mechanism_diagnostics(
         "expanded_slot_ratio": packed.expanded_slots.float().mean()
         / float(source_length),
         "extra_slots": packed.extra_slots.float().mean(),
+    }
+    if not return_capture_payload:
+        return metrics
+    return metrics, {
+        "gamma": gamma,
+        "candidate_mask": candidate,
+        "parent_index": packed.parent_index,
+        "candidate_index": packed.candidate_index,
+        "top_k": packed.top_k,
+        "source_length": source_length,
+        "parent_metrics": {
+            "gamma_kl_prior": kl_parent,
+            "gamma_tv_prior": tv_parent,
+            "candidate_logit_variance": raw_variance,
+            "candidate_logit_range": logit_range,
+            "jensen_gap": jensen_gap,
+        },
     }
