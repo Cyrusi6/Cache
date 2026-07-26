@@ -12,12 +12,13 @@ from types import SimpleNamespace
 
 import pytest
 import torch
+import yaml
 
 import script.experiment.fpct_e1_capture_runner as runner
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-FAKE_IMAGE = "sha256:" + "b" * 64
+FAKE_IMAGE = "registry.example/fpct@sha256:" + "b" * 64
 
 
 def _sha(text: str) -> str:
@@ -77,6 +78,7 @@ def _source_snapshot(tmp_path: Path) -> Path:
         Path("script/experiment/fpct_e1_prepare_input_lock.py"),
         Path("script/experiment/fpct_e1_runtime_backend.py"),
         Path("script/experiment/fpct_e1_runtime_probe.py"),
+        runner.RUNTIME_PROBE_RENDERER_RELATIVE,
         Path("script/experiment/fpct_e1_source_snapshot_lock.py"),
         Path("script/experiment/fpct_e1_k8s_lock_bundle.py"),
         Path("rosetta/model/wrapper.py"),
@@ -156,6 +158,17 @@ def _resolved_plan(tmp_path: Path) -> tuple[dict, Path, Path]:
     execution_sha = receipt_payload["execution_sha"]
     e0_root = _checkpoint_root(tmp_path)
     gate = _gate(tmp_path, repo_snapshot)
+    from script.experiment.fpct_e1_source_snapshot_lock import (
+        verify_source_snapshot_receipt,
+    )
+    source_receipt_raw = source_receipt.read_bytes()
+    source_verification = {
+        **verify_source_snapshot_receipt(
+            source_receipt, repo_snapshot, execution_sha,
+        ),
+        "receipt_file_sha256": runner.sha256_bytes(source_receipt_raw),
+        "receipt_bytes": len(source_receipt_raw),
+    }
     runtime = tmp_path / "runtime.json"
     runtime.write_bytes(runner.canonical_json_bytes({
         "schema_version": 1,
@@ -164,6 +177,7 @@ def _resolved_plan(tmp_path: Path) -> tuple[dict, Path, Path]:
         "execution_sha": execution_sha,
         "image_digest": FAKE_IMAGE,
         "source_snapshot_tree_sha": receipt_payload["snapshot"]["mounted_tree_canonical_sha256"],
+        "source_snapshot_verification": source_verification,
         "runtime": {
             "python": {"version": "3.10", "implementation": "CPython", "executable": "/python"},
             "platform": {"system": "Linux", "release": "test", "version": "test", "machine": "x86_64", "platform": "test"},
@@ -194,7 +208,9 @@ def _resolved_plan(tmp_path: Path) -> tuple[dict, Path, Path]:
         tmp_path / "outputs",
         **common,
     )
-    sidecar = tmp_path / "e1_input_lock.pt"
+    input_lock_root = tmp_path / "input-lock"
+    input_lock_root.mkdir()
+    sidecar = input_lock_root / "e1_input_lock.pt"
     dimensions = {"num_hidden_layers": 28, "num_attention_heads": 16, "num_key_value_heads": 8}
     items = []
     for task in runner.TASKS:
@@ -269,7 +285,7 @@ def _resolved_plan(tmp_path: Path) -> tuple[dict, Path, Path]:
             "row_template": {"count": len(keys), "sha256": digest.hexdigest()},
             "expected_long_form_rows": runner._expected_long_form_rows_contract(members),
         }
-    input_manifest = tmp_path / "e1_input_lock_manifest.json"
+    input_manifest = input_lock_root / "e1_input_lock_manifest.json"
     input_manifest.write_bytes(runner.canonical_json_bytes({
         "schema_version": 1,
         "protocol_id": "fpct_e1_e0_design_input_lock_v1",
@@ -327,6 +343,21 @@ def _find_shard(plan: dict, *, seed: int, arm: str, task: str, value: float, sta
     ]
     assert len(matches) == 1
     return matches[0]
+
+
+def _execute_shard(
+    plan_path: Path, shard_id: str, gate_path: Path | None,
+    output_root: Path, backend_spec: str | None, **kwargs,
+):
+    """Invoke a shard with the same mechanical identities as rendered K8s."""
+
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    kwargs.pop("claim_id", None)
+    kwargs.setdefault("expected_plan_sha256", plan["plan_sha256"])
+    kwargs["claim_id"] = runner._expected_claim_id(plan["plan_sha256"], shard_id)
+    return runner.execute_shard(
+        plan_path, shard_id, gate_path, output_root, backend_spec, **kwargs,
+    )
 
 
 def _write_phase_marker(plan: dict, output: Path, stage: str, closure: str = "4" * 64) -> Path:
@@ -454,6 +485,7 @@ def test_plan_freezes_two_stage_36_plus_72_graph_and_lambda_ids(tmp_path: Path) 
     for relative in (
         "script/experiment/fpct_e1_prepare_input_lock.py",
         "script/experiment/fpct_e1_runtime_backend.py",
+        "script/experiment/fpct_e1_runtime_probe_renderer.py",
         "rosetta/model/wrapper.py",
         "rosetta/model/fpct_attention.py",
         "rosetta/model/fpct_instrumentation.py",
@@ -467,6 +499,27 @@ def test_plan_freezes_two_stage_36_plus_72_graph_and_lambda_ids(tmp_path: Path) 
         "test/test_fpct_e1_runtime_capture_primitives.py",
     ):
         assert f"repo://{relative}" in frozen_sources
+
+
+def test_runtime_probe_renderer_is_frozen_and_tamper_fails_closed(
+    tmp_path: Path,
+) -> None:
+    plan, _, _ = _resolved_plan(tmp_path)
+    logical = f"repo://{runner.RUNTIME_PROBE_RENDERER_RELATIVE.as_posix()}"
+    records = {
+        record["logical_path"]: record for record in plan["source_files"]
+    }
+    assert logical in records
+    renderer_path = runner.resolve_logical_path(plan, logical)
+    assert records[logical]["sha256"] == runner.sha256_file(renderer_path)
+
+    original = renderer_path.read_bytes()
+    renderer_path.write_bytes(original + b"\n# provenance tamper\n")
+    try:
+        with pytest.raises(ValueError, match="provenance changed"):
+            runner.verify_plan_sources(plan)
+    finally:
+        renderer_path.write_bytes(original)
 
 
 def test_active_symlink_resolves_to_immutable_attempt_and_binds_step64_final(tmp_path: Path) -> None:
@@ -502,6 +555,98 @@ def test_portable_logical_paths_map_to_host_and_container(tmp_path: Path) -> Non
     assert snapshot["read_only_required"] is True
     assert snapshot["worktree_mount_forbidden"] is True
     assert runner._tree_manifest(Path(snapshot["host_path"]))["tree_sha256"] == snapshot["tree"]["tree_sha256"]
+
+
+def test_writable_output_roots_are_physically_and_lexically_disjoint(
+    tmp_path: Path,
+) -> None:
+    plan, _, _ = _resolved_plan(tmp_path)
+    repo = Path(plan["path_roots"]["repo"]["host"])
+
+    nested = copy.deepcopy(plan)
+    nested["path_roots"]["output"]["host"] = str(repo / "nested-output")
+    nested["plan_sha256"] = runner._plan_hash(nested)
+    with pytest.raises(ValueError, match="output host root overlaps"):
+        runner.validate_execution_plan(nested)
+
+    alias = tmp_path / "repo-alias"
+    alias.symlink_to(repo, target_is_directory=True)
+    aliased = copy.deepcopy(plan)
+    aliased["path_roots"]["output"]["host"] = str(alias / "nested-output")
+    aliased["plan_sha256"] = runner._plan_hash(aliased)
+    with pytest.raises(ValueError, match="output host root overlaps"):
+        runner.validate_execution_plan(aliased)
+
+    container_nested = copy.deepcopy(plan)
+    container_nested["path_roots"]["output"]["container"] = (
+        plan["path_roots"]["repo"]["container"] + "/nested-output"
+    )
+    container_nested["plan_sha256"] = runner._plan_hash(container_nested)
+    with pytest.raises(ValueError, match="output container root overlaps"):
+        runner.validate_execution_plan(container_nested)
+
+
+def test_finalized_nested_overlay_cannot_capture_e1_3_destinations(
+    tmp_path: Path,
+) -> None:
+    plan, _, _ = _resolved_plan(tmp_path)
+    output = Path(plan["path_roots"]["output"]["host"])
+    finalized = output / "formal-stage"
+    runner._validate_finalized_overlay(plan, finalized)
+
+    colliding = copy.deepcopy(plan)
+    next(
+        shard for shard in colliding["shards"]
+        if shard["stage"] == runner.STAGE_E1_3
+    )["output_relative"] = "formal-stage/illegal-child"
+    with pytest.raises(ValueError, match="falls inside finalized"):
+        runner._validate_finalized_overlay(colliding, finalized)
+    with pytest.raises(ValueError, match="may not contain"):
+        runner._validate_finalized_overlay(plan, output)
+
+
+@pytest.mark.parametrize(
+    "image",
+    [
+        "sha256:" + "b" * 64,
+        "registry.example/fpct:latest",
+        "registry.example/fpct:tag@sha256:" + "b" * 64,
+    ],
+)
+def test_execution_plan_rejects_unnamed_or_tagged_image_references(
+    tmp_path: Path, image: str,
+) -> None:
+    plan, _, _ = _resolved_plan(tmp_path)
+    changed = copy.deepcopy(plan)
+    changed["runtime_lock"]["image_digest"] = image
+    changed["plan_sha256"] = runner._plan_hash(changed)
+    with pytest.raises(RuntimeError, match="execution SHA/image digest"):
+        runner.validate_execution_plan(changed, for_execution=True)
+
+
+def test_runtime_probe_receipt_evidence_is_exactly_cross_bound(
+    tmp_path: Path,
+) -> None:
+    plan, plan_path, _ = _resolved_plan(tmp_path)
+    runtime_record = plan["runtime_lock"]["runtime_provenance"]
+    runtime_path = runner.resolve_logical_path(plan, runtime_record["logical_path"])
+    original = runtime_path.read_bytes()
+    payload = json.loads(original)
+    payload["source_snapshot_verification"]["receipt_file_sha256"] = "0" * 64
+    runtime_path.write_bytes(runner.canonical_json_bytes(payload))
+    changed = copy.deepcopy(plan)
+    changed_runtime = changed["runtime_lock"]["runtime_provenance"]
+    changed_runtime["sha256"] = runner.sha256_file(runtime_path)
+    changed_runtime["identity"]["source_snapshot_verification"] = payload[
+        "source_snapshot_verification"
+    ]
+    changed["plan_sha256"] = runner._plan_hash(changed)
+    plan_path.write_bytes(runner.canonical_json_bytes(changed))
+    try:
+        with pytest.raises(ValueError, match="runtime probe identity changed"):
+            runner.verify_plan_sources(changed)
+    finally:
+        runtime_path.write_bytes(original)
 
 
 def test_consolidated_gate_has_exact_check_set_and_exact_sha(tmp_path: Path) -> None:
@@ -555,8 +700,122 @@ def test_unresolved_template_plan_fails_before_backend_import(tmp_path: Path) ->
         nonlocal called
         called = True
     with pytest.raises(RuntimeError, match="unresolved"):
-        runner.execute_shard(path, plan["shards"][0]["shard_id"], None, tmp_path / "out", None, claim_id="claim", backend_loader=loader)
+        _execute_shard(path, plan["shards"][0]["shard_id"], None, tmp_path / "out", None, claim_id="claim", backend_loader=loader)
     assert called is False
+
+
+def test_run_shard_rejects_replaced_plan_or_nonmechanical_claim_before_backend(
+    tmp_path: Path,
+) -> None:
+    plan, plan_path, gate = _resolved_plan(tmp_path)
+    shard = plan["shards"][0]
+    backend_loaded = False
+
+    def loader(_spec):
+        nonlocal backend_loaded
+        backend_loaded = True
+        return pytest.fail("backend must not load")
+
+    replacement = copy.deepcopy(plan)
+    replacement["replacement_nonce"] = "self-consistent-but-not-rendered"
+    replacement["plan_sha256"] = runner._plan_hash(replacement)
+    replacement_path = tmp_path / "replacement-plan.json"
+    replacement_path.write_bytes(runner.canonical_json_bytes(replacement))
+    with pytest.raises(RuntimeError, match="differs from rendered expected SHA"):
+        runner.execute_shard(
+            replacement_path, shard["shard_id"], gate, tmp_path / "output",
+            "fixture:backend", expected_plan_sha256=plan["plan_sha256"],
+            claim_id=runner._expected_claim_id(
+                plan["plan_sha256"], shard["shard_id"]
+            ),
+            backend_loader=loader,
+        )
+    with pytest.raises(RuntimeError, match="claim ID differs"):
+        runner.execute_shard(
+            plan_path, shard["shard_id"], gate, tmp_path / "output",
+            "fixture:backend", expected_plan_sha256=plan["plan_sha256"],
+            claim_id="0" * 64, backend_loader=loader,
+        )
+    assert backend_loaded is False
+
+
+def test_run_shard_cli_requires_and_forwards_expected_plan_sha(
+    tmp_path: Path, monkeypatch, capsys,
+) -> None:
+    expected = "a" * 64
+    observed = {}
+
+    def fake_execute(*args, **kwargs):
+        observed["args"] = args
+        observed["kwargs"] = kwargs
+        return {"status": "GO"}
+
+    monkeypatch.setattr(runner, "execute_shard", fake_execute)
+    arguments = [
+        "run-shard", "--plan", str(tmp_path / "plan.json"),
+        "--expected-plan-sha256", expected,
+        "--shard-id", "synthetic-shard",
+        "--output-root", str(tmp_path / "output"),
+        "--claim-id", "b" * 64,
+    ]
+    assert runner.main(arguments) == 0
+    assert observed["kwargs"]["expected_plan_sha256"] == expected
+    assert observed["kwargs"]["claim_id"] == "b" * 64
+    assert json.loads(capsys.readouterr().out)["status"] == "GO"
+
+    missing = [
+        "run-shard", "--plan", str(tmp_path / "plan.json"),
+        "--shard-id", "synthetic-shard",
+        "--output-root", str(tmp_path / "output"),
+        "--claim-id", "b" * 64,
+    ]
+    with pytest.raises(SystemExit):
+        runner.main(missing)
+
+
+def test_render_k8s_cli_requires_and_forwards_mounted_receipts(
+    tmp_path: Path, monkeypatch, capsys,
+) -> None:
+    observed = {}
+
+    def fake_render(*args):
+        observed["args"] = args
+        return {"status": "GO"}
+
+    monkeypatch.setattr(runner, "render_k8s", fake_render)
+    paths = {
+        "plan": tmp_path / "plan.json",
+        "template": tmp_path / "template.yaml",
+        "output": tmp_path / "rendered",
+        "bundle": tmp_path / "bundle.json",
+        "receipt": tmp_path / "bundle-verification.json",
+        "finalized_bundle": tmp_path / "finalized-bundle.json",
+        "finalized_receipt": tmp_path / "finalized-bundle-verification.json",
+    }
+    arguments = [
+        "render-k8s",
+        "--plan", str(paths["plan"]),
+        "--template", str(paths["template"]),
+        "--output-dir", str(paths["output"]),
+        "--stage", runner.STAGE_E1_3,
+        "--lock-bundle-manifest", str(paths["bundle"]),
+        "--lock-bundle-verification-receipt", str(paths["receipt"]),
+        "--finalized-lock-bundle-manifest", str(paths["finalized_bundle"]),
+        "--finalized-lock-bundle-verification-receipt",
+        str(paths["finalized_receipt"]),
+    ]
+    assert runner.main(arguments) == 0
+    assert observed["args"] == (
+        paths["plan"], paths["template"], paths["output"], runner.STAGE_E1_3,
+        paths["bundle"], paths["receipt"], paths["finalized_bundle"],
+        paths["finalized_receipt"],
+    )
+    assert json.loads(capsys.readouterr().out)["status"] == "GO"
+
+    receipt_index = arguments.index("--lock-bundle-verification-receipt")
+    missing_required = arguments[:receipt_index] + arguments[receipt_index + 2:]
+    with pytest.raises(SystemExit):
+        runner.main(missing_required)
 
 
 def test_backend_cannot_supply_cpost_and_f_is_joined_from_baseline(tmp_path: Path, monkeypatch) -> None:
@@ -565,13 +824,13 @@ def test_backend_cannot_supply_cpost_and_f_is_joined_from_baseline(tmp_path: Pat
     cpost = _find_shard(plan, seed=runner.SEEDS[0], arm="c_post_trained", task="openbookqa", value=0.0, stage=runner.STAGE_E1_2)
     factorized = _find_shard(plan, seed=runner.SEEDS[0], arm="c_post_trained", task="openbookqa", value=1.0, stage=runner.STAGE_E1_2)
     output = tmp_path / "outputs"
-    baseline_result = runner.execute_shard(plan_path, cpost["shard_id"], gate, output, "fixture:backend", claim_id="baseline", backend_loader=lambda _: _backend_for(plan, cpost))
+    baseline_result = _execute_shard(plan_path, cpost["shard_id"], gate, output, "fixture:backend", claim_id="baseline", backend_loader=lambda _: _backend_for(plan, cpost))
     assert baseline_result["schema_boundary"]["parquet_batch_rows"] == 16
     assert baseline_result["parquet_row_group_count"] == 5
     import pyarrow.parquet as pq
     assert pq.ParquetFile(output / cpost["output_relative"] / "e1_capture_rows.parquet").num_row_groups == 5
     monkeypatch.setattr(runner, "_verify_phase_marker", lambda *_args, **_kwargs: {"status": "GO"})
-    result = runner.execute_shard(plan_path, factorized["shard_id"], gate, output, "fixture:backend", claim_id="factorized", backend_loader=lambda _: _backend_for(plan, factorized))
+    result = _execute_shard(plan_path, factorized["shard_id"], gate, output, "fixture:backend", claim_id="factorized", backend_loader=lambda _: _backend_for(plan, factorized))
     assert result["row_key_attestation"]["exact_bijection_with_cpost"] is True
     first = _first_parquet_row(output / factorized["output_relative"] / "e1_capture_rows.parquet")
     assert first["cpost_gold_logp"] == -1.25
@@ -583,7 +842,7 @@ def test_backend_cannot_supply_cpost_and_f_is_joined_from_baseline(tmp_path: Pat
 
     bad_output = tmp_path / "bad-output"
     with pytest.raises(ValueError, match="may not provide"):
-        runner.execute_shard(plan_path, cpost["shard_id"], gate, bad_output, "fixture:backend", claim_id="bad", backend_loader=lambda _: _backend_for(plan, cpost, inject_cpost=True))
+        _execute_shard(plan_path, cpost["shard_id"], gate, bad_output, "fixture:backend", claim_id="bad", backend_loader=lambda _: _backend_for(plan, cpost, inject_cpost=True))
 
 
 def test_exact_row_key_bijection_rejects_missing_factorized_row(tmp_path: Path, monkeypatch) -> None:
@@ -591,10 +850,10 @@ def test_exact_row_key_bijection_rejects_missing_factorized_row(tmp_path: Path, 
     cpost = _find_shard(plan, seed=runner.SEEDS[0], arm="f_trained", task="openbookqa", value=0.0, stage=runner.STAGE_E1_2)
     factorized = _find_shard(plan, seed=runner.SEEDS[0], arm="f_trained", task="openbookqa", value=1.0, stage=runner.STAGE_E1_2)
     output = tmp_path / "outputs"
-    runner.execute_shard(plan_path, cpost["shard_id"], gate, output, "fixture:backend", claim_id="c", backend_loader=lambda _: _backend_for(plan, cpost))
+    _execute_shard(plan_path, cpost["shard_id"], gate, output, "fixture:backend", claim_id="c", backend_loader=lambda _: _backend_for(plan, cpost))
     monkeypatch.setattr(runner, "_verify_phase_marker", lambda *_args, **_kwargs: {"status": "GO"})
     with pytest.raises(ValueError, match="row-key universe"):
-        runner.execute_shard(plan_path, factorized["shard_id"], gate, output, "fixture:backend", claim_id="f", backend_loader=lambda _: _backend_for(plan, factorized, drop_last=True))
+        _execute_shard(plan_path, factorized["shard_id"], gate, output, "fixture:backend", claim_id="f", backend_loader=lambda _: _backend_for(plan, factorized, drop_last=True))
 
 
 def test_f_runtime_lambda_zero_is_executed_and_exactly_joins_cpost(tmp_path: Path, monkeypatch) -> None:
@@ -602,9 +861,9 @@ def test_f_runtime_lambda_zero_is_executed_and_exactly_joins_cpost(tmp_path: Pat
     baseline = _find_shard(plan, seed=runner.SEEDS[0], arm="c_post_trained", task="openbookqa", value=0.0, stage=runner.STAGE_E1_2)
     control = _find_shard(plan, seed=runner.SEEDS[0], arm="c_post_trained", task="openbookqa", value=0.0, stage=runner.STAGE_E1_3)
     output = tmp_path / "outputs"
-    runner.execute_shard(plan_path, baseline["shard_id"], gate, output, "fixture:backend", claim_id="baseline", backend_loader=lambda _: _backend_for(plan, baseline))
+    _execute_shard(plan_path, baseline["shard_id"], gate, output, "fixture:backend", claim_id="baseline", backend_loader=lambda _: _backend_for(plan, baseline))
     monkeypatch.setattr(runner, "_verify_finalized_e1_2_lock", lambda *_args, **_kwargs: {"status": "GO"})
-    result = runner.execute_shard(plan_path, control["shard_id"], gate, output, "fixture:backend", claim_id="f-lambda-zero", finalized_lock_sha256="f" * 64, backend_loader=lambda _: _backend_for(plan, control))
+    result = _execute_shard(plan_path, control["shard_id"], gate, output, "fixture:backend", claim_id="f-lambda-zero", finalized_lock_sha256="f" * 64, backend_loader=lambda _: _backend_for(plan, control))
     assert result["row_key_attestation"]["exact_bijection_with_cpost"] is True
     row = _first_parquet_row(output / control["output_relative"] / "e1_capture_rows.parquet")
     assert row["inference_operator"] == "f"
@@ -623,14 +882,18 @@ def test_completed_shard_is_idempotent_without_backend_reload(tmp_path: Path) ->
         nonlocal calls
         calls += 1
         return _backend_for(plan, shard)
-    runner.execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="first", backend_loader=loader)
-    resumed = runner.execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="first", backend_loader=loader)
+    _execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="first", backend_loader=loader)
+    resumed = _execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="first", backend_loader=loader)
     assert resumed["resumed_without_model_load"] is True
     assert calls == 1
     claim = json.loads(runner._claim_path(output, shard).read_text())
     assert claim["status"] == "SUCCEEDED" and claim["attempt"] == 1
-    with pytest.raises(RuntimeError, match="completed shard claim belongs"):
-        runner.execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="other", backend_loader=loader)
+    with pytest.raises(RuntimeError, match="claim ID differs"):
+        runner.execute_shard(
+            plan_path, shard["shard_id"], gate, output, "fixture:backend",
+            expected_plan_sha256=plan["plan_sha256"], claim_id="other",
+            backend_loader=loader,
+        )
 
 
 def test_e1_3_completed_resume_rechecks_every_lock_before_fast_return(
@@ -646,7 +909,7 @@ def test_e1_3_completed_resume_rechecks_every_lock_before_fast_return(
         task="openbookqa", value=0.25, stage=runner.STAGE_E1_3,
     )
     output = tmp_path / "outputs"
-    runner.execute_shard(
+    _execute_shard(
         plan_path, baseline["shard_id"], gate, output, "fixture:backend",
         claim_id="baseline", backend_loader=lambda _: _backend_for(plan, baseline),
     )
@@ -675,12 +938,12 @@ def test_e1_3_completed_resume_rechecks_every_lock_before_fast_return(
         backend_loads += 1
         return _backend_for(plan, sweep)
 
-    runner.execute_shard(
+    _execute_shard(
         plan_path, sweep["shard_id"], gate, output, "fixture:backend",
         claim_id="sweep", finalized_lock_sha256=receipt_sha,
         finalized_receipt_path=receipt, backend_loader=loader,
     )
-    resumed = runner.execute_shard(
+    resumed = _execute_shard(
         plan_path, sweep["shard_id"], gate, output, "fixture:backend",
         claim_id="sweep", finalized_lock_sha256=receipt_sha,
         finalized_receipt_path=receipt, backend_loader=loader,
@@ -689,13 +952,13 @@ def test_e1_3_completed_resume_rechecks_every_lock_before_fast_return(
     assert backend_loads == 1 and phase_calls == 2
 
     with pytest.raises(RuntimeError, match="lacks the rendered finalized-lock SHA"):
-        runner.execute_shard(
+        _execute_shard(
             plan_path, sweep["shard_id"], gate, output, "fixture:backend",
             claim_id="sweep", finalized_receipt_path=receipt,
             backend_loader=lambda _spec: pytest.fail("backend loaded"),
         )
     with pytest.raises(RuntimeError, match="finalized receipt SHA mismatch"):
-        runner.execute_shard(
+        _execute_shard(
             plan_path, sweep["shard_id"], gate, output, "fixture:backend",
             claim_id="sweep", finalized_lock_sha256="0" * 64,
             finalized_receipt_path=receipt,
@@ -703,7 +966,7 @@ def test_e1_3_completed_resume_rechecks_every_lock_before_fast_return(
         )
     missing_receipt = tmp_path / "missing-finalized-receipt.json"
     with pytest.raises(RuntimeError, match="finalized receipt missing"):
-        runner.execute_shard(
+        _execute_shard(
             plan_path, sweep["shard_id"], gate, output, "fixture:backend",
             claim_id="sweep", finalized_lock_sha256=receipt_sha,
             finalized_receipt_path=missing_receipt,
@@ -717,7 +980,7 @@ def test_e1_3_completed_resume_rechecks_every_lock_before_fast_return(
     source.write_bytes(source_bytes + b"tamper")
     try:
         with pytest.raises(ValueError, match="snapshot|source"):
-            runner.execute_shard(
+            _execute_shard(
                 plan_path, sweep["shard_id"], gate, output,
                 "fixture:backend", claim_id="sweep",
                 finalized_lock_sha256=receipt_sha,
@@ -731,7 +994,7 @@ def test_e1_3_completed_resume_rechecks_every_lock_before_fast_return(
     gate.write_bytes(gate_bytes + b" ")
     try:
         with pytest.raises(RuntimeError, match="gate exact SHA"):
-            runner.execute_shard(
+            _execute_shard(
                 plan_path, sweep["shard_id"], gate, output,
                 "fixture:backend", claim_id="sweep",
                 finalized_lock_sha256=receipt_sha,
@@ -744,7 +1007,7 @@ def test_e1_3_completed_resume_rechecks_every_lock_before_fast_return(
     baseline_parquet = output / baseline["output_relative"] / "e1_capture_rows.parquet"
     baseline_parquet.write_bytes(baseline_parquet.read_bytes() + b"tamper")
     with pytest.raises(ValueError, match="capture provenance mismatch"):
-        runner.execute_shard(
+        _execute_shard(
             plan_path, sweep["shard_id"], gate, output, "fixture:backend",
             claim_id="sweep", finalized_lock_sha256=receipt_sha,
             finalized_receipt_path=receipt,
@@ -761,33 +1024,40 @@ def test_failed_claim_records_error_and_same_claim_id_can_resume(tmp_path: Path)
         raise ArithmeticError("synthetic backend failure")
 
     with pytest.raises(ArithmeticError, match="synthetic backend failure"):
-        runner.execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="stable-claim", backend_loader=lambda _: failed_backend)
+        _execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="stable-claim", backend_loader=lambda _: failed_backend)
     failed = json.loads(runner._claim_path(output, shard).read_text())
     assert failed["status"] == "FAILED"
     assert failed["error_class"] == "ArithmeticError"
     assert failed["attempt"] == 1
-    result = runner.execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="stable-claim", backend_loader=lambda _: _backend_for(plan, shard))
+    result = _execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="stable-claim", backend_loader=lambda _: _backend_for(plan, shard))
     assert result["status"] == "GO"
     succeeded = json.loads(runner._claim_path(output, shard).read_text())
     assert succeeded["status"] == "SUCCEEDED"
     assert succeeded["attempt"] == 2
 
 
-def test_failed_claim_rejects_different_claim_id_and_active_lease_is_exclusive(tmp_path: Path) -> None:
+def test_nonmechanical_claim_is_rejected_and_active_lease_is_exclusive(tmp_path: Path) -> None:
     plan, plan_path, gate = _resolved_plan(tmp_path)
     shard = _find_shard(plan, seed=runner.SEEDS[0], arm="c_post_trained", task="openbookqa", value=0.0, stage=runner.STAGE_E1_2)
     output = tmp_path / "outputs"
     with pytest.raises(LookupError):
-        runner.execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="owner-a", backend_loader=lambda _: (lambda _request: (_ for _ in ()).throw(LookupError("fail"))))
-    with pytest.raises(RuntimeError, match="another plan/shard/claim-id"):
-        runner.execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="owner-b", backend_loader=lambda _: _backend_for(plan, shard))
+        _execute_shard(plan_path, shard["shard_id"], gate, output, "fixture:backend", claim_id="owner-a", backend_loader=lambda _: (lambda _request: (_ for _ in ()).throw(LookupError("fail"))))
+    with pytest.raises(RuntimeError, match="claim ID differs"):
+        runner.execute_shard(
+            plan_path, shard["shard_id"], gate, output, "fixture:backend",
+            expected_plan_sha256=plan["plan_sha256"], claim_id="owner-b",
+            backend_loader=lambda _: _backend_for(plan, shard),
+        )
 
     second_output = tmp_path / "second-output"
     claim_path = runner._claim_path(second_output, shard)
-    lease = runner._acquire_claim(claim_path, plan, shard, "same-owner")
+    mechanical_claim = runner._expected_claim_id(
+        plan["plan_sha256"], shard["shard_id"]
+    )
+    lease = runner._acquire_claim(claim_path, plan, shard, mechanical_claim)
     try:
         with pytest.raises(RuntimeError, match="currently active"):
-            runner._acquire_claim(claim_path, plan, shard, "same-owner")
+            runner._acquire_claim(claim_path, plan, shard, mechanical_claim)
     finally:
         lease.transition("FAILED", error_class="SyntheticInterruption")
         lease.close()
@@ -801,7 +1071,7 @@ def test_sweep_fails_before_backend_until_endpoint_completion_marker(tmp_path: P
         nonlocal called
         called = True
     with pytest.raises(RuntimeError, match="lacks the rendered finalized-lock SHA"):
-        runner.execute_shard(plan_path, shard["shard_id"], gate, tmp_path / "outputs", "fixture:backend", claim_id="sweep", backend_loader=loader)
+        _execute_shard(plan_path, shard["shard_id"], gate, tmp_path / "outputs", "fixture:backend", claim_id="sweep", backend_loader=loader)
     assert called is False
 
 
@@ -874,16 +1144,158 @@ def test_finalize_stage_mechanically_merges_and_invokes_frozen_analyzer(tmp_path
         runner.finalize_stage(plan_path, output, runner.STAGE_E1_2, final_dir)
 
 
+def test_mounted_byte_receipt_binds_bundle_manifest_and_observed_configmaps(
+    tmp_path: Path,
+) -> None:
+    bundle_manifest = {
+        "schema_version": 1,
+        "protocol_id": "fpct_e1_k8s_lock_bundle_v1",
+        "status": "FROZEN_NOT_APPLIED",
+        "execution_sha": "a" * 40,
+        "plan_sha256": "b" * 64,
+        "configmaps": {
+            "plan_gate": {
+                "name": "fpct-e1-plan-gate",
+                "keys": {
+                    "plan.json": {"bytes": 11, "sha256": "c" * 64},
+                    "gate.json": {"bytes": 13, "sha256": "d" * 64},
+                },
+            },
+            "runtime_probe": {
+                "name": "fpct-e1-runtime-probe",
+                "keys": {
+                    "runtime.json": {"bytes": 17, "sha256": "e" * 64},
+                },
+            },
+        },
+    }
+    bundle_path = tmp_path / "bundle.json"
+    bundle_path.write_bytes(runner.canonical_json_bytes(bundle_manifest))
+    receipt = {
+        "schema_version": 1,
+        "protocol_id": "fpct_e1_k8s_lock_bundle_v1",
+        "status": "VERIFIED_MOUNTED_KEY_BYTES",
+        "execution_sha": bundle_manifest["execution_sha"],
+        "plan_sha256": bundle_manifest["plan_sha256"],
+        "bundle_manifest_sha256": runner.sha256_file(bundle_path),
+        "configmaps": runner._expected_mounted_configmaps(bundle_manifest),
+        "network_accessed": False,
+        "kubectl_invoked_by_verifier": False,
+    }
+    receipt_path = tmp_path / "mounted-byte-receipt.json"
+    receipt_path.write_bytes(runner.canonical_json_bytes(receipt))
+    verified = runner._verify_mounted_bundle_receipt(
+        bundle_manifest_path=bundle_path,
+        bundle_manifest=bundle_manifest,
+        receipt_path=receipt_path,
+        finalized=False,
+    )
+    assert verified["status"] == "VERIFIED_MOUNTED_KEY_BYTES"
+    assert verified["bundle_manifest_sha256"] == runner.sha256_file(bundle_path)
+
+    tampered = copy.deepcopy(receipt)
+    tampered["configmaps"]["fpct-e1-plan-gate"]["keys"]["plan.json"]["bytes"] += 1
+    receipt_path.write_bytes(runner.canonical_json_bytes(tampered))
+    with pytest.raises(RuntimeError, match="absent/invalid"):
+        runner._verify_mounted_bundle_receipt(
+            bundle_manifest_path=bundle_path,
+            bundle_manifest=bundle_manifest,
+            receipt_path=receipt_path,
+            finalized=False,
+        )
+
+
+def test_finalized_mounted_byte_receipt_binds_closure_and_artifact_tree(
+    tmp_path: Path,
+) -> None:
+    bundle_manifest = {
+        "schema_version": 1,
+        "protocol_id": "fpct_e1_k8s_finalized_lock_bundle_v1",
+        "status": "FROZEN_FINALIZED_NOT_APPLIED",
+        "execution_sha": "a" * 40,
+        "plan_sha256": "b" * 64,
+        "receipt_sha256": "c" * 64,
+        "closure_sha256": "d" * 64,
+        "artifact_tree_sha256": "e" * 64,
+        "configmaps": {
+            "finalized": {
+                "name": "fpct-e1-finalized",
+                "keys": {
+                    "e1_2_finalized_receipt.json": {
+                        "bytes": 19,
+                        "sha256": "f" * 64,
+                    },
+                },
+            },
+        },
+    }
+    bundle_path = tmp_path / "finalized-bundle.json"
+    bundle_path.write_bytes(runner.canonical_json_bytes(bundle_manifest))
+    receipt = {
+        "schema_version": 1,
+        "protocol_id": "fpct_e1_k8s_finalized_lock_bundle_v1",
+        "status": "VERIFIED_FINALIZED_MOUNTED_KEY_BYTES",
+        "execution_sha": bundle_manifest["execution_sha"],
+        "plan_sha256": bundle_manifest["plan_sha256"],
+        "bundle_manifest_sha256": runner.sha256_file(bundle_path),
+        "receipt_sha256": bundle_manifest["receipt_sha256"],
+        "closure_sha256": bundle_manifest["closure_sha256"],
+        "artifact_tree_sha256": bundle_manifest["artifact_tree_sha256"],
+        "configmaps": runner._expected_mounted_configmaps(bundle_manifest),
+        "network_accessed": False,
+        "kubectl_invoked_by_verifier": False,
+    }
+    receipt_path = tmp_path / "finalized-mounted-byte-receipt.json"
+    receipt_path.write_bytes(runner.canonical_json_bytes(receipt))
+    verified = runner._verify_mounted_bundle_receipt(
+        bundle_manifest_path=bundle_path,
+        bundle_manifest=bundle_manifest,
+        receipt_path=receipt_path,
+        finalized=True,
+    )
+    assert verified["status"] == "VERIFIED_FINALIZED_MOUNTED_KEY_BYTES"
+
+    tampered = copy.deepcopy(receipt)
+    tampered["closure_sha256"] = "0" * 64
+    receipt_path.write_bytes(runner.canonical_json_bytes(tampered))
+    with pytest.raises(RuntimeError, match="finalized.*identity"):
+        runner._verify_mounted_bundle_receipt(
+            bundle_manifest_path=bundle_path,
+            bundle_manifest=bundle_manifest,
+            receipt_path=receipt_path,
+            finalized=True,
+        )
+
+
 def test_render_k8s_is_separate_and_removes_every_placeholder(tmp_path: Path, monkeypatch) -> None:
     plan, plan_path, _ = _resolved_plan(tmp_path)
     template = runner.resolve_logical_path(plan, plan["k8s_template"]["logical_path"])
     fake_bundle = {"configmaps": {"plan_gate": {"name": "plan-gate"}, "runtime_probe": {"name": "runtime-probe"}}}
     monkeypatch.setattr(runner, "_verify_lock_bundle_manifest", lambda *_args, **_kwargs: fake_bundle)
+    monkeypatch.setattr(
+        runner,
+        "_verify_mounted_bundle_receipt",
+        lambda *, finalized, **_kwargs: {
+            "status": (
+                "VERIFIED_FINALIZED_MOUNTED_KEY_BYTES"
+                if finalized else "VERIFIED_MOUNTED_KEY_BYTES"
+            ),
+            "sha256": ("f" if finalized else "e") * 64,
+            "bytes": 123,
+            "bundle_manifest_sha256": ("d" if finalized else "c") * 64,
+            "configmaps": {},
+        },
+    )
     monkeypatch.setattr(runner, "_verify_finalized_e1_2_lock", lambda *_args, **_kwargs: {"status": "GO", "output_dir": "output://formal-stage"})
     monkeypatch.setattr(runner, "_verify_finalized_bundle_manifest", lambda *_args, **_kwargs: {"configmaps": {"finalized": {"name": "finalized-lock"}}})
     lock_path = Path(plan["path_roots"]["output"]["host"]) / "locks" / f"{runner.FINALIZED_E1_2}.json"
     runner.atomic_write(lock_path, runner.canonical_json_bytes({"synthetic": True}))
-    result = runner.render_k8s(plan_path, template, tmp_path / "rendered", runner.STAGE_E1_3, tmp_path / "bundle.json", tmp_path / "finalized-bundle.json")
+    result = runner.render_k8s(
+        plan_path, template, tmp_path / "rendered", runner.STAGE_E1_3,
+        tmp_path / "bundle.json", tmp_path / "bundle-verification.json",
+        tmp_path / "finalized-bundle.json",
+        tmp_path / "finalized-bundle-verification.json",
+    )
     assert len(result["jobs"]) == 72
     assert result["requires_phase"] == runner.FINALIZED_E1_2
     assert result["resources"] == {
@@ -893,6 +1305,8 @@ def test_render_k8s_is_separate_and_removes_every_placeholder(tmp_path: Path, mo
         "scheduling": "remaining jobs stay Pending; no preemption",
     }
     assert result["run_identity"]["execution_prefix"] == plan["runtime_lock"]["execution_sha"][:8]
+    assert result["mounted_byte_verification"]["initial"]["status"] == "VERIFIED_MOUNTED_KEY_BYTES"
+    assert result["mounted_byte_verification"]["finalized"]["status"] == "VERIFIED_FINALIZED_MOUNTED_KEY_BYTES"
     text = (tmp_path / "rendered" / result["jobs"][0]["path"]).read_text()
     assert runner.UNRESOLVED.search(text) is None
     assert f'requires-phase: "{runner.FINALIZED_E1_2}"' in text
@@ -903,6 +1317,46 @@ def test_render_k8s_is_separate_and_removes_every_placeholder(tmp_path: Path, mo
     assert "nodeName: 4090-48gx2" in text
     assert f"name: fpct-e1-{plan['runtime_lock']['execution_sha'][:8]}-" in text
     assert str(plan["source_snapshot"]["host_path"]) in text
+    job = yaml.safe_load(text)
+    assert job["metadata"]["annotations"][
+        "fpct.openai.com/expected-plan-sha256"
+    ] == plan["plan_sha256"]
+    pod_spec = job["spec"]["template"]["spec"]
+    container = pod_spec["containers"][0]
+    assert container["securityContext"] == {
+        "allowPrivilegeEscalation": False,
+        "readOnlyRootFilesystem": True,
+    }
+    arguments = container["args"]
+    expected_index = arguments.index("--expected-plan-sha256")
+    assert arguments[expected_index + 1] == plan["plan_sha256"]
+    claim_index = arguments.index("--claim-id")
+    expected_claim = runner._expected_claim_id(
+        plan["plan_sha256"], result["jobs"][0]["shard_id"]
+    )
+    assert arguments[claim_index + 1] == expected_claim
+    environment = {record["name"]: record["value"] for record in container["env"]}
+    assert {
+        "HOME": "/tmp/home",
+        "XDG_CACHE_HOME": "/tmp/xdg-cache",
+        "HF_HOME": "/tmp/hf-home",
+        "HF_DATASETS_CACHE": "/tmp/hf-datasets-cache",
+        "TORCH_HOME": "/tmp/torch-home",
+        "CUDA_CACHE_PATH": "/tmp/cuda-cache",
+        "WANDB_DIR": "/tmp/wandb",
+        "TMPDIR": "/tmp",
+    }.items() <= environment.items()
+    mounts = {record["name"]: record for record in container["volumeMounts"]}
+    assert mounts["tmp"] == {"name": "tmp", "mountPath": "/tmp"}
+    assert mounts["e1-results"].get("readOnly") is not True
+    assert all(
+        record.get("readOnly") is True
+        for name, record in mounts.items()
+        if name not in {"tmp", "e1-results"}
+    )
+    volumes = {record["name"]: record for record in pod_spec["volumes"]}
+    assert volumes["tmp"] == {"name": "tmp", "emptyDir": {}}
+    assert set(volumes["e1-results"]) == {"name", "hostPath"}
 
 
 def test_k8s_endpoint_render_is_baseline_marker_then_factorized(tmp_path: Path, monkeypatch) -> None:
@@ -910,16 +1364,27 @@ def test_k8s_endpoint_render_is_baseline_marker_then_factorized(tmp_path: Path, 
     template = runner.resolve_logical_path(plan, plan["k8s_template"]["logical_path"])
     fake_bundle = {"configmaps": {"plan_gate": {"name": "plan-gate"}, "runtime_probe": {"name": "runtime-probe"}}}
     monkeypatch.setattr(runner, "_verify_lock_bundle_manifest", lambda *_args, **_kwargs: fake_bundle)
-    baseline = runner.render_k8s(plan_path, template, tmp_path / "baseline-jobs", runner.PHASE_E1_2_BASELINES, tmp_path / "bundle.json")
+    monkeypatch.setattr(
+        runner,
+        "_verify_mounted_bundle_receipt",
+        lambda **_kwargs: {
+            "status": "VERIFIED_MOUNTED_KEY_BYTES",
+            "sha256": "e" * 64,
+            "bytes": 123,
+            "bundle_manifest_sha256": "c" * 64,
+            "configmaps": {},
+        },
+    )
+    baseline = runner.render_k8s(plan_path, template, tmp_path / "baseline-jobs", runner.PHASE_E1_2_BASELINES, tmp_path / "bundle.json", tmp_path / "bundle-verification.json")
     assert len(baseline["jobs"]) == 18 and baseline["requires_phase"] is None
     with pytest.raises(FileNotFoundError):
-        runner.render_k8s(plan_path, template, tmp_path / "factor-jobs-blocked", runner.PHASE_E1_2_FACTORIZED, tmp_path / "bundle.json")
+        runner.render_k8s(plan_path, template, tmp_path / "factor-jobs-blocked", runner.PHASE_E1_2_FACTORIZED, tmp_path / "bundle.json", tmp_path / "bundle-verification.json")
     monkeypatch.setattr(runner, "_verify_phase_marker", lambda *_args, **_kwargs: {"status": "GO"})
-    factorized = runner.render_k8s(plan_path, template, tmp_path / "factor-jobs", runner.PHASE_E1_2_FACTORIZED, tmp_path / "bundle.json")
+    factorized = runner.render_k8s(plan_path, template, tmp_path / "factor-jobs", runner.PHASE_E1_2_FACTORIZED, tmp_path / "bundle.json", tmp_path / "bundle-verification.json")
     assert len(factorized["jobs"]) == 18
     assert factorized["requires_phase"] == runner.PHASE_E1_2_BASELINES
     with pytest.raises(ValueError, match="dependency-safe phase"):
-        runner.render_k8s(plan_path, template, tmp_path / "unsafe-36", runner.STAGE_E1_2, tmp_path / "bundle.json")
+        runner.render_k8s(plan_path, template, tmp_path / "unsafe-36", runner.STAGE_E1_2, tmp_path / "bundle.json", tmp_path / "bundle-verification.json")
 
 
 def test_teacher_forced_helper_uses_t_plus_one_and_explicit_capture_lifecycle() -> None:

@@ -68,6 +68,9 @@ E0_CONFIG_ROOT_RELATIVE = Path("recipe/eval_recipe/fpct_e0/rendered")
 EXECUTOR_RELATIVE = Path("script/experiment/fpct_e1_capture_runner.py")
 ANALYZER_RELATIVE = Path("script/analysis/fpct_e1_mechanism_audit.py")
 K8S_CAPTURE_TEMPLATE_RELATIVE = Path("recipe/k8s/fpct_e1/e0_design_capture_job.yaml")
+RUNTIME_PROBE_RENDERER_RELATIVE = Path(
+    "script/experiment/fpct_e1_runtime_probe_renderer.py"
+)
 
 REQUIRED_GATE_CHECKS = (
     "formula_oracles",
@@ -111,6 +114,7 @@ PLACEHOLDERS = (
     "__FINALIZED_LOCK_SHA256__", "__FINALIZED_OUTPUT_HOST_ROOT__",
     "__FINALIZED_OUTPUT_CONTAINER_ROOT__",
     "__PLAN_GATE_CONFIGMAP_NAME__", "__RUNTIME_CONFIGMAP_NAME__",
+    "__EXPECTED_PLAN_SHA256__",
     "__FINALIZED_CONFIGMAP_NAME__", "__FINALIZED_RECEIPT_CONTAINER_PATH__",
     "__REPO_CONTAINER_ROOT__", "__E0_HOST_ROOT__", "__E0_CONTAINER_ROOT__",
     "__OUTPUT_HOST_ROOT__", "__OUTPUT_CONTAINER_ROOT_MOUNT__",
@@ -123,7 +127,10 @@ PLACEHOLDERS = (
     "__FINALIZED_VOLUME_BLOCK__", "__RUNNER_CONTAINER_PATH__",
 )
 UNRESOLVED = re.compile("|".join(re.escape(value) for value in PLACEHOLDERS))
-IMAGE_DIGEST = re.compile(r"^(?:[^@\s]+@)?sha256:[0-9a-f]{64}$")
+IMAGE_DIGEST = re.compile(
+    r"^(?:[a-z0-9.-]+(?::[0-9]+)?/)?[a-z0-9._-]+"
+    r"(?:/[a-z0-9._-]+)*@sha256:[0-9a-f]{64}$"
+)
 EXECUTION_SHA = re.compile(r"^[0-9a-f]{40}$")
 
 
@@ -346,6 +353,89 @@ def resolve_logical_path(plan: Mapping[str, Any], logical: str, view: str = "hos
     return Path(roots[root][view]).joinpath(*relative.parts)
 
 
+def _is_within_or_equal(path: Path, root: Path) -> bool:
+    return path == root or root in path.parents
+
+
+def _validate_output_root_isolation(path_roots: Mapping[str, Any]) -> None:
+    """Keep the sole writable output mount disjoint from every frozen RO root."""
+
+    required = {
+        "repo", "e0", "output", "gate", "runtime", "input_lock",
+        "raw_topology", "models",
+    }
+    if not isinstance(path_roots, Mapping) or set(path_roots) != required:
+        raise ValueError("execution path-root universe changed")
+    output_record = path_roots.get("output")
+    if not isinstance(output_record, Mapping):
+        raise ValueError("output path root is absent")
+    output_host_raw = str(output_record.get("host", ""))
+    output_container_raw = str(output_record.get("container", ""))
+    if _contains_unresolved(output_host_raw) or not Path(output_host_raw).is_absolute():
+        raise ValueError("output host root must be a concrete absolute path")
+    output_host = Path(output_host_raw).resolve(strict=False)
+    for role in ("repo", "e0", "models", "input_lock", "raw_topology"):
+        record = path_roots.get(role)
+        if not isinstance(record, Mapping):
+            raise ValueError(f"read-only path root is absent: {role}")
+        raw = str(record.get("host", ""))
+        if _contains_unresolved(raw):
+            continue
+        path = Path(raw)
+        if not path.is_absolute():
+            raise ValueError(f"read-only host root must be absolute: {role}")
+        physical = path.resolve(strict=False)
+        if _is_within_or_equal(output_host, physical) or _is_within_or_equal(
+            physical, output_host
+        ):
+            raise ValueError(
+                f"writable output host root overlaps read-only {role} root"
+            )
+
+    def container_path(role: str) -> PurePosixPath | None:
+        record = path_roots.get(role)
+        if not isinstance(record, Mapping):
+            raise ValueError(f"container path root is absent: {role}")
+        raw = str(record.get("container", ""))
+        if _contains_unresolved(raw):
+            return None
+        path = PurePosixPath(raw)
+        if not path.is_absolute() or ".." in path.parts or str(path) != raw.rstrip("/"):
+            raise ValueError(f"container root must be canonical absolute POSIX: {role}")
+        return path
+
+    output_container = container_path("output")
+    if output_container is None:
+        raise ValueError("output container root must be concrete")
+    for role in ("repo", "e0", "models", "input_lock", "raw_topology", "gate", "runtime"):
+        read_only = container_path(role)
+        if read_only is None:
+            continue
+        if _is_within_or_equal(output_container, read_only) or _is_within_or_equal(
+            read_only, output_container
+        ):
+            raise ValueError(
+                f"writable output container root overlaps read-only {role} root"
+            )
+
+
+def _validate_finalized_overlay(
+    plan: Mapping[str, Any], finalized_output_host: Path,
+) -> None:
+    output_root = Path(plan["path_roots"]["output"]["host"]).resolve(strict=False)
+    finalized_root = finalized_output_host.resolve(strict=False)
+    if finalized_root == output_root or _is_within_or_equal(output_root, finalized_root):
+        raise ValueError("finalized read-only overlay may not contain the writable output root")
+    if not _is_within_or_equal(finalized_root, output_root):
+        return
+    for shard in plan["shards"]:
+        if shard["stage"] != STAGE_E1_3:
+            continue
+        destination = (output_root / shard["output_relative"]).resolve(strict=False)
+        if _is_within_or_equal(destination, finalized_root):
+            raise ValueError("E1-3 shard output falls inside finalized read-only overlay")
+
+
 def _tree_manifest(path: Path) -> dict[str, Any]:
     if not path.is_dir():
         raise FileNotFoundError(path)
@@ -463,6 +553,10 @@ def _plan_hash(plan: Mapping[str, Any]) -> str:
     projected = dict(plan)
     projected.pop("plan_sha256", None)
     return sha256_bytes(canonical_json_bytes(projected))
+
+
+def _expected_claim_id(plan_sha256: str, shard_id: str) -> str:
+    return sha256_bytes(f"{plan_sha256}:{shard_id}".encode())
 
 
 def _lambda_tag(value: float) -> str:
@@ -804,6 +898,7 @@ def build_execution_plan(
         Path("script/experiment/fpct_e1_prepare_input_lock.py"),
         Path("script/experiment/fpct_e1_runtime_backend.py"),
         Path("script/experiment/fpct_e1_runtime_probe.py"),
+        RUNTIME_PROBE_RENDERER_RELATIVE,
         Path("script/experiment/fpct_e1_source_snapshot_lock.py"),
         Path("script/experiment/fpct_e1_k8s_lock_bundle.py"),
         ANALYZER_RELATIVE,
@@ -888,6 +983,13 @@ def build_execution_plan(
             or runtime_payload["source_snapshot_tree_sha"] != source_snapshot["canonical_tree_sha256"]
         ):
             raise ValueError("runtime probe differs from execution/image/source snapshot lock")
+        expected_source_verification = {
+            **source_receipt["verification"],
+            "receipt_file_sha256": source_receipt["sha256"],
+            "receipt_bytes": source_receipt["bytes"],
+        }
+        if runtime_payload.get("source_snapshot_verification") != expected_source_verification:
+            raise ValueError("runtime probe source receipt evidence differs from plan input")
         runtime["identity"] = {
             "schema_version": runtime_payload["schema_version"],
             "protocol_id": runtime_payload["protocol_id"],
@@ -895,6 +997,7 @@ def build_execution_plan(
             "execution_sha": runtime_payload["execution_sha"],
             "image_digest": runtime_payload["image_digest"],
             "source_snapshot_tree_sha": runtime_payload["source_snapshot_tree_sha"],
+            "source_snapshot_verification": expected_source_verification,
         }
 
     def shard(stage: str, seed: int, checkpoint_arm: str, operator: str, task: str, value: float) -> dict[str, Any]:
@@ -951,6 +1054,7 @@ def build_execution_plan(
         "raw_topology": {"host": str(raw_topology_artifact_root.absolute()) if raw_topology_artifact_root else "__RAW_TOPOLOGY_HOST_ROOT__", "container": raw_topology_container},
         "models": {"host": models_host_root, "container": models_container},
     }
+    _validate_output_root_isolation(path_roots)
     plan: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION, "protocol_id": PROTOCOL_ID, "status": "PREPARED_NO_MODEL_LOAD",
         "split_role": ALLOWED_SPLIT_ROLE, "path_roots": path_roots,
@@ -1026,6 +1130,7 @@ def validate_execution_plan(plan: Mapping[str, Any], *, require_checkpoints: boo
         raise ValueError("capture plan is not E0-design")
     if plan.get("firewall", {}).get("e1_pilot") != "SEALED_NOT_RUN_NOT_READ":
         raise ValueError("E1-pilot firewall is open")
+    _validate_output_root_isolation(plan.get("path_roots", {}))
     checkpoints = plan.get("checkpoints")
     if not isinstance(checkpoints, list) or len(checkpoints) != 6:
         raise ValueError("plan must bind six checkpoints")
@@ -1266,10 +1371,18 @@ def verify_plan_sources(plan: Mapping[str, Any], view: str = "host", checkpoint_
         "execution_sha": plan["runtime_lock"]["execution_sha"],
         "image_digest": plan["runtime_lock"]["image_digest"],
         "source_snapshot_tree_sha": plan["source_snapshot"]["canonical_tree_sha256"],
+        "source_snapshot_verification": {
+            **observed_receipt,
+            "receipt_file_sha256": sha256_file(receipt_path),
+            "receipt_bytes": receipt_path.stat().st_size,
+        },
     }
     if runtime.get("identity") != expected_runtime_identity or any(
         runtime_payload[name] != expected_runtime_identity[name]
-        for name in ("execution_sha", "image_digest", "source_snapshot_tree_sha")
+        for name in (
+            "execution_sha", "image_digest", "source_snapshot_tree_sha",
+            "source_snapshot_verification",
+        )
     ):
         raise ValueError("runtime probe identity changed")
 
@@ -1839,14 +1952,20 @@ def _gate_path(plan: Mapping[str, Any], supplied: Path | None, view: str) -> Pat
     return path
 
 
-def execute_shard(plan_path: Path, shard_id: str, gate_path: Path | None, output_root: Path, backend_spec: str | None, *, path_view: str = "host", claim_id: str = "__CLAIM_ID__", finalized_lock_sha256: str | None = None, finalized_receipt_path: Path | None = None, backend_loader: Callable[[str], Callable[[Mapping[str, Any]], Any]] = _load_backend) -> dict[str, Any]:
+def execute_shard(plan_path: Path, shard_id: str, gate_path: Path | None, output_root: Path, backend_spec: str | None, *, path_view: str = "host", expected_plan_sha256: str | None = None, claim_id: str = "__CLAIM_ID__", finalized_lock_sha256: str | None = None, finalized_receipt_path: Path | None = None, backend_loader: Callable[[str], Callable[[Mapping[str, Any]], Any]] = _load_backend) -> dict[str, Any]:
     plan = _read_json(plan_path)
+    if (
+        not _is_sha256(expected_plan_sha256)
+        or expected_plan_sha256 != plan.get("plan_sha256")
+        or expected_plan_sha256 != _plan_hash(plan)
+    ):
+        raise RuntimeError("mounted execution plan differs from rendered expected SHA")
     validate_execution_plan(plan, require_checkpoints=True, for_execution=True)
     shards = {r["shard_id"]: r for r in plan["shards"]}
     if shard_id not in shards: raise ValueError(f"unknown shard: {shard_id}")
     shard = shards[shard_id]
-    if _contains_unresolved(claim_id) or not claim_id:
-        raise RuntimeError("run-shard requires a concrete exclusive claim ID")
+    if claim_id != _expected_claim_id(plan["plan_sha256"], shard_id):
+        raise RuntimeError("run-shard claim ID differs from the rendered plan/shard identity")
     output_dir = output_root / shard["output_relative"]
     verify_plan_sources(plan, path_view, shard["checkpoint_id"])
     frozen_gate_path = _gate_path(plan, gate_path, path_view)
@@ -2159,13 +2278,84 @@ def _verify_finalized_bundle_manifest(
     return manifest
 
 
+def _expected_mounted_configmaps(
+    bundle_manifest: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        record["name"]: {
+            "immutable": True,
+            "keys": {
+                key: {"bytes": locked["bytes"], "sha256": locked["sha256"]}
+                for key, locked in sorted(record["keys"].items())
+            },
+        }
+        for record in bundle_manifest["configmaps"].values()
+    }
+
+
+def _verify_mounted_bundle_receipt(
+    *, bundle_manifest_path: Path, bundle_manifest: Mapping[str, Any],
+    receipt_path: Path, finalized: bool,
+) -> dict[str, Any]:
+    receipt = _read_json(receipt_path)
+    expected_protocol = (
+        "fpct_e1_k8s_finalized_lock_bundle_v1"
+        if finalized else "fpct_e1_k8s_lock_bundle_v1"
+    )
+    expected_status = (
+        "VERIFIED_FINALIZED_MOUNTED_KEY_BYTES"
+        if finalized else "VERIFIED_MOUNTED_KEY_BYTES"
+    )
+    expected_keys = {
+        "schema_version", "protocol_id", "status", "execution_sha",
+        "plan_sha256", "bundle_manifest_sha256", "configmaps",
+        "network_accessed", "kubectl_invoked_by_verifier",
+    }
+    if finalized:
+        expected_keys |= {
+            "receipt_sha256", "closure_sha256", "artifact_tree_sha256",
+        }
+    if (
+        set(receipt) != expected_keys
+        or receipt.get("schema_version") != 1
+        or receipt.get("protocol_id") != expected_protocol
+        or receipt.get("status") != expected_status
+        or receipt.get("execution_sha") != bundle_manifest.get("execution_sha")
+        or receipt.get("plan_sha256") != bundle_manifest.get("plan_sha256")
+        or receipt.get("bundle_manifest_sha256") != sha256_file(bundle_manifest_path)
+        or receipt.get("configmaps") != _expected_mounted_configmaps(bundle_manifest)
+        or receipt.get("network_accessed") is not False
+        or receipt.get("kubectl_invoked_by_verifier") is not False
+    ):
+        raise RuntimeError("ConfigMap mounted-byte verification receipt is absent/invalid")
+    if finalized and any(
+        receipt.get(name) != bundle_manifest.get(name)
+        for name in ("receipt_sha256", "closure_sha256", "artifact_tree_sha256")
+    ):
+        raise RuntimeError("finalized ConfigMap verification receipt identity changed")
+    return {
+        "status": expected_status,
+        "sha256": sha256_file(receipt_path),
+        "bytes": receipt_path.stat().st_size,
+        "bundle_manifest_sha256": receipt["bundle_manifest_sha256"],
+        "configmaps": receipt["configmaps"],
+    }
+
+
 def render_k8s(
     plan_path: Path, template_path: Path, output_dir: Path, stage: str,
-    lock_bundle_manifest_path: Path,
+    lock_bundle_manifest_path: Path, lock_bundle_verification_receipt_path: Path,
     finalized_lock_bundle_manifest_path: Path | None = None,
+    finalized_lock_bundle_verification_receipt_path: Path | None = None,
 ) -> dict[str, Any]:
     plan = _read_json(plan_path); validate_execution_plan(plan, for_execution=True)
     bundle = _verify_lock_bundle_manifest(plan_path, plan, lock_bundle_manifest_path)
+    mounted_bundle_receipt = _verify_mounted_bundle_receipt(
+        bundle_manifest_path=lock_bundle_manifest_path,
+        bundle_manifest=bundle,
+        receipt_path=lock_bundle_verification_receipt_path,
+        finalized=False,
+    )
     frozen_template_path = resolve_logical_path(
         plan, plan["k8s_template"]["logical_path"], "host"
     )
@@ -2182,6 +2372,7 @@ def render_k8s(
     finalized_lock_sha256 = "none"
     finalized_receipt_container_path = "none"
     finalized_configmap_name = "none"
+    finalized_mounted_receipt = None
     finalized_output_host = plan["path_roots"]["output"]["host"]
     finalized_output_container = str(
         Path(plan["path_roots"]["output"]["container"]) / "__no-finalized__"
@@ -2194,18 +2385,30 @@ def render_k8s(
         finalized_lock_sha256 = sha256_file(_finalized_lock_path(capture_root))
         if finalized_lock_bundle_manifest_path is None:
             raise RuntimeError("E1-3 render requires the immutable finalized lock bundle")
+        if finalized_lock_bundle_verification_receipt_path is None:
+            raise RuntimeError("E1-3 render requires finalized mounted-byte verification")
         finalized_bundle = _verify_finalized_bundle_manifest(
             plan, finalized_lock_bundle_manifest_path, finalized_lock_sha256,
+        )
+        finalized_mounted_receipt = _verify_mounted_bundle_receipt(
+            bundle_manifest_path=finalized_lock_bundle_manifest_path,
+            bundle_manifest=finalized_bundle,
+            receipt_path=finalized_lock_bundle_verification_receipt_path,
+            finalized=True,
         )
         finalized_configmap_name = finalized_bundle["configmaps"]["finalized"]["name"]
         finalized_receipt_container_path = "/opt/fpct-e1-finalized-lock/e1_2_finalized_receipt.json"
         finalized_output_host = str(
             resolve_logical_path(plan, finalized["output_dir"], "host")
         )
+        _validate_finalized_overlay(plan, Path(finalized_output_host))
         finalized_output_container = str(
             resolve_logical_path(plan, finalized["output_dir"], "container")
         )
-    elif finalized_lock_bundle_manifest_path is not None:
+    elif (
+        finalized_lock_bundle_manifest_path is not None
+        or finalized_lock_bundle_verification_receipt_path is not None
+    ):
         raise RuntimeError("pre-E1-3 render may not reference a future finalized bundle")
     template = template_path.read_text(encoding="utf-8")
     if not UNRESOLVED.search(template): raise ValueError("K8s source is not a render-only template")
@@ -2248,6 +2451,7 @@ def render_k8s(
         "__FINALIZED_OUTPUT_HOST_ROOT__": finalized_output_host,
         "__FINALIZED_OUTPUT_CONTAINER_ROOT__": finalized_output_container,
         "__PLAN_GATE_CONFIGMAP_NAME__": bundle["configmaps"]["plan_gate"]["name"],
+        "__EXPECTED_PLAN_SHA256__": plan["plan_sha256"],
         "__RUNTIME_CONFIGMAP_NAME__": bundle["configmaps"]["runtime_probe"]["name"],
         "__FINALIZED_CONFIGMAP_NAME__": finalized_configmap_name,
         "__FINALIZED_RECEIPT_CONTAINER_PATH__": finalized_receipt_container_path,
@@ -2282,7 +2486,7 @@ def render_k8s(
             f"{execution_prefix}:{shard['shard_id']}".encode()
         )[:10]
         slug = f"{execution_prefix}-{raw_slug[:29]}-{slug_digest}"
-        values = {**replacements_common, "__SHARD_ID__": shard["shard_id"], "__SHARD_SLUG__": slug, "__LAMBDA_TAG__": shard["lambda_tag"], "__CLAIM_ID__": sha256_bytes(f"{plan['plan_sha256']}:{shard['shard_id']}".encode())}
+        values = {**replacements_common, "__SHARD_ID__": shard["shard_id"], "__SHARD_SLUG__": slug, "__LAMBDA_TAG__": shard["lambda_tag"], "__CLAIM_ID__": _expected_claim_id(plan["plan_sha256"], shard["shard_id"])}
         for old, new in values.items(): text = text.replace(old, new)
         if UNRESOLVED.search(text): raise RuntimeError("K8s render left unresolved placeholders")
         path = output_dir / f"{shard['shard_id']}.yaml"; atomic_write(path, text.encode())
@@ -2306,6 +2510,10 @@ def render_k8s(
             "output_container": finalized_output_container,
             "deep_verified_before_render": stage == STAGE_E1_3,
         },
+        "mounted_byte_verification": {
+            "initial": mounted_bundle_receipt,
+            "finalized": finalized_mounted_receipt,
+        },
         "resources": {
             "node_name": "4090-48gx2",
             "gpu_per_job": 1,
@@ -2328,9 +2536,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     prepare.add_argument("--raw-topology-container", required=True, help="read-only container mount corresponding to the raw-topology artifact root")
     prepare.add_argument("--models-host-root", required=True)
     prepare.add_argument("--models-container", required=True)
-    run = sub.add_parser("run-shard"); run.add_argument("--plan", type=Path, required=True); run.add_argument("--shard-id", required=True); run.add_argument("--instrumentation-gate", type=Path); run.add_argument("--output-root", type=Path, required=True); run.add_argument("--backend"); run.add_argument("--path-view", choices=("host", "container"), default="host"); run.add_argument("--claim-id", required=True); run.add_argument("--finalized-lock-sha256"); run.add_argument("--finalized-receipt", type=Path)
+    run = sub.add_parser("run-shard"); run.add_argument("--plan", type=Path, required=True); run.add_argument("--expected-plan-sha256", required=True); run.add_argument("--shard-id", required=True); run.add_argument("--instrumentation-gate", type=Path); run.add_argument("--output-root", type=Path, required=True); run.add_argument("--backend"); run.add_argument("--path-view", choices=("host", "container"), default="host"); run.add_argument("--claim-id", required=True); run.add_argument("--finalized-lock-sha256"); run.add_argument("--finalized-receipt", type=Path)
     verify = sub.add_parser("verify-all"); verify.add_argument("--plan", type=Path, required=True); verify.add_argument("--output-root", type=Path, required=True); verify.add_argument("--stage", choices=(PHASE_E1_2_BASELINES, PHASE_E1_2_FACTORIZED, STAGE_E1_2, STAGE_E1_3), required=True); verify.add_argument("--merge-dir", type=Path); verify.add_argument("--write-completion", action="store_true")
-    render = sub.add_parser("render-k8s"); render.add_argument("--plan", type=Path, required=True); render.add_argument("--template", type=Path, required=True); render.add_argument("--output-dir", type=Path, required=True); render.add_argument("--stage", choices=(PHASE_E1_2_BASELINES, PHASE_E1_2_FACTORIZED, STAGE_E1_3), required=True); render.add_argument("--lock-bundle-manifest", type=Path, required=True); render.add_argument("--finalized-lock-bundle-manifest", type=Path)
+    render = sub.add_parser("render-k8s"); render.add_argument("--plan", type=Path, required=True); render.add_argument("--template", type=Path, required=True); render.add_argument("--output-dir", type=Path, required=True); render.add_argument("--stage", choices=(PHASE_E1_2_BASELINES, PHASE_E1_2_FACTORIZED, STAGE_E1_3), required=True); render.add_argument("--lock-bundle-manifest", type=Path, required=True); render.add_argument("--lock-bundle-verification-receipt", type=Path, required=True); render.add_argument("--finalized-lock-bundle-manifest", type=Path); render.add_argument("--finalized-lock-bundle-verification-receipt", type=Path)
     finalize = sub.add_parser("finalize-stage"); finalize.add_argument("--plan", type=Path, required=True); finalize.add_argument("--output-root", type=Path, required=True); finalize.add_argument("--stage", choices=(STAGE_E1_2, STAGE_E1_3), required=True); finalize.add_argument("--output-dir", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command == "prepare":
@@ -2338,9 +2546,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         validate_execution_plan(result, require_checkpoints=True, for_execution=True)
         if args.output.exists(): raise FileExistsError(args.output)
         atomic_write(args.output, canonical_json_bytes(result)); result = {"status": "GO", "plan": str(args.output), "plan_sha256": result["plan_sha256"], "endpoint_shards": EXPECTED_ENDPOINT_SHARDS, "sweep_shards": EXPECTED_SWEEP_SHARDS, "model_or_tokenizer_loaded": False, "e1_pilot_consumed": False}
-    elif args.command == "run-shard": result = execute_shard(args.plan, args.shard_id, args.instrumentation_gate, args.output_root, args.backend, path_view=args.path_view, claim_id=args.claim_id, finalized_lock_sha256=None if args.finalized_lock_sha256 in (None, "none") else args.finalized_lock_sha256, finalized_receipt_path=args.finalized_receipt)
+    elif args.command == "run-shard": result = execute_shard(args.plan, args.shard_id, args.instrumentation_gate, args.output_root, args.backend, path_view=args.path_view, expected_plan_sha256=args.expected_plan_sha256, claim_id=args.claim_id, finalized_lock_sha256=None if args.finalized_lock_sha256 in (None, "none") else args.finalized_lock_sha256, finalized_receipt_path=args.finalized_receipt)
     elif args.command == "verify-all": result = verify_all(args.plan, args.output_root, args.stage, args.merge_dir, args.write_completion)
-    elif args.command == "render-k8s": result = render_k8s(args.plan, args.template, args.output_dir, args.stage, args.lock_bundle_manifest, args.finalized_lock_bundle_manifest)
+    elif args.command == "render-k8s": result = render_k8s(args.plan, args.template, args.output_dir, args.stage, args.lock_bundle_manifest, args.lock_bundle_verification_receipt, args.finalized_lock_bundle_manifest, args.finalized_lock_bundle_verification_receipt)
     else: result = finalize_stage(args.plan, args.output_root, args.stage, args.output_dir)
     print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False)); return 0
 

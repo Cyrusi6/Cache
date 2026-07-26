@@ -1,13 +1,17 @@
 {
-  "schema_version": 2,
-  "protocol_id": "fpct_e1_mechanism_audit_v2",
-  "supersedes_before_natural_output": "fpct_e1_mechanism_audit_v1",
+  "schema_version": 3,
+  "protocol_id": "fpct_e1_mechanism_audit_v3",
+  "supersedes_before_natural_output": "fpct_e1_mechanism_audit_v2",
+  "historical_supersession_chain": [
+    "fpct_e1_mechanism_audit_v1",
+    "fpct_e1_mechanism_audit_v2"
+  ],
   "created_at": "2026-07-26T00:00:00+08:00",
   "branch": "research/fpct-e1-mechanism-audit",
   "base_commit": "613958af38fad27e1ea933ccc0dda6d1af5cce89",
   "classification": "EXPLORATORY_MECHANISM_AUDIT_NOT_CONFIRMATORY",
-  "current_stage": "COMMIT_A_PRE_DATA_EXECUTION_LOCK",
-  "current_status": "PRE_DATA_LOCK_GO_NATURAL_EXECUTION_NOT_STARTED",
+  "current_stage": "COMMIT_A2_PRE_DATA_OPERATIONAL_CLOSURE",
+  "current_status": "PRE_DATA_OPERATIONAL_CLOSURE_GO_NATURAL_EXECUTION_NOT_STARTED",
   "e0_read_only": {
     "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
     "result_document": {
@@ -272,10 +276,25 @@
     "fixed_checkpoint_evidence_class": "mechanistic headroom diagnostic, not matched-training or confirmatory evidence"
   },
   "execution_lock_contract": {
-    "status": "CODE_AND_PROTOCOL_FROZEN_PENDING_COMMIT_A",
+    "status": "CODE_PROTOCOL_AND_K8S_CLOSURE_FROZEN_PENDING_CLEAN_PUSHED_EXECUTION_COMMIT",
     "natural_e0_design_output_accessed": false,
+    "superseded_execution_attempt": {
+      "execution_sha": "744a943ea804dfebe4e6d3cba756b6a89763002f",
+      "status": "ABANDONED_BEFORE_NATURAL_DATA",
+      "receipt": "recipe/eval_recipe/fpct_e1/executions/744a943/abandonment_receipt.json",
+      "reason_code": "PRE_OUTPUT_K8S_OPERATIONAL_CLOSURE_SUPERSEDED",
+      "dataset_input_lookup": false,
+      "tokenization": false,
+      "alignment": false,
+      "model_or_checkpoint_load": false,
+      "capture_shards": 0,
+      "resume_allowed": false,
+      "artifact_reuse_allowed": false,
+      "scientific_result": false,
+      "successor_execution_sha": "PENDING_CLEAN_PUSHED_EXECUTION_COMMIT"
+    },
     "source_snapshot": {
-      "construction": "clean pushed Commit A git archive",
+      "construction": "clean pushed successor execution commit git archive; superseded 744a943 archive is never reused",
       "receipt": "commit SHA + Git tree OID + ls-tree mode/blob/path + archive bytes + mounted-tree SHA",
       "live_worktree_mount_forbidden": true,
       "k8s_mount_read_only": true
@@ -297,6 +316,11 @@
     },
     "runtime_provenance": {
       "immutable_image_probe_before_model_output": true,
+      "deterministic_renderer_required": true,
+      "renderer_template_and_producer_must_be_exact_snapshot_files": true,
+      "render_manifest_binds_producer_template_replacements_and_rendered_yaml": true,
+      "pod_verifies_mounted_source_receipt_before_torch_cuda": true,
+      "runtime_probe_persistent_write_scope": "one unique execution-specific runtime directory",
       "sender_receiver_full_asset_trees_verified_before_load": true,
       "dev_data_configs_checkpoints_verified_before_load": true,
       "actual_image_model_checkpoint_input_hashes": "pending_until_post_commit_execution_plan"
@@ -333,25 +357,42 @@
       "initial_and_finalized_configmaps_immutable": true,
       "configmap_size_strictly_less_than_bytes": 1048576,
       "mounted_byte_verification_required": true,
+      "capture_render_consumes_initial_mounted_byte_receipt": true,
+      "e1_3_render_consumes_finalized_mounted_byte_receipt": true,
+      "run_shard_requires_external_expected_plan_sha256": true,
+      "claim_id_recomputed_from_plan_and_shard": true,
       "input_raw_finalized_source_mounts_read_only": true,
-      "writable_scope": "current run output root only",
+      "container_root_filesystem_read_only": true,
+      "writable_scope": "current run persistent output root only; /tmp is isolated ephemeral emptyDir",
       "node_name": "4090-48gx2",
       "gpu_per_shard": 1,
       "maximum_parallel_shards_on_node": 2
     },
     "implementation_and_test_sha256": {
       "script/analysis/fpct_e1_mechanism_audit.py": "8e9636a2f2e4a843be7bb5e70dacc4da1ac035ea2ef353b92dc92dc87115e926",
-      "script/experiment/fpct_e1_capture_runner.py": "3babab4ab5c8b4f0be84280be36b572620d317f41912d783f95d018a79babfa7",
+      "script/experiment/fpct_e1_capture_runner.py": "2dc12d66524560e8494648b4554b7cf98b060da875ba1bc1658bdca63d1a40cb",
       "script/experiment/fpct_e1_prepare_input_lock.py": "e450ccb40450894abd4f0b2e873d2c211f61c7eabfb3435cf500b4648bac5505",
       "script/experiment/fpct_e1_runtime_backend.py": "99fa1b26bba3294e12cec766b165846903e3426d139eb258ed17f8b230c06cbe",
-      "script/experiment/fpct_e1_runtime_probe.py": "dde6b47b0b4779fe0c401c1bb563f67880f6c76e73c762ea6c992c123240066f",
+      "script/experiment/fpct_e1_runtime_probe.py": "7df17c0e6e4d8852cd010183287d4537290464454a14dceed8df7c15722856d7",
       "script/experiment/fpct_e1_source_snapshot_lock.py": "e55203df92a86e656e57372c7333e1f222e9d7a02cc709dbb85ea6cf287416f2",
-      "script/experiment/fpct_e1_k8s_lock_bundle.py": "170fde17abda50ecf85bbd050c3109bf0214178072aef4b181bb371f837f54f4",
-      "recipe/k8s/fpct_e1/e0_design_capture_job.yaml": "8e801db91130e30c29f210067da19d24e3ba361ecee9cd7e44edfe10cb4f1411",
-      "recipe/k8s/fpct_e1/runtime_probe_job.yaml": "85d966b62156a03627338f00804b6a909e43d2e89d81376d9656b342f0bdc88d",
-      "test/test_fpct_e1_capture_runner.py": "a3fc177ae5f1bdcbbf28cbdbab4f75c07573221c5c0e2deeafaa87bc7a690721",
+      "script/experiment/fpct_e1_k8s_lock_bundle.py": "e31b5c96e64c34fe9c3969950ecd503e080299af9ecdc828a0c2b73cc943cf32",
+      "script/experiment/fpct_e1_runtime_probe_renderer.py": "ba780ba2c2cc0ffc400988e7bf712529d84d5aeff25f900e6c20732500f44736",
+      "recipe/k8s/fpct_e1/e0_design_capture_job.yaml": "a52d48847583d1dfd449b604307923f881cbd1af163c9d958b8860c4860ed470",
+      "recipe/k8s/fpct_e1/runtime_probe_job.yaml": "336af4283ca5adc64ba1a7e7b68d052a7a6894c645c22f977ba5f8ee1690ede1",
+      "test/test_fpct_e1_capture_runner.py": "f0bf104207a17b36c26b253cb0582e4359630de033195c7c1c4ff3167450b1ec",
       "test/test_fpct_e1_source_snapshot_lock.py": "8a55578f06026ca07cbc3f384520086edc605648719a2aac6edf238c6a2365fa",
-      "test/test_fpct_e1_k8s_lock_bundle.py": "82ab1f53113b06f5bd0b3f2ded61ff7382151acae9ac0fadc2793319ae9d0fc4"
+      "test/test_fpct_e1_k8s_lock_bundle.py": "b5c366530af48b6c6c9e45897379e02fe7eb49766067bf5b440f95eafa86415d",
+      "test/test_fpct_e1_runtime_probe.py": "1f60d91da2be0131f2bdc7cd7139c12b78380d69f8b553acb85245433f5a8100",
+      "test/test_fpct_e1_runtime_probe_k8s.py": "0fb4ca0512be609f89850fcd74d0b998a7de5474345e96f35a5e7d0cd0c43c98"
+    },
+    "operational_closure_tests": {
+      "suite": "fpct_e1_predata_15_file_suite",
+      "passed": 211,
+      "failed": 0,
+      "all_fpct_cpu_passed": 400,
+      "project_cpu_safe_full_suite_passed": 639,
+      "cuda_visible_devices": "",
+      "basetemp": "/tmp/pytest-e1-predata-a2"
     }
   },
   "authorization": {

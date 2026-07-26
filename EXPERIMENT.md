@@ -446,3 +446,11 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 可复现 pre-data tests：`CUDA_VISIBLE_DEVICES='' python -m pytest -q --no-cov -p no:cacheprovider` 加 15 个 E1 instrumentation/executor/reference/Qwen test files，结果=`169 passed`。All-FPCT CPU suite=`356 passed`；项目 CPU-safe full suite=`595 passed, 2 warnings`。R2l/R2m 两个历史 immutable-lock failures 不属于 functional regression，未修改其历史 allowlist。
 - 预期 Commit A 后命令顺序：`fpct_e1_source_snapshot_lock.py create`；`fpct_e1_prepare_input_lock.py`；`fpct_e1_mechanism_audit.py raw-topology/verify-raw-topology`；immutable-image `fpct_e1_runtime_probe.py`；`fpct_e1_capture_runner.py prepare`；`fpct_e1_k8s_lock_bundle.py build/verify`；随后才允许 render baseline K8s jobs。
 - 当前观测：0 个新自然 E1 row、0 pretrained forward、0 GPU/K8s job、0 optimizer step、0 checkpoint modification、0 E1-pilot/confirmatory outcome。当前 GO 只表示 execution protocol/code 完整，不是 mechanism 或 performance GO。
+
+### 2026-07-26 FPCT-E1 pre-data operational closure amendment
+
+- `744a943ea804dfebe4e6d3cba756b6a89763002f` 只产生 git archive、外置 source receipt 与空 input-lock directory；在 0 dataset lookup/tokenization/alignment/model/GPU 时被 `ABANDONED_BEFORE_NATURAL_DATA`，不 resume、不复用、不是科学 NO-GO。
+- 后继 execution 必须使用全新 run root，receipt 位于 snapshot root；runtime renderer/template/本地 imports 均来自该 exact snapshot。Host 与 Pod 分别复验 mounted receipt、canonical raw bytes 和 mounted tree，probe 在 torch/CUDA 前完成验证。
+- Capture Job 必须携带 expected plan SHA 并重算 claim ID；initial/finalized ConfigMap `verify --output` receipts 是 renderer 的必需输入。Output 与 source/E0/models/input/raw 在 physical host path 和 lexical container path 上 fail-closed 隔离；rootfs read-only，cache 仅写 `/tmp` emptyDir。
+- 镜像固定为命名 OCI digest `repository@sha256:<64hex>`；裸 digest/tag 均拒绝。Fresh-subprocess hostile-PYTHONPATH/bytecode test、CLI forwarding、receipt/plan/path tamper tests全部通过。
+- 可复现 15-file CPU pre-data suite 重新执行为 `211 passed, 0 failed`；all-FPCT CPU=`400 passed`；项目 CPU-safe full suite=`639 passed`（`CUDA_VISIBLE_DEVICES=''`，`--no-cov -p no:cacheprovider`）。截至锁定仍无 E0-design 自然 row、pretrained output、checkpoint load、GPU/K8s、training、E1-pilot 或 confirmatory outcome。

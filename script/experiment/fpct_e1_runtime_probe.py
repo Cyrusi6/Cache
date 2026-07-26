@@ -9,8 +9,14 @@ tokenizer factories nor reads a model, tokenizer, projector, or checkpoint.
 
 from __future__ import annotations
 
+import sys
+
+sys.dont_write_bytecode = True
+
 import argparse
+import hashlib
 import importlib.metadata
+import importlib.util
 import json
 import os
 import platform
@@ -21,17 +27,95 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 
+
+_PRODUCER_RELATIVE = Path("script/experiment/fpct_e1_runtime_probe.py")
+_SOURCE_LOCK_RELATIVE = Path("script/experiment/fpct_e1_source_snapshot_lock.py")
+
+
+def _snapshot_root_from_file(path: Path, relative: Path) -> Path:
+    absolute = path.absolute()
+    if tuple(absolute.parts[-len(relative.parts) :]) != relative.parts:
+        raise RuntimeError(f"local module path is outside the source snapshot: {absolute}")
+    root = absolute
+    for _ in relative.parts:
+        root = root.parent
+    return root
+
+
+def _activate_snapshot_import_root() -> Path:
+    root = _snapshot_root_from_file(Path(__file__), _PRODUCER_RELATIVE)
+    root_text = str(root)
+    if sys.path:
+        sys.path[0] = root_text
+    else:
+        sys.path.append(root_text)
+    return root
+
+
+def _load_exact_local_module(module_label: str, relative: Path):
+    root = _activate_snapshot_import_root()
+    expected = (root / relative).absolute()
+    if not expected.is_file() or expected.is_symlink():
+        raise RuntimeError(f"exact local module is absent/symlinked: {expected}")
+    unique_name = (
+        f"_fpct_e1_exact_{module_label}_"
+        f"{hashlib.sha256(str(expected).encode()).hexdigest()[:16]}"
+    )
+    specification = importlib.util.spec_from_file_location(unique_name, expected)
+    if specification is None or specification.loader is None:
+        raise RuntimeError(f"cannot load exact local module: {expected}")
+    module = importlib.util.module_from_spec(specification)
+    sys.modules[unique_name] = module
+    try:
+        specification.loader.exec_module(module)
+    except BaseException:
+        sys.modules.pop(unique_name, None)
+        raise
+    observed = Path(str(getattr(module, "__file__", ""))).absolute()
+    if observed != expected or observed.is_symlink():
+        raise RuntimeError(f"local module provenance mismatch: {observed} != {expected}")
+    return module
+
+
+_SNAPSHOT_IMPORT_ROOT = _activate_snapshot_import_root()
+_SOURCE_LOCK_MODULE = _load_exact_local_module(
+    "source_snapshot_lock", _SOURCE_LOCK_RELATIVE
+)
+verify_source_snapshot_receipt = _SOURCE_LOCK_MODULE.verify_source_snapshot_receipt
+LOCAL_IMPORT_PROVENANCE = {
+    "source_snapshot_lock": str(
+        (_SNAPSHOT_IMPORT_ROOT / _SOURCE_LOCK_RELATIVE).absolute()
+    )
+}
+
+
 SCHEMA_VERSION = 1
 PROTOCOL_ID = "fpct_e1_runtime_probe_v1"
 STATUS = "FROZEN_MODEL_OUTPUT_FREE_RUNTIME_PROBE"
 EXECUTION_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
-IMAGE_DIGEST_PATTERN = re.compile(r"^(?:[^@\s]+@)?sha256:[0-9a-f]{64}$")
+IMAGE_DIGEST_PATTERN = re.compile(
+    r"^(?:[a-z0-9]+(?:[._-][a-z0-9]+)*(?::[0-9]+)?/)?"
+    r"(?:[a-z0-9]+(?:[._-][a-z0-9]+)*/)*"
+    r"[a-z0-9]+(?:[._-][a-z0-9]+)*@sha256:[0-9a-f]{64}$"
+)
 PACKAGE_DISTRIBUTIONS = ("torch", "transformers", "tokenizers", "pyarrow")
 OFFLINE_ENVIRONMENT = {
     "HF_HUB_OFFLINE": "1",
     "HF_DATASETS_OFFLINE": "1",
     "TRANSFORMERS_OFFLINE": "1",
+}
+SOURCE_VERIFICATION_FIELDS = {
+    "status",
+    "execution_sha",
+    "git_tree_oid",
+    "git_entries_canonical_sha256",
+    "mounted_tree_canonical_sha256",
+    "entry_count",
+    "total_bytes",
+    "receipt_sha256",
+    "receipt_file_sha256",
+    "receipt_bytes",
 }
 
 
@@ -62,11 +146,69 @@ def _device_record(properties: Any, index: int) -> dict[str, Any]:
     }
 
 
+def _validated_source_verification(
+    verification: Mapping[str, Any],
+    *,
+    execution_sha: str,
+    source_snapshot_tree_sha: str,
+) -> dict[str, Any]:
+    if not isinstance(verification, Mapping) or set(verification) != SOURCE_VERIFICATION_FIELDS:
+        raise ValueError("runtime probe source-snapshot verification schema changed")
+    if (
+        verification.get("status") != "GO_MOUNTED_SOURCE_SNAPSHOT"
+        or verification.get("execution_sha") != execution_sha
+        or verification.get("mounted_tree_canonical_sha256")
+        != source_snapshot_tree_sha
+        or not re.fullmatch(
+            r"[0-9a-f]{40,64}", str(verification.get("git_tree_oid", ""))
+        )
+        or not SHA256_PATTERN.fullmatch(
+            str(verification.get("git_entries_canonical_sha256", ""))
+        )
+        or not SHA256_PATTERN.fullmatch(str(verification.get("receipt_sha256", "")))
+        or not SHA256_PATTERN.fullmatch(
+            str(verification.get("receipt_file_sha256", ""))
+        )
+    ):
+        raise ValueError("runtime probe source-snapshot verification identity changed")
+    for name in ("entry_count", "total_bytes", "receipt_bytes"):
+        value = verification.get(name)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+            raise ValueError("runtime probe source-snapshot counters are invalid")
+    return dict(verification)
+
+
+def verify_mounted_source_snapshot(
+    *,
+    execution_sha: str,
+    source_snapshot_tree_sha: str,
+    source_snapshot_root: Path,
+    source_snapshot_receipt: Path,
+) -> dict[str, Any]:
+    receipt_raw = source_snapshot_receipt.read_bytes()
+    receipt_value = json.loads(receipt_raw.decode("utf-8"))
+    if canonical_json_bytes(receipt_value) != receipt_raw:
+        raise ValueError("source snapshot receipt bytes are not exact canonical JSON")
+    verification = verify_source_snapshot_receipt(
+        source_snapshot_receipt, source_snapshot_root, execution_sha
+    )
+    return _validated_source_verification(
+        {
+            **verification,
+            "receipt_file_sha256": hashlib.sha256(receipt_raw).hexdigest(),
+            "receipt_bytes": len(receipt_raw),
+        },
+        execution_sha=execution_sha,
+        source_snapshot_tree_sha=source_snapshot_tree_sha,
+    )
+
+
 def build_runtime_probe(
     *,
     execution_sha: str,
     image_digest: str,
     source_snapshot_tree_sha: str,
+    source_snapshot_verification: Mapping[str, Any],
     torch_module: Any | None = None,
 ) -> dict[str, Any]:
     """Collect runtime-only metadata under an enforced offline environment."""
@@ -77,6 +219,11 @@ def build_runtime_probe(
         raise ValueError("image_digest must be an immutable sha256 image digest")
     if not SHA256_PATTERN.fullmatch(source_snapshot_tree_sha):
         raise ValueError("source_snapshot_tree_sha must be exactly 64 lowercase hex characters")
+    source_verification = _validated_source_verification(
+        source_snapshot_verification,
+        execution_sha=execution_sha,
+        source_snapshot_tree_sha=source_snapshot_tree_sha,
+    )
 
     for name, value in OFFLINE_ENVIRONMENT.items():
         os.environ[name] = value
@@ -99,6 +246,7 @@ def build_runtime_probe(
         "execution_sha": execution_sha,
         "image_digest": image_digest,
         "source_snapshot_tree_sha": source_snapshot_tree_sha,
+        "source_snapshot_verification": source_verification,
         "runtime": {
             "python": {
                 "version": platform.python_version(),
@@ -151,6 +299,7 @@ def validate_runtime_probe(payload: Mapping[str, Any]) -> None:
         "execution_sha",
         "image_digest",
         "source_snapshot_tree_sha",
+        "source_snapshot_verification",
         "runtime",
         "offline",
         "firewall",
@@ -168,6 +317,11 @@ def validate_runtime_probe(payload: Mapping[str, Any]) -> None:
         raise ValueError("runtime probe image digest is invalid")
     if not SHA256_PATTERN.fullmatch(str(payload.get("source_snapshot_tree_sha", ""))):
         raise ValueError("runtime probe source snapshot tree SHA is invalid")
+    _validated_source_verification(
+        payload.get("source_snapshot_verification", {}),
+        execution_sha=str(payload.get("execution_sha", "")),
+        source_snapshot_tree_sha=str(payload.get("source_snapshot_tree_sha", "")),
+    )
     runtime = payload.get("runtime")
     if not isinstance(runtime, Mapping) or set(runtime) != {
         "python", "platform", "packages", "torch_cuda_build", "cuda"
@@ -288,11 +442,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--execution-sha", required=True)
     parser.add_argument("--image-digest", required=True)
     parser.add_argument("--source-snapshot-tree-sha", required=True)
+    parser.add_argument("--source-snapshot-root", type=Path, required=True)
+    parser.add_argument("--source-snapshot-receipt", type=Path, required=True)
     args = parser.parse_args(argv)
+    source_verification = verify_mounted_source_snapshot(
+        execution_sha=args.execution_sha,
+        source_snapshot_tree_sha=args.source_snapshot_tree_sha,
+        source_snapshot_root=args.source_snapshot_root,
+        source_snapshot_receipt=args.source_snapshot_receipt,
+    )
     payload = build_runtime_probe(
         execution_sha=args.execution_sha,
         image_digest=args.image_digest,
         source_snapshot_tree_sha=args.source_snapshot_tree_sha,
+        source_snapshot_verification=source_verification,
     )
     atomic_write_probe(args.output, payload)
     print(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False))

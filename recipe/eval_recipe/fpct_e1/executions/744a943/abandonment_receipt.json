@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_pre_natural_execution_abandonment_v1",
+  "status": "ABANDONED_BEFORE_NATURAL_DATA",
+  "reason_code": "PRE_OUTPUT_K8S_OPERATIONAL_CLOSURE_SUPERSEDED",
+  "execution_sha": "744a943ea804dfebe4e6d3cba756b6a89763002f",
+  "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-20260726-744a943-v1",
+  "source_snapshot": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-20260726-744a943-v1/source_744a943ea804dfebe4e6d3cba756b6a89763002f",
+    "git_tree_oid": "1d859f7464dbef70b0165c20180a6b78adbf003c",
+    "mounted_tree_canonical_sha256": "295d2f2897d48da60ac9b251a9d9c0f8911f0002806f570f67f5b944a3c9ec9e",
+    "entry_count": 611,
+    "total_bytes": 23001972
+  },
+  "source_receipt": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-20260726-744a943-v1/locks/source_snapshot_receipt.json",
+    "bytes": 151616,
+    "file_sha256": "cd3ee4ab5139c93ce53d23168902e0a0ca841668500e4df451a2917eca132640",
+    "receipt_payload_sha256": "e58bd9b2650d01449f0baedb78a429b885e693715962bf8774e213d297453dad",
+    "status": "GO_IMMUTABLE_GIT_ARCHIVE",
+    "plan_eligible": false,
+    "reason": "receipt was external to the archive root and this execution identity was superseded before plan construction"
+  },
+  "firewall": {
+    "dataset_input_lookup": false,
+    "natural_tokenization": false,
+    "alignment": false,
+    "raw_topology": false,
+    "runtime_probe": false,
+    "model_or_tokenizer_load": false,
+    "checkpoint_load": false,
+    "capture_shards": 0,
+    "gpu_or_kubernetes": false,
+    "training": false,
+    "e1_pilot_outcome": false,
+    "confirmatory_outcome": false
+  },
+  "observed_outputs": {
+    "input_lock_directory_exists_and_is_empty": true,
+    "capture_plan_exists": false,
+    "runtime_probe_exists": false,
+    "configmap_applied": false,
+    "scientific_result": false
+  },
+  "resume_allowed": false,
+  "artifact_reuse_allowed": false,
+  "deletion_required": false,
+  "successor_execution_sha": "NEXT_CLEAN_PUSHED_EXECUTION_COMMIT"
+}

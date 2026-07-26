@@ -12,7 +12,7 @@ from script.experiment import fpct_e1_runtime_probe as runtime_probe
 
 
 EXECUTION_SHA = "1" * 40
-IMAGE_DIGEST = "sha256:" + "2" * 64
+IMAGE_DIGEST = "registry.example/fpct@sha256:" + "2" * 64
 SOURCE_TREE = "3" * 64
 
 
@@ -31,14 +31,6 @@ def _write_json(path: Path, value: object) -> bytes:
 def _sources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     versions = {name: "1.0" for name in runtime_probe.PACKAGE_DISTRIBUTIONS}
     monkeypatch.setattr(runtime_probe, "_package_version", versions.__getitem__)
-    runtime = runtime_probe.build_runtime_probe(
-        execution_sha=EXECUTION_SHA,
-        image_digest=IMAGE_DIGEST,
-        source_snapshot_tree_sha=SOURCE_TREE,
-        torch_module=SimpleNamespace(cuda=_Cuda(), version=SimpleNamespace(cuda="12.4")),
-    )
-    runtime_path = tmp_path / "runtime.json"
-    runtime_raw = _write_json(runtime_path, runtime)
     checks = {name: True for name in bundle.REQUIRED_GATE_CHECKS}
     gate = {
         "gate_id": bundle.GATE_ID,
@@ -110,6 +102,22 @@ def _sources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         "total_bytes": 1,
         "receipt_sha256": source_receipt["receipt_sha256"],
     }
+    runtime_source_verification = {
+        **source_verification,
+        "receipt_file_sha256": bundle.sha256_bytes(source_receipt_raw),
+        "receipt_bytes": len(source_receipt_raw),
+    }
+    runtime = runtime_probe.build_runtime_probe(
+        execution_sha=EXECUTION_SHA,
+        image_digest=IMAGE_DIGEST,
+        source_snapshot_tree_sha=SOURCE_TREE,
+        source_snapshot_verification=runtime_source_verification,
+        torch_module=SimpleNamespace(
+            cuda=_Cuda(), version=SimpleNamespace(cuda="12.4")
+        ),
+    )
+    runtime_path = tmp_path / "runtime.json"
+    runtime_raw = _write_json(runtime_path, runtime)
     plan = {
         "schema_version": 2,
         "protocol_id": bundle.PLAN_PROTOCOL_ID,
@@ -117,7 +125,18 @@ def _sources(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         "runtime_lock": {
             "execution_sha": EXECUTION_SHA,
             "image_digest": IMAGE_DIGEST,
-            "runtime_provenance": {"sha256": bundle.sha256_bytes(runtime_raw)},
+            "runtime_provenance": {
+                "sha256": bundle.sha256_bytes(runtime_raw),
+                "identity": {
+                    "schema_version": runtime["schema_version"],
+                    "protocol_id": runtime["protocol_id"],
+                    "status": runtime["status"],
+                    "execution_sha": EXECUTION_SHA,
+                    "image_digest": IMAGE_DIGEST,
+                    "source_snapshot_tree_sha": SOURCE_TREE,
+                    "source_snapshot_verification": runtime_source_verification,
+                },
+            },
         },
         "source_snapshot": {
             "execution_sha": EXECUTION_SHA,
@@ -251,7 +270,7 @@ def test_configmap_rejects_any_serialized_or_data_payload_at_one_mib() -> None:
 
 
 def test_verify_rehashes_kubectl_exported_mounted_key_bytes_and_rejects_tamper(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     plan, gate, runtime, source_receipt = _sources(tmp_path, monkeypatch)
     output = tmp_path / "bundle"
@@ -269,11 +288,25 @@ def test_verify_rehashes_kubectl_exported_mounted_key_bytes_and_rejects_tamper(
         path = tmp_path / f"export-{index}.json"
         path.write_text(json.dumps(obj), encoding="utf-8")
         exports.append(path)
+    bundle_manifest_path = output / "fpct_e1_k8s_lock_bundle_manifest.json"
     report = bundle.verify_exported_configmaps(
-        bundle_manifest_path=output / "fpct_e1_k8s_lock_bundle_manifest.json",
+        bundle_manifest_path=bundle_manifest_path,
         configmap_json_paths=exports,
     )
     assert report["status"] == "VERIFIED_MOUNTED_KEY_BYTES"
+    assert report["bundle_manifest_sha256"] == bundle.sha256_bytes(
+        bundle_manifest_path.read_bytes()
+    )
+    receipt_path = tmp_path / "initial-mounted-byte-receipt.json"
+    cli = [
+        "verify", "--bundle-manifest", str(bundle_manifest_path),
+        "--output", str(receipt_path),
+    ]
+    for exported in exports:
+        cli.extend(("--configmap-json", str(exported)))
+    assert bundle.main(cli) == 0
+    assert json.loads(receipt_path.read_text(encoding="utf-8")) == report
+    capsys.readouterr()
 
     bad = json.loads(exports[0].read_text(encoding="utf-8"))
     first_key = next(iter(bad["data"]))
@@ -301,6 +334,57 @@ def test_source_sha_or_runtime_identity_mismatch_fails_before_bundle(
         )
 
 
+@pytest.mark.parametrize(
+    "image",
+    [
+        "sha256:" + "2" * 64,
+        "registry.example/fpct:latest",
+        "registry.example/fpct:tag@sha256:" + "2" * 64,
+    ],
+)
+def test_bundle_rejects_unnamed_or_tagged_image_references(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, image: str,
+) -> None:
+    plan_path, gate, runtime, source_receipt = _sources(tmp_path, monkeypatch)
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    plan["runtime_lock"]["image_digest"] = image
+    plan["plan_sha256"] = bundle._plan_hash(plan)
+    _write_json(plan_path, plan)
+    with pytest.raises(ValueError, match="execution/image identity"):
+        bundle.build_lock_bundle(
+            plan_path=plan_path,
+            instrumentation_gate_path=gate,
+            runtime_probe_path=runtime,
+            source_snapshot_receipt_path=source_receipt,
+            output_dir=tmp_path / "bundle",
+        )
+
+
+def test_bundle_rejects_probe_bound_to_different_receipt_evidence(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    plan_path, gate, runtime_path, source_receipt = _sources(tmp_path, monkeypatch)
+    runtime = json.loads(runtime_path.read_text(encoding="utf-8"))
+    runtime["source_snapshot_verification"]["receipt_file_sha256"] = "0" * 64
+    runtime_raw = _write_json(runtime_path, runtime)
+    plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    runtime_lock = plan["runtime_lock"]["runtime_provenance"]
+    runtime_lock["sha256"] = bundle.sha256_bytes(runtime_raw)
+    runtime_lock["identity"]["source_snapshot_verification"] = runtime[
+        "source_snapshot_verification"
+    ]
+    plan["plan_sha256"] = bundle._plan_hash(plan)
+    _write_json(plan_path, plan)
+    with pytest.raises(ValueError, match="source-receipt identity"):
+        bundle.build_lock_bundle(
+            plan_path=plan_path,
+            instrumentation_gate_path=gate,
+            runtime_probe_path=runtime_path,
+            source_snapshot_receipt_path=source_receipt,
+            output_dir=tmp_path / "bundle",
+        )
+
+
 def test_initial_bundle_rejects_source_snapshot_receipt_byte_tamper(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -319,7 +403,7 @@ def test_initial_bundle_rejects_source_snapshot_receipt_byte_tamper(
 
 
 def test_build_finalized_binds_plan_receipt_closure_and_artifact_tree(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     plan, receipt, stage = _finalized_sources(tmp_path, monkeypatch)
     output = tmp_path / "finalized-bundle"
@@ -344,11 +428,34 @@ def test_build_finalized_binds_plan_receipt_closure_and_artifact_tree(
     obj = yaml.safe_load(Path(record["yaml_path"]).read_text(encoding="utf-8"))
     exported = tmp_path / "finalized-export.json"
     exported.write_text(json.dumps(obj), encoding="utf-8")
+    bundle_manifest_path = output / "fpct_e1_k8s_finalized_lock_bundle_manifest.json"
     verified = bundle.verify_finalized_exported_configmap(
-        bundle_manifest_path=output / "fpct_e1_k8s_finalized_lock_bundle_manifest.json",
+        bundle_manifest_path=bundle_manifest_path,
         configmap_json_paths=[exported],
     )
     assert verified["status"] == "VERIFIED_FINALIZED_MOUNTED_KEY_BYTES"
+    assert verified["bundle_manifest_sha256"] == bundle.sha256_bytes(
+        bundle_manifest_path.read_bytes()
+    )
+    receipt_path = tmp_path / "finalized-mounted-byte-receipt.json"
+    assert bundle.main([
+        "verify-finalized", "--bundle-manifest", str(bundle_manifest_path),
+        "--configmap-json", str(exported), "--output", str(receipt_path),
+    ]) == 0
+    assert json.loads(receipt_path.read_text(encoding="utf-8")) == verified
+    capsys.readouterr()
+
+
+@pytest.mark.parametrize("command", ["verify", "verify-finalized"])
+def test_verification_cli_requires_an_operative_output_receipt(
+    tmp_path: Path, command: str,
+) -> None:
+    with pytest.raises(SystemExit):
+        bundle.main([
+            command,
+            "--bundle-manifest", str(tmp_path / "bundle.json"),
+            "--configmap-json", str(tmp_path / "export.json"),
+        ])
 
 
 def test_verify_finalized_rejects_mounted_tamper_and_nonimmutable_export(

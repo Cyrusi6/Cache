@@ -178,17 +178,19 @@ metrics = model.end_fpct_capture()
 
 ## 7. 自然输出前的 execution/provenance lock
 
-任何 E0-design tokenizer/alignment、pretrained model forward 或 correctness output 之前，必须先完成并 push Commit A。Commit A 冻结本文、schema、manifest、consolidated gate、科学代码、executor、K8s render-only templates 与 tests。之后的唯一允许顺序是：
+任何 E0-design tokenizer/alignment、pretrained model forward 或 correctness output 之前，必须先完成并 push successor Commit A2。Commit A2 冻结本文、schema、manifest、consolidated gate、科学代码、executor、K8s render-only templates 与 tests；原 `744a943...` Commit A 不满足本节 v3 closure，禁止作为 execution SHA。之后的唯一允许顺序是：
+
+2026-07-26 的前瞻性 operational-closure 复核发生在任何 dataset row lookup、自然 tokenization/alignment、runtime probe 或模型输出之前。原 execution SHA `744a943ea804dfebe4e6d3cba756b6a89763002f` 因 runtime-probe renderer、mounted ConfigMap receipt 消费与只读路径闭包尚不完整而被标记为 `ABANDONED_BEFORE_NATURAL_DATA`；它不是科学 NO-GO，禁止 resume 或复用任何 artifact。只有包含本节新增硬门的后继 clean/pushed execution commit 才能成为实际 source snapshot。
 
 ```text
-clean pushed Commit A
+clean pushed successor Commit A2
   -> exact git-archive source snapshot + portable Git receipt
   -> CPU-only E0-design input lock + raw-topology export/verify
   -> model-output-free immutable-image runtime probe
   -> six checkpoint/data/model/config tree lock + 108-shard execution plan
   -> immutable ConfigMap mounted-byte verification
   -> Commit B records receipts/status only
-  -> natural E1-2 execution from the Commit A read-only snapshot
+  -> natural E1-2 execution from the successor Commit A2 read-only snapshot
 ```
 
 CPU input lock 只允许 326 个已开放的 E0-design distinct groups；E1-pilot 不得 render、tokenize、align 或进入 sidecar。逐样本 long-form 行数在 model load 前精确冻结为：
@@ -201,11 +203,17 @@ answer_query_count * certified_parent_count * 28 receiver layers * 16 query head
 
 Source snapshot 必须由 clean、已 push 的 execution commit 通过 `git archive` 产生。Portable receipt 同时绑定 commit SHA、Git tree OID、`ls-tree` mode/blob/path、archive bytes、mounted-tree SHA 与无额外路径；K8s 只读挂载该 snapshot，禁止挂 live worktree。Immutable image probe 只记录 Python/package/CUDA/hardware metadata，明确 model/tokenizer/checkpoint/output 均未加载。
 
+Runtime probe 必须由 snapshot 内 exact renderer 对 snapshot 内 exact template 确定性渲染，producer/template/replacements/rendered YAML 均记录 bytes 与 SHA256。Source、renderer-output 与唯一 runtime-output root 在 lexical path 和 resolved physical path 上必须互不重叠，任一 symlink alias hard error。Probe Pod 在 import torch/CUDA 之前必须对 `/opt/fpct/.fpct_e1_source_snapshot_receipt.json` 执行 `verify-mounted`，同时验证 canonical raw receipt bytes/SHA/size 与 mounted-tree SHA；仅回显调用者提供的 tree SHA 不构成 provenance。
+
 Plan 必须完整锁定 sender/receiver 全 runtime asset trees、E0 dev-data tree、全部 rendered configs，以及六个 immutable `final` projector trees；每个 `final` projector set 必须机械证明与同 attempt 的 `checkpoint-64` projector set byte-identical，且 final/step-64 两棵树均只读哈希。Runtime 强制 `projector_load_mode=strict_attested`，missing/unexpected keys 必须为空；legacy 默认仍保持 historical non-strict 行为。
 
 Capture artifact 只写 Parquet，固定 `4096` 行 batch/row-group；verify、baseline join、stage merge 与 analyzer 均须 bounded streaming，禁止整表 `read_table/read_text/to_pylist` materialization。每个 shard 使用 recoverable exclusive claim lease、atomic no-overwrite artifact 和 deterministic resume。Initial plan/gate/runtime receipt 与 E1-2 finalized receipt 使用 `immutable: true` ConfigMap，必须通过 `<1 MiB` 门及 API mounted-byte verification。
 
-任何 Commit A 中的 operator、alignment、training/evaluation、threshold、input、schema 或 analysis code 变更都会使 execution plan 失效；不得在看到自然输出后原地修补继续。Commit B 只能记录执行 receipts 和状态，K8s 始终运行 Commit A snapshot。
+`verify`/`verify-finalized` 必须生成不可省略的 mounted-byte receipt；baseline/F renderer 必须消费 initial receipt，E1-3 renderer 还必须消费 finalized receipt。Rendered Job 固定携带 external expected plan SHA；`run-shard` 在 backend/model load 前验证当前 mounted plan self-hash，并机械重算 `claim_id=SHA256(plan_sha256 || ':' || shard_id)`。这关闭 immutable ConfigMap 被同名删除重建为另一份 self-consistent plan 的窗口。
+
+Capture 与 probe 容器使用 read-only root filesystem，所有 HOME/XDG/HF/Torch/CUDA/W&B cache 只指向隔离的 `/tmp` emptyDir。唯一持久可写 hostPath 是当前 execution 的 capture/runtime output root。Capture output 必须与 source/E0/models/input/raw 等只读 host roots 在 physical path 上不相同、不嵌套且无 symlink alias；container mount paths 亦须 lexical disjoint。E1-3 finalized E1-2 tree 只允许作为 output root 内经 receipt 锁定的更具体 read-only nested mount，任何 shard output 不得落入该子树。
+
+任何 successor Commit A2 中的 operator、alignment、training/evaluation、threshold、input、schema 或 analysis code 变更都会使 execution plan 失效；不得在看到自然输出后原地修补继续。Commit B 只能记录执行 receipts 和状态，K8s 始终运行 successor Commit A2 snapshot。
 
 ## 8. E1-2：E0-design full mechanism/topology audit
 
@@ -359,7 +367,7 @@ lambda in {0, 0.25, 0.5, 1, 2}
 
 每个 λ 都报告 teacher-forced `Delta logp(y*)`、accuracy、flip、KL/TV、query variance/top-1 change、parent mass、Jensen gap、output delta，以及按 seed/task/checkpoint-arm/topology/layer/head 的分解。排序、聚合和所有 λ 必须同时报告，不得只保留表现最好的 λ。
 
-执行图冻结为依赖安全的四步：先运行 18 个 C_post baseline shards 并写 completion marker；再运行 18 个 F endpoint shards；36 个 endpoint 全部 closure 后必须完成 bounded analyzer、stage manifest 与 immutable `FINALIZED_E1_2` receipt；只有该 receipt 在 render 时经过 deep verification 并以只读 ConfigMap/hostPath 挂载，才运行 `3 × 2 × 4 additional F lambdas × 3 = 72` 个 E1-3 shards。`λ=1` 复用 E1-2 F endpoint；`λ=0` 必须作为真实 F runtime control 执行，不能用 C_post artifact 代替。最终 closure 包含全部 108 shards。阶段内可并行，禁止跨阶段并行；自然输出后如需修改 Commit A 代码，本 execution 直接失效，不得原地 patch/rerun。
+执行图冻结为依赖安全的四步：先运行 18 个 C_post baseline shards 并写 completion marker；再运行 18 个 F endpoint shards；36 个 endpoint 全部 closure 后必须完成 bounded analyzer、stage manifest 与 immutable `FINALIZED_E1_2` receipt；只有该 receipt 在 render 时经过 deep verification 并以只读 ConfigMap/hostPath 挂载，才运行 `3 × 2 × 4 additional F lambdas × 3 = 72` 个 E1-3 shards。`λ=1` 复用 E1-2 F endpoint；`λ=0` 必须作为真实 F runtime control 执行，不能用 C_post artifact 代替。最终 closure 包含全部 108 shards。阶段内可并行，禁止跨阶段并行；自然输出后如需修改 successor Commit A2 代码，本 execution 直接失效，不得原地 patch/rerun。
 
 本 sweep 是 fixed-checkpoint response-surface diagnostic，不是训练结果。阶段 3 结束后才允许基于 E0-design 证据形成 root-cause record；任何新 operator 只能通过新的 prospective amendment 选择一个因素并冻结。该 amendment 必须早于 E1-pilot forward/outcome。
 

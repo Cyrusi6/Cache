@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：Commit A pre-data execution lock
-> 当前状态：`PRE-DATA LOCK GO / NATURAL EXECUTION NOT STARTED`
-> 下一步：commit/push Commit A；随后只对 E0-design 生成 CPU input/topology lock 与 model-output-free runtime probe
+> 当前阶段：Commit A2 pre-data operational closure
+> 当前状态：`PRE-DATA OPERATIONAL CLOSURE / NATURAL EXECUTION NOT STARTED`
+> 下一步：冻结并 push 后继 execution commit；随后只对 E0-design 生成 CPU input/topology lock 与 model-output-free runtime probe
 > 更新时间：2026-07-26（Asia/Shanghai）
 
 ## 隔离身份
@@ -16,7 +16,8 @@
 | E0 result doc SHA256 | `632af006b37f1edfb26356d47e615def7052158fa1cbe8d944f063f8e99c1c50` |
 | E0 compact artifact anchor SHA256 | `a988061a1353fb8ce6a944b6359f3a0117857013495246f009612492a1ceb42d` |
 | E1 split manifest SHA256 | `030b4236ed9bec82b145227259733b32a8c76af63adf2fa0f1282e3638b5b11d` |
-| Commit A execution SHA | `PENDING_COMMIT` |
+| Superseded execution SHA | `744a943ea804dfebe4e6d3cba756b6a89763002f`；`ABANDONED_BEFORE_NATURAL_DATA`；禁止 resume/reuse |
+| Successor execution SHA | `PENDING_CLEAN_PUSHED_COMMIT` |
 | Consolidated gate SHA256 | `d17b4b7f35e2384abfbd300cf109484d6aacc91dd84cd3f2573a8d5dd36d4b17` |
 
 ## 人工决策锁
@@ -37,8 +38,8 @@
 |---|---|---|---|---|
 | E1-0 protocol + split lock | `GO` | E0 result commit `613958a...` + human amendment | 文档、hash-only split lock | E0 readonly；E1-pilot/confirmatory sealed |
 | E1-1 instrumentation hard gate | `GO` | E1-0 GO | synthetic tensor + random-small Qwen CPU | pre-data suite `169 passed`；ON/OFF bitwise；cross-query variance>0 |
-| Commit A execution lock | `GO / COMMIT PENDING` | E1-1 GO | 文档、代码、tests only | 尚无自然 tokenization/alignment/model output |
-| E1-2 input/topology/provenance lock | `AUTHORIZED AFTER COMMIT A` | clean pushed Commit A | CPU tokenizer/alignment；model-output-free K8s runtime probe | 只允许 326 E0-design groups；生成 immutable plan/receipts |
+| Commit A2 execution lock | `GO / COMMIT PENDING` | E1-1 GO + operational closure | 文档、代码、tests only | 744a943 在自然数据前 supersede；尚无自然 tokenization/alignment/model output |
+| E1-2 input/topology/provenance lock | `AUTHORIZED AFTER SUCCESSOR COMMIT` | clean pushed successor commit | CPU tokenizer/alignment；model-output-free K8s runtime probe | 只允许 326 E0-design groups；生成 immutable plan/receipts |
 | E1-2 C_post baselines | `NOT STARTED` | input/topology/provenance lock GO | 18 K8s shards；1 GPU/shard；最多双卡并行 | actual checkpoint inference；无训练；不得启动 F endpoint 竞态 |
 | E1-2 F endpoints | `BLOCKED BY BASELINE MARKER` | 18 C_post closure | 18 K8s shards；1 GPU/shard | 只识别同 checkpoint F-C_post mechanism；无性能 GO |
 | E1-2 analyzer/finalized receipt | `BLOCKED BY 36-SHARD CLOSURE` | C_post+F endpoints complete | bounded CPU analysis | 必须产生 deep-verified immutable `FINALIZED_E1_2` |
@@ -58,15 +59,18 @@ Consolidated gate 固定六项且全部为 true：formula oracles、instrumentat
 
 最终 15-file pre-data suite 为 `169 passed`。全 FPCT CPU suite 为 `356 passed`；项目 CPU-safe full suite 为 `595 passed, 2 warnings`。另有两个历史 immutable verifier（R2l repository allowlist、R2m production hash lock）按设计拒绝后续 E1 scientific changes；未修改历史锁。
 
+在 744a943 被前瞻 supersede 后，新增 runtime renderer/mounted receipt/expected-plan/path-disjoint/image-digest/fresh-subprocess closure；同一 15-file pre-data suite 重新执行为 `211 passed, 0 failed`，all-FPCT CPU suite=`400 passed`，项目 CPU-safe full suite=`639 passed`。该结果只证明前输出工程与 provenance 闭包，不是自然机制激活或性能证据。
+
 ## Execution lock
 
-- Source：clean pushed Commit A → exact git archive → Git tree/archive/mounted-byte receipt → K8s read-only mount；不得挂 live worktree。
+- History：`744a943...` 只生成 exact git archive、外置 source receipt 与空 input-lock directory；0 dataset lookup/tokenization/alignment/model/GPU。它作为 `ABANDONED_BEFORE_NATURAL_DATA` 保留，不是科学 NO-GO。
+- Source：clean pushed successor execution commit → 全新 run UID/root → exact git archive → snapshot root 内 canonical Git receipt → K8s read-only mount；不得挂 live worktree或复用 744 artifact。
 - Input：仅 E0-design；逐样本 rows=`answer queries × certified parents × 28 × 16`，hard ceiling=`262144`，task-level `sum/min/p50/p95/max/argmax` 预先冻结。
 - Topology：pre-sanitizer raw-to-runtime ledger 在任何 model output 前生成；uncertified rows 共同 slot-0 collapse，不携带 functional metric。
 - Checkpoints：实际加载六个 immutable `final` projector trees；同时 hash `checkpoint-64`，并要求 projector set byte-identical；strict-attested load 的 missing/unexpected keys 为空。
-- Runtime：immutable image probe、sender/receiver full asset trees、dev-data/config/checkpoint trees均在 load 前验证。
+- Runtime：exact snapshot renderer/template；host 与 Pod 内两次 mounted receipt/tree/raw-byte verification；之后才读取 immutable image Python/package/CUDA metadata。Sender/receiver full asset trees、dev-data/config/checkpoint trees均在 model load 前验证。
 - Storage：Parquet-only、4096-row bounded streaming、atomic no-overwrite、recoverable exclusive claim lease。
-- K8s：initial/finalized ConfigMaps immutable 且 `<1 MiB`；input/raw/finalized/source mounts read-only；只给当前 run 的 output root 可写；固定 `4090-48gx2`，每 shard 1 GPU，最多两个 shard 并行。
+- K8s：initial/finalized ConfigMaps immutable 且 `<1 MiB`；mounted-byte receipt 是 renderer 必需输入；Job 携带 expected plan SHA，run-shard 在 backend 前复核 plan/claim。容器 rootfs read-only，HOME/cache 只写 ephemeral `/tmp`；唯一持久可写位置是当前 run output。Input/raw/source 等物理路径与 output fail-closed 隔离；固定 `4090-48gx2`，每 shard 1 GPU，最多两个 shard 并行。
 - DAG：`18 C_post -> marker -> 18 F -> 36 closure -> analyzer/finalized receipt -> 72 lambda additions -> 108 closure`。
 
 ## Centered-λ 锁
@@ -83,6 +87,6 @@ lambda        = {0, 0.25, 0.5, 1, 2}
 
 - E0 tracked result/checkpoint 未修改；
 - E1-pilot 未运行、未读取；confirmatory model-selection/test 未释放；
-- 未运行自然 E0-design tokenizer/alignment audit，未运行 pretrained model forward；
+- 未读取 dataset row、未运行自然 E0-design tokenizer/alignment audit，未运行 pretrained model forward；
 - 未运行 GPU/Kubernetes，未训练、未新增 seed、未启动 36-run；
-- 当前 GO 只到 Commit A 与后续 CPU/model-output-free execution lock，不是 E1-2 scientific GO。
+- 当前 GO 只到 successor Commit A2 与后续 CPU/model-output-free execution lock，不是 E1-2 scientific GO；原 `744a943...` 不在授权链上。

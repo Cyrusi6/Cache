@@ -1511,3 +1511,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 数据与资源合同：query `t` iff `labels[t+1]!=-100`；rows=`answer queries × certified parents × 28 × 16`，sample ceiling=`262144`；每 task 前瞻冻结 row-volume distribution；4096-row Parquet batches；source/input/raw/finalized mounts 只读，仅 current run output root 可写。
 - 验证结果：最终 15-file pre-data suite=`169 passed`；all-FPCT CPU suite=`356 passed`；项目 CPU-safe full suite=`595 passed, 2 warnings`。另两个历史 R2l/R2m immutable verifier按设计拒绝后续 E1 scientific hashes；JSON syntax、`py_compile`、`git diff --check`通过。旧 `82 passed` 记录保留为上一 instrumentation commit 的历史结果。
 - 结论：状态=`PRE-DATA LOCK GO / NATURAL EXECUTION NOT STARTED`。Commit A 后只允许先建 git-archive/input/raw/runtime/plan receipts；`18 C_post -> 18 F -> E1-2 finalized receipt -> 72 lambda` 不得越级。E1-pilot、confirmatory、训练与新 operator 均继续 sealed/not authorized。
+
+### 2026-07-26 FPCT-E1 pre-data operational closure amendment
+
+- 研究目标：在读取任何 E0-design dataset row 或自然 tokenizer/alignment 前，关闭 runtime source identity、ConfigMap TOCTOU、host/container writable alias 与 OCI image identity 的剩余执行漏洞。
+- 核心改动：`744a943...` 被前瞻标记为 `ABANDONED_BEFORE_NATURAL_DATA`，禁止 resume/reuse；新增 exact snapshot runtime renderer、Pod 内 pre-torch mounted-receipt verification、canonical receipt raw-byte binding、expected plan SHA/claim 重算、initial/finalized mounted-byte receipt 消费、read-only rootfs 与隔离 `/tmp` cache、output-vs-readonly physical/lexical disjoint gate。
+- 实验配置：operator、grid、E0-design 326 groups、六个 projector checkpoint、18→18→72 DAG 和全部阈值均未改变；镜像引用只接受 `repository@sha256:<digest>`；E1-pilot 仍只允许解析已冻结 hash-only membership 以证明 counts/disjointness，不解析自然输入。
+- 验证结果：fresh subprocess 在恶意冲突 `PYTHONPATH` 且未设置 bytecode 环境变量时仍只加载 snapshot exact modules，source tree/receipt SHA 不变且无 `.pyc`；15-file pre-data suite=`211 passed`、all-FPCT CPU=`400 passed`、项目 CPU-safe full suite=`639 passed`；manifest implementation/test SHA 全量机械匹配。
+- 结论：只允许从后继 clean/pushed execution commit 创建全新 source snapshot/run UID；截至该 commit 前仍为 0 dataset lookup、0 natural tokenization/alignment、0 model/checkpoint load、0 GPU/K8s、0 training。该 GO 是 provenance/engineering closure，不是机制或性能结论。

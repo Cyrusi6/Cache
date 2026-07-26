@@ -39,7 +39,10 @@ REQUIRED_GATE_CHECKS = {
 CONFIGMAP_LIMIT_BYTES = 1024 * 1024
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
 EXECUTION_SHA = re.compile(r"^[0-9a-f]{40}$")
-IMAGE_DIGEST = re.compile(r"^(?:[^@\s]+@)?sha256:[0-9a-f]{64}$")
+IMAGE_DIGEST = re.compile(
+    r"^(?:[a-z0-9.-]+(?::[0-9]+)?/)?[a-z0-9._-]+"
+    r"(?:/[a-z0-9._-]+)*@sha256:[0-9a-f]{64}$"
+)
 PLAN_KEY = "e1_capture_plan.json"
 GATE_KEY = "instrumentation_gate.json"
 RUNTIME_KEY = "runtime_probe.json"
@@ -212,12 +215,29 @@ def validate_frozen_sources(
         raise ValueError("instrumentation gate evidence is not fully hashed")
 
     validate_runtime_probe(runtime)
+    expected_runtime_source_verification = {
+        **expected_receipt_verification,
+        "receipt_file_sha256": sha256_bytes(source_receipt_raw),
+        "receipt_bytes": len(source_receipt_raw),
+    }
+    expected_runtime_identity = {
+        "schema_version": runtime["schema_version"],
+        "protocol_id": runtime["protocol_id"],
+        "status": runtime["status"],
+        "execution_sha": execution_sha,
+        "image_digest": image_digest,
+        "source_snapshot_tree_sha": tree_sha,
+        "source_snapshot_verification": expected_runtime_source_verification,
+    }
     if (
         runtime.get("execution_sha") != execution_sha
         or runtime.get("image_digest") != image_digest
         or runtime.get("source_snapshot_tree_sha") != tree_sha
+        or runtime.get("source_snapshot_verification")
+        != expected_runtime_source_verification
+        or runtime_record.get("identity") != expected_runtime_identity
     ):
-        raise ValueError("runtime probe identity differs from frozen plan")
+        raise ValueError("runtime probe/source-receipt identity differs from frozen plan")
     return {
         "plan": plan,
         "gate": gate,
@@ -671,6 +691,7 @@ def verify_exported_configmaps(
         "status": "VERIFIED_MOUNTED_KEY_BYTES",
         "execution_sha": manifest["execution_sha"],
         "plan_sha256": manifest["plan_sha256"],
+        "bundle_manifest_sha256": sha256_bytes(bundle_manifest_path.read_bytes()),
         "configmaps": observed,
         "network_accessed": False,
         "kubectl_invoked_by_verifier": False,
@@ -701,6 +722,7 @@ def verify_finalized_exported_configmap(
         "status": "VERIFIED_FINALIZED_MOUNTED_KEY_BYTES",
         "execution_sha": manifest["execution_sha"],
         "plan_sha256": manifest["plan_sha256"],
+        "bundle_manifest_sha256": sha256_bytes(bundle_manifest_path.read_bytes()),
         "receipt_sha256": manifest["receipt_sha256"],
         "closure_sha256": manifest["closure_sha256"],
         "artifact_tree_sha256": manifest["artifact_tree_sha256"],
@@ -729,13 +751,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     verify = subparsers.add_parser("verify")
     verify.add_argument("--bundle-manifest", type=Path, required=True)
     verify.add_argument("--configmap-json", type=Path, action="append", required=True)
-    verify.add_argument("--output", type=Path)
+    verify.add_argument("--output", type=Path, required=True)
     verify_finalized = subparsers.add_parser("verify-finalized")
     verify_finalized.add_argument("--bundle-manifest", type=Path, required=True)
     verify_finalized.add_argument(
         "--configmap-json", type=Path, action="append", required=True
     )
-    verify_finalized.add_argument("--output", type=Path)
+    verify_finalized.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)
     if args.command == "build":
         result = build_lock_bundle(
@@ -759,15 +781,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             bundle_manifest_path=args.bundle_manifest,
             configmap_json_paths=args.configmap_json,
         )
-        if args.output is not None:
-            _atomic_write(args.output, canonical_json_bytes(result))
+        _atomic_write(args.output, canonical_json_bytes(result))
     else:
         result = verify_finalized_exported_configmap(
             bundle_manifest_path=args.bundle_manifest,
             configmap_json_paths=args.configmap_json,
         )
-        if args.output is not None:
-            _atomic_write(args.output, canonical_json_bytes(result))
+        _atomic_write(args.output, canonical_json_bytes(result))
     print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
     return 0
 

@@ -13,6 +13,7 @@ metadata:
   annotations:
     fpct.openai.com/render-only-source: "true"
     fpct.openai.com/requires-phase: "__REQUIRES_PHASE__"
+    fpct.openai.com/expected-plan-sha256: "__EXPECTED_PLAN_SHA256__"
   labels:
     project: fpct
     study: fpct-e1-mechanism-audit
@@ -41,6 +42,9 @@ spec:
       - name: e0-design-capture
         image: __IMMUTABLE_IMAGE_DIGEST__
         imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
         command:
         - /opt/conda/bin/python3.11
         - __RUNNER_CONTAINER_PATH__
@@ -48,6 +52,8 @@ spec:
         - run-shard
         - --plan
         - __PLAN_CONTAINER_PATH__
+        - --expected-plan-sha256
+        - __EXPECTED_PLAN_SHA256__
         - --shard-id
         - __SHARD_ID__
         - --instrumentation-gate
@@ -69,6 +75,14 @@ __FINALIZED_ARG_BLOCK__
         - {name: C2C_MODEL_ROOT, value: __MODELS_CONTAINER_ROOT__}
         - {name: PYTHONPATH, value: __REPO_CONTAINER_ROOT__}
         - {name: PYTHONDONTWRITEBYTECODE, value: "1"}
+        - {name: HOME, value: /tmp/home}
+        - {name: XDG_CACHE_HOME, value: /tmp/xdg-cache}
+        - {name: HF_HOME, value: /tmp/hf-home}
+        - {name: HF_DATASETS_CACHE, value: /tmp/hf-datasets-cache}
+        - {name: TORCH_HOME, value: /tmp/torch-home}
+        - {name: CUDA_CACHE_PATH, value: /tmp/cuda-cache}
+        - {name: WANDB_DIR, value: /tmp/wandb}
+        - {name: TMPDIR, value: /tmp}
         resources:
           limits: {nvidia.com/gpu: "1"}
           requests: {nvidia.com/gpu: "1", cpu: "8", memory: 64Gi}
@@ -81,6 +95,7 @@ __FINALIZED_ARG_BLOCK__
         - {name: input-lock, mountPath: __INPUT_LOCK_CONTAINER_ROOT__, readOnly: true}
         - {name: raw-topology, mountPath: __RAW_TOPOLOGY_CONTAINER_ROOT__, readOnly: true}
 __FINALIZED_VOLUME_MOUNT_BLOCK__
+        - {name: tmp, mountPath: /tmp}
         - {name: e1-results, mountPath: __OUTPUT_CONTAINER_ROOT_MOUNT__}
       volumes:
       - name: source-snapshot
@@ -98,5 +113,7 @@ __FINALIZED_VOLUME_MOUNT_BLOCK__
       - name: raw-topology
         hostPath: {path: __RAW_TOPOLOGY_HOST_ROOT__, type: Directory}
 __FINALIZED_VOLUME_BLOCK__
+      - name: tmp
+        emptyDir: {}
       - name: e1-results
         hostPath: {path: __OUTPUT_HOST_ROOT__, type: DirectoryOrCreate}
