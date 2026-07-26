@@ -420,3 +420,11 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 冻结 GO 规则中“至少 2/3 T>0”通过，但 `mean(T)>=+1.00 pp` 失败，OpenBookQA 低于 `-2.00 pp` task floor，query-time mechanism positive gate 也失败。
 - 最终分类=`E0_NO_GO_FOR_FURTHER_SPEND`：当前 TinyLlama→Qwen3、2,048 examples/64 steps recipe 不支持投入 36-run confirmatory campaign；不外推为 FPCT 普遍无效。
 - 小型正式结果已版本化到 `recipe/eval_recipe/fpct_e0/versioned_outputs/`；完整 55GB checkpoints、逐样本输出和运行日志保留在 `/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1`，不提交 Git。
+
+### 2026-07-26 FPCT-E1 阶段 0 前瞻锁定
+
+- 从冻结 E0 结果 commit `613958af...` 建立独立 `research/fpct-e1-mechanism-audit` worktree；E0 compact results、main 与 Phase2A 均保持只读。
+- 原“remaining calibration 再取 128/70/128”因 ARC 仅余 32、OpenBookQA 余 0 而不可行；用户在任何 E1-pilot forward/outcome 前批准 prospective amendment：改用 support-fit-only certified groups。
+- E1-pilot 按 domain-separated SHA256 排序锁定 ARC 128、OpenBookQA 70、MMLU-Redux 128；E0-design 同规模，两者交集为 0。652-row manifest SHA256=`030b4236ed9bec82b145227259733b32a8c76af63adf2fa0f1282e3638b5b11d`。
+- 当前执行顺序冻结为 instrumentation hard gate → E0-design mechanism/topology audit → E0-design centered-λ sweep。Grid=`{0,0.25,0.5,1,2}`，λ0=C_post、λ1=F。
+- 本阶段只运行 CPU/hash-only locker 与 synthetic unit test（`2 passed`）；未运行 tokenizer/model forward、GPU、训练或 E1-pilot，confirmatory outcome 未访问。

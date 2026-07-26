@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_mechanism_audit_v1",
+  "created_at": "2026-07-26T00:00:00+08:00",
+  "branch": "research/fpct-e1-mechanism-audit",
+  "base_commit": "613958af38fad27e1ea933ccc0dda6d1af5cce89",
+  "classification": "EXPLORATORY_MECHANISM_AUDIT_NOT_CONFIRMATORY",
+  "current_stage": "E1-0",
+  "current_status": "GO",
+  "e0_read_only": {
+    "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
+    "result_document": {
+      "path": "FPCT_E0_RESULTS.md",
+      "sha256": "632af006b37f1edfb26356d47e615def7052158fa1cbe8d944f063f8e99c1c50"
+    },
+    "compact_artifact_anchor": {
+      "path": "recipe/eval_recipe/fpct_e0/versioned_outputs/artifact_manifest.json",
+      "sha256": "a988061a1353fb8ce6a944b6359f3a0117857013495246f009612492a1ceb42d",
+      "verification": "Verify every included artifact against the per-file SHA256 recorded by this anchored manifest."
+    },
+    "development_group_manifest": {
+      "path": "recipe/eval_recipe/fpct_e0/exploratory_dev_manifest.json",
+      "sha256": "25fe8c4dceeaa1174e1433a02ec86f312d909d7d58c3c9a8c7f2caa9d908216a"
+    },
+    "full_result_root": "/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1",
+    "mutation_allowed": false,
+    "reinterpretation_allowed": false,
+    "additional_e0_seeds_allowed": false
+  },
+  "approved_prospective_amendment": {
+    "approval_id": "APPROVED_PROSPECTIVE_AMENDMENT",
+    "approved_at": "2026-07-26",
+    "e1_pilot_source": "support-fit-only certified groups",
+    "counts": {
+      "ai2-arc": 128,
+      "openbookqa": 70,
+      "mmlu-redux": 128
+    },
+    "selection": "frozen domain-separated SHA ordering",
+    "role": "exploratory mechanism pilot",
+    "confirmatory_eligibility": false,
+    "prospective_before_e1_pilot_forward_or_outcome": true
+  },
+    "data_split_lock": {
+        "path": "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json",
+        "sha256": "030b4236ed9bec82b145227259733b32a8c76af63adf2fa0f1282e3638b5b11d",
+        "bytes": 217385,
+        "rows": 652,
+        "hash_record": {
+            "path": "recipe/eval_recipe/fpct_e1/e1_data_split_sha256.json",
+            "sha256": "05c6bee7e551e360fe36a3c0352bfa068b5dfd189eb8cd0d807344f8692f258c"
+        },
+        "locker": {
+            "path": "script/analysis/fpct_e1_split_lock.py",
+            "sha256": "eec8763391b084df2505f3b738e1f517143995161a464b25e43db482b7e8a49b",
+            "test_path": "test/test_fpct_e1_split_lock.py",
+            "test_sha256": "2d58519ffa56d7544b4d93603749f49ef6df5e5d02711fba771034a7de864a1b"
+        },
+    "e0_design_counts": {
+      "ai2-arc": 128,
+      "openbookqa": 70,
+      "mmlu-redux": 128
+    },
+    "e1_pilot_counts": {
+      "ai2-arc": 128,
+      "openbookqa": 70,
+      "mmlu-redux": 128
+    },
+    "e0_design_e1_pilot_distinct_group_intersection": 0,
+    "selection_domain_hex": "667063742d65312d70696c6f742d763100",
+    "selection_rank_formula": "SHA256(domain || UTF8(task) || NUL || UTF8(content_group_sha256))",
+    "ordering": [
+      "selection_rank_sha256 ascending",
+      "content_group_sha256 ascending"
+    ],
+    "eligibility": [
+      "split == fit",
+      "has_certified_m2 == 1",
+      "member_consistent == 1",
+      "content_group_sha256 not in E0-design"
+    ],
+    "labels_answers_predictions_correctness_accessed": false,
+    "e1_pilot_forward_or_result_accessed": false,
+    "confirmatory_outcomes_accessed": false
+  },
+  "data_firewall": {
+    "e0_design": {
+      "source": "historical frozen calibration development groups",
+      "role": "instrumentation-validated mechanism audit, topology audit, and centered-lambda sweep",
+      "status": "OPEN_FOR_E1_DIAGNOSTICS"
+    },
+    "e1_pilot": {
+      "source": "support-fit-only certified groups",
+      "role": "future exploratory mechanism pilot after a prospective single-operator freeze",
+      "status": "SEALED_NOT_RUN_NOT_READ",
+      "may_influence_current_operator_choice": false,
+      "confirmatory_eligible": false
+    },
+    "confirmatory": {
+      "contents": [
+        "model-selection",
+        "held-out test",
+        "formal seed universe"
+      ],
+      "status": "SEALED_NOT_AUTHORIZED"
+    }
+  },
+  "execution_order": [
+    "E1-0_protocol_and_split_lock",
+    "E1-1_instrumentation_hard_gate",
+    "E1-2_e0_design_mechanism_topology_audit",
+    "E1-3_e0_design_centered_lambda_sweep",
+    "prospective_root_cause_and_single_operator_freeze",
+    "separate_authorization_required_before_e1_pilot"
+  ],
+  "instrumentation_contract": {
+    "explicit_capture_lifecycle": true,
+    "capture_modes": [
+      "prefill",
+      "teacher_forced_response",
+      "greedy_decode"
+    ],
+    "forward_must_not_reset_active_capture": true,
+    "online_accumulator": "Welford",
+    "query_variance_axis": "answer queries across the full capture, not q_length within a single decode forward",
+    "required_metrics": [
+      "gamma_query_variance",
+      "KL_gamma_prior",
+      "TV_gamma_prior",
+      "posterior_top1_query_change",
+      "Jensen_gap",
+      "factorized_vs_collapse_output_delta"
+    ],
+    "parity_targets": [
+      "logits",
+      "loss",
+      "generated_tokens",
+      "cache"
+    ],
+    "parity_target_preference": "bitwise_equal",
+    "natural_output_before_parity_gate": false,
+    "hard_gate": [
+      "all formula and synthetic oracles pass",
+      "instrumentation ON and OFF are equivalent",
+      "synthetic query-changing gamma_query_variance > 0",
+      "multi-step accumulation is not overwritten by the final forward",
+      "invalid candidate probability and gradient are exactly zero",
+      "no NaN or Inf"
+    ]
+  },
+  "mechanism_audit": {
+    "population": "E0-design only",
+    "training_allowed": false,
+    "checkpoint_count": 6,
+    "checkpoint_design": "3 seeds x {C_post-trained, F-trained}",
+    "inference_cells": [
+      "Y_CC",
+      "Y_CF",
+      "Y_FC",
+      "Y_FF"
+    ],
+    "query_population": "teacher-forced gold response positions with label != -100",
+    "primary_diagnostic": "Delta log p(y*) = log p_F(y*) - log p_C_post(y*)",
+    "secondary": [
+      "accuracy",
+      "correctness flip"
+    ],
+    "representation_levels": [
+      "raw source candidates",
+      "projected or fused candidates",
+      "attention functional effect"
+    ],
+    "normalized_dispersion": "D_X / (sum_j A_ij * ||X_ij||_2^2 + epsilon)",
+    "contraction_ratio": {
+      "r_K": "D_K_fused / (D_K_source + epsilon)",
+      "r_V": "D_V_fused / (D_V_source + epsilon)"
+    },
+    "topology_strata": [
+      "partition_compositional",
+      "competing_overlap",
+      "boundary_fallback",
+      "neighbor_expansion",
+      "taxonomy_unresolved"
+    ],
+    "performance_go_gate": false,
+    "operator_selection_allowed": false
+  },
+  "centered_lambda_contract": {
+    "population": "E0-design only",
+    "training_allowed": false,
+    "checkpoints": "same six E0 step-64 checkpoints",
+    "K_center": "Kbar_i = sum_j A_ij * Ktilde_ij",
+    "V_center": "Vbar_i = sum_j A_ij * Vtilde_ij",
+    "K_lambda": "K(lambda)_ij = Kbar_i + lambda * (Ktilde_ij - Kbar_i)",
+    "V_lambda": "V(lambda)_ij = Vbar_i + lambda * (Vtilde_ij - Vbar_i)",
+    "logit": "z(lambda)_tij = dot(q_t, K(lambda)_ij) / sqrt(d) + parent_bias + parent_mask + log(A_ij)",
+    "normalization": "native atoms and every legal child atom share one global softmax denominator",
+    "grid": [
+      0,
+      0.25,
+      0.5,
+      1,
+      2
+    ],
+    "lambda_0_contract": "exact C_post replicated-collapse",
+    "lambda_1_contract": "exact current F operator",
+    "lambda_2_role": "extrapolative diagnostic only; not an approved training operator",
+    "m_le_1_contract": "equal to C_post for every lambda",
+    "prior_used_once": true,
+    "all_grid_points_reported": true,
+    "best_lambda_only_reporting_forbidden": true,
+    "fixed_checkpoint_evidence_class": "mechanistic headroom diagnostic, not matched-training or confirmatory evidence"
+  },
+  "authorization": {
+    "instrumentation_hard_gate": true,
+    "e0_design_mechanism_audit": "conditional on instrumentation GO",
+    "e0_design_centered_lambda_sweep": "conditional on mechanism audit completion",
+    "new_training": false,
+    "additional_e0_seeds": false,
+    "e1_pilot_forward_or_outcome": false,
+    "confirmatory_model_selection_or_test": false,
+    "native_null_or_g": false,
+    "cross_pair": false,
+    "36_run_confirmatory": false
+  },
+  "claim_boundary": [
+    "Instrumentation correctness is not real-data mechanism activation.",
+    "Candidate dispersion is not query-time separability.",
+    "Query-varying posterior is not task improvement.",
+    "A positive centered-lambda fixed-checkpoint response is headroom evidence only, not matched-training evidence.",
+    "E1-pilot is exploratory and never confirmatory-eligible.",
+    "Any conclusion is limited to the TinyLlama-to-Qwen3 E0 checkpoints and frozen development population."
+  ]
+}

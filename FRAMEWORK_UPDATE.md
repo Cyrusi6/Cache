@@ -1486,3 +1486,11 @@ R2 v2 prospective repair只把tensor byte hashing从scalar不合法的直接`vie
 - 结果：mean `T=-0.2728 pp`，2/3 T positive；mean `O=-0.4762 pp`，0/3 O positive。Task mean T 为 ARC `-1.5625 pp`、MMLU `+3.1250 pp`、OpenBookQA `-2.3810 pp`。
 - 结论：冻结分类=`E0_NO_GO_FOR_FURTHER_SPEND`。工程路径成立且机制被激活，但当前 recipe 没有表现出正的 query-time accuracy effect，也未达到继续正式确认投入的门槛。
 - 归档：Git 保存 aggregate、每 seed effect、mechanism、integrity、CSV 与 SHA manifest；完整 55GB 运行产物继续保存在 `/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1`。
+
+### 2026-07-26 FPCT-E1 mechanism-audit 隔离与数据 firewall
+
+- 研究目标：不扩大 E0 seed/训练投入，先修复 query-time mechanism instrumentation，再用 E0-design 定位 candidate contraction 与 fixed-checkpoint headroom。
+- 核心改动：建立独立 E1 branch/worktree；冻结 E0 read-only SHA；记录用户批准的 fit-only amendment；新增 deterministic hash-only split locker、测试、预注册、状态和 manifest。
+- 数据配置：E0-design=`128/70/128` calibration groups；E1-pilot=`128/70/128` support-fit-only certified groups，domain=`fpct-e1-pilot-v1\0`，两者 intersection=0；model-selection/test/formal seeds 继续 sealed。
+- 验证结果：split byte-identical rerun；652 rows；source/ledger SHA、E0 artifact per-file SHA、JSON syntax 与 intersections 全部通过；split test=`2 passed`；`git diff --check` clean。
+- 结论：E1-0=`GO` only to instrumentation hard gate。E1-pilot=`SEALED / NOT RUN / NOT READ`；禁止在 mechanism audit 与 centered-λ sweep 冻结前选择或训练新 operator。
