@@ -1,9 +1,9 @@
 # FPCT-E1 状态
 
-> 当前阶段：A4 streaming CPU input-lock failure closure
-> 当前状态：`A4_INPUT_LOCK_BLOCKED / HUMAN REVIEW REQUIRED`
-> 下一步：人工在 historical projected-first4 anchor 与 actual E0 production-runtime prompt 两个合同之间作出前瞻选择；当前 execution 永久禁止 resume/reuse
-> 更新时间：2026-07-27（Asia/Shanghai）
+> 当前阶段：A5 actual E0 production-runtime prompt protocol/schema 与 pre-natural qualification
+> 当前状态：`A5 HUMAN DECISION APPROVED / PRE-NATURAL GATE PENDING / E1-2 NOT AUTHORIZED`
+> 下一步：完成 A5 dual-anchor implementation 和新的 prompt-specific synthetic/instrumentation hard gate；只有 gate GO、clean push、新 snapshot/root 后才可从 group 1 运行 326-group CPU input lock
+> 更新时间：2026-07-28（Asia/Shanghai）
 
 ## 隔离身份
 
@@ -19,8 +19,11 @@
 | Superseded execution SHA | `744a943ea804dfebe4e6d3cba756b6a89763002f`；`ABANDONED_BEFORE_NATURAL_DATA`；禁止 resume/reuse |
 | Failed execution SHA | `d1698177e60455a42731165b88a66374b8826718`；自然 alignment 后、artifact 前 integrity failure；禁止 resume/reuse |
 | Resource-ceiling execution SHA | `612697dfc44ab46699728b8d2de0a6fce980a889`；自然 multi-task alignment 后、artifact 前 fail-closed；禁止 resume/reuse |
-| Successor execution SHA | `HUMAN_REVIEW_REQUIRED_NOT_ASSIGNED` |
+| Successor execution SHA | `PENDING_CLEAN_PUSHED_A5_COMMIT` |
 | A4 successor execution SHA | `07755a4039e89700e59af9e141026a57142f9da0`；`A4_INPUT_LOCK_BLOCKED`；永久禁止 resume/reuse |
+| A5 protocol ID | `fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt` |
+| A5 selected prompt contract | `ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT` |
+| A5 successor execution SHA | `PENDING_CLEAN_PUSHED_A5_COMMIT` |
 | Consolidated gate SHA256 | `d17b4b7f35e2384abfbd300cf109484d6aacc91dd84cd3f2573a8d5dd36d4b17` |
 
 ## 人工决策锁
@@ -165,3 +168,73 @@ lambda        = {0, 0.25, 0.5, 1, 2}
 - 0 usable sidecar/manifest/templates/raw/runtime/plan；0 model/checkpoint load、forward、GPU、Kubernetes、training。E1-pilot 继续 `SEALED / NOT RENDERED / NOT TOKENIZED / NOT ALIGNED / NOT RUN / NOT READ`。
 - 机器可读闭环：`recipe/eval_recipe/fpct_e1/executions/07755a40/input_lock_failure_receipt.json`。当前 root 永久 no-resume/no-reuse。
 - `HUMAN REVIEW REQUIRED`，尚未批准也不自动推荐两项之一：`STRICT_HISTORICAL_PROJECTED_FIRST4_ANCHOR` 或 `ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT`。任一选择都必须先形成新的前瞻 amendment，再使用新 commit/snapshot/run UID/root；不得原地放宽、重跑或复用本 execution。
+
+## 2026-07-28 A5 actual E0 production-runtime prompt 前瞻修订
+
+> 上一节最后一项是 A4 failure closure 当时的历史状态。用户随后在任何 A5
+> natural census、model/checkpoint load、E1-2 或 E1-pilot access 之前作出独立
+> 人工批准；不是回写或删除旧失败记录。
+
+### 人工决定与双锚点
+
+- Approval ID：`APPROVED_PROSPECTIVE_AMENDMENT_E1_A5_RUNTIME_PROMPT`。
+- Selected：`ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT`。
+- Rejected as primary：`STRICT_HISTORICAL_PROJECTED_FIRST4_ANCHOR`。
+- `historical_projection_anchor` 继续冻结 question + first four choices，只承担
+  support selection、content-group/sample identity 与 historical provenance。
+- `production_runtime_anchor` 使用 exact materialized E0 row、完整 production
+  choice list、exact historical E0 evaluator/prompt builder、tokenizer 和 chat
+  template；这是未来 E1-2/E1-3 的唯一 operative prompt/alignment anchor。
+- 事件分类为 `HISTORICAL_PROMPT_ANCHOR_UNDERSPECIFICATION`。不修改或重算 E0
+  aggregate，不推断 first-four counterfactual accuracy，也不改变 operator、
+  checkpoint、lambda grid、estimand、weight 或 group membership。
+
+Normative sources：
+
+- `FPCT_E1_A5_PRODUCTION_PROMPT_AMENDMENT.md`；
+- `recipe/eval_recipe/fpct_e1/e1_a5_prompt_contract.json`；
+- `recipe/eval_recipe/fpct_e1/e1_a5_prompt_schema.json`。
+
+### A5 当前阶段表
+
+| 阶段 | 当前状态 | 依赖 | 当前授权 | 边界 |
+|---|---|---|---|---|
+| A5 v7 protocol/contract/schema | `GO — HUMAN DECISION LOCKED` | A4 failure closure + prospective approval | 文档/schema/manifest | 输入 provenance 修订，不是 mechanism/performance evidence |
+| Dual-anchor implementation | `GO / PRE-NATURAL` | v7 contract | code + CPU synthetic tests | 不得读取 natural census、model/checkpoint 或 E1-pilot |
+| A5 prompt-specific synthetic gate | `GO` | implementation complete | CPU synthetic only | path=`e1_a5_prompt_synthetic_gate.json`；SHA256=`464e646c...`；旧 A4 gate 仅作 07755a40 historical evidence |
+| Clean pushed A5 commit/snapshot/root | `PENDING` | 新 gate GO | research branch commit/push + immutable snapshot | 必须使用新 UID/root，不得复制 A4 run artifacts |
+| 326-group CPU census/input lock | `CONDITIONALLY AUTHORIZED` | gate GO + clean push + fresh root | dataset lookup/render/tokenize/align/topology/hash/streaming only | 从 group 1 开始；必须得到 `A5_INPUT_LOCK_GO` |
+| Runtime/checkpoint/plan/E1-2 | `NOT AUTHORIZED` | 另行授权，即使 input-lock GO 也不自动进入 | 无 | 禁止 model/checkpoint load 和 forward |
+| E1-3 | `NOT AUTHORIZED` | finalized E1-2 + 另行授权 | 无 | 未进入 |
+| E1-pilot | `SEALED / NOT RUN / NOT READ` | operator freeze 后独立授权 | 无 | 不得 render/tokenize/align/run/read |
+| Confirmatory | `SEALED / NOT AUTHORIZED` | 后续完整阶段链 | 无 | model-selection/test/formal seeds 不得访问 |
+
+### A5 hard gate 与 execution firewall
+
+- Census population 固定为 326 distinct E0-design groups：ARC 128、OpenBookQA
+  70、MMLU-Redux 128。
+- `prompt_relation` 只允许
+  `EXACT_HISTORICAL_AND_PRODUCTION_MATCH` 或 `EXTRA_CHOICES_ONLY`；question、
+  first-four text/order、instruction/template/whitespace、gold A-D 或唯一 row
+  mapping 任一异常均 fail-closed。
+- 每一 group 必须满足 historical first four 等于 production first four，且
+  gold answer 属于 A-D；完整记录 dual hashes、choice counts、raw row hash、
+  production token/alignment/topology/logical-row geometry。
+- 新 pre-natural gate 必须使用
+  `recipe/eval_recipe/fpct_e1/e1_a5_prompt_synthetic_gate.json` 和 A5 versioned
+  instrumentation artifacts；不得用改变后的 tree 去通过旧 A4
+  `verify_tracked_gate`，也不得覆盖旧 gate。
+- A5 gate 已原子发布并独立自验：`248 passed / 0 failed`，artifact/evidence
+  SHA256=`464e646c336d33c97a03c603d283a95b1579508d63ae0f19d7c700ccf2dcfc02`
+  / `2fc5c70da231cfd0aba54656c5a34ff142594208f4a006348f73607559af4a47`。
+  Million-row stress=`1,000,384` logical/emitted rows、245 chunks、semantic replay
+  exact；peak RSS=`676,200,448 B`，低于冻结 threshold=`812,384,256 B`。
+- A5 instrumentation parity/synthetic/hard-gate SHA256 分别为
+  `220c8da80e2b5409a82cff386048e3afb8814efb23a6cf4bf84216d4e7066333`、
+  `6f294b7c68eeee3e8f488e19c55f081dfcd23b04ae241f5367222a1bb0f10f16`、
+  `29a3018d900231be3eca10b6e3762872bf588458390a1d595fe4f2012861ac58`。
+- `07755a40` 继续永久 abandoned：resume=false、artifact reuse=false、
+  scientific result=false。A5 必须使用新 clean pushed commit、snapshot、UID 和
+  empty run root，从 group 1 重跑。
+- 本次 A5 人工批准不授权 model/projector/checkpoint load、model forward、GPU、
+  CUDA、Kubernetes、training、E1-2、E1-3、E1-pilot 或 confirmatory access。

@@ -1,0 +1,1444 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://cache.local/schema/fpct/e1/a5-prompt/v7",
+  "title": "FPCT-E1 A5 actual E0 production-runtime prompt artifacts",
+  "description": "Strict schemas for the A5 dual-anchor census, its full-population manifest, the versioned pre-natural gate, and fail-closed input-lock receipts.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/a5PromptCensusRecord"
+    },
+    {
+      "$ref": "#/$defs/a5PromptCensusManifest"
+    },
+    {
+      "$ref": "#/$defs/a5PromptSyntheticGate"
+    },
+    {
+      "$ref": "#/$defs/a5InputLockGoReceipt"
+    },
+    {
+      "$ref": "#/$defs/a5InputLockBlockedReceipt"
+    },
+    {
+      "$ref": "#/$defs/a5InputLockManifest"
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "gitSha40": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "nonNegativeInteger": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "positiveInteger": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "task": {
+      "enum": [
+        "ai2-arc",
+        "openbookqa",
+        "mmlu-redux"
+      ]
+    },
+    "promptRelation": {
+      "enum": [
+        "EXACT_HISTORICAL_AND_PRODUCTION_MATCH",
+        "EXTRA_CHOICES_ONLY"
+      ]
+    },
+    "protocolHeader": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "protocol_id"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 7
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt"
+        }
+      }
+    },
+    "sourceRowId": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "$ref": "#/$defs/nonNegativeInteger"
+        }
+      ]
+    },
+    "choiceLabels": {
+      "type": "array",
+      "minItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Z]$"
+      }
+    },
+    "a5PromptCensusRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "task",
+        "content_group_sha256",
+        "sample_key_sha256",
+        "source_row_id",
+        "historical_choice_count",
+        "production_choice_count",
+        "raw_choice_labels",
+        "gold_answer",
+        "historical_first4_question_choices_sha256",
+        "historical_rendered_prompt_sha256",
+        "historical_alignment_sha256",
+        "raw_full_row_sha256",
+        "production_rendered_prompt_sha256",
+        "production_alignment_sha256",
+        "historical_prompt_token_count",
+        "production_prompt_token_count",
+        "production_certified_parent_count",
+        "production_logical_row_count",
+        "production_physical_chunk_count",
+        "prompt_relation",
+        "choice_difference_only"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 7
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt"
+        },
+        "artifact_type": {
+          "const": "a5_prompt_census_record"
+        },
+        "task": {
+          "$ref": "#/$defs/task"
+        },
+        "content_group_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sample_key_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "source_row_id": {
+          "$ref": "#/$defs/sourceRowId"
+        },
+        "historical_choice_count": {
+          "const": 4
+        },
+        "production_choice_count": {
+          "type": "integer",
+          "minimum": 4
+        },
+        "raw_choice_labels": {
+          "$ref": "#/$defs/choiceLabels"
+        },
+        "gold_answer": {
+          "enum": [
+            "A",
+            "B",
+            "C",
+            "D"
+          ]
+        },
+        "historical_first4_question_choices_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "historical_rendered_prompt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "historical_alignment_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "raw_full_row_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "production_rendered_prompt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "production_alignment_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "historical_prompt_token_count": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "production_prompt_token_count": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "production_certified_parent_count": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "production_logical_row_count": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "production_physical_chunk_count": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "prompt_relation": {
+          "$ref": "#/$defs/promptRelation"
+        },
+        "choice_difference_only": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "prompt_relation": {
+                "const": "EXACT_HISTORICAL_AND_PRODUCTION_MATCH"
+              }
+            },
+            "required": [
+              "prompt_relation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "production_choice_count": {
+                "const": 4
+              },
+              "choice_difference_only": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "prompt_relation": {
+                "const": "EXTRA_CHOICES_ONLY"
+              }
+            },
+            "required": [
+              "prompt_relation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "production_choice_count": {
+                "type": "integer",
+                "minimum": 5
+              },
+              "choice_difference_only": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    "taskCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ai2-arc",
+        "openbookqa",
+        "mmlu-redux"
+      ],
+      "properties": {
+        "ai2-arc": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "openbookqa": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "mmlu-redux": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        }
+      }
+    },
+    "exactPopulationCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ai2-arc",
+        "openbookqa",
+        "mmlu-redux"
+      ],
+      "properties": {
+        "ai2-arc": {
+          "const": 128
+        },
+        "openbookqa": {
+          "const": 70
+        },
+        "mmlu-redux": {
+          "const": 128
+        }
+      }
+    },
+    "integerHistogram": {
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[0-9]+$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/nonNegativeInteger"
+      }
+    },
+    "distributionSummary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "sum",
+        "min",
+        "p50",
+        "p95",
+        "max",
+        "argmax_content_group_sha256"
+      ],
+      "properties": {
+        "count": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "sum": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "min": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "p50": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "p95": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "max": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "argmax_content_group_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "anchorMapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "task",
+        "content_group_sha256",
+        "sample_key_sha256",
+        "historical_first4_question_choices_sha256",
+        "historical_rendered_prompt_sha256",
+        "historical_alignment_sha256",
+        "raw_full_row_sha256",
+        "production_rendered_prompt_sha256",
+        "production_alignment_sha256",
+        "prompt_relation"
+      ],
+      "properties": {
+        "task": {
+          "$ref": "#/$defs/task"
+        },
+        "content_group_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "sample_key_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "historical_first4_question_choices_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "historical_rendered_prompt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "historical_alignment_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "raw_full_row_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "production_rendered_prompt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "production_alignment_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "prompt_relation": {
+          "$ref": "#/$defs/promptRelation"
+        }
+      }
+    },
+    "artifactDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relative_path",
+        "sha256",
+        "bytes",
+        "row_count"
+      ],
+      "properties": {
+        "relative_path": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bytes": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        },
+        "row_count": {
+          "$ref": "#/$defs/nonNegativeInteger"
+        }
+      }
+    },
+    "a5PromptCensusManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "status",
+        "execution_sha",
+        "run_uid",
+        "population_count",
+        "task_counts",
+        "affected_task_counts",
+        "unaffected_task_counts",
+        "historical_choice_count_distribution",
+        "production_choice_count_distribution",
+        "affected_content_group_sha256",
+        "historical_to_production_anchor_map",
+        "production_prompt_token_count_distribution",
+        "production_certified_parent_count_distribution",
+        "production_logical_row_count_distribution",
+        "production_physical_chunk_count_distribution",
+        "unexpected_prompt_difference_count",
+        "missing_row_count",
+        "duplicate_row_count",
+        "canonical_semantic_stream_sha256",
+        "artifacts"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 7
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt"
+        },
+        "artifact_type": {
+          "const": "a5_prompt_census_manifest"
+        },
+        "status": {
+          "const": "COMPLETE_PRE_MODEL_CENSUS"
+        },
+        "execution_sha": {
+          "$ref": "#/$defs/gitSha40"
+        },
+        "run_uid": {
+          "type": "string",
+          "pattern": "^fpct-e1-a5-runtime-prompt-[0-9a-f]{8,40}-v1$"
+        },
+        "population_count": {
+          "const": 326
+        },
+        "task_counts": {
+          "$ref": "#/$defs/exactPopulationCounts"
+        },
+        "affected_task_counts": {
+          "$ref": "#/$defs/taskCounts"
+        },
+        "unaffected_task_counts": {
+          "$ref": "#/$defs/taskCounts"
+        },
+        "historical_choice_count_distribution": {
+          "$ref": "#/$defs/integerHistogram"
+        },
+        "production_choice_count_distribution": {
+          "$ref": "#/$defs/integerHistogram"
+        },
+        "affected_content_group_sha256": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/sha256"
+          }
+        },
+        "historical_to_production_anchor_map": {
+          "type": "array",
+          "minItems": 326,
+          "maxItems": 326,
+          "items": {
+            "$ref": "#/$defs/anchorMapping"
+          }
+        },
+        "production_prompt_token_count_distribution": {
+          "$ref": "#/$defs/distributionSummary"
+        },
+        "production_certified_parent_count_distribution": {
+          "$ref": "#/$defs/distributionSummary"
+        },
+        "production_logical_row_count_distribution": {
+          "$ref": "#/$defs/distributionSummary"
+        },
+        "production_physical_chunk_count_distribution": {
+          "$ref": "#/$defs/distributionSummary"
+        },
+        "unexpected_prompt_difference_count": {
+          "const": 0
+        },
+        "missing_row_count": {
+          "const": 0
+        },
+        "duplicate_row_count": {
+          "const": 0
+        },
+        "canonical_semantic_stream_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/artifactDescriptor"
+          }
+        }
+      }
+    },
+    "gateChecksTrue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "a4_streaming_oracles_pass",
+        "renderer_source_identity_attested",
+        "a5_instrumentation_reattestation_go",
+        "dual_anchor_tests_pass",
+        "full_population_fixture_tests_pass",
+        "prompt_classifier_tests_pass",
+        "streaming_semantic_replay_tests_pass",
+        "failure_corruption_atomicity_resume_tests_pass",
+        "four_choice_exact_pass",
+        "five_choice_gold_A_extra_E_pass",
+        "five_choice_gold_E_fail_closed_pass",
+        "first_four_order_change_fail_closed_pass",
+        "suffix_E_text_change_detected_pass",
+        "renderer_mismatch_fail_closed_pass",
+        "chunk_partition_semantic_equivalence_pass"
+      ],
+      "properties": {
+        "a4_streaming_oracles_pass": {
+          "const": true
+        },
+        "renderer_source_identity_attested": {
+          "const": true
+        },
+        "a5_instrumentation_reattestation_go": {
+          "const": true
+        },
+        "dual_anchor_tests_pass": {
+          "const": true
+        },
+        "full_population_fixture_tests_pass": {
+          "const": true
+        },
+        "prompt_classifier_tests_pass": {
+          "const": true
+        },
+        "streaming_semantic_replay_tests_pass": {
+          "const": true
+        },
+        "failure_corruption_atomicity_resume_tests_pass": {
+          "const": true
+        },
+        "four_choice_exact_pass": {
+          "const": true
+        },
+        "five_choice_gold_A_extra_E_pass": {
+          "const": true
+        },
+        "five_choice_gold_E_fail_closed_pass": {
+          "const": true
+        },
+        "first_four_order_change_fail_closed_pass": {
+          "const": true
+        },
+        "suffix_E_text_change_detected_pass": {
+          "const": true
+        },
+        "renderer_mismatch_fail_closed_pass": {
+          "const": true
+        },
+        "chunk_partition_semantic_equivalence_pass": {
+          "const": true
+        }
+      }
+    },
+    "streamingContractChecksTrue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "row_key_reference_equivalence",
+        "weights_reference_equivalence",
+        "topology_reference_equivalence",
+        "chunk_partition_semantic_equivalence",
+        "aggregate_partition_equivalence",
+        "bounded_peak_rss",
+        "atomic_no_overwrite",
+        "crash_resume_equivalence"
+      ],
+      "properties": {
+        "row_key_reference_equivalence": {"const": true},
+        "weights_reference_equivalence": {"const": true},
+        "topology_reference_equivalence": {"const": true},
+        "chunk_partition_semantic_equivalence": {"const": true},
+        "aggregate_partition_equivalence": {"const": true},
+        "bounded_peak_rss": {"const": true},
+        "atomic_no_overwrite": {"const": true},
+        "crash_resume_equivalence": {"const": true}
+      }
+    },
+    "trackedFilesSha256": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/sha256"
+      }
+    },
+    "streamingOracleCase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logical_rows",
+        "emitted_rows",
+        "semantic_stream_sha256",
+        "replay_semantic_stream_sha256",
+        "chunk_count",
+        "physical_file_bytes",
+        "max_physical_chunk_bytes",
+        "max_observed_canonical_row_bytes",
+        "peak_rss_bytes"
+      ],
+      "properties": {
+        "logical_rows": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "emitted_rows": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "semantic_stream_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "replay_semantic_stream_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "chunk_count": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "physical_file_bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "max_physical_chunk_bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "max_observed_canonical_row_bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "peak_rss_bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        }
+      }
+    },
+    "streamingStressEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "baseline",
+        "stress",
+        "threshold_bytes",
+        "bounded_peak_rss"
+      ],
+      "properties": {
+        "baseline": {
+          "$ref": "#/$defs/streamingOracleCase"
+        },
+        "stress": {
+          "$ref": "#/$defs/streamingOracleCase"
+        },
+        "threshold_bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "bounded_peak_rss": {
+          "const": true
+        }
+      }
+    },
+    "a5GateEnvironment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "python",
+        "python_executable",
+        "platform",
+        "machine",
+        "pyarrow",
+        "torch",
+        "transformers",
+        "tokenizers",
+        "datasets",
+        "pyyaml",
+        "cuda_visible_devices",
+        "offline",
+        "model_instantiated"
+      ],
+      "properties": {
+        "python": {
+          "type": "string",
+          "minLength": 1
+        },
+        "python_executable": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1
+        },
+        "machine": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pyarrow": {
+          "type": "string",
+          "minLength": 1
+        },
+        "torch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "transformers": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tokenizers": {
+          "type": "string",
+          "minLength": 1
+        },
+        "datasets": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pyyaml": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cuda_visible_devices": {
+          "const": ""
+        },
+        "offline": {
+          "const": true
+        },
+        "model_instantiated": {
+          "const": false
+        }
+      }
+    },
+    "a5PromptSyntheticGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "status",
+        "execution_tree_sha256",
+        "evidence_sha256",
+        "tracked_files_sha256",
+        "estimated_physical_bytes_per_row",
+        "streaming_stress",
+        "streaming_contract_checks",
+        "environment",
+        "environment_identity_sha256",
+        "historical_a4_gate_sha256",
+        "historical_a4_gate_verified_against_current_tree",
+        "tests",
+        "checks",
+        "natural_e0_design_accessed",
+        "model_instantiated",
+        "model_or_checkpoint_loaded",
+        "model_forward_run",
+        "gpu_or_kubernetes_used",
+        "e1_pilot_consumed"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 7
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt"
+        },
+        "artifact_type": {
+          "const": "a5_prompt_synthetic_gate"
+        },
+        "status": {
+          "const": "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE"
+        },
+        "execution_tree_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evidence_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "tracked_files_sha256": {
+          "$ref": "#/$defs/trackedFilesSha256"
+        },
+        "estimated_physical_bytes_per_row": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "streaming_stress": {
+          "$ref": "#/$defs/streamingStressEvidence"
+        },
+        "streaming_contract_checks": {
+          "$ref": "#/$defs/streamingContractChecksTrue"
+        },
+        "environment": {
+          "$ref": "#/$defs/a5GateEnvironment"
+        },
+        "environment_identity_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "historical_a4_gate_sha256": {
+          "const": "42b6c98fd5f27a49e258bae4b79ff3c4673c9144465a3c43f9a672d228c82df4"
+        },
+        "historical_a4_gate_verified_against_current_tree": {
+          "const": false
+        },
+        "tests": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "passed",
+            "failed",
+            "output_sha256"
+          ],
+          "properties": {
+            "passed": {
+              "$ref": "#/$defs/positiveInteger"
+            },
+            "failed": {
+              "const": 0
+            },
+            "output_sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "checks": {
+          "$ref": "#/$defs/gateChecksTrue"
+        },
+        "natural_e0_design_accessed": {
+          "const": false
+        },
+        "model_instantiated": {
+          "const": false
+        },
+        "model_or_checkpoint_loaded": {
+          "const": false
+        },
+        "model_forward_run": {
+          "const": false
+        },
+        "gpu_or_kubernetes_used": {
+          "const": false
+        },
+        "e1_pilot_consumed": {
+          "const": false
+        }
+      }
+    },
+    "goChecksTrue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "historical_projection_anchor_unchanged",
+        "e0_design_membership_unchanged",
+        "renderer_source_identity_attested",
+        "production_renderer_exactly_attested",
+        "production_data_tree_exactly_attested",
+        "all_326_groups_resolved",
+        "all_first4_choices_equal_historical",
+        "all_gold_answers_in_A_B_C_D",
+        "all_prompt_differences_classified",
+        "historical_to_runtime_mapping_complete",
+        "production_prompt_replay_equal",
+        "production_alignment_replay_equal",
+        "choice_order_preserved",
+        "raw_full_row_hashes_complete",
+        "logical_row_coverage_exact",
+        "streaming_semantic_replay_equal",
+        "bounded_peak_rss"
+      ],
+      "properties": {
+        "historical_projection_anchor_unchanged": {
+          "const": true
+        },
+        "e0_design_membership_unchanged": {
+          "const": true
+        },
+        "renderer_source_identity_attested": {
+          "const": true
+        },
+        "production_renderer_exactly_attested": {
+          "const": true
+        },
+        "production_data_tree_exactly_attested": {
+          "const": true
+        },
+        "all_326_groups_resolved": {
+          "const": true
+        },
+        "all_first4_choices_equal_historical": {
+          "const": true
+        },
+        "all_gold_answers_in_A_B_C_D": {
+          "const": true
+        },
+        "all_prompt_differences_classified": {
+          "const": true
+        },
+        "historical_to_runtime_mapping_complete": {
+          "const": true
+        },
+        "production_prompt_replay_equal": {
+          "const": true
+        },
+        "production_alignment_replay_equal": {
+          "const": true
+        },
+        "choice_order_preserved": {
+          "const": true
+        },
+        "raw_full_row_hashes_complete": {
+          "const": true
+        },
+        "logical_row_coverage_exact": {
+          "const": true
+        },
+        "streaming_semantic_replay_equal": {
+          "const": true
+        },
+        "bounded_peak_rss": {
+          "const": true
+        }
+      }
+    },
+    "firewallFalse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "old_execution_artifact_reused",
+        "whole_table_materialization_detected",
+        "model_instantiated",
+        "model_or_checkpoint_loaded",
+        "model_forward_run",
+        "gpu_or_kubernetes_used",
+        "e1_pilot_consumed",
+        "confirmatory_consumed"
+      ],
+      "properties": {
+        "old_execution_artifact_reused": {
+          "const": false
+        },
+        "whole_table_materialization_detected": {
+          "const": false
+        },
+        "model_instantiated": {
+          "const": false
+        },
+        "model_or_checkpoint_loaded": {
+          "const": false
+        },
+        "model_forward_run": {
+          "const": false
+        },
+        "gpu_or_kubernetes_used": {
+          "const": false
+        },
+        "e1_pilot_consumed": {
+          "const": false
+        },
+        "confirmatory_consumed": {
+          "const": false
+        }
+      }
+    },
+    "zeroCounts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "unexpected_prompt_difference_count",
+        "missing_rows",
+        "duplicate_rows"
+      ],
+      "properties": {
+        "unexpected_prompt_difference_count": {
+          "const": 0
+        },
+        "missing_rows": {
+          "const": 0
+        },
+        "duplicate_rows": {
+          "const": 0
+        }
+      }
+    },
+    "a5InputLockGoReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "status",
+        "execution_sha",
+        "run_uid",
+        "run_root",
+        "source_snapshot_receipt_sha256",
+        "prompt_census_manifest_sha256",
+        "checks",
+        "firewall",
+        "zero_counts",
+        "resume_from_group_one",
+        "downstream_e1_2_authorized"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 7
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt"
+        },
+        "artifact_type": {
+          "const": "a5_input_lock_receipt"
+        },
+        "status": {
+          "const": "A5_INPUT_LOCK_GO"
+        },
+        "execution_sha": {
+          "$ref": "#/$defs/gitSha40"
+        },
+        "run_uid": {
+          "type": "string",
+          "pattern": "^fpct-e1-a5-runtime-prompt-[0-9a-f]{8,40}-v1$"
+        },
+        "run_root": {
+          "type": "string",
+          "pattern": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5-[0-9a-f]{8,40}-v1$"
+        },
+        "source_snapshot_receipt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "prompt_census_manifest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "checks": {
+          "$ref": "#/$defs/goChecksTrue"
+        },
+        "firewall": {
+          "$ref": "#/$defs/firewallFalse"
+        },
+        "zero_counts": {
+          "$ref": "#/$defs/zeroCounts"
+        },
+        "resume_from_group_one": {
+          "const": true
+        },
+        "downstream_e1_2_authorized": {
+          "const": false
+        }
+      }
+    },
+    "a5InputLockBlockedReceipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "status",
+        "execution_sha",
+        "run_uid",
+        "run_root",
+        "failed_check",
+        "failure_detail_sha256",
+        "resume_allowed",
+        "artifact_reuse_allowed",
+        "scientific_result",
+        "downstream_e1_2_or_e1_3_authorized"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 7
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt"
+        },
+        "artifact_type": {
+          "const": "a5_input_lock_blocked_receipt"
+        },
+        "status": {
+          "const": "A5_INPUT_LOCK_BLOCKED"
+        },
+        "execution_sha": {
+          "$ref": "#/$defs/gitSha40"
+        },
+        "run_uid": {
+          "type": "string",
+          "pattern": "^fpct-e1-a5-runtime-prompt-[0-9a-f]{8,40}-v1$"
+        },
+        "run_root": {
+          "type": "string",
+          "pattern": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5-[0-9a-f]{8,40}-v1$"
+        },
+        "failed_check": {
+          "type": "string",
+          "minLength": 1
+        },
+        "failure_detail_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "resume_allowed": {
+          "const": false
+        },
+        "artifact_reuse_allowed": {
+          "const": false
+        },
+        "scientific_result": {
+          "const": false
+        },
+        "downstream_e1_2_or_e1_3_authorized": {
+          "const": false
+        }
+      }
+    },
+    "a5BoundArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "bytes",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "a5SidecarBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contract_version",
+        "path",
+        "bytes",
+        "file_sha256",
+        "semantic_sha256",
+        "item_count",
+        "expanded_logical_rows_present"
+      ],
+      "properties": {
+        "contract_version": {
+          "const": 3
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bytes": {
+          "$ref": "#/$defs/positiveInteger"
+        },
+        "file_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "semantic_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "item_count": {
+          "const": 326
+        },
+        "expanded_logical_rows_present": {
+          "const": false
+        }
+      }
+    },
+    "a5CensusBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "manifest",
+        "records",
+        "record_count",
+        "canonical_semantic_stream_sha256"
+      ],
+      "properties": {
+        "manifest": {
+          "$ref": "#/$defs/a5BoundArtifact"
+        },
+        "records": {
+          "$ref": "#/$defs/a5BoundArtifact"
+        },
+        "record_count": {
+          "const": 326
+        },
+        "canonical_semantic_stream_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "a5ExecutionBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "execution_sha",
+        "run_uid",
+        "run_root",
+        "source_snapshot_receipt_sha256",
+        "source_snapshot_tree_sha256"
+      ],
+      "properties": {
+        "execution_sha": {
+          "$ref": "#/$defs/gitSha40"
+        },
+        "run_uid": {
+          "type": "string",
+          "pattern": "^fpct-e1-a5-runtime-prompt-[0-9a-f]{8}-v1$"
+        },
+        "run_root": {
+          "type": "string",
+          "pattern": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5-[0-9a-f]{8}-v1$"
+        },
+        "source_snapshot_receipt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "source_snapshot_tree_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "a5ProvenanceBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "renderer_source_identity_sha256",
+        "prompt_config_identity_sha256",
+        "runtime_prompt_assets_sha256",
+        "materialized_e0_dev_data_tree_sha256",
+        "input_assets_before_sha256",
+        "input_assets_after_sha256",
+        "input_assets_unchanged"
+      ],
+      "properties": {
+        "renderer_source_identity_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "prompt_config_identity_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "runtime_prompt_assets_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "materialized_e0_dev_data_tree_sha256": {
+          "const": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73"
+        },
+        "input_assets_before_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_assets_after_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_assets_unchanged": {
+          "const": true
+        }
+      }
+    },
+    "a5StreamingBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol_id",
+        "schema_sha256",
+        "physical_chunk_rows",
+        "synthetic_gate_sha256",
+        "geometry_lock_receipt_sha256",
+        "streaming_template_lock_receipt_sha256",
+        "logical_row_coverage_exact",
+        "streaming_semantic_replay_equal",
+        "whole_table_materialization_detected"
+      ],
+      "properties": {
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+        },
+        "schema_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "physical_chunk_rows": {
+          "const": 4096
+        },
+        "synthetic_gate_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "geometry_lock_receipt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "streaming_template_lock_receipt_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "logical_row_coverage_exact": {
+          "const": true
+        },
+        "streaming_semantic_replay_equal": {
+          "const": true
+        },
+        "whole_table_materialization_detected": {
+          "const": false
+        }
+      }
+    },
+    "a5ManifestFirewall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "old_execution_artifact_reused",
+        "model_instantiated",
+        "model_or_checkpoint_loaded",
+        "model_forward_run",
+        "gpu_or_cuda_used",
+        "kubernetes_used",
+        "training",
+        "e1_pilot_consumed",
+        "confirmatory_consumed"
+      ],
+      "properties": {
+        "old_execution_artifact_reused": {
+          "const": false
+        },
+        "model_instantiated": {
+          "const": false
+        },
+        "model_or_checkpoint_loaded": {
+          "const": false
+        },
+        "model_forward_run": {
+          "const": false
+        },
+        "gpu_or_cuda_used": {
+          "const": false
+        },
+        "kubernetes_used": {
+          "const": false
+        },
+        "training": {
+          "const": false
+        },
+        "e1_pilot_consumed": {
+          "const": false
+        },
+        "confirmatory_consumed": {
+          "const": false
+        }
+      }
+    },
+    "a5InputLockManifest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "status",
+        "split_role",
+        "execution",
+        "task_counts",
+        "provenance",
+        "census",
+        "sidecar",
+        "streaming",
+        "hard_gate_checks",
+        "zero_counts",
+        "firewall",
+        "e1_2_or_e1_3_authorized"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 7
+        },
+        "protocol_id": {
+          "const": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt"
+        },
+        "artifact_type": {
+          "const": "a5_input_lock_manifest"
+        },
+        "status": {
+          "const": "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT"
+        },
+        "split_role": {
+          "const": "e0_design"
+        },
+        "execution": {
+          "$ref": "#/$defs/a5ExecutionBinding"
+        },
+        "task_counts": {
+          "$ref": "#/$defs/exactPopulationCounts"
+        },
+        "provenance": {
+          "$ref": "#/$defs/a5ProvenanceBinding"
+        },
+        "census": {
+          "$ref": "#/$defs/a5CensusBinding"
+        },
+        "sidecar": {
+          "$ref": "#/$defs/a5SidecarBinding"
+        },
+        "streaming": {
+          "$ref": "#/$defs/a5StreamingBinding"
+        },
+        "hard_gate_checks": {
+          "$ref": "#/$defs/goChecksTrue"
+        },
+        "zero_counts": {
+          "$ref": "#/$defs/zeroCounts"
+        },
+        "firewall": {
+          "$ref": "#/$defs/a5ManifestFirewall"
+        },
+        "e1_2_or_e1_3_authorized": {
+          "const": false
+        }
+      }
+    }
+  }
+}

@@ -495,3 +495,39 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - Root cause：historical anchor 从 first-four label-free projection 渲染 A-D；materialized production row 保留额外 E 选项，真实 E0/A4 formatter 遍历完整 choices。该差异与 A4 streaming、operator 或 mechanism 无关。
 - Persistent outputs：仅 execution identity 与 generic blocked receipt；`0` usable input sidecar/manifest/templates/raw/runtime/plan，`0` model/checkpoint load/forward，`0` GPU/K8s/training。E1-pilot 与 confirmatory 继续 sealed。
 - Disposition：run root 永久 abandoned，resume/reuse=`false`。下一步=`HUMAN REVIEW REQUIRED`；未批准的候选合同为 strict historical first-four anchor 或 actual E0 production-runtime prompt。不得在同一 execution 自动选择、放宽或重跑。
+
+### 2026-07-28 FPCT-E1 A5 production-prompt prospective experiment lock
+
+- Human decision：
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5_RUNTIME_PROMPT`；operative input=
+  `ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT`。First-four 仅保留为 immutable
+  selection/content-group/provenance anchor。
+- Population：E0-design 326 groups，ARC/OpenBookQA/MMLU-Redux=`128/70/128`；
+  membership、answers、checkpoints、operators、lambda grid、estimands 与
+  statistical weights 不变。E1-pilot 和 confirmatory 全部 sealed。
+- Planned no-model experiment：从 group 1 对完整 population 生成双锚点 census，
+  每 row 记录 historical/production choice counts、raw labels/gold、first4/full
+  raw/prompt/alignment hashes、production token/certified-parent/logical-row/chunk
+  geometry。Classifier 只允许 exact match 或 extra choices only；question、前四
+  text/order、gold A-D、template/whitespace 或唯一映射异常均 fail-closed。
+- Pre-natural gate：新 gate path=
+  `recipe/eval_recipe/fpct_e1/e1_a5_prompt_synthetic_gate.json`，必须重新运行
+  A4 streaming oracles、A5 instrumentation、dual-anchor/classifier/partition/
+  corruption tests。Historical A4 gate 保持只读，不对 A5 current tree 重验。
+- Pre-natural result：A5 gate=`GO`；`248 passed / 0 failed`。Gate artifact /
+  evidence SHA256=`464e646c336d33c97a03c603d283a95b1579508d63ae0f19d7c700ccf2dcfc02`
+  / `2fc5c70da231cfd0aba54656c5a34ff142594208f4a006348f73607559af4a47`。
+  Million-row stress=`1,000,384` logical/emitted rows、245 chunks、semantic replay
+  exact，peak RSS=`676,200,448 B` < frozen threshold=`812,384,256 B`。此 gate
+  明确记录 natural E0-design access=false、model instantiated/forward=false。
+  326-group affected count、choice/token/alignment/topology/row geometry 仍未知，
+  必须等待 clean push 后的新 execution 从 group 1 生成。
+- 先前未提交的 gates `6dc44be9...` / `b116670b...` 分别因 source closure
+  不完整与 tracked amendment Markdown 空白清理而在自然数据前失效，原字节隔离到
+  `local/fpct_e1/a5_precommit_invalidated/`；它不属于正式结果。随后补齐
+  source-snapshot producer、真实 A5 gate-shape 与 producer/verifier 回归后，
+  从头重跑得到上述 operative gate。
+- Execution firewall：`07755a40` 永久 abandoned；A5 要求新 clean pushed
+  commit、immutable snapshot、UID/root。当前未进行 A5 natural census/input
+  lock，未加载 model/checkpoint，未运行 forward、GPU、Kubernetes、training、
+  E1-2/E1-3，未访问 E1-pilot/confirmatory。

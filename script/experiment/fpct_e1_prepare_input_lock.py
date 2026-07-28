@@ -36,10 +36,10 @@ def _early_main_bootstrap_guard() -> None:
         root = Path(sys.argv[root_index])
     except (IndexError, ValueError) as exc:
         raise RuntimeError(
-            "formal A4 prepare requires --source-snapshot-root under bootstrap"
+            "formal A5 prepare requires --source-snapshot-root under bootstrap"
         ) from exc
     if not root.is_absolute() or root.resolve(strict=True) != root:
-        raise RuntimeError("formal A4 prepare source snapshot must be a realpath")
+        raise RuntimeError("formal A5 prepare source snapshot must be a realpath")
     bootstrap = sys.modules.get("fpct_bootstrap")
     if bootstrap is None:
         try:
@@ -48,7 +48,7 @@ def _early_main_bootstrap_guard() -> None:
             bootstrap = None
     if bootstrap is None:
         raise RuntimeError(
-            "formal A4 prepare requires canonical python -I fpct_bootstrap.py"
+            "formal A5 prepare requires canonical python -I fpct_bootstrap.py"
         )
     bootstrap_path = Path(str(getattr(bootstrap, "__file__", ""))).absolute()
     expected_bootstrap = root / "script/runtime/fpct_bootstrap.py"
@@ -105,28 +105,59 @@ from script.analysis.fpct_e1_streaming_verify import (
     verify_parquet_stream_artifact,
     write_parquet_stream_artifact,
 )
+from script.experiment.fpct_e1_a5_prompt_provenance import (
+    A5_PROTOCOL_ID,
+    EXTRA_CHOICES_ONLY,
+    HISTORICAL_EXACT,
+    attest_e0_renderer_identity,
+    build_census_manifest,
+    dual_anchor_record,
+    full_question_choices,
+    historical_projected_example,
+    raw_full_row_sha256,
+    summarize_dual_anchor_census,
+)
 
 
-SCHEMA_VERSION = 2
-PROTOCOL_ID = "fpct_e1_e0_design_input_lock_v2_streaming"
+SCHEMA_VERSION = 3
+PROTOCOL_ID = "fpct_e1_e0_design_input_lock_v3_actual_runtime_prompt"
 EXPECTED_RECEIVER_LAYERS = 28
 EXPECTED_QUERY_HEADS = 16
 HISTORICAL_MAX_LONG_FORM_ROWS_PER_SAMPLE = 262144
-A4_PROTOCOL_ID = "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+A4_STREAMING_PROTOCOL_ID = (
+    "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"
+)
+# Backwards-compatible symbol for the unchanged representation-only streaming
+# sub-contract.  A5 never consumes the old A4 tracked-tree GO receipt.
+A4_PROTOCOL_ID = A4_STREAMING_PROTOCOL_ID
 A4_STREAMING_SCHEMA_RELATIVE = Path(
     "recipe/eval_recipe/fpct_e1/e1_streaming_schema.json"
 )
-A4_SYNTHETIC_GATE_RELATIVE = Path(
+A4_HISTORICAL_SYNTHETIC_GATE_RELATIVE = Path(
     "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json"
+)
+A5_PROMPT_CONTRACT_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/e1_a5_prompt_contract.json"
+)
+A5_PROMPT_SCHEMA_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/e1_a5_prompt_schema.json"
+)
+A5_SYNTHETIC_GATE_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/e1_a5_prompt_synthetic_gate.json"
 )
 SOURCE_SNAPSHOT_RECEIPT_NAME = ".fpct_e1_source_snapshot_receipt.json"
 INPUT_LOCK_ROOT_NAME = "input_lock"
-RUN_UID_TEMPLATE = "fpct-e1-a4-streaming-{prefix}-v1"
-RUN_ROOT_TEMPLATE = "fpct-e1-a4-{prefix}-v1"
-HISTORICAL_EXECUTION_PREFIXES = frozenset(("744a943", "d1698177", "612697df"))
+RUN_UID_TEMPLATE = "fpct-e1-a5-runtime-prompt-{prefix}-v1"
+RUN_ROOT_TEMPLATE = "fpct-e1-a5-{prefix}-v1"
+HISTORICAL_EXECUTION_PREFIXES = frozenset(
+    ("744a943", "d1698177", "612697df", "07755a40")
+)
 EXECUTION_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
-BLOCKED_RECEIPT_NAME = "A4_INPUT_LOCK_BLOCKED.json"
-RUN_IDENTITY_NAME = "a4_input_lock_execution_identity.json"
+BLOCKED_RECEIPT_NAME = "A5_INPUT_LOCK_BLOCKED.json"
+GO_RECEIPT_NAME = "A5_INPUT_LOCK_GO.json"
+RUN_IDENTITY_NAME = "a5_input_lock_execution_identity.json"
+PROMPT_CENSUS_NAME = "a5_prompt_census_manifest.json"
+PROMPT_CENSUS_RECORDS_NAME = "a5_prompt_census_records.jsonl"
 
 SEALED_PREPARE_SOURCE_CLOSURE = {
     "capture_runner": Path("script/experiment/fpct_e1_capture_runner.py"),
@@ -254,7 +285,7 @@ def _require_sealed_prepare_execution(
         if "PYTEST_CURRENT_TEST" not in os.environ or test_sentinel != expected:
             raise RuntimeError("invalid test-only sealed-prepare sentinel")
         return {
-            "protocol_id": "fpct_e1_a4_test_only_sealed_prepare_v1",
+            "protocol_id": "fpct_e1_a5_test_only_sealed_prepare_v1",
             "repo_root": str(snapshot),
             "execution_sha": execution_sha,
             "pytest_verified_test_sentinel": True,
@@ -277,7 +308,7 @@ def _require_sealed_prepare_execution(
             bootstrap = None
     if bootstrap is None:
         raise RuntimeError(
-            "formal A4 prepare requires canonical python -I fpct_bootstrap.py"
+            "formal A5 prepare requires canonical python -I fpct_bootstrap.py"
         )
     bootstrap_origin = _canonical_regular_file(
         Path(str(getattr(bootstrap, "__file__", ""))),
@@ -289,7 +320,7 @@ def _require_sealed_prepare_execution(
         attestation = bootstrap.require_active(target=target)
     except Exception as exc:
         raise RuntimeError(
-            "formal A4 prepare requires the active bootstrap sentinel"
+            "formal A5 prepare requires the active bootstrap sentinel"
         ) from exc
     if not isinstance(attestation, Mapping):
         raise RuntimeError("sealed prepare bootstrap attestation is malformed")
@@ -367,7 +398,7 @@ def _require_sealed_prepare_execution(
             ) from exc
 
     return {
-        "protocol_id": "fpct_e1_a4_sealed_prepare_execution_v1",
+        "protocol_id": "fpct_e1_a5_sealed_prepare_execution_v1",
         "repo_root": str(snapshot),
         "execution_sha": execution_sha,
         "bootstrap": {
@@ -1128,8 +1159,93 @@ def runtime_asset_tree(path: Path) -> dict[str, Any]:
     }
 
 
-def portable_runtime_asset_tree(record: Mapping[str, Any]) -> dict[str, Any]:
+A5_TOKENIZER_ONLY_ALLOWLIST = (
+    "added_tokens.json",
+    "chat_template.jinja",
+    "config.json",
+    "generation_config.json",
+    "merges.txt",
+    "special_tokens_map.json",
+    "tokenizer.json",
+    "tokenizer.model",
+    "tokenizer_config.json",
+    "vocab.json",
+)
+A5_FORBIDDEN_WEIGHT_SUFFIXES = (".safetensors", ".bin", ".pt", ".pth")
+
+
+def tokenizer_runtime_asset_tree(path: Path) -> dict[str, Any]:
+    """Hash only prompt/tokenizer/config assets; never open weight/checkpoint files."""
+
+    requested = path.absolute()
+    if not requested.exists():
+        raise FileNotFoundError(requested)
+    root_is_symlink = requested.is_symlink()
+    root_link_target = os.readlink(requested) if root_is_symlink else None
+    resolved = requested.resolve(strict=True)
+    if not resolved.is_dir():
+        raise ValueError("A5 tokenizer asset root is not a directory")
+    files: list[dict[str, Any]] = []
+    for name in A5_TOKENIZER_ONLY_ALLOWLIST:
+        candidate = resolved / name
+        try:
+            mode = candidate.lstat().st_mode
+        except FileNotFoundError:
+            continue
+        if stat.S_ISLNK(mode):
+            target_text = os.readlink(candidate)
+            target = candidate.resolve(strict=True)
+            if not target.is_file() or target.is_symlink():
+                raise ValueError(
+                    f"A5 tokenizer symlink does not resolve to a regular file: {name}"
+                )
+            kind = "symlink_file"
+            digest_path = target
+            symlink_target = target_text
+        elif stat.S_ISREG(mode):
+            kind = "file"
+            digest_path = candidate
+            symlink_target = None
+        else:
+            raise ValueError(f"A5 tokenizer asset is not a regular file: {name}")
+        files.append(
+            {
+                "relative_path": name,
+                "kind": kind,
+                "symlink_target": symlink_target,
+                "bytes": digest_path.stat().st_size,
+                "sha256": sha256_file(digest_path),
+            }
+        )
+    names = {record["relative_path"] for record in files}
+    if not {"config.json", "tokenizer.json", "tokenizer_config.json"}.issubset(
+        names
+    ):
+        raise ValueError("A5 tokenizer-only asset tree lacks required files")
+    if any(
+        record["relative_path"].endswith(A5_FORBIDDEN_WEIGHT_SUFFIXES)
+        for record in files
+    ):
+        raise AssertionError("A5 tokenizer-only asset walker admitted a weight file")
+    portable = {
+        "root_kind": "symlink_dir" if root_is_symlink else "directory",
+        "root_symlink_target": root_link_target,
+        "asset_scope": "tokenizer_config_chat_template_only_no_weights",
+        "weight_or_checkpoint_file_opened": False,
+        "files": sorted(files, key=lambda record: record["relative_path"]),
+    }
     return {
+        "requested_path": str(requested),
+        "resolved_path": str(resolved),
+        **portable,
+        "file_count": len(files),
+        "bytes": sum(int(record["bytes"]) for record in files),
+        "tree_sha256": nested_sha256(portable),
+    }
+
+
+def portable_runtime_asset_tree(record: Mapping[str, Any]) -> dict[str, Any]:
+    portable = {
         "root_kind": record["root_kind"],
         "root_symlink_target": record.get("root_symlink_target"),
         "files": record["files"],
@@ -1137,6 +1253,12 @@ def portable_runtime_asset_tree(record: Mapping[str, Any]) -> dict[str, Any]:
         "bytes": int(record["bytes"]),
         "tree_sha256": record["tree_sha256"],
     }
+    if "asset_scope" in record:
+        portable["asset_scope"] = record["asset_scope"]
+        portable["weight_or_checkpoint_file_opened"] = record.get(
+            "weight_or_checkpoint_file_opened"
+        )
+    return portable
 
 
 def _generic_asset_tree(path: Path) -> dict[str, Any]:
@@ -1199,7 +1321,10 @@ def input_asset_state(
 
     tracked_relatives = (
         A4_STREAMING_SCHEMA_RELATIVE,
-        A4_SYNTHETIC_GATE_RELATIVE,
+        A4_HISTORICAL_SYNTHETIC_GATE_RELATIVE,
+        A5_PROMPT_CONTRACT_RELATIVE,
+        A5_PROMPT_SCHEMA_RELATIVE,
+        A5_SYNTHETIC_GATE_RELATIVE,
         Path("recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"),
         E0_DEV_MANIFEST_RELATIVE,
         Path("recipe/eval_recipe/fpct_e0/rendered/eval_2026072201_Y_FF_ai2-arc.yaml"),
@@ -1229,7 +1354,245 @@ def input_asset_state(
     return {**payload, "aggregate_sha256": nested_sha256(payload)}
 
 
-def validate_a4_execution_identity(
+def _load_a5_prompt_contract(repo_root: Path) -> dict[str, Any]:
+    path = repo_root / A5_PROMPT_CONTRACT_RELATIVE
+    contract = json.loads(path.read_text(encoding="utf-8"))
+    if (
+        contract.get("schema_version") != 7
+        or contract.get("protocol_id") != A5_PROTOCOL_ID
+        or contract.get("amendment_id")
+        != "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5_RUNTIME_PROMPT"
+        or contract.get("approval", {}).get("selected_option")
+        != "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT"
+    ):
+        raise ValueError("A5 prompt contract identity/approval is invalid")
+    population = contract.get("population", {})
+    if (
+        population.get("distinct_content_groups") != 326
+        or population.get("task_order") != list(TASKS)
+        or population.get("task_counts") != TASK_GROUP_COUNTS
+        or population.get("start_group_ordinal_one_based") != 1
+        or population.get("old_group_161_resume_allowed") is not False
+    ):
+        raise ValueError("A5 prompt contract population/order changed")
+    gate = contract.get("a5_pre_natural_gate", {})
+    if gate.get("path") != A5_SYNTHETIC_GATE_RELATIVE.as_posix():
+        raise ValueError("A5 prompt contract synthetic-gate path changed")
+    return contract
+
+
+def _verify_all_e0_prompt_configs(
+    repo_root: Path, contract: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Bind every rendered E0 evaluation config, not one convenient cell."""
+
+    index_path = repo_root / "recipe/eval_recipe/fpct_e0/rendered/config_index.json"
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    oracle = contract["e0_renderer_oracle"]
+    if sha256_file(index_path) != oracle["config_index_sha256"]:
+        raise ValueError("A5 E0 rendered config index SHA changed")
+    if index.get("bundle_sha256") != oracle["rendered_config_bundle_sha256"]:
+        raise ValueError("A5 E0 rendered config bundle SHA changed")
+    records = [row for row in index.get("records", []) if row.get("kind") == "evaluation"]
+    if len(records) != 36:
+        raise ValueError("A5 expected exactly 36 E0 evaluation configs")
+    expected_cells = {"Y_CC", "Y_CF", "Y_FC", "Y_FF"}
+    expected_seeds = {2026072201, 2026072202, 2026072203}
+    expected_keys = {
+        (seed, cell, task)
+        for seed in expected_seeds
+        for cell in expected_cells
+        for task in TASKS
+    }
+    observed_keys = {
+        (int(row.get("seed", -1)), str(row.get("cell")), str(row.get("task")))
+        for row in records
+    }
+    if observed_keys != expected_keys:
+        raise ValueError("A5 E0 evaluation config seed/cell/task universe changed")
+    prompt_projection: dict[str, Any] | None = None
+    verified: list[dict[str, Any]] = []
+    for record in records:
+        path = index_path.parent / str(record.get("filename", ""))
+        if not path.is_file() or sha256_file(path) != record.get("sha256"):
+            raise ValueError("A5 E0 rendered evaluation config SHA changed")
+        value = yaml.safe_load(path.read_text(encoding="utf-8"))
+        rosetta = value.get("model", {}).get("rosetta_config", {})
+        projection = {
+            "use_cot": value.get("eval", {}).get("use_cot"),
+            "use_template": value.get("eval", {}).get("use_template"),
+            "answer_method": value.get("eval", {}).get("answer_method"),
+            "do_sample": value.get("model", {})
+            .get("generation_config", {})
+            .get("do_sample"),
+            "enable_thinking": False,
+            "base_model": rosetta.get("base_model"),
+            "teacher_model": rosetta.get("teacher_model"),
+            "alignment_strategy": rosetta.get("alignment_strategy"),
+            "soft_alignment_top_k": rosetta.get("soft_alignment_top_k"),
+            "soft_alignment_score_mode": rosetta.get("soft_alignment_score_mode"),
+            "soft_alignment_min_weight": rosetta.get("soft_alignment_min_weight"),
+            "candidate_window": rosetta.get(
+                "soft_alignment_candidate_window", 0
+            ),
+            "soft_alignment_boundary_bonus": rosetta.get(
+                "soft_alignment_boundary_bonus"
+            ),
+            "soft_alignment_boundary_tolerance": rosetta.get(
+                "soft_alignment_boundary_tolerance"
+            ),
+            "fpct_alignment_sanitizer": rosetta.get("fpct_alignment_sanitizer"),
+            "include_response": rosetta.get("include_response"),
+            "attn_implementation": rosetta.get("attn_implementation"),
+        }
+        if projection != oracle["canonical_prompt_alignment_config_projection"]:
+            raise ValueError("A5 E0 prompt-relevant evaluation config changed")
+        if prompt_projection is None:
+            prompt_projection = projection
+        elif projection != prompt_projection:
+            raise ValueError("A5 E0 evaluation configs disagree on prompt semantics")
+        verified.append(
+            {
+                "filename": path.name,
+                "sha256": record["sha256"],
+                "task": record["task"],
+                "seed": record["seed"],
+                "cell": record["cell"],
+            }
+        )
+    records_sha256 = nested_sha256(verified)
+    if records_sha256 != oracle["ordered_evaluation_config_records_sha256"]:
+        raise ValueError("A5 ordered E0 evaluation config record SHA changed")
+    return {
+        "config_index_sha256": sha256_file(index_path),
+        "rendered_config_bundle_sha256": index["bundle_sha256"],
+        "evaluation_config_count": len(verified),
+        "prompt_projection": prompt_projection,
+        "enable_thinking": False,
+        "records_sha256": records_sha256,
+    }
+
+
+def _tokenizer_file_record(
+    runtime_asset: Mapping[str, Any], relative_path: str
+) -> Mapping[str, Any]:
+    matches = [
+        row
+        for row in runtime_asset.get("files", [])
+        if row.get("relative_path") == relative_path
+    ]
+    if len(matches) != 1:
+        raise ValueError(f"A5 tokenizer asset is missing/ambiguous: {relative_path}")
+    return matches[0]
+
+
+def _tokenizer_bundle_sha256(path: Path) -> str:
+    allowed = (
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "tokenizer.model",
+        "special_tokens_map.json",
+        "vocab.json",
+        "merges.txt",
+        "config.json",
+        "generation_config.json",
+    )
+    files = [path / name for name in allowed if (path / name).is_file()]
+    if not files:
+        raise ValueError("A5 tokenizer bundle has no frozen files")
+    digest = hashlib.sha256()
+    for path in sorted(files, key=lambda value: value.name):
+        digest.update(path.name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(bytes.fromhex(sha256_file(path)))
+    return digest.hexdigest()
+
+
+def _attest_a5_runtime_assets(
+    *,
+    contract: Mapping[str, Any],
+    runtime_assets: Mapping[str, Mapping[str, Any]],
+    receiver: Any,
+    sender: Any,
+    e0_data_tree_sha256: str,
+) -> dict[str, Any]:
+    assets = contract["asset_identity"]
+    if e0_data_tree_sha256 != assets["materialized_e0_dev_data_tree_sha256"]:
+        raise ValueError("A5 materialized E0 development tree SHA changed")
+    expected = {
+        "receiver": assets["receiver"],
+        "sender": assets["sender"],
+    }
+    required_files = {
+        "receiver": {
+            "tokenizer.json": expected["receiver"]["tokenizer_json_sha256"],
+            "tokenizer_config.json": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+        },
+        "sender": {
+            "tokenizer.json": expected["sender"]["tokenizer_json_sha256"],
+            "tokenizer.model": expected["sender"]["tokenizer_model_sha256"],
+            "tokenizer_config.json": "7b41ba7d0eb91e77914ca3dafde559ea3e19878769b7e68409e89bed5222e77a",
+        },
+    }
+    expected_bundles = {
+        "receiver": "d2a315d4ca46d73b53ef973f5eda2561daf90a848e07779fac19ce9761f714be",
+        "sender": "5a1a4d8005b2377b26f425fc64322ebcb22e898f8d81c603875eec5f8083809b",
+    }
+    expected_templates = {
+        "receiver": (
+            4168,
+            "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8",
+        ),
+        "sender": (
+            410,
+            "66291cf0045c2425a3a667cf3cbb7af2b11f09e025c02f97245323ab79119362",
+        ),
+    }
+    result: dict[str, Any] = {}
+    for role, tokenizer in (("receiver", receiver), ("sender", sender)):
+        asset = runtime_assets[role]
+        if asset.get("model_id") != expected[role]["name"]:
+            raise ValueError(f"A5 {role} tokenizer model ID changed")
+        resolved = str(asset.get("resolved_path", ""))
+        revision = str(expected[role]["revision"])
+        resolved_path = Path(resolved)
+        bundle_sha256 = _tokenizer_bundle_sha256(resolved_path)
+        if bundle_sha256 != expected_bundles[role]:
+            raise ValueError(f"A5 {role} tokenizer bundle SHA changed")
+        files = {}
+        for relative, digest in required_files[role].items():
+            record = _tokenizer_file_record(asset, relative)
+            if record.get("sha256") != digest:
+                raise ValueError(f"A5 {role} {relative} SHA changed")
+            files[relative] = digest
+        chat_template = getattr(tokenizer, "chat_template", None)
+        if not isinstance(chat_template, str) or not chat_template:
+            raise ValueError(f"A5 {role} chat template is missing")
+        template_bytes = chat_template.encode("utf-8")
+        if (
+            len(template_bytes),
+            _sha256_bytes(template_bytes),
+        ) != expected_templates[role]:
+            raise ValueError(f"A5 {role} decoded chat-template bytes changed")
+        result[role] = {
+            "model_id": asset["model_id"],
+            "revision": revision,
+            "revision_resolution": "exact_frozen_tokenizer_bundle",
+            "tree_sha256": asset["tree_sha256"],
+            "tokenizer_bundle_sha256": bundle_sha256,
+            "files": files,
+            "chat_template_bytes": len(template_bytes),
+            "chat_template_sha256": _sha256_bytes(template_bytes),
+        }
+    return {
+        "production_data_tree_exactly_attested": True,
+        "materialized_e0_dev_data_tree_sha256": e0_data_tree_sha256,
+        "tokenizers": result,
+        "enable_thinking": False,
+    }
+
+
+def validate_a5_execution_identity(
     *,
     execution_sha: str,
     source_snapshot_root: Path,
@@ -1240,8 +1603,9 @@ def validate_a4_execution_identity(
     output_sidecar_name: str = "e0_design_input_sidecar.pt",
     output_manifest_name: str = "e0_design_input_manifest.json",
     sealed_prepare_execution: Mapping[str, Any] | None = None,
+    _test_only_run_parent: Path | None = None,
 ) -> dict[str, Any]:
-    """Bind input lock to one clean successor snapshot and never an old run."""
+    """Bind input lock to one fresh A5 snapshot and never an A4 artifact."""
 
     if not EXECUTION_SHA_PATTERN.fullmatch(execution_sha):
         raise ValueError("execution_sha must be one lowercase 40-character Git SHA")
@@ -1249,16 +1613,29 @@ def validate_a4_execution_identity(
     if any(execution_sha.startswith(old) for old in HISTORICAL_EXECUTION_PREFIXES):
         raise ValueError("historical abandoned execution identity is forbidden")
     if run_uid != RUN_UID_TEMPLATE.format(prefix=prefix):
-        raise ValueError("run_uid does not match the A4 execution SHA")
+        raise ValueError("run_uid does not match the A5 execution SHA")
     run_root_absolute = run_root.absolute()
     if (
         not run_root_absolute.is_dir()
         or run_root_absolute.is_symlink()
         or run_root_absolute.resolve(strict=True) != run_root_absolute
     ):
-        raise ValueError("A4 run root must be an existing non-symlink directory")
+        raise ValueError("A5 run root must be an existing non-symlink directory")
     if run_root_absolute.name != RUN_ROOT_TEMPLATE.format(prefix=prefix):
-        raise ValueError("run root basename does not match the A4 execution SHA")
+        raise ValueError("run root basename does not match the A5 execution SHA")
+    if _test_only_run_parent is not None:
+        if (
+            "PYTEST_CURRENT_TEST" not in os.environ
+            or not isinstance(sealed_prepare_execution, Mapping)
+            or sealed_prepare_execution.get("pytest_verified_test_sentinel") is not True
+        ):
+            raise ValueError("A5 test-only run parent lacks verified pytest sentinel")
+        expected_parent = _test_only_run_parent.absolute()
+    else:
+        expected_parent = Path("/netdisk/lijunsi/fpct-e1")
+    expected_run_root = expected_parent / RUN_ROOT_TEMPLATE.format(prefix=prefix)
+    if run_root_absolute != expected_run_root:
+        raise ValueError("A5 run root is outside the frozen /netdisk execution parent")
     if any(old in str(run_root_absolute) for old in HISTORICAL_EXECUTION_PREFIXES):
         raise ValueError("run root aliases a historical abandoned execution")
     snapshot = source_snapshot_root.absolute()
@@ -1267,13 +1644,13 @@ def validate_a4_execution_identity(
         or snapshot.is_symlink()
         or snapshot.resolve(strict=True) != snapshot
     ):
-        raise ValueError("source snapshot must be the non-aliased A4 run-root snapshot")
+        raise ValueError("source snapshot must be the non-aliased A5 run-root snapshot")
     receipt = source_snapshot_receipt.absolute()
     if receipt != snapshot / SOURCE_SNAPSHOT_RECEIPT_NAME:
         raise ValueError("source snapshot receipt path is not canonical")
     output = output_root.absolute()
     if output != run_root_absolute / INPUT_LOCK_ROOT_NAME or output.is_symlink():
-        raise ValueError("input-lock output must be the canonical A4 input root")
+        raise ValueError("input-lock output must be the canonical A5 input root")
     downstream_root_names = {"raw", "runtime", "locks", "k8s"}
     allowed_run_entries = {
         "source_snapshot",
@@ -1285,7 +1662,7 @@ def validate_a4_execution_identity(
         if path.name not in allowed_run_entries
     )
     if unexpected:
-        raise ValueError(f"new A4 run root contains unapproved state: {unexpected}")
+        raise ValueError(f"new A5 run root contains unapproved state: {unexpected}")
     for name in downstream_root_names:
         candidate = run_root_absolute / name
         if candidate.exists() and (
@@ -1314,7 +1691,7 @@ def validate_a4_execution_identity(
             raise ValueError("sealed prepare execution attestation is inconsistent")
     identity = {
         "schema_version": 1,
-        "protocol_id": "fpct_e1_a4_input_lock_execution_identity_v1",
+        "protocol_id": "fpct_e1_a5_input_lock_execution_identity_v1",
         "execution_sha": execution_sha,
         "execution_prefix": prefix,
         "run_uid": run_uid,
@@ -1333,16 +1710,16 @@ def validate_a4_execution_identity(
     }
     if sealed_prepare_execution is not None:
         identity["sealed_prepare_execution"] = dict(sealed_prepare_execution)
-    output = _ensure_producer_directory(output, "A4 input-lock output root")
+    output = _ensure_producer_directory(output, "A5 input-lock output root")
     identity_path = output / RUN_IDENTITY_NAME
     blocked_path = output / BLOCKED_RECEIPT_NAME
-    _preflight_producer_file(identity_path, "A4 execution identity final")
-    _preflight_producer_file(blocked_path, "A4 blocked receipt final")
+    _preflight_producer_file(identity_path, "A5 execution identity final")
+    _preflight_producer_file(blocked_path, "A5 blocked receipt final")
     if blocked_path.exists():
-        raise RuntimeError("A4 run is terminally blocked; use a new run identity")
+        raise RuntimeError("A5 run is terminally blocked; use a new run identity")
     existing = sorted(path.name for path in output.iterdir())
     if existing and not identity_path.is_file():
-        raise ValueError("nonempty A4 input root lacks its immutable identity")
+        raise ValueError("nonempty A5 input root lacks its immutable identity")
     allowed_resume_entries = {
         RUN_IDENTITY_NAME,
         "input_geometry_samples.parquet",
@@ -1351,6 +1728,9 @@ def validate_a4_execution_identity(
         "row_templates",
         "input_row_template_chunk_index.json",
         "streaming_input_lock_receipt.json",
+        PROMPT_CENSUS_NAME,
+        PROMPT_CENSUS_RECORDS_NAME,
+        GO_RECEIPT_NAME,
         output_sidecar_name,
         output_manifest_name,
     }
@@ -1363,10 +1743,16 @@ def validate_a4_execution_identity(
     )
     if unexpected_output:
         raise ValueError(
-            f"A4 input root contains unbound artifact state: {unexpected_output}"
+            f"A5 input root contains unbound artifact state: {unexpected_output}"
         )
     atomic_json(identity_path, identity)
     return {**identity, "identity_sha256": sha256_file(identity_path)}
+
+
+# Kept only for import compatibility with pre-A5 unit tests.  The validator
+# itself accepts exclusively the fresh A5 UID/root patterns and rejects the
+# abandoned 07755a40 execution prefix.
+validate_a4_execution_identity = validate_a5_execution_identity
 
 
 def _raw_topology_compact_metadata(
@@ -2070,7 +2456,11 @@ def _write_streaming_template_lock(
     else:
         validate_streaming_schema_artifact(index)
         atomic_json(index_path, index)
-    synthetic_checks = synthetic_gate.get("checks", {})
+    synthetic_checks = (
+        synthetic_gate.get("streaming_contract_checks", {})
+        if synthetic_gate.get("protocol_id") == A5_PROTOCOL_ID
+        else synthetic_gate.get("checks", {})
+    )
     required_synthetic = (
         "row_key_reference_equivalence",
         "weights_reference_equivalence",
@@ -2167,6 +2557,107 @@ def _verify_completed_file_record(
         raise RuntimeError(f"completed {label} path/SHA/size changed")
 
 
+def _verify_a5_census_artifacts(
+    *,
+    repo_root: Path,
+    output_root: Path,
+    completed: Mapping[str, Any],
+    locked_payload: Mapping[str, Any],
+    execution_identity: Mapping[str, Any],
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Strictly reopen every canonical JSONL row and independently reduce it."""
+
+    from script.analysis.fpct_e1_a5_prompt_gate import validate_a5_schema_artifact
+
+    records_path = _canonical_regular_file(
+        output_root / PROMPT_CENSUS_RECORDS_NAME, "A5 census JSONL"
+    )
+    manifest_path = _canonical_regular_file(
+        output_root / PROMPT_CENSUS_NAME, "A5 census manifest"
+    )
+    records: list[dict[str, Any]] = []
+    with records_path.open("rb") as handle:
+        for ordinal, line in enumerate(handle, start=1):
+            if not line.endswith(b"\n") or line in {b"\n", b"\r\n"}:
+                raise RuntimeError("A5 census JSONL line framing changed")
+            try:
+                value = json.loads(line.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise RuntimeError("A5 census JSONL is malformed") from error
+            if not isinstance(value, dict) or canonical_json_bytes(value) != line:
+                raise RuntimeError("A5 census JSONL is not canonical one-row-per-line")
+            validate_a5_schema_artifact(value, repo_root=repo_root)
+            records.append(value)
+    expected_population = sum(TASK_GROUP_COUNTS.values())
+    if len(records) != expected_population:
+        raise RuntimeError("A5 census JSONL row count differs from frozen population")
+    census_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    validate_a5_schema_artifact(census_manifest, repo_root=repo_root)
+    rebuilt = build_census_manifest(
+        records,
+        execution_sha=str(execution_identity["execution_sha"]),
+        run_uid=str(execution_identity["run_uid"]),
+        record_artifact={
+            "relative_path": PROMPT_CENSUS_RECORDS_NAME,
+            "sha256": sha256_file(records_path),
+            "bytes": records_path.stat().st_size,
+            "row_count": len(records),
+        },
+        expected_task_counts=TASK_GROUP_COUNTS,
+    )
+    if rebuilt != census_manifest:
+        raise RuntimeError("A5 census manifest does not independently recompute")
+    census_binding = completed.get("census", {})
+    for name, path in (("records", records_path), ("manifest", manifest_path)):
+        record = census_binding.get(name, {})
+        if (
+            Path(str(record.get("path", ""))).absolute() != path.absolute()
+            or record.get("sha256") != sha256_file(path)
+            or record.get("bytes") != path.stat().st_size
+        ):
+            raise RuntimeError(f"A5 top-level census {name} binding changed")
+    if (
+        census_binding.get("record_count") != len(records)
+        or census_binding.get("canonical_semantic_stream_sha256")
+        != census_manifest["canonical_semantic_stream_sha256"]
+    ):
+        raise RuntimeError("A5 top-level census semantic binding changed")
+    items = locked_payload.get("items")
+    if not isinstance(items, list) or len(items) != len(records):
+        raise RuntimeError("A5 census/compact-sidecar population differs")
+    item_by_key = {
+        (
+            str(item.get("task")),
+            str(item.get("content_group_sha256")),
+            str(item.get("sample_sha256")),
+        ): item
+        for item in items
+    }
+    if len(item_by_key) != len(items):
+        raise RuntimeError("A5 compact sidecar has duplicate census identity")
+    for record in records:
+        key = (
+            record["task"],
+            record["content_group_sha256"],
+            record["sample_key_sha256"],
+        )
+        item = item_by_key.get(key)
+        if item is None or any(
+            item.get(item_name) != record[record_name]
+            for item_name, record_name in (
+                ("production_rendered_prompt_sha256", "production_rendered_prompt_sha256"),
+                ("historical_rendered_prompt_sha256", "historical_rendered_prompt_sha256"),
+                ("production_alignment_sha256", "production_alignment_sha256"),
+                ("historical_alignment_sha256", "historical_alignment_sha256"),
+                ("raw_full_row_sha256", "raw_full_row_sha256"),
+                ("prompt_relation", "prompt_relation"),
+                ("choice_difference_only", "choice_difference_only"),
+            )
+        ):
+            raise RuntimeError("A5 census row differs from compact sidecar semantics")
+    return census_manifest, records
+
+
 def _clean_owned_completed_crash_debris(
     output_root: Path, *, output_sidecar_name: str, output_manifest_name: str
 ) -> None:
@@ -2184,6 +2675,9 @@ def _clean_owned_completed_crash_debris(
         "input_geometry_receipt.json",
         "input_row_template_chunk_index.json",
         "streaming_input_lock_receipt.json",
+        PROMPT_CENSUS_RECORDS_NAME,
+        PROMPT_CENSUS_NAME,
+        GO_RECEIPT_NAME,
         output_sidecar_name,
         output_manifest_name,
     }
@@ -2244,6 +2738,7 @@ def _verify_completed_input_lock(
     output_sidecar: Path,
     output_manifest: Path,
     execution_identity: Mapping[str, Any],
+    expect_go_receipt: bool = True,
 ) -> dict[str, Any]:
     """Deeply replay an existing GO lock without creating or repairing artifacts.
 
@@ -2255,7 +2750,10 @@ def _verify_completed_input_lock(
     """
 
     import torch
-    from script.analysis.fpct_e1_streaming_synthetic_gate import verify_tracked_gate
+    from script.analysis.fpct_e1_a5_prompt_gate import (
+        validate_a5_schema_artifact,
+        verify_a5_gate,
+    )
 
     output_root = output_manifest.absolute().parent
     _clean_owned_completed_crash_debris(
@@ -2272,25 +2770,31 @@ def _verify_completed_input_lock(
         raise RuntimeError("completed input lock lacks its manifest or sidecar")
     completed = json.loads(output_manifest.read_text(encoding="utf-8"))
     streaming_schema_path = (repo_root / A4_STREAMING_SCHEMA_RELATIVE).absolute()
-    synthetic_gate_path = (repo_root / A4_SYNTHETIC_GATE_RELATIVE).absolute()
+    synthetic_gate_path = (repo_root / A5_SYNTHETIC_GATE_RELATIVE).absolute()
     if (
         not streaming_schema_path.is_file()
         or streaming_schema_path.is_symlink()
         or not synthetic_gate_path.is_file()
         or synthetic_gate_path.is_symlink()
     ):
-        raise FileNotFoundError("A4 streaming schema/synthetic gate is unavailable")
+        raise FileNotFoundError("A5 streaming schema/synthetic gate is unavailable")
     streaming_schema_sha256 = sha256_file(streaming_schema_path)
-    validate_streaming_schema_artifact(completed, streaming_schema_path)
+    validate_a5_schema_artifact(completed, repo_root=repo_root)
 
     if (
-        completed.get("schema_version") != SCHEMA_VERSION
-        or completed.get("protocol_id") != PROTOCOL_ID
+        completed.get("schema_version") != 7
+        or completed.get("protocol_id") != A5_PROTOCOL_ID
+        or completed.get("artifact_type") != "a5_input_lock_manifest"
         or completed.get("status")
-        != "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT"
-        or completed.get("execution_identity") != dict(execution_identity)
+        != "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT"
+        or completed.get("execution", {}).get("execution_sha")
+        != execution_identity.get("execution_sha")
+        or completed.get("execution", {}).get("run_uid")
+        != execution_identity.get("run_uid")
+        or completed.get("execution", {}).get("run_root")
+        != execution_identity.get("run_root")
     ):
-        raise RuntimeError("completed A4 input lock identity/status changed")
+        raise RuntimeError("completed A5 input lock identity/status changed")
 
     identity_path = output_root / RUN_IDENTITY_NAME
     identity_payload = dict(execution_identity)
@@ -2301,7 +2805,7 @@ def _verify_completed_input_lock(
         or identity_sha256 != sha256_file(identity_path)
         or json.loads(identity_path.read_text(encoding="utf-8")) != identity_payload
     ):
-        raise RuntimeError("completed A4 execution identity changed")
+        raise RuntimeError("completed A5 execution identity changed")
     source_receipt = execution_identity.get("source_snapshot_receipt", {})
     source_receipt_path = Path(str(source_receipt.get("path", ""))).absolute()
     if (
@@ -2314,18 +2818,36 @@ def _verify_completed_input_lock(
         or source_receipt.get("bytes") != source_receipt_path.stat().st_size
     ):
         raise RuntimeError("completed source-snapshot receipt binding changed")
-
-    synthetic_gate = verify_tracked_gate(synthetic_gate_path, repo_root)
+    completed_execution = completed.get("execution", {})
     if (
-        synthetic_gate.get("protocol_id") != A4_PROTOCOL_ID
+        completed_execution.get("source_snapshot_receipt_sha256")
+        != source_receipt["file_sha256"]
+        or completed_execution.get("source_snapshot_tree_sha256")
+        != source_receipt.get("verification", {}).get(
+            "mounted_tree_canonical_sha256"
+        )
+    ):
+        raise RuntimeError("completed A5 source-snapshot execution binding changed")
+
+    synthetic_gate = verify_a5_gate(synthetic_gate_path, repo_root=repo_root)
+    if (
+        synthetic_gate.get("protocol_id") != A5_PROTOCOL_ID
         or synthetic_gate.get("status") != "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE"
-        or synthetic_gate.get("natural_data_accessed") is not False
-        or synthetic_gate.get("physical_chunk_rows") != PHYSICAL_CHUNK_ROWS
-        or synthetic_gate.get("streaming_schema_sha256")
-        != streaming_schema_sha256
+        or synthetic_gate.get("natural_e0_design_accessed") is not False
     ):
         raise RuntimeError("completed lock synthetic gate/source binding changed")
-    streaming_contract = completed.get("streaming_contract", {})
+    sidecar_record = completed.get("sidecar", {})
+    if (
+        Path(str(sidecar_record.get("path", ""))).absolute()
+        != output_sidecar.absolute()
+        or sidecar_record.get("file_sha256") != sha256_file(output_sidecar)
+        or sidecar_record.get("bytes") != output_sidecar.stat().st_size
+    ):
+        raise RuntimeError("completed compact sidecar path/SHA/size changed")
+    locked_payload = torch.load(output_sidecar, map_location="cpu", weights_only=False)
+    if not isinstance(locked_payload, Mapping):
+        raise RuntimeError("completed compact sidecar is not a mapping")
+    streaming_contract = locked_payload.get("streaming_contract", {})
     synthetic_record = streaming_contract.get("synthetic_gate", {})
     if (
         Path(str(synthetic_record.get("path", ""))).absolute()
@@ -2336,40 +2858,55 @@ def _verify_completed_input_lock(
         or streaming_contract.get("physical_chunk_rows") != PHYSICAL_CHUNK_ROWS
     ):
         raise RuntimeError("completed streaming protocol/gate provenance changed")
+    manifest_streaming = completed.get("streaming", {})
+    if (
+        manifest_streaming.get("protocol_id") != A4_PROTOCOL_ID
+        or manifest_streaming.get("schema_sha256") != streaming_schema_sha256
+        or manifest_streaming.get("physical_chunk_rows") != PHYSICAL_CHUNK_ROWS
+        or manifest_streaming.get("synthetic_gate_sha256")
+        != sha256_file(synthetic_gate_path)
+        or manifest_streaming.get("whole_table_materialization_detected") is not False
+    ):
+        raise RuntimeError("completed A5 streaming manifest binding changed")
 
-    sidecar_record = completed.get("sidecar", {})
-    _verify_completed_file_record(sidecar_record, output_sidecar, "compact sidecar")
-    locked_payload = torch.load(output_sidecar, map_location="cpu", weights_only=False)
-    if not isinstance(locked_payload, Mapping):
-        raise RuntimeError("completed compact sidecar is not a mapping")
     if (
         locked_payload.get("schema_version") != SCHEMA_VERSION
         or locked_payload.get("protocol_id") != PROTOCOL_ID
         or locked_payload.get("status")
-        != "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT"
+        != "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT"
         or locked_payload.get("execution_identity") != dict(execution_identity)
-        or locked_payload.get("dimensions") != completed.get("dimensions")
-        or locked_payload.get("input_asset_state")
-        != completed.get("input_asset_state", {}).get("records")
         or expanded_row_absence_proof(locked_payload)
-        != completed.get("expanded_row_absence_proof")
+        != locked_payload.get("expanded_row_absence_proof")
+        or sidecar_record.get("semantic_sha256") != nested_sha256(locked_payload)
+        or sidecar_record.get("contract_version") != SCHEMA_VERSION
+        or sidecar_record.get("item_count") != len(locked_payload.get("items", []))
+        or sidecar_record.get("expanded_logical_rows_present") is not False
     ):
         raise RuntimeError("completed compact sidecar semantic binding changed")
+    census_manifest, census_records = _verify_a5_census_artifacts(
+        repo_root=repo_root,
+        output_root=output_root,
+        completed=completed,
+        locked_payload=locked_payload,
+        execution_identity=execution_identity,
+    )
 
-    recorded_runtime_assets = completed.get("runtime_assets", {})
+    recorded_runtime_assets = locked_payload.get("runtime_assets", {})
     current_runtime_assets: dict[str, Any] = {}
     for role in ("receiver", "sender"):
         recorded = recorded_runtime_assets.get(role)
         if not isinstance(recorded, Mapping):
             raise RuntimeError("completed runtime-asset provenance is incomplete")
-        current = runtime_asset_tree(Path(str(recorded.get("requested_path", ""))))
+        current = tokenizer_runtime_asset_tree(
+            Path(str(recorded.get("requested_path", "")))
+        )
         current_runtime_assets[role] = {
             "model_id": recorded.get("model_id"),
             **current,
         }
         if current_runtime_assets[role] != dict(recorded):
             raise RuntimeError(f"completed {role} runtime asset tree changed")
-        tokenizer_record = completed.get("tokenizers", {}).get(role, {})
+        tokenizer_record = locked_payload.get("tokenizers", {}).get(role, {})
         if (
             tokenizer_record.get("name") != recorded.get("model_id")
             or Path(str(tokenizer_record.get("path", ""))).absolute()
@@ -2385,20 +2922,70 @@ def _verify_completed_input_lock(
         runtime_assets=current_runtime_assets,
         source_snapshot_verification=source_receipt["verification"],
     )
-    asset_record = completed.get("input_asset_state", {})
-    if (
-        asset_record.get("records") != current_assets
-        or asset_record.get("before_sha256") != current_assets["aggregate_sha256"]
-        or asset_record.get("after_sha256") != current_assets["aggregate_sha256"]
-        or asset_record.get("unchanged") is not True
-    ):
+    if locked_payload.get("input_asset_state") != current_assets:
         raise RuntimeError("completed input-asset/provenance binding changed")
-    source_record = completed.get("source", {})
+    provenance_record = completed.get("provenance", {})
+    if (
+        provenance_record.get("input_assets_before_sha256")
+        != current_assets["aggregate_sha256"]
+        or provenance_record.get("input_assets_after_sha256")
+        != current_assets["aggregate_sha256"]
+        or provenance_record.get("input_assets_unchanged") is not True
+        or provenance_record.get("materialized_e0_dev_data_tree_sha256")
+        != current_assets["e0_data_assets"]["tree_sha256"]
+        or provenance_record.get("runtime_prompt_assets_sha256")
+        != nested_sha256(
+            locked_payload.get("a5_prompt_provenance", {}).get(
+                "runtime_prompt_assets"
+            )
+        )
+        or provenance_record.get("prompt_config_identity_sha256")
+        != nested_sha256(
+            locked_payload.get("a5_prompt_provenance", {}).get(
+                "prompt_config_identity"
+            )
+        )
+        or provenance_record.get("renderer_source_identity_sha256")
+        != nested_sha256(
+            locked_payload.get("a5_prompt_provenance", {}).get(
+                "renderer_identity"
+            )
+        )
+    ):
+        raise RuntimeError("completed A5 prompt provenance binding changed")
+    source_record = locked_payload.get("source", {})
     if (
         Path(str(source_record.get("e0_data_root", ""))).absolute()
         != e0_data_root.absolute()
     ):
         raise RuntimeError("completed E0-design data root changed")
+    a5_contract = _load_a5_prompt_contract(repo_root)
+    prompt_config_identity = _verify_all_e0_prompt_configs(repo_root, a5_contract)
+    locked_prompt_provenance = locked_payload.get("a5_prompt_provenance", {})
+    if locked_prompt_provenance.get("prompt_config_identity") != prompt_config_identity:
+        raise RuntimeError("completed A5 prompt-config identity changed")
+    current_renderer_source = attest_e0_renderer_identity(repo_root)
+    locked_renderer = locked_prompt_provenance.get("renderer_identity", {})
+    for name, value in current_renderer_source.items():
+        if name in {
+            "production_renderer_exactly_attested",
+            "production_renderer_exact_attestation_pending",
+        }:
+            continue
+        if locked_renderer.get(name) != value:
+            raise RuntimeError("completed A5 frozen renderer source identity changed")
+    if (
+        locked_renderer.get("historical_oracle_mode")
+        != "EXACT_FROZEN_SOURCE_IDENTITY"
+        or locked_renderer.get("renderer_source_identity_attested") is not True
+        or locked_renderer.get("production_renderer_exactly_attested") is not True
+        or locked_renderer.get("full_row_replay_group_count")
+        != sum(TASK_GROUP_COUNTS.values())
+        or locked_renderer.get("prechat_prompt_replay_equal") is not True
+        or locked_renderer.get("receiver_sender_rendered_replay_equal") is not True
+        or locked_renderer.get("production_alignment_replay_equal") is not True
+    ):
+        raise RuntimeError("completed A5 renderer replay attestation is incomplete")
     split = load_e0_design_lock(
         repo_root / "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"
     )
@@ -2548,7 +3135,7 @@ def _verify_completed_input_lock(
     if geometry_receipt != expected_geometry_receipt:
         raise RuntimeError("completed geometry receipt semantics changed")
 
-    required_firewall_false = (
+    sidecar_firewall_false = (
         "e1_pilot_consumed",
         "e1_pilot_rendered_tokenized_aligned_run_or_read",
         "model_selection_consumed",
@@ -2558,13 +3145,27 @@ def _verify_completed_input_lock(
         "gpu_or_cuda_used",
         "training",
     )
-    for label, container in (
-        ("manifest", completed),
-        ("sidecar", locked_payload),
+    if any(
+        locked_payload.get("firewall", {}).get(name) is not False
+        for name in sidecar_firewall_false
     ):
-        firewall = container.get("firewall", {})
-        if any(firewall.get(name) is not False for name in required_firewall_false):
-            raise RuntimeError(f"completed {label} firewall provenance changed")
+        raise RuntimeError("completed sidecar firewall provenance changed")
+    manifest_firewall_false = (
+        "old_execution_artifact_reused",
+        "model_instantiated",
+        "model_or_checkpoint_loaded",
+        "model_forward_run",
+        "gpu_or_cuda_used",
+        "kubernetes_used",
+        "training",
+        "e1_pilot_consumed",
+        "confirmatory_consumed",
+    )
+    if any(
+        completed.get("firewall", {}).get(name) is not False
+        for name in manifest_firewall_false
+    ):
+        raise RuntimeError("completed A5 manifest firewall provenance changed")
     if (
         locked_payload.get("e1_pilot_consumed") is not False
         or locked_payload.get("model_or_checkpoint_loaded") is not False
@@ -2572,7 +3173,7 @@ def _verify_completed_input_lock(
     ):
         raise RuntimeError("completed sidecar execution firewall changed")
 
-    dimensions = completed.get("dimensions")
+    dimensions = locked_payload.get("dimensions")
     if not isinstance(dimensions, Mapping):
         raise RuntimeError("completed receiver dimensions are missing")
     verified_template_lock = _write_streaming_template_lock(
@@ -2597,6 +3198,19 @@ def _verify_completed_input_lock(
         != verified_template_lock
     ):
         raise RuntimeError("completed streaming template binding changed")
+    if (
+        completed.get("streaming", {}).get("geometry_lock_receipt_sha256")
+        != sha256_file(geometry_receipt_path)
+        or completed.get("streaming", {}).get(
+            "streaming_template_lock_receipt_sha256"
+        )
+        != verified_template_lock["receipt"]["sha256"]
+        or completed.get("streaming", {}).get("logical_row_coverage_exact")
+        is not True
+        or completed.get("streaming", {}).get("streaming_semantic_replay_equal")
+        is not True
+    ):
+        raise RuntimeError("completed A5 streaming receipt SHA binding changed")
 
     expected_root_entries = {
         RUN_IDENTITY_NAME,
@@ -2606,9 +3220,31 @@ def _verify_completed_input_lock(
         "row_templates",
         "input_row_template_chunk_index.json",
         "streaming_input_lock_receipt.json",
+        PROMPT_CENSUS_RECORDS_NAME,
+        PROMPT_CENSUS_NAME,
         output_sidecar.name,
         output_manifest.name,
     }
+    go_receipt_path = output_root / GO_RECEIPT_NAME
+    if expect_go_receipt:
+        expected_root_entries.add(GO_RECEIPT_NAME)
+        if not go_receipt_path.is_file() or go_receipt_path.is_symlink():
+            raise RuntimeError("completed A5 input lock lacks GO receipt")
+        go_receipt = json.loads(go_receipt_path.read_text(encoding="utf-8"))
+        validate_a5_schema_artifact(go_receipt, repo_root=repo_root)
+        if (
+            go_receipt.get("execution_sha") != execution_identity["execution_sha"]
+            or go_receipt.get("run_uid") != execution_identity["run_uid"]
+            or go_receipt.get("run_root") != execution_identity["run_root"]
+            or go_receipt.get("prompt_census_manifest_sha256")
+            != sha256_file(output_root / PROMPT_CENSUS_NAME)
+            or go_receipt.get("checks") != completed.get("hard_gate_checks")
+            or go_receipt.get("zero_counts") != completed.get("zero_counts")
+            or go_receipt.get("downstream_e1_2_authorized") is not False
+        ):
+            raise RuntimeError("completed A5 GO receipt binding changed")
+    elif go_receipt_path.exists():
+        raise RuntimeError("pre-GO independent verifier found a premature GO receipt")
     observed_root_entries = {path.name for path in output_root.iterdir()}
     if observed_root_entries != expected_root_entries:
         raise RuntimeError("completed input root contains missing or unbound artifacts")
@@ -2626,9 +3262,9 @@ def _prepare_input_lock_after_identity(
     """Materialize the local sidecar; caller must run only after code lock."""
 
     if output_sidecar.absolute().parent != output_manifest.absolute().parent:
-        raise ValueError("A4 input-lock sidecar and manifest must share one root")
+        raise ValueError("A5 input-lock sidecar and manifest must share one root")
     output_root = _canonical_real_directory(
-        output_manifest.absolute().parent, "A4 input-lock producer root"
+        output_manifest.absolute().parent, "A5 input-lock producer root"
     )
     producer_finals = (
         output_sidecar.absolute(),
@@ -2638,9 +3274,12 @@ def _prepare_input_lock_after_identity(
         output_root / "input_geometry_receipt.json",
         output_root / "input_row_template_chunk_index.json",
         output_root / "streaming_input_lock_receipt.json",
+        output_root / PROMPT_CENSUS_RECORDS_NAME,
+        output_root / PROMPT_CENSUS_NAME,
+        output_root / GO_RECEIPT_NAME,
     )
     for path in producer_finals:
-        _preflight_producer_file(path, "A4 input-lock producer final")
+        _preflight_producer_file(path, "A5 input-lock producer final")
     row_template_root = output_root / "row_templates"
     try:
         row_template_root.lstat()
@@ -2668,21 +3307,24 @@ def _prepare_input_lock_after_identity(
     if torch.cuda.is_initialized():
         raise RuntimeError("prepare-input-lock refuses an initialized CUDA runtime")
     streaming_schema_path = repo_root / A4_STREAMING_SCHEMA_RELATIVE
-    synthetic_gate_path = repo_root / A4_SYNTHETIC_GATE_RELATIVE
+    synthetic_gate_path = repo_root / A5_SYNTHETIC_GATE_RELATIVE
     if not streaming_schema_path.is_file() or not synthetic_gate_path.is_file():
-        raise FileNotFoundError("A4 streaming schema/synthetic gate is unavailable")
+        raise FileNotFoundError("A5 streaming schema/synthetic gate is unavailable")
     streaming_schema_sha256 = sha256_file(streaming_schema_path)
-    from script.analysis.fpct_e1_streaming_synthetic_gate import verify_tracked_gate
+    from script.analysis.fpct_e1_a5_prompt_gate import verify_a5_gate
 
-    synthetic_gate = verify_tracked_gate(synthetic_gate_path, repo_root)
+    synthetic_gate = verify_a5_gate(synthetic_gate_path, repo_root=repo_root)
     if (
-        synthetic_gate.get("protocol_id") != A4_PROTOCOL_ID
+        synthetic_gate.get("protocol_id") != A5_PROTOCOL_ID
         or synthetic_gate.get("status") != "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE"
-        or synthetic_gate.get("natural_data_accessed") is not False
-        or synthetic_gate.get("physical_chunk_rows") != PHYSICAL_CHUNK_ROWS
-        or synthetic_gate.get("streaming_schema_sha256") != streaming_schema_sha256
+        or synthetic_gate.get("natural_e0_design_accessed") is not False
+        or synthetic_gate.get("model_or_checkpoint_loaded") is not False
+        or synthetic_gate.get("gpu_or_kubernetes_used") is not False
     ):
-        raise ValueError("A4 pre-natural synthetic gate is absent or incompatible")
+        raise ValueError("A5 pre-natural synthetic gate is absent or incompatible")
+    renderer_identity = attest_e0_renderer_identity(repo_root)
+    a5_contract = _load_a5_prompt_contract(repo_root)
+    prompt_config_identity = _verify_all_e0_prompt_configs(repo_root, a5_contract)
     split = load_e0_design_lock(
         repo_root / "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"
     )
@@ -2694,11 +3336,11 @@ def _prepare_input_lock_after_identity(
     runtime_assets = {
         "receiver": {
             "model_id": receiver_name,
-            **runtime_asset_tree(receiver_path),
+            **tokenizer_runtime_asset_tree(receiver_path),
         },
         "sender": {
             "model_id": sender_name,
-            **runtime_asset_tree(sender_path),
+            **tokenizer_runtime_asset_tree(sender_path),
         },
     }
     source_verification = execution_identity["source_snapshot_receipt"][
@@ -2712,8 +3354,29 @@ def _prepare_input_lock_after_identity(
     )
     receiver = AutoTokenizer.from_pretrained(receiver_path)
     sender = AutoTokenizer.from_pretrained(sender_path)
+    chat_templates_before = {
+        "receiver": getattr(receiver, "chat_template", None),
+        "sender": getattr(sender, "chat_template", None),
+    }
     set_default_chat_template(receiver, receiver_name)
     set_default_chat_template(sender, sender_name)
+    chat_templates_after = {
+        "receiver": getattr(receiver, "chat_template", None),
+        "sender": getattr(sender, "chat_template", None),
+    }
+    if chat_templates_before != chat_templates_after or any(
+        not isinstance(value, str) or not value
+        for value in chat_templates_before.values()
+    ):
+        raise ValueError("A5 runtime used or changed a chat-template fallback")
+    runtime_prompt_assets = _attest_a5_runtime_assets(
+        contract=a5_contract,
+        runtime_assets=runtime_assets,
+        receiver=receiver,
+        sender=sender,
+        e0_data_tree_sha256=input_assets_before["e0_data_assets"]["tree_sha256"],
+    )
+    runtime_prompt_assets["chat_template_fallback_used"] = False
     dimensions = _config_dimensions(receiver_path)
 
     reference_config = yaml.safe_load(
@@ -2726,7 +3389,20 @@ def _prepare_input_lock_after_identity(
     dataset_cache: dict[tuple[str, str], Any] = {}
     items: list[dict[str, Any]] = []
     task_counts = {task: 0 for task in TASKS}
-    for group, descriptor in sorted(dev["records"].items()):
+    ordered_descriptors = [
+        (group, descriptor)
+        for task_name in TASKS
+        for group, descriptor in sorted(dev["records"].items())
+        if descriptor["task"] == task_name
+    ]
+    if len(ordered_descriptors) != sum(TASK_GROUP_COUNTS.values()):
+        raise ValueError("A5 census population/order is incomplete")
+    census_records: list[dict[str, Any]] = []
+    for group_ordinal, (group, descriptor) in enumerate(
+        ordered_descriptors, start=1
+    ):
+        if group_ordinal < 1:
+            raise AssertionError("A5 input lock did not restart from group 1")
         task = descriptor["task"]
         example = _load_task_example(
             task=task,
@@ -2735,7 +3411,13 @@ def _prepare_input_lock_after_identity(
             cache=dataset_cache,
         )
         question, choices = _question_choices(task, example)
-        if canonical_content_sha256(question, choices) != group:
+        production_question, production_choices, production_labels = (
+            full_question_choices(task, example)
+        )
+        if question != production_question or choices != production_choices[:4]:
+            raise ValueError("A5 historical first-four projection changed")
+        historical_content_sha256 = canonical_content_sha256(question, choices)
+        if historical_content_sha256 != group:
             raise ValueError("input-lock materialized content hash mismatch")
         expected_sample = canonical_sample_sha256(
             task, descriptor["subject"], descriptor["source_row_id"]
@@ -2751,13 +3433,50 @@ def _prepare_input_lock_after_identity(
             "use_cot": False,
             "use_template": True,
         }
-        prompt = formatter.format_example(example, use_cot=False)
+        projected_example = historical_projected_example(task, example)
+        historical_prompt = formatter.format_example(
+            projected_example, use_cot=False
+        )
+        historical_prompt_details = _prompt_alignment_details(
+            aligner, historical_prompt, top_k=4
+        )
+        historical_rendered_sha = _sha256_bytes(
+            historical_prompt_details["slm_text"].encode("utf-8")
+        )
+        historical_alignment_sha = _alignment_sha256(historical_prompt_details)
+        if historical_rendered_sha != descriptor["rendered_prompt_sha256"]:
+            raise ValueError("A5 historical first-four rendered prompt SHA mismatch")
+        if historical_alignment_sha != descriptor["prompt_alignment_sha256"]:
+            raise ValueError("A5 historical first-four alignment SHA mismatch")
+
+        # Exact frozen source/config/tokenizer identity establishes that the
+        # active renderer is the effective historical E0 renderer; this is not
+        # a second independent implementation.  Two calls below are a strict
+        # determinism replay for each full row and both tokenizer renderings.
+        historical_e0_full_prompt = formatter.format_example(example, use_cot=False)
+        a5_production_prompt = formatter.format_example(example, use_cot=False)
+        if historical_e0_full_prompt.encode("utf-8") != a5_production_prompt.encode(
+            "utf-8"
+        ):
+            raise ValueError("A5 full pre-chat prompt differs from historical E0")
+        historical_e0_full_details = _prompt_alignment_details(
+            aligner, historical_e0_full_prompt, top_k=4
+        )
+        prompt = a5_production_prompt
         prompt_details = _prompt_alignment_details(aligner, prompt, top_k=4)
+        if _to_python(historical_e0_full_details) != _to_python(prompt_details):
+            raise ValueError(
+                "A5 receiver/sender rendered bytes or production alignment replay changed"
+            )
+        if (
+            historical_e0_full_details.get("slm_text")
+            != prompt_details.get("slm_text")
+            or historical_e0_full_details.get("llm_text")
+            != prompt_details.get("llm_text")
+        ):
+            raise ValueError("A5 dual-tokenizer rendered chat bytes changed")
         rendered_sha = _sha256_bytes(prompt_details["slm_text"].encode("utf-8"))
-        if rendered_sha != descriptor["rendered_prompt_sha256"]:
-            raise ValueError("input-lock rendered prompt SHA mismatch")
-        if _alignment_sha256(prompt_details) != descriptor["prompt_alignment_sha256"]:
-            raise ValueError("input-lock prompt alignment SHA mismatch")
+        production_alignment_sha = _alignment_sha256(prompt_details)
         answer = formatter.parse_answer(example)
         if answer not in {"A", "B", "C", "D"}:
             raise ValueError("input-lock has no canonical A-D gold answer")
@@ -2825,6 +3544,29 @@ def _prepare_input_lock_after_identity(
             num_query_heads=dimensions["num_attention_heads"],
         )
         raw_topology_compact = _raw_topology_compact_metadata(raw_topology)
+        census_record = dual_anchor_record(
+            task=task,
+            content_group_sha256=group,
+            sample_key_sha256=expected_sample,
+            source_row_id=str(descriptor["source_row_id"]),
+            example=example,
+            gold_answer=answer,
+            historical_rendered_prompt=historical_prompt_details["slm_text"],
+            historical_alignment_sha256=historical_alignment_sha,
+            production_rendered_prompt=prompt_details["slm_text"],
+            production_alignment_sha256=production_alignment_sha,
+            historical_prompt_token_count=len(historical_prompt_details["slm_ids"]),
+            production_prompt_token_count=len(prompt_details["slm_ids"]),
+            production_certified_parent_count=len(certified_parents),
+            production_logical_row_count=expected_rows,
+            production_physical_chunk_count=math.ceil(
+                expected_rows / PHYSICAL_CHUNK_ROWS
+            ),
+            historical_content_sha256=historical_content_sha256,
+        )
+        if census_record["raw_choice_labels"] != production_labels:
+            raise ValueError("A5 census lost production choice labels/order")
+        census_records.append(census_record)
         item = {
             "task": task,
             "sample_sha256": expected_sample,
@@ -2851,6 +3593,13 @@ def _prepare_input_lock_after_identity(
             "raw_topology_compact_sha256": nested_sha256(raw_topology_compact),
             "instruction_end": instruction_end,
             "rendered_prompt_sha256": rendered_sha,
+            "production_rendered_prompt_sha256": rendered_sha,
+            "historical_rendered_prompt_sha256": historical_rendered_sha,
+            "production_alignment_sha256": production_alignment_sha,
+            "historical_alignment_sha256": historical_alignment_sha,
+            "raw_full_row_sha256": raw_full_row_sha256(example),
+            "prompt_relation": census_record["prompt_relation"],
+            "choice_difference_only": census_record["choice_difference_only"],
         }
         item["item_semantic_sha256"] = nested_sha256(
             {key: value for key, value in item.items() if key != "feature"}
@@ -2859,8 +3608,36 @@ def _prepare_input_lock_after_identity(
         task_counts[task] += 1
     if task_counts != TASK_GROUP_COUNTS:
         raise ValueError("input-lock population differs from frozen 128/70/128")
+    from script.analysis.fpct_e1_a5_prompt_gate import validate_a5_schema_artifact
+
+    for census_record in census_records:
+        validate_a5_schema_artifact(census_record, repo_root=repo_root)
+    census_records_path = output_root / PROMPT_CENSUS_RECORDS_NAME
+    census_records_payload = b"".join(
+        canonical_json_bytes(record) for record in census_records
+    )
+    census_records_sha256 = publish_bytes_no_overwrite(
+        census_records_path, census_records_payload
+    )
+    census_manifest = build_census_manifest(
+        census_records,
+        execution_sha=str(execution_identity["execution_sha"]),
+        run_uid=str(execution_identity["run_uid"]),
+        record_artifact={
+            "relative_path": PROMPT_CENSUS_RECORDS_NAME,
+            "sha256": census_records_sha256,
+            "bytes": len(census_records_payload),
+            "row_count": len(census_records),
+        },
+        expected_task_counts=TASK_GROUP_COUNTS,
+    )
+    validate_a5_schema_artifact(census_manifest, repo_root=repo_root)
+    census_manifest_path = output_root / PROMPT_CENSUS_NAME
+    atomic_json(census_manifest_path, census_manifest)
     for role, model_path in (("receiver", receiver_path), ("sender", sender_path)):
-        if portable_runtime_asset_tree(runtime_asset_tree(model_path)) != portable_runtime_asset_tree(runtime_assets[role]):
+        if portable_runtime_asset_tree(
+            tokenizer_runtime_asset_tree(model_path)
+        ) != portable_runtime_asset_tree(runtime_assets[role]):
             raise ValueError(f"{role} runtime asset tree changed during CPU input locking")
     from script.experiment.fpct_e1_source_snapshot_lock import (
         verify_source_snapshot_receipt,
@@ -2879,7 +3656,14 @@ def _prepare_input_lock_after_identity(
     )
     if input_assets_before != input_assets_after:
         raise RuntimeError("input assets changed during CPU input locking")
-    items.sort(key=lambda item: (item["task"], item["sample_sha256"]))
+    task_rank = {task: index for index, task in enumerate(TASKS)}
+    items.sort(
+        key=lambda item: (
+            task_rank[item["task"]],
+            item["content_group_sha256"],
+            item["sample_sha256"],
+        )
+    )
     by_task = {}
     for task in TASKS:
         members = [item for item in items if item["task"] == task]
@@ -2970,7 +3754,7 @@ def _prepare_input_lock_after_identity(
     payload = {
         "schema_version": SCHEMA_VERSION,
         "protocol_id": PROTOCOL_ID,
-        "status": "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT",
+        "status": "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
         "split_role": "e0_design",
         "items": items,
         "dimensions": dimensions,
@@ -2980,11 +3764,53 @@ def _prepare_input_lock_after_identity(
             "physical_chunk_rows": PHYSICAL_CHUNK_ROWS,
             "expanded_logical_rows_present": False,
             "compact_geometry_only": True,
+            "synthetic_gate": _a5_synthetic_gate_binding(synthetic_gate_path),
             "geometry_lock": geometry_lock,
             "streaming_template_lock": streaming_template_lock,
         },
         "execution_identity": dict(execution_identity),
+        "a5_prompt_provenance": {
+            "renderer_identity": {
+                **renderer_identity,
+                "historical_oracle_mode": "EXACT_FROZEN_SOURCE_IDENTITY",
+                "production_renderer_exactly_attested": True,
+                "production_renderer_exact_attestation_pending": None,
+                "full_row_replay_group_count": len(census_records),
+                "prechat_prompt_replay_equal": True,
+                "receiver_sender_rendered_replay_equal": True,
+                "production_alignment_replay_equal": True,
+            },
+            "prompt_config_identity": prompt_config_identity,
+            "runtime_prompt_assets": runtime_prompt_assets,
+            "census_manifest": {
+                "path": str(census_manifest_path),
+                "sha256": sha256_file(census_manifest_path),
+                "records_path": str(census_records_path),
+                "records_sha256": census_records_sha256,
+            },
+            "historical_projection_anchor_unchanged": True,
+            "production_runtime_anchor_operative": True,
+        },
         "input_asset_state": input_assets_after,
+        "source": {
+            "split_sha256": split["sha256"],
+            "dev_manifest_sha256": dev["sha256"],
+            "e0_data_root": str(e0_data_root),
+        },
+        "tokenizers": {
+            "receiver": {
+                "name": receiver_name,
+                "path": str(receiver_path),
+                "files": _tokenizer_files(receiver_path),
+            },
+            "sender": {
+                "name": sender_name,
+                "path": str(sender_path),
+                "files": _tokenizer_files(sender_path),
+            },
+        },
+        "runtime_assets": runtime_assets,
+        "task_contract": by_task,
         "e1_pilot_consumed": False,
         "model_or_checkpoint_loaded": False,
         "cuda_initialized": False,
@@ -3037,73 +3863,274 @@ def _prepare_input_lock_after_identity(
         "expanded_row_absence_proof"
     ]:
         raise RuntimeError("published compact sidecar failed expanded-row absence proof")
+    source_tree_sha256 = execution_identity["source_snapshot_receipt"][
+        "verification"
+    ].get("mounted_tree_canonical_sha256")
+    if not isinstance(source_tree_sha256, str) or not re.fullmatch(
+        r"[0-9a-f]{64}", source_tree_sha256
+    ):
+        raise RuntimeError("A5 source snapshot canonical tree SHA is missing")
+    expected_group_count = sum(TASK_GROUP_COUNTS.values())
+    expected_group_ids = set(dev["records"])
+    observed_group_ids = {
+        str(record["content_group_sha256"]) for record in census_records
+    }
+    renderer_lock = payload["a5_prompt_provenance"]["renderer_identity"]
+    streaming_receipt = json.loads(
+        Path(streaming_template_lock["receipt"]["path"]).read_text(encoding="utf-8")
+    )
+    hard_gate_checks = {
+        "historical_projection_anchor_unchanged": bool(
+            payload["a5_prompt_provenance"][
+                "historical_projection_anchor_unchanged"
+            ]
+            and all(
+                record["historical_choice_count"] == 4
+                for record in census_records
+            )
+        ),
+        "e0_design_membership_unchanged": bool(
+            task_counts == TASK_GROUP_COUNTS
+            and observed_group_ids == expected_group_ids
+            and len(observed_group_ids) == expected_group_count
+        ),
+        "renderer_source_identity_attested": bool(
+            renderer_lock.get("renderer_source_identity_attested") is True
+        ),
+        "production_renderer_exactly_attested": bool(
+            renderer_lock.get("production_renderer_exactly_attested") is True
+            and renderer_lock.get("historical_oracle_mode")
+            == "EXACT_FROZEN_SOURCE_IDENTITY"
+            and renderer_lock.get("full_row_replay_group_count")
+            == expected_group_count
+        ),
+        "production_data_tree_exactly_attested": bool(
+            runtime_prompt_assets.get("production_data_tree_exactly_attested")
+            is True
+            and runtime_prompt_assets.get(
+                "materialized_e0_dev_data_tree_sha256"
+            )
+            == input_assets_after["e0_data_assets"]["tree_sha256"]
+        ),
+        "all_326_groups_resolved": bool(
+            census_manifest["population_count"] == expected_group_count
+            and len(census_records) == expected_group_count
+        ),
+        "all_first4_choices_equal_historical": bool(
+            all(
+                record["historical_choice_count"] == 4
+                and record["production_choice_count"] >= 4
+                for record in census_records
+            )
+        ),
+        "all_gold_answers_in_A_B_C_D": bool(
+            all(record["gold_answer"] in {"A", "B", "C", "D"} for record in census_records)
+        ),
+        "all_prompt_differences_classified": bool(
+            census_manifest["unexpected_prompt_difference_count"] == 0
+            and all(
+                record["prompt_relation"]
+                in {
+                    "EXACT_HISTORICAL_AND_PRODUCTION_MATCH",
+                    "EXTRA_CHOICES_ONLY",
+                }
+                for record in census_records
+            )
+        ),
+        "historical_to_runtime_mapping_complete": bool(
+            len(census_manifest["historical_to_production_anchor_map"])
+            == expected_group_count
+            and len(observed_group_ids) == expected_group_count
+        ),
+        "production_prompt_replay_equal": bool(
+            renderer_lock.get("prechat_prompt_replay_equal") is True
+            and renderer_lock.get("receiver_sender_rendered_replay_equal") is True
+        ),
+        "production_alignment_replay_equal": bool(
+            renderer_lock.get("production_alignment_replay_equal") is True
+        ),
+        "choice_order_preserved": bool(
+            all(
+                record["raw_choice_labels"]
+                == [
+                    chr(65 + index)
+                    for index in range(record["production_choice_count"])
+                ]
+                for record in census_records
+            )
+        ),
+        "raw_full_row_hashes_complete": bool(
+            all(
+                re.fullmatch(r"[0-9a-f]{64}", record["raw_full_row_sha256"])
+                is not None
+                for record in census_records
+            )
+        ),
+        "logical_row_coverage_exact": bool(
+            streaming_template_lock["expected_logical_rows"]
+            == streaming_template_lock["emitted_logical_rows"]
+            and streaming_receipt.get("expected_logical_rows_eq_emitted") is True
+            and streaming_receipt.get("missing_rows") == 0
+            and streaming_receipt.get("duplicate_rows") == 0
+        ),
+        "streaming_semantic_replay_equal": bool(
+            streaming_receipt.get("semantic_stream_replay_equal") is True
+            and streaming_receipt.get("chunk_partition_semantic_equivalence")
+            is True
+            and streaming_receipt.get("aggregate_partition_equivalence") is True
+        ),
+        "bounded_peak_rss": _a5_bounded_peak_rss_gate(
+            streaming_receipt, synthetic_gate
+        ),
+    }
+    failed_hard_gates = sorted(
+        name for name, passed in hard_gate_checks.items() if passed is not True
+    )
+    if failed_hard_gates:
+        raise RuntimeError(f"A5 derived hard gates failed: {failed_hard_gates}")
     manifest = {
-        "schema_version": SCHEMA_VERSION,
-        "protocol_id": PROTOCOL_ID,
-        "status": "GO_STREAMING_CPU_INPUT_LOCK_NO_MODEL_OUTPUT",
+        "schema_version": 7,
+        "protocol_id": A5_PROTOCOL_ID,
+        "artifact_type": "a5_input_lock_manifest",
+        "status": "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
         "split_role": "e0_design",
-        "execution_identity": dict(execution_identity),
-        "input_asset_state": {
-            "before_sha256": input_assets_before["aggregate_sha256"],
-            "after_sha256": input_assets_after["aggregate_sha256"],
-            "unchanged": input_assets_before == input_assets_after,
-            "records": input_assets_after,
+        "execution": {
+            "execution_sha": str(execution_identity["execution_sha"]),
+            "run_uid": str(execution_identity["run_uid"]),
+            "run_root": str(execution_identity["run_root"]),
+            "source_snapshot_receipt_sha256": str(
+                execution_identity["source_snapshot_receipt"]["file_sha256"]
+            ),
+            "source_snapshot_tree_sha256": source_tree_sha256,
         },
-        "source": {
-            "split_sha256": split["sha256"],
-            "dev_manifest_sha256": dev["sha256"],
-            "e0_data_root": str(e0_data_root),
+        "task_counts": dict(TASK_GROUP_COUNTS),
+        "provenance": {
+            "renderer_source_identity_sha256": nested_sha256(
+                payload["a5_prompt_provenance"]["renderer_identity"]
+            ),
+            "prompt_config_identity_sha256": nested_sha256(prompt_config_identity),
+            "runtime_prompt_assets_sha256": nested_sha256(runtime_prompt_assets),
+            "materialized_e0_dev_data_tree_sha256": runtime_prompt_assets[
+                "materialized_e0_dev_data_tree_sha256"
+            ],
+            "input_assets_before_sha256": input_assets_before["aggregate_sha256"],
+            "input_assets_after_sha256": input_assets_after["aggregate_sha256"],
+            "input_assets_unchanged": input_assets_before == input_assets_after,
         },
-        "tokenizers": {
-            "receiver": {"name": receiver_name, "path": str(receiver_path), "files": _tokenizer_files(receiver_path)},
-            "sender": {"name": sender_name, "path": str(sender_path), "files": _tokenizer_files(sender_path)},
+        "census": {
+            "manifest": {
+                "path": str(census_manifest_path),
+                "bytes": census_manifest_path.stat().st_size,
+                "sha256": sha256_file(census_manifest_path),
+            },
+            "records": {
+                "path": str(census_records_path),
+                "bytes": census_records_path.stat().st_size,
+                "sha256": sha256_file(census_records_path),
+            },
+            "record_count": len(census_records),
+            "canonical_semantic_stream_sha256": census_manifest[
+                "canonical_semantic_stream_sha256"
+            ],
         },
-        "runtime_assets": runtime_assets,
-        "dimensions": dimensions,
-        "gold_response_template": GOLD_RESPONSE_TEMPLATE,
-        "gold_response_template_sha256": _sha256_bytes(GOLD_RESPONSE_TEMPLATE.encode("utf-8")),
-        "task_contract": by_task,
-        "streaming_contract": {
+        "sidecar": {
+            "contract_version": SCHEMA_VERSION,
+            "path": str(output_sidecar),
+            "bytes": output_sidecar.stat().st_size,
+            "file_sha256": sha256_file(output_sidecar),
+            "semantic_sha256": nested_sha256(payload),
+            "item_count": len(items),
+            "expanded_logical_rows_present": False,
+        },
+        "streaming": {
             "protocol_id": A4_PROTOCOL_ID,
             "schema_sha256": streaming_schema_sha256,
             "physical_chunk_rows": PHYSICAL_CHUNK_ROWS,
-            "historical_cumulative_ceiling_operative": False,
-            "geometry_lock": geometry_lock,
-            "streaming_template_lock": streaming_template_lock,
-            "synthetic_gate": {
-                "path": str(synthetic_gate_path),
-                "sha256": sha256_file(synthetic_gate_path),
-            },
+            "synthetic_gate_sha256": sha256_file(synthetic_gate_path),
+            "geometry_lock_receipt_sha256": geometry_lock["receipt"]["sha256"],
+            "streaming_template_lock_receipt_sha256": streaming_template_lock[
+                "receipt"
+            ]["sha256"],
+            "logical_row_coverage_exact": hard_gate_checks[
+                "logical_row_coverage_exact"
+            ],
+            "streaming_semantic_replay_equal": hard_gate_checks[
+                "streaming_semantic_replay_equal"
+            ],
+            "whole_table_materialization_detected": bool(
+                streaming_receipt["whole_table_materialization_detected"]
+            ),
         },
-        "expected_long_form_rows_by_task": {
-            task: {
-                "count": by_task[task]["expected_long_form_rows"]["count"],
-                "sum": by_task[task]["expected_long_form_rows"]["sum"],
-            }
-            for task in TASKS
-        },
-        "item_count": len(items),
-        "sidecar": {
-            "path": str(output_sidecar),
-            "bytes": output_sidecar.stat().st_size,
-            "sha256": sha256_file(output_sidecar),
+        "hard_gate_checks": hard_gate_checks,
+        "zero_counts": {
+            "unexpected_prompt_difference_count": census_manifest[
+                "unexpected_prompt_difference_count"
+            ],
+            "missing_rows": streaming_receipt["missing_rows"],
+            "duplicate_rows": streaming_receipt["duplicate_rows"],
         },
         "firewall": {
-            "e1_pilot_consumed": False,
-            "e1_pilot_rendered_tokenized_aligned_run_or_read": False,
-            "model_selection_consumed": False,
-            "test_consumed": False,
-            "confirmatory_consumed": False,
+            "old_execution_artifact_reused": False,
+            "model_instantiated": False,
             "model_or_checkpoint_loaded": False,
+            "model_forward_run": False,
             "gpu_or_cuda_used": False,
             "kubernetes_used": False,
             "training": False,
+            "e1_pilot_consumed": False,
+            "confirmatory_consumed": False,
         },
-        "expanded_row_absence_proof": payload["expanded_row_absence_proof"],
+        "e1_2_or_e1_3_authorized": False,
     }
-    validate_streaming_schema_artifact(manifest)
+    from script.analysis.fpct_e1_a5_prompt_gate import validate_a5_schema_artifact
+
+    validate_a5_schema_artifact(manifest, repo_root=repo_root)
     atomic_json(output_manifest, manifest)
-    return manifest
+    verified_manifest = _verify_completed_input_lock(
+        repo_root=repo_root,
+        e0_data_root=e0_data_root,
+        output_sidecar=output_sidecar,
+        output_manifest=output_manifest,
+        execution_identity=execution_identity,
+        expect_go_receipt=False,
+    )
+    go_receipt = {
+        "schema_version": 7,
+        "protocol_id": A5_PROTOCOL_ID,
+        "artifact_type": "a5_input_lock_receipt",
+        "status": "A5_INPUT_LOCK_GO",
+        "execution_sha": str(execution_identity["execution_sha"]),
+        "run_uid": str(execution_identity["run_uid"]),
+        "run_root": str(execution_identity["run_root"]),
+        "source_snapshot_receipt_sha256": str(
+            execution_identity["source_snapshot_receipt"]["file_sha256"]
+        ),
+        "prompt_census_manifest_sha256": sha256_file(census_manifest_path),
+        "checks": dict(verified_manifest["hard_gate_checks"]),
+        "firewall": {
+            "old_execution_artifact_reused": False,
+            "whole_table_materialization_detected": False,
+            "model_instantiated": False,
+            "model_or_checkpoint_loaded": False,
+            "model_forward_run": False,
+            "gpu_or_kubernetes_used": False,
+            "e1_pilot_consumed": False,
+            "confirmatory_consumed": False,
+        },
+        "zero_counts": dict(verified_manifest["zero_counts"]),
+        "resume_from_group_one": True,
+        "downstream_e1_2_authorized": False,
+    }
+    validate_a5_schema_artifact(go_receipt, repo_root=repo_root)
+    atomic_json(output_root / GO_RECEIPT_NAME, go_receipt)
+    return _verify_completed_input_lock(
+        repo_root=repo_root,
+        e0_data_root=e0_data_root,
+        output_sidecar=output_sidecar,
+        output_manifest=output_manifest,
+        execution_identity=execution_identity,
+        expect_go_receipt=True,
+    )
 
 
 def _blocked_check_name(error: Exception) -> str:
@@ -3112,24 +4139,48 @@ def _blocked_check_name(error: Exception) -> str:
     return normalized[:160] or error.__class__.__name__.lower()
 
 
-def _publish_blocked_receipt(output_root: Path, error: Exception) -> None:
+def _a5_bounded_peak_rss_gate(
+    streaming_receipt: Mapping[str, Any], synthetic_gate: Mapping[str, Any]
+) -> bool:
+    """Bind the natural lock to the A5 gate's frozen streaming evidence."""
+
+    return bool(
+        streaming_receipt.get("bounded_peak_rss") is True
+        and synthetic_gate.get("streaming_stress", {}).get("bounded_peak_rss")
+        is True
+    )
+
+
+def _a5_synthetic_gate_binding(path: Path) -> dict[str, str]:
+    canonical = _canonical_regular_file(path, "A5 synthetic gate")
+    return {"path": str(canonical), "sha256": sha256_file(canonical)}
+
+
+def _publish_blocked_receipt(
+    output_root: Path,
+    error: Exception,
+    execution_identity: Mapping[str, Any],
+) -> None:
     """Emit the only terminal receipt permitted after a caught gate failure."""
 
     payload = {
-        "schema_version": 6,
-        "protocol_id": A4_PROTOCOL_ID,
-        "artifact_type": "streaming_input_lock_blocked_receipt",
-        "status": "A4_INPUT_LOCK_BLOCKED",
-        "failed_checks": [_blocked_check_name(error)],
-        "runtime_probe_created": False,
-        "execution_plan_created": False,
-        "configmap_created": False,
-        "checkpoint_job_created": False,
-        "e1_2_started": False,
-        "e1_3_started": False,
-        "e1_pilot_consumed": False,
+        "schema_version": 7,
+        "protocol_id": A5_PROTOCOL_ID,
+        "artifact_type": "a5_input_lock_blocked_receipt",
+        "status": "A5_INPUT_LOCK_BLOCKED",
+        "execution_sha": str(execution_identity["execution_sha"]),
+        "run_uid": str(execution_identity["run_uid"]),
+        "run_root": str(execution_identity["run_root"]),
+        "failed_check": _blocked_check_name(error),
+        "failure_detail_sha256": _sha256_bytes(str(error).encode("utf-8")),
+        "resume_allowed": False,
+        "artifact_reuse_allowed": False,
+        "scientific_result": False,
+        "downstream_e1_2_or_e1_3_authorized": False,
     }
-    validate_streaming_schema_artifact(payload)
+    from script.analysis.fpct_e1_a5_prompt_gate import validate_a5_schema_artifact
+
+    validate_a5_schema_artifact(payload, repo_root=Path(execution_identity["source_snapshot_root"]))
     atomic_json(output_root / BLOCKED_RECEIPT_NAME, payload)
 
 
@@ -3146,20 +4197,20 @@ def prepare_input_lock(
     run_root: Path,
     _test_only_sealed_execution: tuple[object, str, str] | None = None,
 ) -> dict[str, Any]:
-    """Validate the successor identity, then run one fail-closed A4 input lock."""
+    """Validate the successor identity, then run one fail-closed A5 input lock."""
 
     output_root = output_manifest.absolute().parent
     if output_sidecar.absolute().parent != output_root:
-        raise ValueError("A4 input-lock sidecar and manifest must share one root")
+        raise ValueError("A5 input-lock sidecar and manifest must share one root")
     if repo_root.absolute() != source_snapshot_root.absolute():
-        raise ValueError("A4 input lock must execute from its immutable source snapshot")
+        raise ValueError("A5 input lock must execute from its immutable source snapshot")
     sealed_prepare_execution = _require_sealed_prepare_execution(
         repo_root=repo_root,
         source_snapshot_root=source_snapshot_root,
         execution_sha=execution_sha,
         test_sentinel=_test_only_sealed_execution,
     )
-    identity = validate_a4_execution_identity(
+    identity = validate_a5_execution_identity(
         execution_sha=execution_sha,
         source_snapshot_root=source_snapshot_root,
         source_snapshot_receipt=source_snapshot_receipt,
@@ -3169,6 +4220,11 @@ def prepare_input_lock(
         output_sidecar_name=output_sidecar.name,
         output_manifest_name=output_manifest.name,
         sealed_prepare_execution=sealed_prepare_execution,
+        _test_only_run_parent=(
+            run_root.absolute().parent
+            if sealed_prepare_execution.get("pytest_verified_test_sentinel") is True
+            else None
+        ),
     )
     try:
         return _prepare_input_lock_after_identity(
@@ -3181,7 +4237,7 @@ def prepare_input_lock(
     except (FileNotFoundError, FileExistsError, RuntimeError, ValueError) as error:
         # Abrupt process death/KeyboardInterrupt is intentionally not caught;
         # immutable chunks plus the execution identity then support exact resume.
-        _publish_blocked_receipt(output_root, error)
+        _publish_blocked_receipt(output_root, error, identity)
         raise
 
 

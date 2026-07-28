@@ -809,6 +809,32 @@ def _validate_json_schema(
         if matches != 1:
             raise ValueError(f"{path}: JSON schema oneOf matched {matches} branches")
         return
+    if "allOf" in schema:
+        branches = schema["allOf"]
+        if not isinstance(branches, list) or not branches:
+            raise ValueError(f"{path}: JSON schema allOf is malformed")
+        for index, branch in enumerate(branches):
+            if not isinstance(branch, Mapping):
+                raise ValueError(f"{path}: JSON schema allOf branch is malformed")
+            _validate_json_schema(value, branch, root, path=f"{path}.allOf[{index}]")
+    if "if" in schema:
+        condition = schema["if"]
+        if not isinstance(condition, Mapping):
+            raise ValueError(f"{path}: JSON schema if is malformed")
+        try:
+            _validate_json_schema(value, condition, root, path=f"{path}.if")
+        except ValueError:
+            selected = schema.get("else")
+            selected_name = "else"
+        else:
+            selected = schema.get("then")
+            selected_name = "then"
+        if selected is not None:
+            if not isinstance(selected, Mapping):
+                raise ValueError(f"{path}: JSON schema {selected_name} is malformed")
+            _validate_json_schema(
+                value, selected, root, path=f"{path}.{selected_name}"
+            )
     if "const" in schema and value != schema["const"]:
         raise ValueError(f"{path}: value differs from JSON schema const")
     if "enum" in schema and value not in schema["enum"]:
@@ -825,6 +851,20 @@ def _validate_json_schema(
     if expected_type is not None and not type_ok:
         raise ValueError(f"{path}: value differs from JSON schema type {expected_type}")
     if isinstance(value, Mapping):
+        if len(value) < int(schema.get("minProperties", 0)):
+            raise ValueError(f"{path}: JSON schema minProperties failed")
+        if "maxProperties" in schema and len(value) > int(
+            schema["maxProperties"]
+        ):
+            raise ValueError(f"{path}: JSON schema maxProperties failed")
+        property_names = schema.get("propertyNames")
+        if property_names is not None:
+            if not isinstance(property_names, Mapping):
+                raise ValueError(f"{path}: JSON schema propertyNames is malformed")
+            for name in value:
+                _validate_json_schema(
+                    str(name), property_names, root, path=f"{path}.<propertyName>"
+                )
         required = schema.get("required", [])
         missing = [name for name in required if name not in value]
         if missing:
@@ -836,6 +876,10 @@ def _validate_json_schema(
                 raise ValueError(f"{path}: JSON schema additional properties: {extra}")
         for name, child in value.items():
             child_schema = properties.get(name)
+            if child_schema is None and isinstance(
+                schema.get("additionalProperties"), Mapping
+            ):
+                child_schema = schema["additionalProperties"]
             if isinstance(child_schema, Mapping):
                 _validate_json_schema(child, child_schema, root, path=f"{path}.{name}")
     if isinstance(value, list):

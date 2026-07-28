@@ -1580,3 +1580,39 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
 - 根因：historical E0 support projection 只将 `choices[:4]` 写入 prompt anchor；实际 materialized ARC row 含额外 E 选项，production `UnifiedEvaluator` 对完整 choice list 渲染。前四项归一化 membership hash 仍相等，所以 exact rendered/alignment check 才首先暴露差异。
 - 验证边界：0 usable sidecar/manifest/templates/raw/runtime/plan；0 model/checkpoint load、forward、GPU、Kubernetes、training；E1-pilot 未 render/tokenize/align/run/read。该 root 永久 no-resume/no-reuse。
 - 结论：状态=`A4_INPUT_LOCK_BLOCKED / HUMAN REVIEW REQUIRED`。待人工在 `STRICT_HISTORICAL_PROJECTED_FIRST4_ANCHOR` 与 `ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT` 两个前瞻合同间选择；本文不把任何选项写成已批准或自动推荐。任一后继均需新 amendment、commit、snapshot、UID/root。
+
+### 2026-07-28 FPCT-E1 A5 actual production-runtime prompt provenance lock
+
+- 研究目标：使 E1 解释真实 E0 production evaluation，而不是未运行的
+  first-four prompt 反事实；在任何新 natural census 或 model output 前冻结
+  prompt provenance 修订。
+- 人工决定：批准
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5_RUNTIME_PROMPT`，selected=
+  `ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT`。Historical first-four 继续只作
+  selection/content-group/provenance anchor；完整 materialized row 经 exact E0
+  evaluator/prompt builder 产生 operative runtime anchor。
+- 核心改动：新增 v7 amendment、machine contract 和 strict artifact schema，
+  冻结 326-group dual-anchor census 字段、两类 closed-world prompt classifier、
+  historical E0 renderer/config/tokenizer/data-tree identity、A5 input-lock hard
+  gate 与 group-1 fresh execution 顺序。A4 gate 只读绑定 `07755a40` historical
+  tree；A5 使用新 `e1_a5_prompt_synthetic_gate.json`，不得覆盖或把旧 gate
+  当作当前 tree 证据。
+- 实验配置：E0-design 仍为 ARC/OpenBookQA/MMLU-Redux=`128/70/128`；A4
+  4096-row bounded streaming、operator、six checkpoints、centered-lambda grid、
+  estimands、weights 和 seals 均不变。当前只允许 CPU synthetic qualification；
+  full census/input lock 仅在新 gate GO、clean push、新 snapshot/root 后授权。
+- 验证状态：protocol/contract/schema JSON syntax 与路径一致性已检查；A5
+  pre-natural gate=`GO`，`248 passed / 0 failed`，artifact/evidence SHA256=
+  `464e646c336d33c97a03c603d283a95b1579508d63ae0f19d7c700ccf2dcfc02` /
+  `2fc5c70da231cfd0aba54656c5a34ff142594208f4a006348f73607559af4a47`。
+  Million-row stress=`1,000,384` rows / 245 chunks，semantic replay exact，peak
+  RSS=`676,200,448 B` < threshold=`812,384,256 B`。A5 instrumentation 三件套
+  已重新锁定；326-group census 和 input-lock 仍 `PENDING`，未读取自然结果。
+- 两份未提交的 precommit gate 在任何自然数据访问前失效：`6dc44be9...`
+  漏列 source-snapshot producer，`b116670b...` 随后因 tracked amendment 的
+  Markdown 空白清理而失效。原字节只保存在
+  `local/fpct_e1/a5_precommit_invalidated/`，不提交、不复用、不作为 GO 证据。
+- 结论：事件分类为 `HISTORICAL_PROMPT_ANCHOR_UNDERSPECIFICATION`，不改变
+  `E0_NO_GO_FOR_FURTHER_SPEND`，也不推断 first-four accuracy。Execution
+  `07755a40` 永久 no-resume/no-reuse；E1-2/E1-3、model/checkpoint、GPU/K8s、
+  training、E1-pilot 与 confirmatory 仍未授权。

@@ -1,0 +1,501 @@
+{
+  "schema_version": 7,
+  "protocol_id": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt",
+  "amendment_id": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5_RUNTIME_PROMPT",
+  "approval": {
+    "approved_at": "2026-07-28",
+    "prospective": true,
+    "selected_option": "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT",
+    "rejected_as_primary": "STRICT_HISTORICAL_PROJECTED_FIRST4_ANCHOR",
+    "classification": "INPUT_PROVENANCE_CONTRACT_CORRECTION",
+    "incident_classification": "HISTORICAL_PROMPT_ANCHOR_UNDERSPECIFICATION",
+    "e0_aggregate_or_claim_changed": false,
+    "counterfactual_first4_run_authorized": false
+  },
+  "normative_sources": {
+    "amendment": "FPCT_E1_A5_PRODUCTION_PROMPT_AMENDMENT.md",
+    "contract": "recipe/eval_recipe/fpct_e1/e1_a5_prompt_contract.json",
+    "schema": "recipe/eval_recipe/fpct_e1/e1_a5_prompt_schema.json",
+    "predecessor_streaming_amendment": "FPCT_E1_STREAMING_AMENDMENT.md",
+    "predecessor_streaming_contract": "recipe/eval_recipe/fpct_e1/e1_streaming_contract.json",
+    "predecessor_streaming_schema": "recipe/eval_recipe/fpct_e1/e1_streaming_schema.json"
+  },
+  "historical_a4_evidence": {
+    "execution_sha": "07755a4039e89700e59af9e141026a57142f9da0",
+    "status": "A4_INPUT_LOCK_BLOCKED",
+    "failure_closure": {
+      "path": "recipe/eval_recipe/fpct_e1/executions/07755a40/input_lock_failure_receipt.json",
+      "sha256": "2300e19d04233c734d13b7181246bd6628941c0fa486981938cb4216e06bdc9d"
+    },
+    "streaming_gate": {
+      "path": "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json",
+      "sha256": "42b6c98fd5f27a49e258bae4b79ff3c4673c9144465a3c43f9a672d228c82df4",
+      "evidence_sha256": "d22bb1997234dd0c895f1b819e9cbf3bb1102633502f482cbb7b2d4d4ecc8e43",
+      "scope": "HISTORICAL_TREE_07755A40_ONLY",
+      "verify_against_a5_tree": false,
+      "overwrite_allowed": false
+    },
+    "instrumentation_artifacts": [
+      "recipe/eval_recipe/fpct_e1/e1_instrumentation_parity_a4.json",
+      "recipe/eval_recipe/fpct_e1/e1_synthetic_query_variance_a4.json",
+      "recipe/eval_recipe/fpct_e1/e1_instrumentation_hard_gate_a4.json"
+    ],
+    "resume_allowed": false,
+    "artifact_reuse_allowed": false,
+    "scientific_result": false
+  },
+  "dual_anchor": {
+    "historical_projection_anchor": {
+      "input": "question plus first four choices in frozen historical order",
+      "roles": [
+        "support_selection",
+        "content_group_identity",
+        "sample_identity",
+        "historical_provenance_diagnostic"
+      ],
+      "operative_runtime_input": false,
+      "immutable": true
+    },
+    "production_runtime_anchor": {
+      "input": "exact materialized E0 development row with full production choice list in original order",
+      "renderer": "exact historical E0 production evaluator and prompt builder",
+      "roles": [
+        "operative_E1_2_input",
+        "operative_E1_3_input",
+        "tokenization",
+        "alignment",
+        "certified_topology",
+        "logical_row_geometry"
+      ],
+      "operative_runtime_input": true,
+      "must_be_regenerated": true
+    }
+  },
+  "scientific_invariants": {
+    "e0_design_membership_unchanged": true,
+    "content_group_and_sample_identity_unchanged": true,
+    "task_membership_unchanged": true,
+    "gold_answer_unchanged": true,
+    "checkpoint_universe_unchanged": true,
+    "operators_unchanged": [
+      "C_post",
+      "F"
+    ],
+    "centered_lambda_grid": [
+      0.0,
+      0.25,
+      0.5,
+      1.0,
+      2.0
+    ],
+    "estimands_weights_accuracy_and_flip_definitions_unchanged": true,
+    "a4_streaming_semantics_and_physical_chunk_rows_unchanged": true,
+    "physical_chunk_rows": 4096,
+    "e1_pilot_sealed": true,
+    "confirmatory_sealed": true
+  },
+  "freshly_derived_production_fields": [
+    "production_rendered_prompt_sha256",
+    "production_alignment_sha256",
+    "production_prompt_token_count",
+    "production_certified_parent_count",
+    "production_topology",
+    "production_logical_row_count",
+    "production_physical_chunk_count"
+  ],
+  "e0_renderer_oracle": {
+    "commit_chain": {
+      "scientific_operator_and_image_source": "80fb295542ad298fae4cddb1273517b401bbcd17",
+      "initial_execution_and_config_lock": "c8751b2a933484ca250b2dcf3f80e233e3809cf6",
+      "corrected_dev_tree_lock_and_replacement_configmap_basis": "ce99abc066ca55d3d6b75f1005e1d4e6188136f3",
+      "final_decode_evaluation_image_and_source": "6a51ad4ed1d66067c0ac2d3f2c8c3b5de0f5d2ba",
+      "decode_recovery_execution_lock": "a1bb56cf0b315fdf4b03d56eab2e5a91560c3907",
+      "final_result_archive": "613958af38fad27e1ea933ccc0dda6d1af5cce89"
+    },
+    "source_files": {
+      "script/evaluation/unified_evaluator.py": "bba1a0d3591a00ce62586f055e92875fb01e84c708c42e922493c3aef91a0371",
+      "rosetta/utils/evaluate.py": "1e1d06d79769386a63436cf230cbc9c5ef09d9342b7f060b7238e4a57f94d50d",
+      "script/experiment/fpct_e0_runner.py": "d3008d18bd19bb13c8bdc5526412c23bbe64dd3ba0a7ffe799f3f928d9d08f0e"
+    },
+    "build_prompt_ast_source_sha256": "74b7ad7ebfd1df557c3eb4c36075bfe45958c915574a498622f68d287cfb4332",
+    "set_default_chat_template_ast_source_sha256": "0b5a3e0f9890daf6393f3be73c9b55fc9f93e77ed881c58994523efc9943ccb6",
+    "effective_source_closure_sha256": {
+      "rosetta/model/aligner.py": "fe77d72fb7103ca103fe87fa602bed545e0caf6fc75b1741b8736b41e9daf7d8",
+      "rosetta/train/dataset_adapters.py": "125c22bd09b2eec0f021f75496ff2a74ef1f795d9b8c0336b70342e6eba08dc0",
+      "rosetta/utils/model_loading.py": "d99b45372f1a756cd4e7bf8443c6ab838102e8dfa89f96bdc3b3910ca6532b3a",
+      "script/experiment/fpct_e0_runner.py": "d3008d18bd19bb13c8bdc5526412c23bbe64dd3ba0a7ffe799f3f928d9d08f0e"
+    },
+    "config_index_sha256": "555364574fb5f36b472a91ef9ea0bc9534660ff462c97566e793f7997e71b4ae",
+    "rendered_config_bundle_sha256": "021f09404666e05effe780d32f7b3956e145d440a565ead8c4790ac80a181391",
+    "evaluation_config_count": 36,
+    "ordered_evaluation_config_records_sha256": "24a46571715dd0bdc5ca7953243e7c57556655e1eeed231cb306cb1f8852899a",
+    "evaluation_config_cartesian_identity": {
+      "seeds": [
+        2026072201,
+        2026072202,
+        2026072203
+      ],
+      "cells": [
+        "Y_CC",
+        "Y_CF",
+        "Y_FC",
+        "Y_FF"
+      ],
+      "tasks": [
+        "ai2-arc",
+        "openbookqa",
+        "mmlu-redux"
+      ],
+      "exact_cartesian_record_count": 36,
+      "missing_or_duplicate_record_allowed": false
+    },
+    "canonical_prompt_alignment_config_projection": {
+      "answer_method": "generate",
+      "use_cot": false,
+      "use_template": true,
+      "do_sample": false,
+      "enable_thinking": false,
+      "base_model": "Qwen/Qwen3-0.6B",
+      "teacher_model": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "alignment_strategy": "soft_span_overlap_v2",
+      "soft_alignment_top_k": 4,
+      "soft_alignment_score_mode": "uniform",
+      "soft_alignment_boundary_bonus": 0.5,
+      "soft_alignment_boundary_tolerance": 1,
+      "soft_alignment_min_weight": 0.0,
+      "candidate_window": 0,
+      "fpct_alignment_sanitizer": "certified_slot0_v1",
+      "include_response": false,
+      "attn_implementation": "eager"
+    },
+    "evaluation_settings": {
+      "enable_thinking": false,
+      "use_cot": false,
+      "use_template": true
+    },
+    "required_equivalence": "historical_E0_renderer_full_row_bytes_exactly_equal_A5_renderer_full_row_bytes",
+    "source_similarity_is_sufficient": false,
+    "historical_source_snapshot_is_reference_oracle": true
+  },
+  "asset_identity": {
+    "materialized_e0_dev_data_tree_sha256": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73",
+    "receiver": {
+      "name": "Qwen/Qwen3-0.6B",
+      "revision": "c1899de289a04d12100db370d81485cdf75e47ca",
+      "tokenizer_json_sha256": "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4",
+      "tokenizer_config_sha256": "d5d09f07b48c3086c508b30d1c9114bd1189145b74e982a265350c923acd8101",
+      "tokenizer_bundle_sha256": "d2a315d4ca46d73b53ef973f5eda2561daf90a848e07779fac19ce9761f714be",
+      "chat_template_bytes": 4168,
+      "chat_template_sha256": "a55ee1b1660128b7098723e0abcd92caa0788061051c62d51cbe87d9cf1974d8"
+    },
+    "sender": {
+      "name": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
+      "revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",
+      "tokenizer_json_sha256": "bcd04f0eadf90287bd26e1a183ac487d8a141b09b06aecb7725bbdd343640f2e",
+      "tokenizer_model_sha256": "9e556afd44213b6bd1be2b850ebbbd98f5481437a8021afaf58ee7fb1818d347",
+      "tokenizer_config_sha256": "7b41ba7d0eb91e77914ca3dafde559ea3e19878769b7e68409e89bed5222e77a",
+      "tokenizer_bundle_sha256": "5a1a4d8005b2377b26f425fc64322ebcb22e898f8d81c603875eec5f8083809b",
+      "chat_template_bytes": 410,
+      "chat_template_sha256": "66291cf0045c2425a3a667cf3cbb7af2b11f09e025c02f97245323ab79119362"
+    },
+    "provenance_boundary": {
+      "pre_e0_lock": "model IDs, exact revisions, tokenizer.json hashes, and TinyLlama tokenizer.model hash",
+      "same_mount_corroboration": "tokenizer_config, tokenizer bundle, and decoded chat-template byte/hash values; must be re-attested before census and are not retroactively asserted as original E0 receipt fields"
+    },
+    "complete_tokenizer_asset_tree_sha256_must_be_frozen_in_new_execution_receipt": true,
+    "tokenizer_asset_tree_scope": {
+      "includes": "tokenizer/config/generation-config/special-token/vocab/merges/chat-template assets required to reconstruct prompt bytes and tokenization",
+      "excludes": [
+        "*.safetensors",
+        "*.bin",
+        "*.pt",
+        "checkpoint trees",
+        "model-weight files"
+      ],
+      "checkpoint_or_model_weight_tree_read_authorized": false
+    },
+    "missing_or_ambiguous_identity_action": "A5_INPUT_LOCK_BLOCKED"
+  },
+  "population": {
+    "name": "E0-design",
+    "distinct_content_groups": 326,
+    "task_order": [
+      "ai2-arc",
+      "openbookqa",
+      "mmlu-redux"
+    ],
+    "task_counts": {
+      "ai2-arc": 128,
+      "openbookqa": 70,
+      "mmlu-redux": 128
+    },
+    "start_group_ordinal_one_based": 1,
+    "old_group_161_resume_allowed": false,
+    "e1_pilot_in_population": false
+  },
+  "census_record_contract": {
+    "required_fields_in_order": [
+      "task",
+      "content_group_sha256",
+      "sample_key_sha256",
+      "source_row_id",
+      "historical_choice_count",
+      "production_choice_count",
+      "raw_choice_labels",
+      "gold_answer",
+      "historical_first4_question_choices_sha256",
+      "historical_rendered_prompt_sha256",
+      "historical_alignment_sha256",
+      "raw_full_row_sha256",
+      "production_rendered_prompt_sha256",
+      "production_alignment_sha256",
+      "historical_prompt_token_count",
+      "production_prompt_token_count",
+      "production_certified_parent_count",
+      "production_logical_row_count",
+      "production_physical_chunk_count",
+      "prompt_relation",
+      "choice_difference_only"
+    ],
+    "prompt_relation_enum": [
+      "EXACT_HISTORICAL_AND_PRODUCTION_MATCH",
+      "EXTRA_CHOICES_ONLY"
+    ],
+    "sort_order": [
+      "task according to population.task_order",
+      "content_group_sha256 ascending",
+      "sample_key_sha256 ascending"
+    ],
+    "gold_answer_enum": [
+      "A",
+      "B",
+      "C",
+      "D"
+    ],
+    "historical_choice_count": 4,
+    "raw_full_row_hash_required": true
+  },
+  "prompt_relation_classifier": {
+    "closed_world": true,
+    "exact_match": {
+      "id": "EXACT_HISTORICAL_AND_PRODUCTION_MATCH",
+      "requirements": [
+        "question bytes equal",
+        "complete choice labels text count and order equal",
+        "rendered prompt bytes equal",
+        "alignment identity equal"
+      ],
+      "choice_difference_only": false
+    },
+    "extra_choices_only": {
+      "id": "EXTRA_CHOICES_ONLY",
+      "requirements": [
+        "question bytes equal",
+        "first four choice labels text and order equal",
+        "production choice count greater than four",
+        "all input differences confined to ordered suffix choices",
+        "historical group and sample identities exact"
+      ],
+      "choice_difference_only": true
+    },
+    "fail_closed_conditions": [
+      "question_text_changed",
+      "first_four_choice_text_changed",
+      "first_four_choice_order_changed",
+      "chat_template_changed",
+      "prompt_instruction_changed",
+      "unexpected_whitespace_or_template_drift",
+      "gold_answer_outside_A_B_C_D",
+      "raw_row_not_uniquely_mapped_to_historical_group",
+      "missing_or_duplicate_group",
+      "unclassified_prompt_difference"
+    ],
+    "extra_suffix_text_change_semantics": "historical identity remains fixed; raw full-row and production runtime anchors must change and record the change"
+  },
+  "census_outputs": {
+    "record_count": 326,
+    "required_aggregates": [
+      "per_task_affected_group_count",
+      "per_task_unaffected_group_count",
+      "historical_choice_count_distribution",
+      "production_choice_count_distribution",
+      "all_affected_content_group_hashes",
+      "historical_to_production_anchor_map",
+      "production_prompt_token_count_distribution",
+      "production_certified_parent_count_distribution",
+      "production_logical_row_count_distribution",
+      "production_physical_chunk_count_distribution",
+      "unexpected_prompt_difference_count",
+      "missing_row_count",
+      "duplicate_row_count"
+    ],
+    "canonical_semantic_stream_required": true,
+    "partition_invariant": true,
+    "physical_chunk_rows": 4096
+  },
+  "a5_pre_natural_gate": {
+    "path": "recipe/eval_recipe/fpct_e1/e1_a5_prompt_synthetic_gate.json",
+    "runner": "script/analysis/fpct_e1_a5_prompt_gate.py",
+    "status_before_execution": "PENDING_NOT_RUN",
+    "old_a4_gate_may_substitute": false,
+    "old_a4_tracked_tree_may_be_verified_as_current": false,
+    "transactional_publish_go_only": true,
+    "required_evidence_fields": {
+      "tracked_files_sha256": "complete dynamic repo-relative source and test path to SHA256 map; exact key set and live bytes are independently recomputed by the code verifier",
+      "tests.output_sha256": "SHA256 of the complete captured pytest stdout plus stderr used to derive the passed/failed counts",
+      "estimated_physical_bytes_per_row": "positive integer consumed by the compact-geometry storage preflight",
+      "streaming_stress": "fresh A5 baseline/stress worker records with exact logical/emitted counts, semantic/replay SHA256, physical sizes, chunk count, peak RSS, objective threshold, and bounded-RSS result",
+      "streaming_contract_checks": "exact detailed A4-compatible row-key, weights, topology, chunk/aggregate equivalence, bounded RSS, atomic no-overwrite, and crash/resume booleans; consumed directly by the A5 natural input-lock producer",
+      "environment": "strict Python executable/version, platform, machine, PyArrow, Torch, Transformers, Tokenizers, Datasets, PyYAML, empty CUDA_VISIBLE_DEVICES, offline=true, and model_instantiated=false record",
+      "environment_identity_sha256": "SHA256 of the canonical strict environment object, independently recomputed by the gate verifier"
+    },
+    "instrumentation_reattestation_boundary": {
+      "classification": "NO_MODEL_STATIC_SOURCE_IDENTITY_PLUS_PURE_TENSOR_SYNTHETIC",
+      "immutable_a4_real_model_parity_evidence": "reference and rehash only",
+      "hf_or_rosetta_model_forward_rerun_authorized": false,
+      "new_a5_evidence_may_claim_real_model_logits_loss_cache_parity_rerun": false,
+      "model_instantiated": false,
+      "model_forward_run": false
+    },
+    "required_suites": [
+      "exact E0 renderer source/config identity attestation",
+      "A4 streaming synthetic oracle under A5 sources",
+      "A5 instrumentation re-attestation",
+      "dual-anchor tests",
+      "full-population fixture tests",
+      "historical-vs-production classifier tests",
+      "streaming semantic replay tests",
+      "failure corruption atomicity and resume tests"
+    ],
+    "instrumentation_paths": {
+      "parity": "recipe/eval_recipe/fpct_e1/e1_instrumentation_parity_a5.json",
+      "synthetic_query_variance": "recipe/eval_recipe/fpct_e1/e1_synthetic_query_variance_a5.json",
+      "hard_gate": "recipe/eval_recipe/fpct_e1/e1_instrumentation_hard_gate_a5.json"
+    },
+    "required_synthetic_cases": [
+      "four_choice_exact",
+      "five_choice_gold_A_extra_E",
+      "five_choice_gold_E_fail_closed",
+      "first_four_order_change_fail_closed",
+      "suffix_E_text_change_updates_runtime_anchor",
+      "historical_current_formatter_mismatch_fail_closed",
+      "chunk_partition_semantic_equivalence"
+    ],
+    "natural_e0_design_access_before_go": false
+  },
+  "fresh_execution": {
+    "commit": "PENDING_CLEAN_PUSHED_A5_COMMIT",
+    "uid_pattern": "^fpct-e1-a5-runtime-prompt-[0-9a-f]{8,40}-v1$",
+    "root_pattern": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5-[0-9a-f]{8,40}-v1$",
+    "new_empty_root_required": true,
+    "new_immutable_source_snapshot_and_receipt_required": true,
+    "restart_from_first_group": true,
+    "execution_07755a40_resume_or_reuse_allowed": false,
+    "ordered_stages": [
+      "new_source_snapshot_receipt",
+      "dual_anchor_full_population_prompt_census",
+      "production_tokenization_alignment_lock",
+      "streaming_geometry_and_raw_topology_lock",
+      "complete_independent_input_lock_verifier",
+      "A5_INPUT_LOCK_GO_receipt"
+    ]
+  },
+  "input_lock_hard_gate": {
+    "go_status": "A5_INPUT_LOCK_GO",
+    "failure_status": "A5_INPUT_LOCK_BLOCKED",
+    "all_boolean_checks_must_be_true": [
+      "historical_projection_anchor_unchanged",
+      "e0_design_membership_unchanged",
+      "renderer_source_identity_attested",
+      "production_renderer_exactly_attested",
+      "production_data_tree_exactly_attested",
+      "all_326_groups_resolved",
+      "all_first4_choices_equal_historical",
+      "all_gold_answers_in_A_B_C_D",
+      "all_prompt_differences_classified",
+      "historical_to_runtime_mapping_complete",
+      "production_prompt_replay_equal",
+      "production_alignment_replay_equal",
+      "choice_order_preserved",
+      "raw_full_row_hashes_complete",
+      "logical_row_coverage_exact",
+      "streaming_semantic_replay_equal",
+      "bounded_peak_rss"
+    ],
+    "all_boolean_checks_must_be_false": [
+      "old_execution_artifact_reused",
+      "whole_table_materialization_detected",
+      "model_instantiated",
+      "model_or_checkpoint_loaded",
+      "model_forward_run",
+      "gpu_or_kubernetes_used",
+      "e1_pilot_consumed",
+      "confirmatory_consumed"
+    ],
+    "all_integer_checks_must_equal_zero": [
+      "unexpected_prompt_difference_count",
+      "missing_rows",
+      "duplicate_rows"
+    ],
+    "exact_group_count": 326,
+    "failure_invalidates_run_for_resume_or_reuse": true,
+    "failure_forbids": [
+      "runtime_image_probe",
+      "checkpoint_tree_lock",
+      "execution_plan",
+      "configmap",
+      "E1_2",
+      "E1_3"
+    ]
+  },
+  "input_lock_manifest_contract": {
+    "schema_version": 7,
+    "protocol_id": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt",
+    "artifact_type": "a5_input_lock_manifest",
+    "go_status": "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
+    "strict_schema_definition": "recipe/eval_recipe/fpct_e1/e1_a5_prompt_schema.json#/$defs/a5InputLockManifest",
+    "must_bind": [
+      "fresh execution/source snapshot receipt and tree",
+      "exact 128/70/128 task counts",
+      "renderer/config/tokenizer/data-tree provenance hashes",
+      "326-row census manifest and record stream",
+      "compact sidecar file and semantic hashes",
+      "A4 streaming schema/gate/geometry/template receipts",
+      "all A5 hard-gate booleans and zero counts",
+      "no-model/GPU/Kubernetes/training/E1-pilot/confirmatory firewall"
+    ],
+    "compact_sidecar_contract_version": 3,
+    "untyped_or_legacy_A4_main_manifest_allowed": false
+  },
+  "authorization": {
+    "authorized_next": [
+      "A5_protocol_and_schema",
+      "dual_anchor_implementation",
+      "full_E0_design_no_model_prompt_census",
+      "synthetic_and_CPU_hard_gate",
+      "new_clean_pushed_commit",
+      "new_immutable_snapshot_and_run_root",
+      "full_CPU_input_lock_from_group_1"
+    ],
+    "not_authorized": [
+      "resume_execution_07755a40",
+      "reuse_A4_run_artifacts",
+      "model_or_checkpoint_load",
+      "model_forward",
+      "GPU_or_CUDA_or_Kubernetes",
+      "E1_2",
+      "E1_3",
+      "training",
+      "E1_pilot_access",
+      "confirmatory_access",
+      "first4_counterfactual_prompt_sensitivity"
+    ]
+  },
+  "claim_boundary": [
+    "A5 prompt census and input lock are provenance evidence, not mechanism activation.",
+    "Changing the operative anchor does not change or recompute the E0 aggregate.",
+    "No inference is permitted about first-four counterfactual accuracy.",
+    "A5_INPUT_LOCK_GO does not authorize E1-2 or E1-3.",
+    "E1-pilot remains exploratory, sealed, and never confirmatory-eligible."
+  ]
+}
