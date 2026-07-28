@@ -14,8 +14,8 @@
   "branch": "research/fpct-e1-mechanism-audit",
   "base_commit": "613958af38fad27e1ea933ccc0dda6d1af5cce89",
   "classification": "EXPLORATORY_MECHANISM_AUDIT_NOT_CONFIRMATORY",
-  "current_stage": "A5_PROMPT_PROVENANCE_PROTOCOL_SCHEMA_AND_PRE_NATURAL_QUALIFICATION",
-  "current_status": "A5_APPROVED_PRE_NATURAL_GATE_PENDING_E1_2_NOT_AUTHORIZED",
+  "current_stage": "A5_INPUT_LOCK_FAILURE_CLOSURE_AND_A5R1_HUMAN_REVIEW",
+  "current_status": "A5_INPUT_LOCK_BLOCKED_HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED",
   "e0_read_only": {
     "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
     "result_document": {
@@ -267,7 +267,7 @@
     "e0_design": {
       "source": "historical frozen calibration development groups",
       "role": "instrumentation-validated mechanism audit, topology audit, and centered-lambda sweep",
-      "status": "A5_FULL_POPULATION_NO_MODEL_CENSUS_AND_INPUT_LOCK_CONDITIONALLY_AUTHORIZED_AFTER_NEW_PRE_NATURAL_GATE_GO"
+      "status": "A5_INPUT_LOCK_BLOCKED_BEFORE_GROUP_ONE_RERUN_REQUIRES_A5R1_HUMAN_APPROVAL"
     },
     "e1_pilot": {
       "source": "support-fit-only certified groups",
@@ -530,18 +530,29 @@
       "scientific_result": false
     },
     "a5_successor_state": {
-      "status": "APPROVED_PRE_NATURAL_GATE_PENDING",
+      "status": "A5_INPUT_LOCK_BLOCKED_PERMANENTLY_ABANDONED",
       "protocol_id": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt",
       "selected_prompt_anchor": "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT",
       "historical_first4_anchor_role": "SELECTION_CONTENT_GROUP_IDENTITY_AND_PROVENANCE_ONLY",
-      "new_clean_pushed_commit": "PENDING",
-      "new_source_snapshot_uid_and_run_root": "PENDING",
-      "natural_e0_design_census_authorized_only_after_a5_gate_go": true,
+      "new_clean_pushed_commit": "9b248d2094b684f5d9e9a218919a354b7d97468e",
+      "source_snapshot_git_tree": "ec8254302e831d83a169971964e848550e659f75",
+      "source_snapshot_mounted_tree_sha256": "ee824b0d51d015a615f0db836ab1d0e2b555e36bcc55a5a284245dcc98f1cb65",
+      "run_uid": "fpct-e1-a5-runtime-prompt-9b248d20-v1",
+      "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5-9b248d20-v1",
+      "terminal_receipt_status": "A5_INPUT_LOCK_BLOCKED",
+      "failed_check": "a5_materialized_e0_development_tree_sha_changed",
+      "natural_e0_design_group_count": 0,
+      "strict_tokenizer_bundle_and_template_attestation_completed": false,
+      "historical_natural_census_authorization_consumed_and_terminal": true,
+      "new_natural_census_requires_a5r1_human_approval": true,
       "model_or_checkpoint_loaded": false,
       "gpu_or_kubernetes_used": false,
       "training": false,
       "e1_2_or_e1_3_authorized": false,
-      "e1_pilot_consumed": false
+      "e1_pilot_consumed": false,
+      "resume_allowed": false,
+      "artifact_reuse_allowed": false,
+      "scientific_result": false
     },
     "superseded_execution_attempt": {
       "execution_sha": "744a943ea804dfebe4e6d3cba756b6a89763002f",
@@ -595,7 +606,8 @@
       "artifact_reuse_allowed": false,
       "scientific_result": false,
       "automatic_ceiling_or_representation_amendment_allowed": false,
-      "successor_execution_sha": "PENDING_CLEAN_PUSHED_A4_COMMIT"
+      "successor_execution_sha": "07755a4039e89700e59af9e141026a57142f9da0",
+      "successor_status": "A4_INPUT_LOCK_BLOCKED_PERMANENTLY_ABANDONED"
     },
     "source_snapshot": {
       "construction": "the clean pushed A4 successor commit git archive created only after synthetic GO; superseded/failed 744a943, d1698177, and 612697df archives are never reused",
@@ -644,7 +656,7 @@
       "runtime_probe_persistent_write_scope": "one unique execution-specific runtime directory",
       "sender_receiver_full_asset_trees_verified_before_load": true,
       "dev_data_configs_checkpoints_verified_before_load": true,
-      "actual_image_model_checkpoint_input_hashes": "pending_until_post_commit_execution_plan"
+      "actual_image_model_checkpoint_input_hashes": "NOT_GENERATED_A5_BLOCKED_BEFORE_RUNTIME_EXECUTION_PLAN"
     },
     "raw_topology": {
       "generated_before_model_output": true,
@@ -693,9 +705,10 @@
       "e1_pilot_consumed": false,
       "historical_attempt_resume_or_artifact_reuse_allowed": false
     },
-        "a5_stage_graph": {
-      "status": "PRE_NATURAL_GATE_GO_AWAITING_CLEAN_PUSH_AND_CPU_INPUT_LOCK",
-      "operative": true,
+    "a5_stage_graph": {
+      "status": "A5_INPUT_LOCK_BLOCKED_AT_9B248D20_HUMAN_REVIEW_REQUIRED",
+      "operative": false,
+      "record_scope": "HISTORICAL_BLOCKED_EXECUTION_9B248D20_NOT_CURRENT_AUTHORIZATION",
       "pre_natural_requirements": [
         "A5 v7 protocol contract and schema complete",
         "A5 prompt-specific synthetic and instrumentation hard gate GO",
@@ -714,7 +727,23 @@
       "e1_2_authorized": false,
       "e1_3_authorized": false,
       "e1_pilot_consumed": false,
-      "execution_07755a40_resume_or_artifact_reuse_allowed": false
+      "execution_07755a40_resume_or_artifact_reuse_allowed": false,
+      "execution_9b248d20_resume_or_artifact_reuse_allowed": false
+    },
+    "a5r1_data_hash_recovery_proposal": {
+      "status": "DRAFT_HUMAN_APPROVAL_REQUIRED_NOT_OPERATIVE",
+      "requested_approval_id": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS",
+      "document": "FPCT_E1_A5_DATA_HASH_RECOVERY_ADDENDUM.md",
+      "document_sha256": "4de16ef383c608c528003634e1cf0c16c9100f0bab1d32cb3868c83439ef3ce4",
+      "failure_closure": "recipe/eval_recipe/fpct_e1/executions/9b248d20/input_lock_failure_receipt.json",
+      "failure_closure_sha256": "76e4dafcb1bf7673a3a4d1cbd124ba4099f8de8bca6af411cdbb9f83b32e3da4",
+      "root_cause": "HASH_ALGORITHM_DOMAIN_MISMATCH_DATA_BYTES_UNCHANGED",
+      "generic_tree_algorithm": "canonical_json_file_manifest_v1",
+      "generic_tree_sha256": "12f537cade1a30f6fd4e7a146c58311412f8824a6845ea4e6f7a6b5651bcb405",
+      "e0_declared_tree_algorithm": "relative_path_nul_file_sha256_bytes_v1",
+      "e0_declared_tree_sha256": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73",
+      "new_gate_commit_snapshot_uid_root_authorized": false,
+      "natural_census_rerun_authorized": false
     },
     "baseline_ownership": {
       "cpost_fields_runtime_backend_may_report": false,
@@ -776,8 +805,9 @@
   },
   "authorization": {
     "instrumentation_hard_gate": true,
-    "a5_prompt_specific_pre_natural_gate": "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE_PENDING_CLEAN_PUSH",
-    "e0_design_input_lock_rerun": "CONDITIONALLY_AUTHORIZED_AFTER_A5_GATE_GO_CLEAN_PUSH_AND_NEW_SNAPSHOT_FROM_GROUP_ONE",
+    "a5_prompt_specific_pre_natural_gate": "HISTORICAL_GO_BOUND_TO_BLOCKED_9B248D20",
+    "a5r1_data_hash_recovery": "HUMAN_APPROVAL_REQUIRED_NOT_OPERATIVE",
+    "e0_design_input_lock_rerun": "BLOCKED_PENDING_A5R1_HUMAN_APPROVAL",
     "e0_design_mechanism_audit": "BLOCKED_NO_INPUT_LOCK_GO",
     "e0_design_centered_lambda_sweep": "BLOCKED_NO_FINALIZED_E1_2",
     "new_training": false,
@@ -791,13 +821,16 @@
   "execution_authorization": {
     "a4_successor_input_lock_operative": false,
     "a4_successor_dag_operative": false,
-    "a5_protocol_schema_and_implementation_operative": true,
-    "a5_cpu_input_lock_operative_only_after_prompt_specific_gate_go": true,
+    "a5_protocol_schema_and_implementation_operative": false,
+    "a5_cpu_input_lock_operative_only_after_prompt_specific_gate_go": false,
+    "a5_cpu_input_lock_currently_authorized": false,
+    "fresh_a5r1_gate_required_after_human_approval": true,
     "requires_a5_input_lock_go": true,
-    "blocked_execution_sha": "07755a4039e89700e59af9e141026a57142f9da0",
+    "blocked_execution_sha": "9b248d2094b684f5d9e9a218919a354b7d97468e",
+    "historical_blocked_execution_sha": "07755a4039e89700e59af9e141026a57142f9da0",
     "blocked_execution_resume_or_reuse_allowed": false,
-    "human_review_required": false,
-    "human_decision": "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT",
+    "human_review_required": true,
+    "human_decision": "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT; A5R1_HASH_DOMAIN_RECOVERY_UNDECIDED",
     "historical_attempt_resume_allowed": false,
     "e1_2_or_e1_3_authorized": false,
     "e1_pilot_forward_or_outcome": false,

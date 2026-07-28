@@ -1607,7 +1607,8 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
   `2fc5c70da231cfd0aba54656c5a34ff142594208f4a006348f73607559af4a47`。
   Million-row stress=`1,000,384` rows / 245 chunks，semantic replay exact，peak
   RSS=`676,200,448 B` < threshold=`812,384,256 B`。A5 instrumentation 三件套
-  已重新锁定；326-group census 和 input-lock 仍 `PENDING`，未读取自然结果。
+  已重新锁定；在该 pre-execution gate 冻结时，326-group census 和 input-lock
+  仍为 `PENDING` 且未读取自然结果；后续 terminal 状态见下一节 failure closure。
 - 两份未提交的 precommit gate 在任何自然数据访问前失效：`6dc44be9...`
   漏列 source-snapshot producer，`b116670b...` 随后因 tracked amendment 的
   Markdown 空白清理而失效。原字节只保存在
@@ -1616,3 +1617,36 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
   `E0_NO_GO_FOR_FURTHER_SPEND`，也不推断 first-four accuracy。Execution
   `07755a40` 永久 no-resume/no-reuse；E1-2/E1-3、model/checkpoint、GPU/K8s、
   training、E1-pilot 与 confirmatory 仍未授权。
+
+### 2026-07-28 FPCT-E1 A5 input-lock hash-domain failure closure
+
+- 研究目标：记录 clean A5 execution `9b248d2094b684f5d9e9a218919a354b7d97468e`
+  的 pre-group-1 fail-closed 事实并冻结后继授权边界；不修改 v7 protocol、
+  contract、schema、gate、producer/tests 或任何科学定义。
+- 执行配置：UID=`fpct-e1-a5-runtime-prompt-9b248d20-v1`，root=
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5-9b248d20-v1`。641-entry immutable
+  snapshot 的 Git tree=`ec8254302e831d83a169971964e848550e659f75`，mounted
+  tree SHA256=`ee824b0d51d015a615f0db836ab1d0e2b555e36bcc55a5a284245dcc98f1cb65`。
+- 验证结果：sealed bootstrap 与 source-snapshot provenance 通过；本地 tokenizer
+  paths/files 被解析、枚举且 tokenizer objects 被加载，但 strict tokenizer-
+  bundle/template attestation 尚未完成。Producer 在任何 E0-design group
+  lookup/render/tokenize/align 前以
+  `a5_materialized_e0_development_tree_sha_changed` fail-closed。Terminal=
+  `A5_INPUT_LOCK_BLOCKED`；blocked receipt/identity SHA256=
+  `fe305b2c9d881b202f4a096646e9530e8d630a6fcfa095754d3101450ad7ab79` /
+  `2247ccf274ea8c55b25b55fd5ac3fb2a191d6796f5ea06a9b18b4a9d8e6b7a0b`；
+  natural group count=`0`，无 usable census/input-lock artifact。
+- 根因：同一 51 files / 233,569 bytes 被跨 algorithm domain 比较。Frozen E0
+  `relative_path_nul_file_sha256_bytes_v1`=
+  `f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73`；
+  A5 generic `canonical_json_file_manifest_v1`=
+  `12f537cade1a30f6fd4e7a146c58311412f8824a6845ea4e6f7a6b5651bcb405`。
+  Frozen E0 implementation exact 重现前者，故为 implementation provenance
+  hash-domain mismatch；数据 bytes 未变，不是 scientific/data failure。
+- 结论：本 execution/root 永久 no-resume/no-reuse，E1-2/E1-3 继续 blocked。
+  `FPCT_E1_A5_DATA_HASH_RECOVERY_ADDENDUM.md` 仅为
+  `HUMAN APPROVAL REQUIRED / NOT OPERATIVE` 草案；只有用户明确回复
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS` 后，才可在新
+  versioned gate、clean commit、snapshot、UID/root 上从 group 1 重启。
+- 资源/隔离：未加载 model/checkpoint，未运行 model forward、GPU、CUDA、
+  Kubernetes 或 training；E1-pilot/confirmatory 未访问，main/Phase2A 未修改。

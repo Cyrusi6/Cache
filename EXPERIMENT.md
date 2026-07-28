@@ -520,14 +520,47 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
   Million-row stress=`1,000,384` logical/emitted rows、245 chunks、semantic replay
   exact，peak RSS=`676,200,448 B` < frozen threshold=`812,384,256 B`。此 gate
   明确记录 natural E0-design access=false、model instantiated/forward=false。
-  326-group affected count、choice/token/alignment/topology/row geometry 仍未知，
-  必须等待 clean push 后的新 execution 从 group 1 生成。
+  在该 pre-execution gate 冻结时，326-group affected count、choice/token/
+  alignment/topology/row geometry 仍未知；随后 `9b248d20` execution 的 terminal
+  结果见下一节，不能把本条历史 `PENDING` 当作当前授权。
 - 先前未提交的 gates `6dc44be9...` / `b116670b...` 分别因 source closure
   不完整与 tracked amendment Markdown 空白清理而在自然数据前失效，原字节隔离到
   `local/fpct_e1/a5_precommit_invalidated/`；它不属于正式结果。随后补齐
   source-snapshot producer、真实 A5 gate-shape 与 producer/verifier 回归后，
   从头重跑得到上述 operative gate。
 - Execution firewall：`07755a40` 永久 abandoned；A5 要求新 clean pushed
-  commit、immutable snapshot、UID/root。当前未进行 A5 natural census/input
-  lock，未加载 model/checkpoint，未运行 forward、GPU、Kubernetes、training、
+  commit、immutable snapshot、UID/root。在该 gate 冻结时尚未进行 A5 natural
+  census/input lock，未加载 model/checkpoint，未运行 forward、GPU、Kubernetes、
+  training、E1-2/E1-3，未访问 E1-pilot/confirmatory；后续 BLOCKED 结果见下一节。
+
+### 2026-07-28 FPCT-E1 A5 CPU input-lock pre-group-1 failure
+
+- Execution/source SHA=`9b248d2094b684f5d9e9a218919a354b7d97468e`；UID=
+  `fpct-e1-a5-runtime-prompt-9b248d20-v1`；root=
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5-9b248d20-v1`。Source snapshot 为 641
+  entries；Git tree=`ec8254302e831d83a169971964e848550e659f75`；mounted
+  tree SHA256=`ee824b0d51d015a615f0db836ab1d0e2b555e36bcc55a5a284245dcc98f1cb65`。
+- Sealed bootstrap 与 source-snapshot provenance 通过；本地 tokenizer paths/
+  files 被解析和枚举、tokenizer objects 被加载，但 strict tokenizer-bundle/
+  template attestation 尚未完成。Producer 在 E0-design group 1 lookup/render/
+  tokenize/align 前因 `a5_materialized_e0_development_tree_sha_changed` 终止。
+  状态=`A5_INPUT_LOCK_BLOCKED`；natural group count=`0`；无 census/alignment/
+  sidecar/geometry/runtime/plan/scientific artifact。
+- Blocked receipt/identity SHA256=
+  `fe305b2c9d881b202f4a096646e9530e8d630a6fcfa095754d3101450ad7ab79` /
+  `2247ccf274ea8c55b25b55fd5ac3fb2a191d6796f5ea06a9b18b4a9d8e6b7a0b`；
+  source receipt file/internal SHA256=
+  `dc4396d50594f0db120fcba9252e85c92e343a014230379ebe8c51e645082981` /
+  `9d051cca1290e4d90560587e5d95ed8f81c8e4a156090baf323614a0a07ec95e`。
+- Read-only diagnostic 在相同 51 files / 233,569 bytes 上重现 frozen E0 declared
+  SHA=`f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73`
+  与 A5 generic manifest SHA=
+  `12f537cade1a30f6fd4e7a146c58311412f8824a6845ea4e6f7a6b5651bcb405`。
+  两者使用不同算法，故 root cause=
+  `HASH_ALGORITHM_DOMAIN_MISMATCH_DATA_BYTES_UNCHANGED`；无数据漂移或损坏证据。
+- Run/root 永久 abandoned，resume/reuse=`false`。A5R1 双 hash-domain 修复仅以
+  draft addendum 记录，等待
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS`；不得提前运行新 gate、
+  successor execution 或自然 census。
+- 未加载 model/checkpoint、未运行 forward/GPU/Kubernetes/training，未进入
   E1-2/E1-3，未访问 E1-pilot/confirmatory。

@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5 actual E0 production-runtime prompt protocol/schema 与 pre-natural qualification
-> 当前状态：`A5 HUMAN DECISION APPROVED / PRE-NATURAL GATE PENDING / E1-2 NOT AUTHORIZED`
-> 下一步：完成 A5 dual-anchor implementation 和新的 prompt-specific synthetic/instrumentation hard gate；只有 gate GO、clean push、新 snapshot/root 后才可从 group 1 运行 326-group CPU input lock
+> 当前阶段：A5 actual E0 production-runtime prompt CPU input-lock failure closure
+> 当前状态：`A5_INPUT_LOCK_BLOCKED / A5R1 HUMAN APPROVAL REQUIRED / E1-2 NOT AUTHORIZED`
+> 下一步：等待 `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS`；在批准前不得运行 recovery gate、建立 successor execution 或重跑自然 census
 > 更新时间：2026-07-28（Asia/Shanghai）
 
 ## 隔离身份
@@ -19,11 +19,11 @@
 | Superseded execution SHA | `744a943ea804dfebe4e6d3cba756b6a89763002f`；`ABANDONED_BEFORE_NATURAL_DATA`；禁止 resume/reuse |
 | Failed execution SHA | `d1698177e60455a42731165b88a66374b8826718`；自然 alignment 后、artifact 前 integrity failure；禁止 resume/reuse |
 | Resource-ceiling execution SHA | `612697dfc44ab46699728b8d2de0a6fce980a889`；自然 multi-task alignment 后、artifact 前 fail-closed；禁止 resume/reuse |
-| Successor execution SHA | `PENDING_CLEAN_PUSHED_A5_COMMIT` |
+| Successor execution SHA | `9b248d2094b684f5d9e9a218919a354b7d97468e`；`A5_INPUT_LOCK_BLOCKED`；永久禁止 resume/reuse |
 | A4 successor execution SHA | `07755a4039e89700e59af9e141026a57142f9da0`；`A4_INPUT_LOCK_BLOCKED`；永久禁止 resume/reuse |
 | A5 protocol ID | `fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt` |
 | A5 selected prompt contract | `ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT` |
-| A5 successor execution SHA | `PENDING_CLEAN_PUSHED_A5_COMMIT` |
+| A5 successor execution SHA | `9b248d2094b684f5d9e9a218919a354b7d97468e`；pre-group-1 provenance failure；永久禁止 resume/reuse |
 | Consolidated gate SHA256 | `d17b4b7f35e2384abfbd300cf109484d6aacc91dd84cd3f2573a8d5dd36d4b17` |
 
 ## 人工决策锁
@@ -202,8 +202,9 @@ Normative sources：
 | A5 v7 protocol/contract/schema | `GO — HUMAN DECISION LOCKED` | A4 failure closure + prospective approval | 文档/schema/manifest | 输入 provenance 修订，不是 mechanism/performance evidence |
 | Dual-anchor implementation | `GO / PRE-NATURAL` | v7 contract | code + CPU synthetic tests | 不得读取 natural census、model/checkpoint 或 E1-pilot |
 | A5 prompt-specific synthetic gate | `GO` | implementation complete | CPU synthetic only | path=`e1_a5_prompt_synthetic_gate.json`；SHA256=`464e646c...`；旧 A4 gate 仅作 07755a40 historical evidence |
-| Clean pushed A5 commit/snapshot/root | `PENDING` | 新 gate GO | research branch commit/push + immutable snapshot | 必须使用新 UID/root，不得复制 A4 run artifacts |
-| 326-group CPU census/input lock | `CONDITIONALLY AUTHORIZED` | gate GO + clean push + fresh root | dataset lookup/render/tokenize/align/topology/hash/streaming only | 从 group 1 开始；必须得到 `A5_INPUT_LOCK_GO` |
+| Clean pushed A5 commit/snapshot/root | `GO / EXECUTION NOW ABANDONED` | 新 gate GO | research branch commit/push + immutable snapshot | commit=`9b248d20...`；fresh UID/root 已建立，未复用 A4 artifacts |
+| 326-group CPU census/input lock | `A5_INPUT_LOCK_BLOCKED / NO USABLE CENSUS` | gate GO + clean push + fresh root | 仅执行了 pre-group-1 provenance attestation | 在第 1 个 group lookup/render/tokenize/align 前因 data-tree hash-domain mismatch fail-closed |
+| A5R1 hash-domain recovery | `HUMAN REVIEW REQUIRED / NOT OPERATIVE` | A5 failure closure + explicit prospective approval | 当前无授权资源 | approval ID=`APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS`；不得先运行 gate 或自然数据 |
 | Runtime/checkpoint/plan/E1-2 | `NOT AUTHORIZED` | 另行授权，即使 input-lock GO 也不自动进入 | 无 | 禁止 model/checkpoint load 和 forward |
 | E1-3 | `NOT AUTHORIZED` | finalized E1-2 + 另行授权 | 无 | 未进入 |
 | E1-pilot | `SEALED / NOT RUN / NOT READ` | operator freeze 后独立授权 | 无 | 不得 render/tokenize/align/run/read |
@@ -234,7 +235,47 @@ Normative sources：
   `6f294b7c68eeee3e8f488e19c55f081dfcd23b04ae241f5367222a1bb0f10f16`、
   `29a3018d900231be3eca10b6e3762872bf588458390a1d595fe4f2012861ac58`。
 - `07755a40` 继续永久 abandoned：resume=false、artifact reuse=false、
-  scientific result=false。A5 必须使用新 clean pushed commit、snapshot、UID 和
-  empty run root，从 group 1 重跑。
+  scientific result=false。该 A5 前置条件随后由 `9b248d20` 的 clean commit、
+  snapshot、UID/root 满足，但该 execution 已在 group 1 前 fail-closed；任何新的
+  group-1 重启都必须先获得独立 A5R1 人工批准。
 - 本次 A5 人工批准不授权 model/projector/checkpoint load、model forward、GPU、
   CUDA、Kubernetes、training、E1-2、E1-3、E1-pilot 或 confirmatory access。
+
+### A5 clean execution 与 pre-group-1 failure closure
+
+- Clean pushed execution/source SHA=`9b248d2094b684f5d9e9a218919a354b7d97468e`；
+  UID=`fpct-e1-a5-runtime-prompt-9b248d20-v1`；root=
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5-9b248d20-v1`。该 root 永久
+  abandoned，resume/reuse=`false`。
+- Immutable source snapshot：641 entries；Git tree=
+  `ec8254302e831d83a169971964e848550e659f75`；mounted-tree SHA256=
+  `ee824b0d51d015a615f0db836ab1d0e2b555e36bcc55a5a284245dcc98f1cb65`；
+  source receipt file/internal SHA256=
+  `dc4396d50594f0db120fcba9252e85c92e343a014230379ebe8c51e645082981` /
+  `9d051cca1290e4d90560587e5d95ed8f81c8e4a156090baf323614a0a07ec95e`。
+- Sealed bootstrap 与 snapshot provenance 通过；本地 Qwen3/TinyLlama
+  tokenizer 路径完成解析/文件枚举且 tokenizer objects 被加载，但后续 strict
+  tokenizer-bundle/template attestation 尚未完成。Producer 在任何 E0-design
+  group 被 lookup、render、tokenize 或 align 前，因
+  `a5_materialized_e0_development_tree_sha_changed` 终止。
+- 原生 terminal receipt=`A5_INPUT_LOCK_BLOCKED`；blocked receipt / execution
+  identity SHA256=
+  `fe305b2c9d881b202f4a096646e9530e8d630a6fcfa095754d3101450ad7ab79` /
+  `2247ccf274ea8c55b25b55fd5ac3fb2a191d6796f5ea06a9b18b4a9d8e6b7a0b`。
+  `natural_e0_design_group_count=0`；未生成 census row、alignment row、sidecar、
+  geometry、runtime、plan 或 scientific result。
+- Read-only root-cause verification 对同一 E0 development tree 的 51 files /
+  233,569 bytes 重算：冻结 E0 算法
+  `relative_path_nul_file_sha256_bytes_v1` 得
+  `f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73`；
+  A5 rich generic 算法 `canonical_json_file_manifest_v1` 得
+  `12f537cade1a30f6fd4e7a146c58311412f8824a6845ea4e6f7a6b5651bcb405`。
+  前者与 frozen E0 manifest/runtime provenance exact match，因此分类为
+  `HASH_ALGORITHM_DOMAIN_MISMATCH_DATA_BYTES_UNCHANGED`，不是 data drift/corruption。
+- Machine-readable failure closure：
+  `recipe/eval_recipe/fpct_e1/executions/9b248d20/input_lock_failure_receipt.json`。
+  A5R1 proposal=`FPCT_E1_A5_DATA_HASH_RECOVERY_ADDENDUM.md`，当前仅为 draft；
+  它建议分别保存两个 algorithm-domain hashes，但未授权改 code/contract/tests、
+  运行新 gate、建立新 commit/snapshot/root 或访问自然 group。
+- 未加载 model/checkpoint，未运行 model forward、GPU、CUDA、Kubernetes 或
+  training；E1-2/E1-3 未进入；E1-pilot 与 confirmatory 继续 sealed。
