@@ -1745,7 +1745,32 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
   326-row synthetic census、dual-anchor/source-snapshot binding、atomic publish、
   tamper replay 与 terminal BLOCKED transition；这是 synthetic correctness，不是
   自然 support、mechanism 或 accuracy evidence。
-- 当前状态：新的自然 326-row audit 尚未运行或读取；clean execution commit、
-  source snapshot、UID/root 与 input-lock 仍待建立/执行。`37be816a` 及其 root
-  永久 no-resume/no-reuse。0 model/checkpoint load、0 forward、0 GPU/CUDA/K8s、
-  0 training；E1-2/E1-3 未进入，E1-pilot/confirmatory 继续 sealed。
+- Gate-freeze 状态：当时新的自然 326-row audit 尚未运行或读取，clean execution
+  commit、source snapshot、UID/root 与 input-lock 尚待建立；其后获授权的单次
+  执行结果见下一节。`37be816a` 及其 root 永久 no-resume/no-reuse。
+
+### 2026-07-31 FPCT-E1 A5R2 CPU choice-audit atomic-publication failure
+
+- 研究目标：在 pre-natural v9 gate 与 clean push 后，执行唯一一次 326-row
+  label-free choice-cardinality audit，并且只有完整 audit lock GO 才进入 CPU
+  tokenizer/alignment input-lock。
+- 执行配置：commit=`e765d493733d9eec94c152506a1c57781e26fb41`；UID=
+  `fpct-e1-a5r2-choice-cardinality-e765d493-v1`；root=
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-e765d493-v1`。658-entry source snapshot
+  Git tree=`5ed0ec9da90838d4b05fc7ff22ee6b22d8140f37`，mounted-tree=
+  `ebaa80303447e931dd0695ba49d76d21d1f630f87e94577828b53d15239e2c5f`。
+- 验证结果：sealed CPU/offline run 从 group 1 读取并在内存完成全部 326 行
+  allowlisted reduction；在 atomic directory publication 时，`/netdisk` 对
+  `renameat2(RENAME_NOREPLACE)` 返回 `EINVAL`。Fail-closed cleanup 后无 final
+  ledger/summary/lock，不能恢复或推断 natural decision；没有启动 tokenizer、
+  chat-template、alignment 或 sidecar/input-manifest 生产。
+- Terminal=`A5R2_INPUT_LOCK_BLOCKED`；blocked/identity SHA256=
+  `498a3571a8933d34c3bdf7e4f2641b8da5f863bff7a5f87124488794dcc71fd2` /
+  `a2c8786c290be420dad6a89a7615fb1db49c7092c0ce600c5d2add8f0534df8f`。
+  Closure=
+  `recipe/eval_recipe/fpct_e1/executions/e765d493/input_lock_failure_receipt.json`，
+  SHA256=`f6715f9d86b23ccc265f6ead7b24af47acaf1e1ecd9eb14552af7940d68f798c`。
+- 结论：不原地修补或重跑；`e765d493` execution/root 永久 no-resume/no-reuse。
+  portable atomic no-replace 修复需要新的 prospective amendment、commit/snapshot/
+  UID/root。0 model/checkpoint load、0 forward、0 GPU/CUDA/K8s/training；E1-2/E1-3
+  未进入，E1-pilot/confirmatory 继续 sealed；main/Phase2A 未修改。

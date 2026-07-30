@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R2 choice-cardinality recovery pre-natural lock
-> 当前状态：`A5R2 SYNTHETIC GATE GO / NATURAL 326-ROW AUDIT NOT RUN / E1-2 NOT AUTHORIZED`
-> 下一步：在新的 clean commit/snapshot/UID/root 上仅执行一次 label-free 326-row choice audit 与条件式 CPU input-lock
+> 当前阶段：A5R2 CPU choice-audit atomic-publication failure closure
+> 当前状态：`A5R2 INPUT LOCK BLOCKED / NO USABLE CHOICE-AUDIT LOCK / E1-2 NOT AUTHORIZED`
+> 下一步：人工审查 portable atomic no-replace publication；`e765d493` execution/root 永久禁止 resume/reuse
 > 更新时间：2026-07-31（Asia/Shanghai）
 
 ## 隔离身份
@@ -383,15 +383,48 @@ Normative sources 与 SHA256：
 |---|---|---|---|
 | A5R2 protocol/contract/schema | `GO — HUMAN DECISION LOCKED` | 上述三项 SHA256 | 仅输入/provenance 合同修订 |
 | A5R2 pre-natural synthetic gate | `GO` | `325 passed / 0 failed`；tracked tree=`60946d56e4c11ebcff8ac44b94b8bcdedbd6a6c5aea71ed168f854d6dce996ca`；evidence=`8788694b7715676a84e453f80b3bb596c5688a7660fa916964ab15ddaf9213c4`；artifact=`cfc8c7da3bb074b0a4fcb23276af8d8404516b656337abb5c3034724272d2cd9` | CPU/offline/no-natural synthetic evidence only |
-| A5R2 clean commit/snapshot/UID/root | `PENDING` | synthetic GO 后的新 immutable execution identity | 禁止复用 `37be816a` |
-| Label-free 326-row choice audit | `AUTHORIZED BUT NOT RUN` | clean local/upstream + fresh snapshot/root | 只能执行一次；先 audit，后条件式 CPU input-lock |
-| CPU input-lock | `CONDITIONAL / NOT RUN` | audit taxonomy 必须为 GO 且无 invalid row | 即使 GO 也不自动授权 E1-2 |
+| A5R2 clean commit/snapshot/UID/root | `GO / CONSUMED BY TERMINAL BLOCK` | commit=`e765d493...`；658-entry immutable snapshot | `e765d493` root 禁止 resume/reuse |
+| Label-free 326-row choice audit | `BLOCKED AT ATOMIC PUBLICATION` | 326 rows read/reduced in memory；`renameat2(RENAME_NOREPLACE)`=`EINVAL` | 无 final ledger/summary/lock；不得推断自然 decision |
+| CPU input-lock | `BLOCKED / NOT RUN` | 没有可用 audit GO lock | 不得 tokenizer/alignment 或进入 E1-2 |
 | E1-2 / E1-3 | `NOT AUTHORIZED` | 独立后续授权 | 禁止 model/checkpoint load 或 forward |
 | E1-pilot / confirmatory | `SEALED / NOT RUN / NOT READ` | operator freeze 后独立授权 | exploratory pilot 仍无 confirmatory eligibility |
 
 Gate 只证明 variable-cardinality parser、allowlisted projection、ordinal/summary/
 lock、dual data-tree/source-snapshot binding、atomic publish 与 fail-closed taxonomy
 在 synthetic fixtures 上满足合同；它不是自然 choice distribution、input-lock、
-mechanism activation 或 task improvement 的证据。到本记录冻结时，新的 326-row
-自然 audit 尚未运行或读取；未加载 model/checkpoint，未运行 model forward、GPU、
-CUDA、Kubernetes 或 training，且未进入 E1-2/E1-3。
+mechanism activation 或 task improvement 的证据。在 gate artifact 冻结时，新的
+326-row 自然 audit 尚未运行；其后获授权的单次执行结果见下一节。未加载
+model/checkpoint，未运行 model forward、GPU、CUDA、Kubernetes 或 training，且未
+进入 E1-2/E1-3。
+
+## 2026-07-31 A5R2 CPU choice-audit terminal failure
+
+- Clean commit/push=`e765d493733d9eec94c152506a1c57781e26fb41`；UID=
+  `fpct-e1-a5r2-choice-cardinality-e765d493-v1`；fresh root=
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-e765d493-v1`。Snapshot 共 658 entries，
+  Git tree=`5ed0ec9da90838d4b05fc7ff22ee6b22d8140f37`，mounted-tree SHA256=
+  `ebaa80303447e931dd0695ba49d76d21d1f630f87e94577828b53d15239e2c5f`；
+  source receipt file/internal SHA256=
+  `e6a2930130cdc8e966596195015a12a4020455a9eb3a9f4f75fa59223748d1f5` /
+  `4c681ab9ec5032841b4055c2bdfdaf9d05e02f39fb09f54ea60bd6320a55657a`。
+- 首次 launcher 因 Conda `python` symlink 在 target import 前被 sealed bootstrap
+  拒绝；未创建任何自然 artifact。改用解释器 realpath `python3.10` 后，正式
+  CPU/offline audit 从 group 1 读取并在内存中完成 326-row label-free reduction。
+- 在 final `choice_audit` 目录发布时，当前 `/netdisk` 文件系统对
+  `renameat2(RENAME_NOREPLACE)` 返回 `EINVAL`。Staging 按 fail-closed finally
+  清理；没有 final ledger、summary 或 audit lock，因而不得从执行位置推断
+  natural mechanical GO/BLOCK。Tokenizer/chat-template/alignment 以及后续 sidecar/
+  input manifest 均未执行或持久化。
+- Native terminal receipt=`A5R2_INPUT_LOCK_BLOCKED`，stage/code=
+  `PRECOMPUTATION / ERRNO_22_INVALID_ARGUMENT`，blocked/identity SHA256=
+  `498a3571a8933d34c3bdf7e4f2641b8da5f863bff7a5f87124488794dcc71fd2` /
+  `a2c8786c290be420dad6a89a7615fb1db49c7092c0ce600c5d2add8f0534df8f`；
+  strict v9 schema validation=`GO`。
+- Machine-readable closure=
+  `recipe/eval_recipe/fpct_e1/executions/e765d493/input_lock_failure_receipt.json`，
+  SHA256=`f6715f9d86b23ccc265f6ead7b24af47acaf1e1ecd9eb14552af7940d68f798c`。
+  本轮未做 post-failure natural scan，未修改 code/threshold；execution/root 永久
+  resume/reuse=`false`。任何 publication 修复必须先有新的 prospective amendment、
+  commit、snapshot、UID/root；不得原地重跑。
+- 0 model/checkpoint load、0 model forward、0 GPU/CUDA/Kubernetes、0 training；
+  E1-2/E1-3 未进入，E1-pilot/confirmatory 继续 sealed。

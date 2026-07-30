@@ -650,3 +650,24 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
   运行。A5R1 execution/root `37be816a...` 永久禁止 resume/reuse。未加载
   model/checkpoint，未运行 forward/GPU/CUDA/Kubernetes/training，未进入
   E1-2/E1-3；E1-pilot 和 confirmatory 保持 sealed。
+
+### 2026-07-31 FPCT-E1 A5R2 CPU choice-audit terminal closure
+
+- Execution=`e765d493733d9eec94c152506a1c57781e26fb41`；UID=
+  `fpct-e1-a5r2-choice-cardinality-e765d493-v1`；root=
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-e765d493-v1`。Source snapshot 658
+  entries；mounted-tree SHA256=
+  `ebaa80303447e931dd0695ba49d76d21d1f630f87e94577828b53d15239e2c5f`。
+- CPU/offline audit 完成 326 个 frozen E0-design group 的 label-free 内存
+  reduction，但在发布 immutable `choice_audit` 目录时，
+  `renameat2(RENAME_NOREPLACE)` 返回 `EINVAL`。无 final ledger/summary/lock；
+  staging 已清理，不能据此读取或推断 natural audit decision。
+- Terminal=`A5R2_INPUT_LOCK_BLOCKED`；blocked/identity SHA256=
+  `498a3571a8933d34c3bdf7e4f2641b8da5f863bff7a5f87124488794dcc71fd2` /
+  `a2c8786c290be420dad6a89a7615fb1db49c7092c0ce600c5d2add8f0534df8f`。
+  Closure=
+  `recipe/eval_recipe/fpct_e1/executions/e765d493/input_lock_failure_receipt.json`，
+  SHA256=`f6715f9d86b23ccc265f6ead7b24af47acaf1e1ecd9eb14552af7940d68f798c`。
+- No post-failure natural scan；未修改 protocol/code/threshold，未运行 tokenizer/
+  alignment、model/checkpoint forward、GPU/CUDA/K8s 或 training。`e765d493` root
+  永久 no-resume/no-reuse，E1-2/E1-3 未进入；后续修复需新的 prospective approval。
