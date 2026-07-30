@@ -1,9 +1,9 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R1 dual hash-domain pre-natural execution lock
-> 当前状态：`A5R1 SYNTHETIC GATE GO / CLEAN COMMIT+PUSH PENDING / E1-2 NOT AUTHORIZED`
-> 下一步：提交并推送完整 v8 source/gate；验证 clean local/upstream 后创建全新 snapshot、UID/root，并从 group 1 运行 CPU input lock
-> 更新时间：2026-07-28（Asia/Shanghai）
+> 当前阶段：A5R1 CPU input-lock failure closure
+> 当前状态：`A5_INPUT_LOCK_BLOCKED / NO USABLE CENSUS / E1-2 NOT AUTHORIZED`
+> 下一步：人工审查 choice-cardinality failure；当前 execution/root 永久禁止 resume/reuse
+> 更新时间：2026-07-30（Asia/Shanghai）
 
 ## 隔离身份
 
@@ -24,6 +24,7 @@
 | A5 protocol ID | `fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt` |
 | A5 selected prompt contract | `ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT` |
 | A5 successor execution SHA | `9b248d2094b684f5d9e9a218919a354b7d97468e`；pre-group-1 provenance failure；永久禁止 resume/reuse |
+| A5R1 execution SHA | `37be816ad611b8b0d916bd98c840c5f31efe2b50`；choice-cardinality failure；永久禁止 resume/reuse |
 | Consolidated gate SHA256 | `d17b4b7f35e2384abfbd300cf109484d6aacc91dd84cd3f2573a8d5dd36d4b17` |
 
 ## 人工决策锁
@@ -204,9 +205,9 @@ Normative sources：
 | A5 prompt-specific synthetic gate | `GO` | implementation complete | CPU synthetic only | path=`e1_a5_prompt_synthetic_gate.json`；SHA256=`464e646c...`；旧 A4 gate 仅作 07755a40 historical evidence |
 | Clean pushed A5 commit/snapshot/root | `GO / EXECUTION NOW ABANDONED` | 新 gate GO | research branch commit/push + immutable snapshot | commit=`9b248d20...`；fresh UID/root 已建立，未复用 A4 artifacts |
 | 326-group CPU census/input lock | `A5_INPUT_LOCK_BLOCKED / NO USABLE CENSUS` | gate GO + clean push + fresh root | 仅执行了 pre-group-1 provenance attestation | 在第 1 个 group lookup/render/tokenize/align 前因 data-tree hash-domain mismatch fail-closed |
-| A5R1 hash-domain recovery | `APPROVED / PRE-NATURAL GATE GO` | A5 failure closure + 2026-07-30 prospective approval | CPU-only protocol/code/tests/gate | gate SHA256=`a2e53784...`；尚未 commit/snapshot/natural census |
-| A5R1 clean commit/snapshot/root | `PENDING` | v8 gate GO | research commit/push + immutable snapshot | 必须使用新 SHA/UID/empty root，不得复用 `9b248d20` |
-| A5R1 326-group CPU input lock | `CONDITIONALLY AUTHORIZED / NOT STARTED` | clean local/upstream + new snapshot/root | CPU tokenizer/alignment only | 必须从 group 1 完整重启；GO 后仍停在 E1-2 前 |
+| A5R1 hash-domain recovery | `APPROVED / PRE-NATURAL GATE GO` | A5 failure closure + 2026-07-30 prospective approval | CPU-only protocol/code/tests/gate | gate SHA256=`a2e53784...`；在 gate 冻结时尚未 commit/snapshot/natural census |
+| A5R1 clean commit/snapshot/root | `GO / EXECUTION NOW BLOCKED` | v8 gate GO | research commit/push + immutable snapshot | commit=`37be816a...`；649-entry snapshot 与 fresh UID/root 已验证 |
+| A5R1 326-group CPU input lock | `A5_INPUT_LOCK_BLOCKED / NO USABLE CENSUS` | clean local/upstream + new snapshot/root | CPU tokenizer/alignment only | choice-cardinality hard check 失败；0 persisted census rows；禁止 resume/reuse |
 | Runtime/checkpoint/plan/E1-2 | `NOT AUTHORIZED` | 另行授权，即使 input-lock GO 也不自动进入 | 无 | 禁止 model/checkpoint load 和 forward |
 | E1-3 | `NOT AUTHORIZED` | finalized E1-2 + 另行授权 | 无 | 未进入 |
 | E1-pilot | `SEALED / NOT RUN / NOT READ` | operator freeze 后独立授权 | 无 | 不得 render/tokenize/align/run/read |
@@ -313,6 +314,38 @@ Normative sources：
   gate `681532e9...` 在 schema/terminal-atomicity 复核中被主动隔离为 local-only
   invalid evidence，未 commit、未作为 operative gate、未访问 natural data。
   修复并冻结回归后从头运行，才产生上述唯一 operative gate。
-- 当前仍未创建 successor commit/snapshot/UID/root，未访问任何 E0-design
-  natural group。`9b248d20` 继续永久 no-resume/no-reuse；E1-2/E1-3、
-  model/checkpoint/forward、GPU/K8s/training、E1-pilot/confirmatory 均未授权。
+- 在 gate 冻结时尚未创建 successor commit/snapshot/UID/root，也未访问任何
+  E0-design natural group；随后获授权执行的 `37be816a...` 结果见下一节。
+  `9b248d20` 继续永久 no-resume/no-reuse；E1-2/E1-3、model/checkpoint/
+  forward、GPU/K8s/training、E1-pilot/confirmatory 均未授权。
+
+### 2026-07-30 A5R1 CPU input-lock terminal failure
+
+- Clean commit/push=`37be816ad611b8b0d916bd98c840c5f31efe2b50`；UID=
+  `fpct-e1-a5r1-hash-domains-37be816a-v1`；root=
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5r1-37be816a-v1`。649-entry immutable
+  snapshot 的 Git tree=`7aea57815c6abb0005739f77d9ea753f22e26d85`，mounted
+  tree SHA256=`1c2f3a1db2036104d13e1f1f07225d5eeaf8e8c4276c827c1b59340354875508`；
+  source receipt file/internal SHA256=
+  `9e0ac64a3653b58a7c518650f5795ebd10ecc24ffe702def754e663ba480339b` /
+  `1bbb0c4e38b36138b8d7c3592f8bbe10d91c1b174860610f947feec18086b6d4`。
+- Sealed bootstrap、snapshot 与两个 hash domains 均通过；CPU/offline producer
+  加载本地 tokenizer 与 ARC dataset 后，在冻结的 choice-cardinality contract
+  触发 `a5_materialized_row_has_fewer_than_four_choices`。Terminal receipt=
+  `A5_INPUT_LOCK_BLOCKED`；blocked/identity file SHA256=
+  `46143877891c15fab1b5ebd3d359b80f3d9aa7464ceb961a0e8f353b0873bee2` /
+  `c0a1e1b1b0de7700e4a7d7ce79c3317af30c183b1f321187b2cd505c592b27e5`。
+- Producer 没有在失败前持久化 group ordinal，因此不事后扫描自然 population
+  猜测失败行；仅对已授权的 frozen ordinal-1 ARC row 做单行 replay，确认其为
+  canonical 四选项，但不能定位后续失败。失败 group/已在内存处理的 group 数记为
+  unknown。Persisted census rows=`0`，未生成 sidecar、manifest、geometry 或
+  streaming artifact，不能作为 mechanism/scientific evidence。
+- Machine-readable closure：
+  `recipe/eval_recipe/fpct_e1/executions/37be816a/input_lock_failure_receipt.json`；
+  SHA256=`ec3ae949b557da957a1a1f295f41b91b8522420445b5479a945b1f59b5de8e8a`。
+  Root cause 当前仅冻结为
+  `MATERIALIZED_CHOICE_CARDINALITY_CONTRACT_FAILURE_UNLOCATED`；任何 parser/
+  population 修订与新执行都需要新的前瞻人工批准。
+- 当前 execution/root 永久 resume/reuse=`false`。未加载 model/checkpoint，未
+  运行 model forward、GPU、CUDA、Kubernetes 或 training；E1-2/E1-3 未进入，
+  E1-pilot 与 confirmatory 继续 sealed。

@@ -1684,7 +1684,35 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
   natural access 前被隔离为 non-operative local evidence。修复、补齐 crash
   recovery tests 后，从头重跑产生唯一 operative gate；独立 verify 和 v7
   predecessor SHA 检查通过。
-- 当前状态：`A5R1 SYNTHETIC GATE GO / CLEAN COMMIT+PUSH PENDING`。只有 clean
-  push 后才能建立新 snapshot、UID/root，并从 group 1 执行 326-group CPU input
-  lock。即使 input-lock GO，也不自动授权 E1-2/E1-3、model/checkpoint forward、
-  GPU/K8s/training、E1-pilot 或 confirmatory。
+- Gate-freeze 状态为 `A5R1 SYNTHETIC GATE GO / CLEAN COMMIT+PUSH PENDING`；
+  当时尚未建立 snapshot/UID/root。随后单次 CPU input-lock 的 terminal failure
+  见下一节；即使本来得到 GO，也不自动授权 E1-2/E1-3、model/checkpoint
+  forward、GPU/K8s/training、E1-pilot 或 confirmatory。
+
+### 2026-07-30 FPCT-E1 A5R1 CPU input-lock choice-cardinality failure
+
+- 研究目标：执行已批准的单次、从 group 1 开始的 CPU/offline input lock；不
+  加载模型/checkpoint，不进入 E1-2，并在任一输入合同失败时终止。
+- 执行配置：clean pushed SHA=`37be816ad611b8b0d916bd98c840c5f31efe2b50`；
+  UID=`fpct-e1-a5r1-hash-domains-37be816a-v1`；新 root=
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5r1-37be816a-v1`。649-entry snapshot 的 Git
+  tree=`7aea57815c6abb0005739f77d9ea753f22e26d85`，mounted-tree SHA256=
+  `1c2f3a1db2036104d13e1f1f07225d5eeaf8e8c4276c827c1b59340354875508`。
+- 验证结果：source receipt 与双 hash-domain attestation 通过；本地 tokenizer 与
+  ARC dataset 被加载。Frozen choice contract 以
+  `a5_materialized_row_has_fewer_than_four_choices` fail-closed，terminal=
+  `A5_INPUT_LOCK_BLOCKED`。Blocked/identity SHA256=
+  `46143877891c15fab1b5ebd3d359b80f3d9aa7464ceb961a0e8f353b0873bee2` /
+  `c0a1e1b1b0de7700e4a7d7ce79c3317af30c183b1f321187b2cd505c592b27e5`。
+- 结果边界：失败 ordinal 未在失败前持久化，未执行 post-failure population
+  scan；仅单行 replay frozen ordinal-1 ARC row，确认该行是 canonical 四选项，
+  因而不能定位失败。Persisted census rows=`0`，无 sidecar/manifest/geometry/
+  streaming/scientific artifact。Root cause 暂记
+  `MATERIALIZED_CHOICE_CARDINALITY_CONTRACT_FAILURE_UNLOCATED`，不得在同一
+  execution 修 parser、跳过行或 resume。
+- 结论：`37be816a` root 永久 no-resume/no-reuse；E1-2/E1-3 继续 NOT
+  AUTHORIZED。Machine-readable closure=
+  `recipe/eval_recipe/fpct_e1/executions/37be816a/input_lock_failure_receipt.json`，
+  SHA256=`ec3ae949b557da957a1a1f295f41b91b8522420445b5479a945b1f59b5de8e8a`。
+  未加载 model/checkpoint，未运行 forward/GPU/K8s/training，未访问 E1-pilot/
+  confirmatory；main/Phase2A 未修改。

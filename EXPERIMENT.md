@@ -587,6 +587,35 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
   在最后 publish 因 sibling worktree read-only 失败。两次均未生成 gate/partial
   artifact。`681532e9...` precommit gate 随后因 schema/terminal-atomicity 缺口
   被隔离为 local-only invalid evidence；修复并重新完整执行后才得到唯一正式 gate。
-- 当前没有自然 census/output；successor commit/snapshot/UID/root 仍 pending。
-  0 model/checkpoint load、0 forward、0 GPU/CUDA/K8s/training；E1-2/E1-3 与
-  E1-pilot/confirmatory 继续 NOT AUTHORIZED/sealed。
+- 在 gate 冻结时没有自然 census/output，successor commit/snapshot/UID/root
+  尚未建立；随后获授权的单次 CPU input-lock 结果见下一节。0 model/checkpoint
+  load、0 forward、0 GPU/CUDA/K8s/training；E1-2/E1-3 与 E1-pilot/
+  confirmatory 继续 NOT AUTHORIZED/sealed。
+
+### 2026-07-30 FPCT-E1 A5R1 CPU input-lock terminal failure
+
+- Execution/source SHA=`37be816ad611b8b0d916bd98c840c5f31efe2b50`；UID=
+  `fpct-e1-a5r1-hash-domains-37be816a-v1`；root=
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5r1-37be816a-v1`。Snapshot=649 entries；
+  Git tree=`7aea57815c6abb0005739f77d9ea753f22e26d85`；mounted tree SHA256=
+  `1c2f3a1db2036104d13e1f1f07225d5eeaf8e8c4276c827c1b59340354875508`。
+- Canonical CPU/offline bootstrap 从 group 1 启动，source snapshot、tokenizer
+  assets 与 declared/generic E0 data hashes 通过。本地 tokenizer 与 ARC dataset
+  被加载后，choice-cardinality hard check 抛出
+  `A5 materialized row has fewer than four choices`。Native status=
+  `A5_INPUT_LOCK_BLOCKED`；resume/reuse/scientific result 均为 false。
+- Blocked/identity SHA256=
+  `46143877891c15fab1b5ebd3d359b80f3d9aa7464ceb961a0e8f353b0873bee2` /
+  `c0a1e1b1b0de7700e4a7d7ce79c3317af30c183b1f321187b2cd505c592b27e5`；
+  source receipt file/internal SHA256=
+  `9e0ac64a3653b58a7c518650f5795ebd10ecc24ffe702def754e663ba480339b` /
+  `1bbb0c4e38b36138b8d7c3592f8bbe10d91c1b174860610f947feec18086b6d4`。
+- Failure 前没有持久化 group ordinal；本轮不做 post-failure natural population
+  scan。只对 frozen ordinal-1 ARC row 做单行 replay，确认其为 canonical 四选项，
+  但不能定位失败。Persisted census rows=`0`，未生成 sidecar、manifest、geometry、
+  streaming 或 scientific result。Closure=
+  `recipe/eval_recipe/fpct_e1/executions/37be816a/input_lock_failure_receipt.json`，
+  SHA256=`ec3ae949b557da957a1a1f295f41b91b8522420445b5479a945b1f59b5de8e8a`。
+- 0 model/checkpoint load、0 forward、0 GPU/CUDA/K8s/training；未进入 E1-2/E1-3，
+  未读取 E1-pilot/confirmatory。任何修复都需要新 prospective amendment、commit、
+  snapshot、UID/root；不得复用 `37be816a`。
