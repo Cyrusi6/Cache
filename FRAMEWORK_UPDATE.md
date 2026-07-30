@@ -1650,3 +1650,41 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
   versioned gate、clean commit、snapshot、UID/root 上从 group 1 重启。
 - 资源/隔离：未加载 model/checkpoint，未运行 model forward、GPU、CUDA、
   Kubernetes 或 training；E1-pilot/confirmatory 未访问，main/Phase2A 未修改。
+
+### 2026-07-30 FPCT-E1 A5R1 dual hash-domain prospective lock
+
+- 研究目标：只修复 A5 producer 的跨 hash-domain provenance comparison，使
+  E0-declared identity 与 generic asset-manifest identity 各自在自己的算法域内
+  校验；不改变 prompt、population、tokenizer、alignment、operator、estimand、
+  threshold、split 或任何模型行为。
+- 人工决定：用户回复 `可以`，前瞻记录为
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS`。v8 protocol=
+  `fpct_e1_mechanism_audit_v8_a5r1_hash_domains`；旧 v7 四件套与 blocked
+  execution `9b248d20` 永久 immutable/no-resume/no-reuse。
+- 核心改动：producer state 同时携带 generic
+  `canonical_json_file_manifest_v1` 与 declared
+  `relative_path_nul_file_sha256_bytes_v1`；前者只用于同域 predecessor、
+  before/after 与 tamper，后者只与 frozen E0 identity 比较。Compact sidecar、
+  strict manifest、GO/blocked receipt 和 completed verifier 全部显式绑定两域。
+- 新 normative SHA256：amendment=
+  `8eafb29d3d736740730e10505ebd8217e779e5ef4d3a128cfb0db3a10a018068`；
+  contract=`643151b67d98c84c1120b52705b0fe837fb4106664f10200ada1a692c744a0b1`；
+  schema=`7bd2478f7ef3cfd32e752056cf161b8575b84a1f65088c84a0d2c37aec43704b`。
+- Pre-natural gate=`GO_PRE_NATURAL_A5R1_HASH_DOMAIN_HARD_GATE`；artifact /
+  evidence / execution-tree SHA256=
+  `a2e53784fa46d2f63963bdb41e327a4e17936cce2bff765802b34f3d87869a9f` /
+  `14225f02046f0fe626b3fab1cd8d07d5e45e873ac54f3d2e0ba78d78a6fdd003` /
+  `8449418e9518847ef7b6c0a7e9bd638d83d3bb098f5253a8564d4f4cd7e1e77d`。
+  Tests=`291 passed / 0 failed`；million-row stress=`1,000,384` rows / 245
+  chunks，semantic replay exact，peak RSS=`676,876,288 B` < threshold=
+  `813,060,096 B`；11 项 hash-domain controls 全通过。
+- 运行记录：direct-file invocation 在 import 前失败；首次完整计算仅在最终
+  atomic publish 时被 sandbox read-only 拒绝。二者均无 gate/partial artifact。
+  后续 `681532e9...` precommit gate 因 schema/terminal-atomicity 缺口在任何
+  natural access 前被隔离为 non-operative local evidence。修复、补齐 crash
+  recovery tests 后，从头重跑产生唯一 operative gate；独立 verify 和 v7
+  predecessor SHA 检查通过。
+- 当前状态：`A5R1 SYNTHETIC GATE GO / CLEAN COMMIT+PUSH PENDING`。只有 clean
+  push 后才能建立新 snapshot、UID/root，并从 group 1 执行 326-group CPU input
+  lock。即使 input-lock GO，也不自动授权 E1-2/E1-3、model/checkpoint forward、
+  GPU/K8s/training、E1-pilot 或 confirmatory。

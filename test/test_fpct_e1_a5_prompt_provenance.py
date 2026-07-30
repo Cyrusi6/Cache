@@ -8,6 +8,8 @@ from pathlib import Path
 import pytest
 
 from script.experiment.fpct_e1_a5_prompt_provenance import (
+    A5_PROTOCOL_ID,
+    A5R1_PROTOCOL_ID,
     EXTRA_CHOICES_ONLY,
     HISTORICAL_EXACT,
     TASK_ORDER,
@@ -39,7 +41,13 @@ def _arc(choices: list[str], answer: str = "A") -> dict:
     }
 
 
-def _record(example: dict, *, answer: str = "A") -> dict:
+def _record(
+    example: dict,
+    *,
+    answer: str = "A",
+    schema_version: int = 7,
+    protocol_id: str = A5_PROTOCOL_ID,
+) -> dict:
     choices = list(example["choices"]["text"])
     group = canonical_content_sha256(example["question"], choices[:4])
     historical_prompt = "Q\n" + "\n".join(choices[:4])
@@ -63,6 +71,8 @@ def _record(example: dict, *, answer: str = "A") -> dict:
         production_logical_row_count=896,
         production_physical_chunk_count=1,
         historical_content_sha256=group,
+        schema_version=schema_version,
+        protocol_id=protocol_id,
     )
 
 
@@ -71,6 +81,39 @@ def test_four_choice_row_is_exact_dual_anchor() -> None:
     assert value["prompt_relation"] == HISTORICAL_EXACT
     assert value["choice_difference_only"] is False
     assert value["historical_choice_count"] == value["production_choice_count"] == 4
+
+
+def test_v8_successor_header_is_explicit_and_v7_default_is_unchanged() -> None:
+    example = _arc(["a", "b", "c", "d"])
+    historical = _record(example)
+    successor = _record(
+        example,
+        schema_version=8,
+        protocol_id=A5R1_PROTOCOL_ID,
+    )
+    assert (historical["schema_version"], historical["protocol_id"]) == (
+        7,
+        A5_PROTOCOL_ID,
+    )
+    assert (successor["schema_version"], successor["protocol_id"]) == (
+        8,
+        A5R1_PROTOCOL_ID,
+    )
+    counts = {"ai2-arc": 1, "openbookqa": 0, "mmlu-redux": 0}
+    summary = summarize_dual_anchor_census(
+        [successor],
+        expected_task_counts=counts,
+        schema_version=8,
+        protocol_id=A5R1_PROTOCOL_ID,
+    )
+    assert summary["schema_version"] == 8
+    with pytest.raises(ValueError, match="protocol header"):
+        summarize_dual_anchor_census(
+            [historical],
+            expected_task_counts=counts,
+            schema_version=8,
+            protocol_id=A5R1_PROTOCOL_ID,
+        )
 
 
 def test_five_choice_gold_a_is_extra_choice_only_and_keeps_historical_anchor() -> None:
@@ -305,3 +348,49 @@ def test_full_326_population_summary_and_partition_semantics() -> None:
     )
     with pytest.raises(ValueError, match="canonical task/group/sample order"):
         summarize_dual_anchor_census(lexical_task_order)
+
+
+def test_v8_census_manifest_inherits_structure_with_exact_successor_uid() -> None:
+    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
+        validate_a5r1_schema_artifact,
+    )
+
+    counts = {"ai2-arc": 128, "openbookqa": 70, "mmlu-redux": 128}
+    records = []
+    for task in TASK_ORDER:
+        members = []
+        for index in range(counts[task]):
+            record = _synthetic_census_record(task, index)
+            record["schema_version"] = 8
+            record["protocol_id"] = A5R1_PROTOCOL_ID
+            members.append(record)
+        records.extend(
+            sorted(
+                members,
+                key=lambda row: (
+                    row["content_group_sha256"], row["sample_key_sha256"]
+                ),
+            )
+        )
+    for record in records:
+        validate_a5r1_schema_artifact(record, repo_root=REPO_ROOT)
+    execution_sha = "a" * 40
+    payload = b"".join(canonical_json_bytes(row) + b"\n" for row in records)
+    manifest = build_census_manifest(
+        records,
+        execution_sha=execution_sha,
+        run_uid="fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        record_artifact={
+            "relative_path": "a5_prompt_census_records.jsonl",
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "bytes": len(payload),
+            "row_count": len(records),
+        },
+        schema_version=8,
+        protocol_id=A5R1_PROTOCOL_ID,
+    )
+    validate_a5r1_schema_artifact(manifest, repo_root=REPO_ROOT)
+    broken = copy.deepcopy(manifest)
+    broken["run_uid"] = "fpct-e1-a5r1-hash-domains-bbbbbbbb-v1"
+    with pytest.raises(ValueError, match="execution/UID binding"):
+        validate_a5r1_schema_artifact(broken, repo_root=REPO_ROOT)

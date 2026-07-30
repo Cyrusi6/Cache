@@ -72,6 +72,7 @@ from script.experiment.fpct_e1_capture_runner import (
     E0_DEV_MANIFEST_RELATIVE,
     TASKS,
     TASK_GROUP_COUNTS,
+    _e0_declared_tree_sha256,
     load_e0_design_lock,
     sha256_file,
     verify_e0_dev_anchor,
@@ -106,7 +107,8 @@ from script.analysis.fpct_e1_streaming_verify import (
     write_parquet_stream_artifact,
 )
 from script.experiment.fpct_e1_a5_prompt_provenance import (
-    A5_PROTOCOL_ID,
+    A5R1_AMENDMENT_ID,
+    A5R1_PROTOCOL_ID,
     EXTRA_CHOICES_ONLY,
     HISTORICAL_EXACT,
     attest_e0_renderer_identity,
@@ -119,8 +121,36 @@ from script.experiment.fpct_e1_a5_prompt_provenance import (
 )
 
 
-SCHEMA_VERSION = 3
-PROTOCOL_ID = "fpct_e1_e0_design_input_lock_v3_actual_runtime_prompt"
+SCHEMA_VERSION = 4
+PROTOCOL_ID = "fpct_e1_e0_design_input_lock_v4_a5r1_hash_domains"
+A5_PROTOCOL_ID = A5R1_PROTOCOL_ID
+A5_ARTIFACT_SCHEMA_VERSION = 8
+A5_SYNTHETIC_GATE_ARTIFACT_TYPE = "a5r1_hash_domain_synthetic_gate"
+A5_SYNTHETIC_GATE_STATUS = "GO_PRE_NATURAL_A5R1_HASH_DOMAIN_HARD_GATE"
+A5_INPUT_LOCK_MANIFEST_ARTIFACT_TYPE = "a5r1_input_lock_manifest"
+A5_INPUT_LOCK_GO_ARTIFACT_TYPE = "a5r1_input_lock_receipt"
+A5_INPUT_LOCK_BLOCKED_ARTIFACT_TYPE = "a5r1_input_lock_blocked_receipt"
+GENERIC_ASSET_TREE_ALGORITHM = "canonical_json_file_manifest_v1"
+E0_DECLARED_TREE_ALGORITHM = "relative_path_nul_file_sha256_bytes_v1"
+A5R1_HASH_REQUIRED_TRUE = frozenset(
+    {
+        "e0_declared_domain_present",
+        "e0_declared_algorithm_exact",
+        "e0_declared_sha_matches_frozen_e0",
+        "a5_generic_domain_present",
+        "a5_generic_algorithm_exact",
+        "a5_generic_sha_matches_same_domain_predecessor",
+        "a5_generic_before_equals_after",
+        "completed_verifier_recomputes_both_domains",
+    }
+)
+A5R1_HASH_REQUIRED_FALSE = frozenset(
+    {
+        "cross_domain_comparison_detected",
+        "old_v7_artifact_modified",
+        "blocked_execution_artifact_reused",
+    }
+)
 EXPECTED_RECEIVER_LAYERS = 28
 EXPECTED_QUERY_HEADS = 16
 HISTORICAL_MAX_LONG_FORM_ROWS_PER_SAMPLE = 262144
@@ -137,24 +167,27 @@ A4_HISTORICAL_SYNTHETIC_GATE_RELATIVE = Path(
     "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json"
 )
 A5_PROMPT_CONTRACT_RELATIVE = Path(
-    "recipe/eval_recipe/fpct_e1/e1_a5_prompt_contract.json"
+    "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_contract.json"
 )
 A5_PROMPT_SCHEMA_RELATIVE = Path(
-    "recipe/eval_recipe/fpct_e1/e1_a5_prompt_schema.json"
+    "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_schema.json"
 )
 A5_SYNTHETIC_GATE_RELATIVE = Path(
-    "recipe/eval_recipe/fpct_e1/e1_a5_prompt_synthetic_gate.json"
+    "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_synthetic_gate.json"
 )
 SOURCE_SNAPSHOT_RECEIPT_NAME = ".fpct_e1_source_snapshot_receipt.json"
 INPUT_LOCK_ROOT_NAME = "input_lock"
-RUN_UID_TEMPLATE = "fpct-e1-a5-runtime-prompt-{prefix}-v1"
-RUN_ROOT_TEMPLATE = "fpct-e1-a5-{prefix}-v1"
+RUN_UID_TEMPLATE = "fpct-e1-a5r1-hash-domains-{prefix}-v1"
+RUN_ROOT_TEMPLATE = "fpct-e1-a5r1-{prefix}-v1"
 HISTORICAL_EXECUTION_PREFIXES = frozenset(
-    ("744a943", "d1698177", "612697df", "07755a40")
+    ("744a943", "d1698177", "612697df", "07755a40", "9b248d20")
 )
 EXECUTION_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
 BLOCKED_RECEIPT_NAME = "A5_INPUT_LOCK_BLOCKED.json"
 GO_RECEIPT_NAME = "A5_INPUT_LOCK_GO.json"
+GO_QUARANTINE_PATTERN = re.compile(
+    rf"^\.{re.escape(GO_RECEIPT_NAME)}\.invalid\.([0-9a-f]{{64}})\.json$"
+)
 RUN_IDENTITY_NAME = "a5_input_lock_execution_identity.json"
 PROMPT_CENSUS_NAME = "a5_prompt_census_manifest.json"
 PROMPT_CENSUS_RECORDS_NAME = "a5_prompt_census_records.jsonl"
@@ -1306,7 +1339,126 @@ def _generic_asset_tree(path: Path) -> dict[str, Any]:
         "files": records,
         "file_count": len(records),
         "bytes": sum(int(record["bytes"]) for record in records),
+        "tree_algorithm": GENERIC_ASSET_TREE_ALGORITHM,
         "tree_sha256": nested_sha256(portable),
+    }
+
+
+def _e0_data_asset_tree(path: Path) -> dict[str, Any]:
+    """Bind the E0 data bytes in two named, non-interchangeable hash domains."""
+
+    generic = _generic_asset_tree(path)
+    return {
+        **generic,
+        "e0_declared_tree_algorithm": E0_DECLARED_TREE_ALGORITHM,
+        "e0_declared_tree_sha256": _e0_declared_tree_sha256(
+            Path(generic["resolved_path"])
+        ),
+    }
+
+
+def _e0_data_hash_domain_projection(record: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the exact cross-artifact identity without crossing hash domains."""
+
+    projection = {
+        "generic_asset_tree_algorithm": record.get("tree_algorithm"),
+        "generic_asset_tree_sha256": record.get("tree_sha256"),
+        "e0_declared_tree_algorithm": record.get("e0_declared_tree_algorithm"),
+        "e0_declared_tree_sha256": record.get("e0_declared_tree_sha256"),
+        "file_count": record.get("file_count"),
+        "bytes": record.get("bytes"),
+    }
+    if (
+        projection["generic_asset_tree_algorithm"]
+        != GENERIC_ASSET_TREE_ALGORITHM
+        or projection["e0_declared_tree_algorithm"]
+        != E0_DECLARED_TREE_ALGORITHM
+        or any(
+            not isinstance(projection[name], str)
+            or re.fullmatch(r"[0-9a-f]{64}", projection[name]) is None
+            for name in (
+                "generic_asset_tree_sha256",
+                "e0_declared_tree_sha256",
+            )
+        )
+        or not isinstance(projection["file_count"], int)
+        or projection["file_count"] <= 0
+        or not isinstance(projection["bytes"], int)
+        or projection["bytes"] <= 0
+    ):
+        raise ValueError("A5R1 E0 data hash-domain identity is incomplete")
+    return projection
+
+
+def _a5r1_hash_domain_checks(
+    *,
+    repo_root: Path,
+    contract: Mapping[str, Any],
+    input_assets_before: Mapping[str, Any],
+    input_assets_after: Mapping[str, Any],
+    execution_identity: Mapping[str, Any],
+) -> dict[str, bool]:
+    """Recompute every A5R1 hash-domain gate without comparing across domains."""
+
+    before = _e0_data_hash_domain_projection(input_assets_before["e0_data_assets"])
+    after = _e0_data_hash_domain_projection(input_assets_after["e0_data_assets"])
+    expected = contract.get("asset_identity", {}).get(
+        "materialized_e0_dev_data_tree"
+    )
+    if not isinstance(expected, Mapping):
+        raise ValueError("A5R1 frozen E0 data-tree identity is missing")
+    immutable_v7 = (
+        contract.get("immutable_predecessors", {}).get("v7_objects", {})
+    )
+    if not isinstance(immutable_v7, Mapping) or not immutable_v7:
+        raise ValueError("A5R1 immutable v7 predecessor closure is missing")
+    old_v7_artifact_modified = any(
+        not isinstance(relative, str)
+        or not isinstance(digest, str)
+        or not (repo_root / relative).is_file()
+        or sha256_file(repo_root / relative) != digest
+        for relative, digest in immutable_v7.items()
+    )
+    blocked = contract.get("immutable_predecessors", {}).get(
+        "blocked_execution", {}
+    )
+    blocked_execution_artifact_reused = bool(
+        execution_identity.get("execution_sha") == blocked.get("execution_sha")
+        or execution_identity.get("run_uid") == blocked.get("run_uid")
+        or execution_identity.get("run_root") == blocked.get("run_root")
+    )
+    return {
+        "e0_declared_domain_present": bool(before["e0_declared_tree_sha256"]),
+        "e0_declared_algorithm_exact": bool(
+            before["e0_declared_tree_algorithm"] == E0_DECLARED_TREE_ALGORITHM
+            == after["e0_declared_tree_algorithm"]
+        ),
+        "e0_declared_sha_matches_frozen_e0": bool(
+            before["e0_declared_tree_sha256"]
+            == expected.get("e0_declared_tree_sha256")
+            == after["e0_declared_tree_sha256"]
+        ),
+        "a5_generic_domain_present": bool(before["generic_asset_tree_sha256"]),
+        "a5_generic_algorithm_exact": bool(
+            before["generic_asset_tree_algorithm"]
+            == GENERIC_ASSET_TREE_ALGORITHM
+            == after["generic_asset_tree_algorithm"]
+        ),
+        "a5_generic_sha_matches_same_domain_predecessor": bool(
+            before["generic_asset_tree_sha256"]
+            == expected.get("generic_asset_tree_sha256")
+            == after["generic_asset_tree_sha256"]
+        ),
+        "a5_generic_before_equals_after": bool(
+            before["generic_asset_tree_sha256"]
+            == after["generic_asset_tree_sha256"]
+        ),
+        # The independent completed-lock verifier invokes this same projection
+        # over freshly recomputed assets and rejects either-domain drift.
+        "completed_verifier_recomputes_both_domains": True,
+        "cross_domain_comparison_detected": False,
+        "old_v7_artifact_modified": old_v7_artifact_modified,
+        "blocked_execution_artifact_reused": blocked_execution_artifact_reused,
     }
 
 
@@ -1347,7 +1499,7 @@ def input_asset_state(
     }
     payload = {
         "tracked_source_assets": tracked,
-        "e0_data_assets": _generic_asset_tree(e0_data_root),
+        "e0_data_assets": _e0_data_asset_tree(e0_data_root),
         "runtime_assets": portable_runtime,
         "source_snapshot_verification": dict(source_snapshot_verification),
     }
@@ -1356,16 +1508,44 @@ def input_asset_state(
 
 def _load_a5_prompt_contract(repo_root: Path) -> dict[str, Any]:
     path = repo_root / A5_PROMPT_CONTRACT_RELATIVE
-    contract = json.loads(path.read_text(encoding="utf-8"))
+    successor = json.loads(path.read_text(encoding="utf-8"))
     if (
-        contract.get("schema_version") != 7
-        or contract.get("protocol_id") != A5_PROTOCOL_ID
-        or contract.get("amendment_id")
-        != "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5_RUNTIME_PROMPT"
-        or contract.get("approval", {}).get("selected_option")
+        successor.get("schema_version") != A5_ARTIFACT_SCHEMA_VERSION
+        or successor.get("protocol_id") != A5_PROTOCOL_ID
+        or successor.get("amendment_id")
+        != A5R1_AMENDMENT_ID
+        or successor.get("approval", {}).get("selected_option")
         != "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT"
     ):
         raise ValueError("A5 prompt contract identity/approval is invalid")
+    base_record = successor.get("base_scientific_contract", {})
+    if base_record.get("path") != "recipe/eval_recipe/fpct_e1/e1_a5_prompt_contract.json":
+        raise ValueError("A5R1 inherited v7 scientific contract path changed")
+    base_path = repo_root / str(base_record.get("path", ""))
+    if (
+        not base_path.is_file()
+        or base_path.is_symlink()
+        or sha256_file(base_path) != base_record.get("sha256")
+    ):
+        raise ValueError("A5R1 inherited v7 scientific contract changed")
+    base = json.loads(base_path.read_text(encoding="utf-8"))
+    if (
+        base.get("schema_version") != 7
+        or base.get("protocol_id")
+        != "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt"
+    ):
+        raise ValueError("A5R1 inherited v7 scientific contract is invalid")
+    contract = {**base, **successor}
+    contract["asset_identity"] = {
+        **base.get("asset_identity", {}),
+        **successor.get("asset_identity", {}),
+    }
+    contract["a5_pre_natural_gate"] = {
+        **base.get("a5_pre_natural_gate", {}),
+        "path": successor.get("versioned_artifacts", {}).get(
+            "pre_natural_gate"
+        ),
+    }
     population = contract.get("population", {})
     if (
         population.get("distinct_content_groups") != 326
@@ -1514,10 +1694,14 @@ def _attest_a5_runtime_assets(
     runtime_assets: Mapping[str, Mapping[str, Any]],
     receiver: Any,
     sender: Any,
-    e0_data_tree_sha256: str,
+    e0_data_assets: Mapping[str, Any],
 ) -> dict[str, Any]:
     assets = contract["asset_identity"]
-    if e0_data_tree_sha256 != assets["materialized_e0_dev_data_tree_sha256"]:
+    observed_e0_tree = _e0_data_hash_domain_projection(e0_data_assets)
+    expected_e0_tree = assets.get("materialized_e0_dev_data_tree")
+    if not isinstance(expected_e0_tree, Mapping):
+        raise ValueError("A5R1 materialized E0 data-tree identity is missing")
+    if observed_e0_tree != dict(expected_e0_tree):
         raise ValueError("A5 materialized E0 development tree SHA changed")
     expected = {
         "receiver": assets["receiver"],
@@ -1586,7 +1770,7 @@ def _attest_a5_runtime_assets(
         }
     return {
         "production_data_tree_exactly_attested": True,
-        "materialized_e0_dev_data_tree_sha256": e0_data_tree_sha256,
+        "materialized_e0_dev_data_tree": observed_e0_tree,
         "tokenizers": result,
         "enable_thinking": False,
     }
@@ -1691,7 +1875,7 @@ def validate_a5_execution_identity(
             raise ValueError("sealed prepare execution attestation is inconsistent")
     identity = {
         "schema_version": 1,
-        "protocol_id": "fpct_e1_a5_input_lock_execution_identity_v1",
+        "protocol_id": "fpct_e1_a5r1_input_lock_execution_identity_v1",
         "execution_sha": execution_sha,
         "execution_prefix": prefix,
         "run_uid": run_uid,
@@ -1720,6 +1904,14 @@ def validate_a5_execution_identity(
     existing = sorted(path.name for path in output.iterdir())
     if existing and not identity_path.is_file():
         raise ValueError("nonempty A5 input root lacks its immutable identity")
+    validated_go_quarantine_names = {
+        path.name for path in _validated_go_quarantines(output)
+    }
+    if validated_go_quarantine_names:
+        _canonical_regular_file(
+            output / output_manifest_name,
+            "invalid GO quarantine bound input manifest",
+        )
     allowed_resume_entries = {
         RUN_IDENTITY_NAME,
         "input_geometry_samples.parquet",
@@ -1737,7 +1929,9 @@ def validate_a5_execution_identity(
     unexpected_output = sorted(
         name
         for name in existing
-        if name not in allowed_resume_entries and not (
+        if name not in allowed_resume_entries
+        and name not in validated_go_quarantine_names
+        and not (
             name.startswith(".") and name.endswith(".tmp")
         )
     )
@@ -2567,7 +2761,9 @@ def _verify_a5_census_artifacts(
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Strictly reopen every canonical JSONL row and independently reduce it."""
 
-    from script.analysis.fpct_e1_a5_prompt_gate import validate_a5_schema_artifact
+    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
+        validate_a5_schema_artifact,
+    )
 
     records_path = _canonical_regular_file(
         output_root / PROMPT_CENSUS_RECORDS_NAME, "A5 census JSONL"
@@ -2604,6 +2800,8 @@ def _verify_a5_census_artifacts(
             "row_count": len(records),
         },
         expected_task_counts=TASK_GROUP_COUNTS,
+        schema_version=A5_ARTIFACT_SCHEMA_VERSION,
+        protocol_id=A5_PROTOCOL_ID,
     )
     if rebuilt != census_manifest:
         raise RuntimeError("A5 census manifest does not independently recompute")
@@ -2750,7 +2948,7 @@ def _verify_completed_input_lock(
     """
 
     import torch
-    from script.analysis.fpct_e1_a5_prompt_gate import (
+    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
         validate_a5_schema_artifact,
         verify_a5_gate,
     )
@@ -2782,9 +2980,10 @@ def _verify_completed_input_lock(
     validate_a5_schema_artifact(completed, repo_root=repo_root)
 
     if (
-        completed.get("schema_version") != 7
+        completed.get("schema_version") != A5_ARTIFACT_SCHEMA_VERSION
         or completed.get("protocol_id") != A5_PROTOCOL_ID
-        or completed.get("artifact_type") != "a5_input_lock_manifest"
+        or completed.get("input_lock_protocol_id") != PROTOCOL_ID
+        or completed.get("artifact_type") != A5_INPUT_LOCK_MANIFEST_ARTIFACT_TYPE
         or completed.get("status")
         != "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT"
         or completed.get("execution", {}).get("execution_sha")
@@ -2832,7 +3031,8 @@ def _verify_completed_input_lock(
     synthetic_gate = verify_a5_gate(synthetic_gate_path, repo_root=repo_root)
     if (
         synthetic_gate.get("protocol_id") != A5_PROTOCOL_ID
-        or synthetic_gate.get("status") != "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE"
+        or synthetic_gate.get("artifact_type") != A5_SYNTHETIC_GATE_ARTIFACT_TYPE
+        or synthetic_gate.get("status") != A5_SYNTHETIC_GATE_STATUS
         or synthetic_gate.get("natural_e0_design_accessed") is not False
     ):
         raise RuntimeError("completed lock synthetic gate/source binding changed")
@@ -2925,14 +3125,36 @@ def _verify_completed_input_lock(
     if locked_payload.get("input_asset_state") != current_assets:
         raise RuntimeError("completed input-asset/provenance binding changed")
     provenance_record = completed.get("provenance", {})
+    current_e0_hash_domains = _e0_data_hash_domain_projection(
+        current_assets["e0_data_assets"]
+    )
+    a5_contract = _load_a5_prompt_contract(repo_root)
+    current_hash_domain_checks = _a5r1_hash_domain_checks(
+        repo_root=repo_root,
+        contract=a5_contract,
+        input_assets_before=current_assets,
+        input_assets_after=current_assets,
+        execution_identity=execution_identity,
+    )
     if (
         provenance_record.get("input_assets_before_sha256")
         != current_assets["aggregate_sha256"]
         or provenance_record.get("input_assets_after_sha256")
         != current_assets["aggregate_sha256"]
         or provenance_record.get("input_assets_unchanged") is not True
-        or provenance_record.get("materialized_e0_dev_data_tree_sha256")
-        != current_assets["e0_data_assets"]["tree_sha256"]
+        or provenance_record.get("e0_declared_tree_algorithm")
+        != current_e0_hash_domains["e0_declared_tree_algorithm"]
+        or provenance_record.get("e0_declared_tree_sha256")
+        != current_e0_hash_domains["e0_declared_tree_sha256"]
+        or provenance_record.get("generic_asset_tree_algorithm")
+        != current_e0_hash_domains["generic_asset_tree_algorithm"]
+        or provenance_record.get("generic_asset_tree_sha256")
+        != current_e0_hash_domains["generic_asset_tree_sha256"]
+        or locked_payload.get("a5_prompt_provenance", {})
+        .get("runtime_prompt_assets", {})
+        .get("materialized_e0_dev_data_tree")
+        != current_e0_hash_domains
+        or completed.get("hash_domain_checks") != current_hash_domain_checks
         or provenance_record.get("runtime_prompt_assets_sha256")
         != nested_sha256(
             locked_payload.get("a5_prompt_provenance", {}).get(
@@ -2959,7 +3181,6 @@ def _verify_completed_input_lock(
         != e0_data_root.absolute()
     ):
         raise RuntimeError("completed E0-design data root changed")
-    a5_contract = _load_a5_prompt_contract(repo_root)
     prompt_config_identity = _verify_all_e0_prompt_configs(repo_root, a5_contract)
     locked_prompt_provenance = locked_payload.get("a5_prompt_provenance", {})
     if locked_prompt_provenance.get("prompt_config_identity") != prompt_config_identity:
@@ -3238,7 +3459,19 @@ def _verify_completed_input_lock(
             or go_receipt.get("run_root") != execution_identity["run_root"]
             or go_receipt.get("prompt_census_manifest_sha256")
             != sha256_file(output_root / PROMPT_CENSUS_NAME)
+            or go_receipt.get("input_lock_manifest_sha256")
+            != sha256_file(output_manifest)
+            or go_receipt.get("e0_declared_tree_algorithm")
+            != completed.get("provenance", {}).get("e0_declared_tree_algorithm")
+            or go_receipt.get("e0_declared_tree_sha256")
+            != completed.get("provenance", {}).get("e0_declared_tree_sha256")
+            or go_receipt.get("generic_asset_tree_algorithm")
+            != completed.get("provenance", {}).get("generic_asset_tree_algorithm")
+            or go_receipt.get("generic_asset_tree_sha256")
+            != completed.get("provenance", {}).get("generic_asset_tree_sha256")
             or go_receipt.get("checks") != completed.get("hard_gate_checks")
+            or go_receipt.get("hash_domain_checks")
+            != completed.get("hash_domain_checks")
             or go_receipt.get("zero_counts") != completed.get("zero_counts")
             or go_receipt.get("downstream_e1_2_authorized") is not False
         ):
@@ -3311,12 +3544,13 @@ def _prepare_input_lock_after_identity(
     if not streaming_schema_path.is_file() or not synthetic_gate_path.is_file():
         raise FileNotFoundError("A5 streaming schema/synthetic gate is unavailable")
     streaming_schema_sha256 = sha256_file(streaming_schema_path)
-    from script.analysis.fpct_e1_a5_prompt_gate import verify_a5_gate
+    from script.analysis.fpct_e1_a5r1_hash_domain_gate import verify_a5_gate
 
     synthetic_gate = verify_a5_gate(synthetic_gate_path, repo_root=repo_root)
     if (
         synthetic_gate.get("protocol_id") != A5_PROTOCOL_ID
-        or synthetic_gate.get("status") != "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE"
+        or synthetic_gate.get("artifact_type") != A5_SYNTHETIC_GATE_ARTIFACT_TYPE
+        or synthetic_gate.get("status") != A5_SYNTHETIC_GATE_STATUS
         or synthetic_gate.get("natural_e0_design_accessed") is not False
         or synthetic_gate.get("model_or_checkpoint_loaded") is not False
         or synthetic_gate.get("gpu_or_kubernetes_used") is not False
@@ -3374,7 +3608,7 @@ def _prepare_input_lock_after_identity(
         runtime_assets=runtime_assets,
         receiver=receiver,
         sender=sender,
-        e0_data_tree_sha256=input_assets_before["e0_data_assets"]["tree_sha256"],
+        e0_data_assets=input_assets_before["e0_data_assets"],
     )
     runtime_prompt_assets["chat_template_fallback_used"] = False
     dimensions = _config_dimensions(receiver_path)
@@ -3563,6 +3797,8 @@ def _prepare_input_lock_after_identity(
                 expected_rows / PHYSICAL_CHUNK_ROWS
             ),
             historical_content_sha256=historical_content_sha256,
+            schema_version=A5_ARTIFACT_SCHEMA_VERSION,
+            protocol_id=A5_PROTOCOL_ID,
         )
         if census_record["raw_choice_labels"] != production_labels:
             raise ValueError("A5 census lost production choice labels/order")
@@ -3608,7 +3844,9 @@ def _prepare_input_lock_after_identity(
         task_counts[task] += 1
     if task_counts != TASK_GROUP_COUNTS:
         raise ValueError("input-lock population differs from frozen 128/70/128")
-    from script.analysis.fpct_e1_a5_prompt_gate import validate_a5_schema_artifact
+    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
+        validate_a5_schema_artifact,
+    )
 
     for census_record in census_records:
         validate_a5_schema_artifact(census_record, repo_root=repo_root)
@@ -3630,6 +3868,8 @@ def _prepare_input_lock_after_identity(
             "row_count": len(census_records),
         },
         expected_task_counts=TASK_GROUP_COUNTS,
+        schema_version=A5_ARTIFACT_SCHEMA_VERSION,
+        protocol_id=A5_PROTOCOL_ID,
     )
     validate_a5_schema_artifact(census_manifest, repo_root=repo_root)
     census_manifest_path = output_root / PROMPT_CENSUS_NAME
@@ -3656,6 +3896,17 @@ def _prepare_input_lock_after_identity(
     )
     if input_assets_before != input_assets_after:
         raise RuntimeError("input assets changed during CPU input locking")
+    hash_domain_checks = _a5r1_hash_domain_checks(
+        repo_root=repo_root,
+        contract=a5_contract,
+        input_assets_before=input_assets_before,
+        input_assets_after=input_assets_after,
+        execution_identity=execution_identity,
+    )
+    if any(hash_domain_checks[name] is not True for name in A5R1_HASH_REQUIRED_TRUE):
+        raise RuntimeError("A5R1 required-true hash-domain gate failed")
+    if any(hash_domain_checks[name] is not False for name in A5R1_HASH_REQUIRED_FALSE):
+        raise RuntimeError("A5R1 required-false hash-domain gate failed")
     task_rank = {task: index for index, task in enumerate(TASKS)}
     items.sort(
         key=lambda item: (
@@ -3908,9 +4159,11 @@ def _prepare_input_lock_after_identity(
             runtime_prompt_assets.get("production_data_tree_exactly_attested")
             is True
             and runtime_prompt_assets.get(
-                "materialized_e0_dev_data_tree_sha256"
+                "materialized_e0_dev_data_tree"
             )
-            == input_assets_after["e0_data_assets"]["tree_sha256"]
+            == _e0_data_hash_domain_projection(
+                input_assets_after["e0_data_assets"]
+            )
         ),
         "all_326_groups_resolved": bool(
             census_manifest["population_count"] == expected_group_count
@@ -3989,9 +4242,10 @@ def _prepare_input_lock_after_identity(
     if failed_hard_gates:
         raise RuntimeError(f"A5 derived hard gates failed: {failed_hard_gates}")
     manifest = {
-        "schema_version": 7,
+        "schema_version": A5_ARTIFACT_SCHEMA_VERSION,
         "protocol_id": A5_PROTOCOL_ID,
-        "artifact_type": "a5_input_lock_manifest",
+        "input_lock_protocol_id": PROTOCOL_ID,
+        "artifact_type": A5_INPUT_LOCK_MANIFEST_ARTIFACT_TYPE,
         "status": "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
         "split_role": "e0_design",
         "execution": {
@@ -4010,9 +4264,18 @@ def _prepare_input_lock_after_identity(
             ),
             "prompt_config_identity_sha256": nested_sha256(prompt_config_identity),
             "runtime_prompt_assets_sha256": nested_sha256(runtime_prompt_assets),
-            "materialized_e0_dev_data_tree_sha256": runtime_prompt_assets[
-                "materialized_e0_dev_data_tree_sha256"
-            ],
+            "e0_declared_tree_algorithm": runtime_prompt_assets[
+                "materialized_e0_dev_data_tree"
+            ]["e0_declared_tree_algorithm"],
+            "e0_declared_tree_sha256": runtime_prompt_assets[
+                "materialized_e0_dev_data_tree"
+            ]["e0_declared_tree_sha256"],
+            "generic_asset_tree_algorithm": runtime_prompt_assets[
+                "materialized_e0_dev_data_tree"
+            ]["generic_asset_tree_algorithm"],
+            "generic_asset_tree_sha256": runtime_prompt_assets[
+                "materialized_e0_dev_data_tree"
+            ]["generic_asset_tree_sha256"],
             "input_assets_before_sha256": input_assets_before["aggregate_sha256"],
             "input_assets_after_sha256": input_assets_after["aggregate_sha256"],
             "input_assets_unchanged": input_assets_before == input_assets_after,
@@ -4062,6 +4325,7 @@ def _prepare_input_lock_after_identity(
             ),
         },
         "hard_gate_checks": hard_gate_checks,
+        "hash_domain_checks": hash_domain_checks,
         "zero_counts": {
             "unexpected_prompt_difference_count": census_manifest[
                 "unexpected_prompt_difference_count"
@@ -4079,10 +4343,13 @@ def _prepare_input_lock_after_identity(
             "training": False,
             "e1_pilot_consumed": False,
             "confirmatory_consumed": False,
+            "e1_2_or_e1_3_authorized": False,
         },
         "e1_2_or_e1_3_authorized": False,
     }
-    from script.analysis.fpct_e1_a5_prompt_gate import validate_a5_schema_artifact
+    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
+        validate_a5_schema_artifact,
+    )
 
     validate_a5_schema_artifact(manifest, repo_root=repo_root)
     atomic_json(output_manifest, manifest)
@@ -4095,9 +4362,9 @@ def _prepare_input_lock_after_identity(
         expect_go_receipt=False,
     )
     go_receipt = {
-        "schema_version": 7,
+        "schema_version": A5_ARTIFACT_SCHEMA_VERSION,
         "protocol_id": A5_PROTOCOL_ID,
-        "artifact_type": "a5_input_lock_receipt",
+        "artifact_type": A5_INPUT_LOCK_GO_ARTIFACT_TYPE,
         "status": "A5_INPUT_LOCK_GO",
         "execution_sha": str(execution_identity["execution_sha"]),
         "run_uid": str(execution_identity["run_uid"]),
@@ -4106,7 +4373,21 @@ def _prepare_input_lock_after_identity(
             execution_identity["source_snapshot_receipt"]["file_sha256"]
         ),
         "prompt_census_manifest_sha256": sha256_file(census_manifest_path),
+        "input_lock_manifest_sha256": sha256_file(output_manifest),
+        "e0_declared_tree_algorithm": verified_manifest["provenance"][
+            "e0_declared_tree_algorithm"
+        ],
+        "e0_declared_tree_sha256": verified_manifest["provenance"][
+            "e0_declared_tree_sha256"
+        ],
+        "generic_asset_tree_algorithm": verified_manifest["provenance"][
+            "generic_asset_tree_algorithm"
+        ],
+        "generic_asset_tree_sha256": verified_manifest["provenance"][
+            "generic_asset_tree_sha256"
+        ],
         "checks": dict(verified_manifest["hard_gate_checks"]),
+        "hash_domain_checks": dict(verified_manifest["hash_domain_checks"]),
         "firewall": {
             "old_execution_artifact_reused": False,
             "whole_table_materialization_detected": False,
@@ -4123,14 +4404,10 @@ def _prepare_input_lock_after_identity(
     }
     validate_a5_schema_artifact(go_receipt, repo_root=repo_root)
     atomic_json(output_root / GO_RECEIPT_NAME, go_receipt)
-    return _verify_completed_input_lock(
-        repo_root=repo_root,
-        e0_data_root=e0_data_root,
-        output_sidecar=output_sidecar,
-        output_manifest=output_manifest,
-        execution_identity=execution_identity,
-        expect_go_receipt=True,
-    )
+    # GO is the final operation that may fail.  In particular, never run a
+    # verifier after publishing the canonical terminal-success receipt: a
+    # post-GO exception could otherwise create contradictory GO+BLOCKED state.
+    return verified_manifest
 
 
 def _blocked_check_name(error: Exception) -> str:
@@ -4156,17 +4433,88 @@ def _a5_synthetic_gate_binding(path: Path) -> dict[str, str]:
     return {"path": str(canonical), "sha256": sha256_file(canonical)}
 
 
+def _quarantine_canonical_go_before_blocked(output_root: Path) -> Path | None:
+    """Preserve an invalid GO's bytes, then remove its canonical terminal name."""
+
+    go_path = output_root / GO_RECEIPT_NAME
+    try:
+        mode = go_path.lstat().st_mode
+    except FileNotFoundError:
+        return None
+    if not stat.S_ISREG(mode) or go_path.is_symlink():
+        raise RuntimeError("cannot safely quarantine non-regular canonical GO")
+    payload = go_path.read_bytes()
+    digest = hashlib.sha256(payload).hexdigest()
+    quarantine = output_root / f".{GO_RECEIPT_NAME}.invalid.{digest}.json"
+    publish_bytes_no_overwrite(quarantine, payload)
+    go_path.unlink()
+    _fsync_directory(output_root)
+    try:
+        go_path.lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        raise RuntimeError("canonical GO still exists before BLOCKED publication")
+    return quarantine
+
+
+def _validated_go_quarantines(output_root: Path) -> tuple[Path, ...]:
+    """Validate the sole crash-resume form of an invalid terminal GO copy.
+
+    A quarantine is owned state only when its filename digest exactly binds its
+    immutable bytes.  More than one copy, or a coexisting canonical GO with
+    different bytes, is contradictory state and must fail closed.
+    """
+
+    output = _canonical_real_directory(output_root, "A5 input-lock output root")
+    quarantines: list[Path] = []
+    for candidate in output.iterdir():
+        match = GO_QUARANTINE_PATTERN.fullmatch(candidate.name)
+        if match is None:
+            continue
+        canonical = _canonical_regular_file(candidate, "invalid GO quarantine")
+        observed_digest = sha256_file(canonical)
+        if observed_digest != match.group(1):
+            raise RuntimeError("invalid GO quarantine filename/bytes SHA differs")
+        quarantines.append(canonical)
+    quarantines.sort(key=lambda path: path.name)
+    if len(quarantines) > 1:
+        raise RuntimeError("multiple invalid GO quarantines are contradictory")
+    if quarantines:
+        go_path = output / GO_RECEIPT_NAME
+        try:
+            go_path.lstat()
+        except FileNotFoundError:
+            pass
+        else:
+            canonical_go = _canonical_regular_file(go_path, "canonical GO")
+            if canonical_go.read_bytes() != quarantines[0].read_bytes():
+                raise RuntimeError(
+                    "canonical GO differs from its crash-resume quarantine"
+                )
+    return tuple(quarantines)
+
+
 def _publish_blocked_receipt(
     output_root: Path,
     error: Exception,
     execution_identity: Mapping[str, Any],
+    e0_data_hash_domains: Mapping[str, Any] | None = None,
 ) -> None:
     """Emit the only terminal receipt permitted after a caught gate failure."""
 
+    canonical_go = output_root / GO_RECEIPT_NAME
+    try:
+        canonical_go.lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        raise RuntimeError("refusing BLOCKED publication while canonical GO exists")
+
     payload = {
-        "schema_version": 7,
+        "schema_version": A5_ARTIFACT_SCHEMA_VERSION,
         "protocol_id": A5_PROTOCOL_ID,
-        "artifact_type": "a5_input_lock_blocked_receipt",
+        "artifact_type": A5_INPUT_LOCK_BLOCKED_ARTIFACT_TYPE,
         "status": "A5_INPUT_LOCK_BLOCKED",
         "execution_sha": str(execution_identity["execution_sha"]),
         "run_uid": str(execution_identity["run_uid"]),
@@ -4176,9 +4524,28 @@ def _publish_blocked_receipt(
         "resume_allowed": False,
         "artifact_reuse_allowed": False,
         "scientific_result": False,
-        "downstream_e1_2_or_e1_3_authorized": False,
+        "e1_2_or_e1_3_authorized": False,
     }
-    from script.analysis.fpct_e1_a5_prompt_gate import validate_a5_schema_artifact
+    if e0_data_hash_domains is not None:
+        payload.update(
+            {
+                "e0_declared_tree_algorithm": e0_data_hash_domains[
+                    "e0_declared_tree_algorithm"
+                ],
+                "e0_declared_tree_sha256": e0_data_hash_domains[
+                    "e0_declared_tree_sha256"
+                ],
+                "generic_asset_tree_algorithm": e0_data_hash_domains[
+                    "generic_asset_tree_algorithm"
+                ],
+                "generic_asset_tree_sha256": e0_data_hash_domains[
+                    "generic_asset_tree_sha256"
+                ],
+            }
+        )
+    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
+        validate_a5_schema_artifact,
+    )
 
     validate_a5_schema_artifact(payload, repo_root=Path(execution_identity["source_snapshot_root"]))
     atomic_json(output_root / BLOCKED_RECEIPT_NAME, payload)
@@ -4227,6 +4594,18 @@ def prepare_input_lock(
         ),
     )
     try:
+        # A quarantine proves that a prior invocation died during the terminal
+        # GO->BLOCKED transition.  Raise into the common fail-closed handler;
+        # never re-enter either completed verification or natural preparation.
+        if _validated_go_quarantines(output_root):
+            _canonical_regular_file(
+                output_manifest,
+                "invalid GO quarantine bound input manifest",
+            )
+            raise RuntimeError(
+                "A5_TERMINAL_RECOVERY_REQUIRED:"
+                "quarantined_go_without_blocked_receipt"
+            )
         return _prepare_input_lock_after_identity(
             repo_root=repo_root,
             e0_data_root=e0_data_root,
@@ -4234,10 +4613,24 @@ def prepare_input_lock(
             output_manifest=output_manifest,
             execution_identity=identity,
         )
-    except (FileNotFoundError, FileExistsError, RuntimeError, ValueError) as error:
+    except (OSError, RuntimeError, ValueError) as error:
         # Abrupt process death/KeyboardInterrupt is intentionally not caught;
         # immutable chunks plus the execution identity then support exact resume.
-        _publish_blocked_receipt(output_root, error, identity)
+        try:
+            blocked_hash_domains = _e0_data_hash_domain_projection(
+                _e0_data_asset_tree(e0_data_root)
+            )
+        except Exception:
+            # Hash provenance is best effort for failures that precede a usable
+            # E0 data root.  Never replace or obscure the original gate error.
+            blocked_hash_domains = None
+        _quarantine_canonical_go_before_blocked(output_root)
+        _publish_blocked_receipt(
+            output_root,
+            error,
+            identity,
+            e0_data_hash_domains=blocked_hash_domains,
+        )
         raise
 
 

@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5 actual E0 production-runtime prompt CPU input-lock failure closure
-> 当前状态：`A5_INPUT_LOCK_BLOCKED / A5R1 HUMAN APPROVAL REQUIRED / E1-2 NOT AUTHORIZED`
-> 下一步：等待 `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS`；在批准前不得运行 recovery gate、建立 successor execution 或重跑自然 census
+> 当前阶段：A5R1 dual hash-domain pre-natural execution lock
+> 当前状态：`A5R1 SYNTHETIC GATE GO / CLEAN COMMIT+PUSH PENDING / E1-2 NOT AUTHORIZED`
+> 下一步：提交并推送完整 v8 source/gate；验证 clean local/upstream 后创建全新 snapshot、UID/root，并从 group 1 运行 CPU input lock
 > 更新时间：2026-07-28（Asia/Shanghai）
 
 ## 隔离身份
@@ -204,7 +204,9 @@ Normative sources：
 | A5 prompt-specific synthetic gate | `GO` | implementation complete | CPU synthetic only | path=`e1_a5_prompt_synthetic_gate.json`；SHA256=`464e646c...`；旧 A4 gate 仅作 07755a40 historical evidence |
 | Clean pushed A5 commit/snapshot/root | `GO / EXECUTION NOW ABANDONED` | 新 gate GO | research branch commit/push + immutable snapshot | commit=`9b248d20...`；fresh UID/root 已建立，未复用 A4 artifacts |
 | 326-group CPU census/input lock | `A5_INPUT_LOCK_BLOCKED / NO USABLE CENSUS` | gate GO + clean push + fresh root | 仅执行了 pre-group-1 provenance attestation | 在第 1 个 group lookup/render/tokenize/align 前因 data-tree hash-domain mismatch fail-closed |
-| A5R1 hash-domain recovery | `HUMAN REVIEW REQUIRED / NOT OPERATIVE` | A5 failure closure + explicit prospective approval | 当前无授权资源 | approval ID=`APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS`；不得先运行 gate 或自然数据 |
+| A5R1 hash-domain recovery | `APPROVED / PRE-NATURAL GATE GO` | A5 failure closure + 2026-07-30 prospective approval | CPU-only protocol/code/tests/gate | gate SHA256=`a2e53784...`；尚未 commit/snapshot/natural census |
+| A5R1 clean commit/snapshot/root | `PENDING` | v8 gate GO | research commit/push + immutable snapshot | 必须使用新 SHA/UID/empty root，不得复用 `9b248d20` |
+| A5R1 326-group CPU input lock | `CONDITIONALLY AUTHORIZED / NOT STARTED` | clean local/upstream + new snapshot/root | CPU tokenizer/alignment only | 必须从 group 1 完整重启；GO 后仍停在 E1-2 前 |
 | Runtime/checkpoint/plan/E1-2 | `NOT AUTHORIZED` | 另行授权，即使 input-lock GO 也不自动进入 | 无 | 禁止 model/checkpoint load 和 forward |
 | E1-3 | `NOT AUTHORIZED` | finalized E1-2 + 另行授权 | 无 | 未进入 |
 | E1-pilot | `SEALED / NOT RUN / NOT READ` | operator freeze 后独立授权 | 无 | 不得 render/tokenize/align/run/read |
@@ -274,8 +276,43 @@ Normative sources：
   `HASH_ALGORITHM_DOMAIN_MISMATCH_DATA_BYTES_UNCHANGED`，不是 data drift/corruption。
 - Machine-readable failure closure：
   `recipe/eval_recipe/fpct_e1/executions/9b248d20/input_lock_failure_receipt.json`。
-  A5R1 proposal=`FPCT_E1_A5_DATA_HASH_RECOVERY_ADDENDUM.md`，当前仅为 draft；
-  它建议分别保存两个 algorithm-domain hashes，但未授权改 code/contract/tests、
-  运行新 gate、建立新 commit/snapshot/root 或访问自然 group。
+  A5R1 proposal=`FPCT_E1_A5_DATA_HASH_RECOVERY_ADDENDUM.md`；在本 failure
+  closure 冻结时它仍仅为 draft。用户随后于 2026-07-30 前瞻批准，operative
+  successor 见下一节；本段不被追溯改写为当时已经授权。
 - 未加载 model/checkpoint，未运行 model forward、GPU、CUDA、Kubernetes 或
   training；E1-2/E1-3 未进入；E1-pilot 与 confirmatory 继续 sealed。
+
+### 2026-07-30 A5R1 human decision 与 v8 pre-natural gate
+
+- 用户回复 `可以` 已前瞻记录为
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS`。授权仅覆盖双
+  hash-domain 修复、CPU/offline/no-model gate、全新 commit/snapshot/UID/root
+  与一次从 group 1 开始的 CPU input lock；不授权 E1-2/E1-3 或模型输出。
+- Operative protocol=`fpct_e1_mechanism_audit_v8_a5r1_hash_domains`；新增
+  amendment/contract/schema SHA256=
+  `8eafb29d3d736740730e10505ebd8217e779e5ef4d3a128cfb0db3a10a018068` /
+  `643151b67d98c84c1120b52705b0fe837fb4106664f10200ada1a692c744a0b1` /
+  `7bd2478f7ef3cfd32e752056cf161b8575b84a1f65088c84a0d2c37aec43704b`。
+- Declared domain 固定
+  `relative_path_nul_file_sha256_bytes_v1` / `f3dcf2c7...`，只与 frozen E0
+  identity 比较；generic domain 固定 `canonical_json_file_manifest_v1` /
+  `12f537ca...`，只用于同域 predecessor、before/after 和 tamper。Manifest、
+  sidecar、GO/blocked receipt 与 completed verifier 都显式绑定两域。
+- v8 synthetic gate=`GO_PRE_NATURAL_A5R1_HASH_DOMAIN_HARD_GATE`；artifact /
+  evidence / tracked-tree SHA256=
+  `a2e53784fa46d2f63963bdb41e327a4e17936cce2bff765802b34f3d87869a9f` /
+  `14225f02046f0fe626b3fab1cd8d07d5e45e873ac54f3d2e0ba78d78a6fdd003` /
+  `8449418e9518847ef7b6c0a7e9bd638d83d3bb098f5253a8564d4f4cd7e1e77d`。
+- Tests=`291 passed / 0 failed`，output SHA256=
+  `652e62bfb95a6acc1cfe156aa67b7c8010856105f85ef329f5dfa8847fe96250`。
+  Stress=`1,000,384` logical/emitted rows、245 chunks、semantic replay exact；
+  peak RSS=`676,876,288 B` < frozen threshold=`813,060,096 B`。独立 gate verify
+  与 v7 四件套 SHA 检查通过。
+- 一次 direct-file 调用在 import 前失败、一次完整计算在最终发布时被 sandbox
+  read-only 拒绝；两者均未生成 gate/partial artifact。随后生成的 precommit
+  gate `681532e9...` 在 schema/terminal-atomicity 复核中被主动隔离为 local-only
+  invalid evidence，未 commit、未作为 operative gate、未访问 natural data。
+  修复并冻结回归后从头运行，才产生上述唯一 operative gate。
+- 当前仍未创建 successor commit/snapshot/UID/root，未访问任何 E0-design
+  natural group。`9b248d20` 继续永久 no-resume/no-reuse；E1-2/E1-3、
+  model/checkpoint/forward、GPU/K8s/training、E1-pilot/confirmatory 均未授权。

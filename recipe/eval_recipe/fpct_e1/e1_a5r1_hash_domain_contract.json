@@ -1,0 +1,234 @@
+{
+  "schema_version": 8,
+  "protocol_id": "fpct_e1_mechanism_audit_v8_a5r1_hash_domains",
+  "artifact_type": "a5r1_hash_domain_contract",
+  "amendment_id": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS",
+  "approval": {
+    "approved": true,
+    "decision_date": "2026-07-30",
+    "timezone": "Asia/Shanghai",
+    "user_response_verbatim": "可以",
+    "selected_option": "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT",
+    "classification": "PROSPECTIVE_IMPLEMENTATION_PROVENANCE_CORRECTION",
+    "scientific_input_operator_estimand_threshold_population_changed": false
+  },
+  "operative_scope": {
+    "a5r1_contract_schema_code_tests": true,
+    "cpu_offline_no_model_synthetic_gate": true,
+    "fresh_commit_push_snapshot_uid_root": true,
+    "fresh_cpu_input_lock_from_group_one": true,
+    "model_or_checkpoint_load": false,
+    "model_forward": false,
+    "gpu_cuda_or_kubernetes": false,
+    "training": false,
+    "e1_2": false,
+    "e1_3": false,
+    "e1_pilot_or_confirmatory": false
+  },
+  "immutable_predecessors": {
+    "v7_protocol_id": "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt",
+    "v7_objects": {
+      "FPCT_E1_A5_PRODUCTION_PROMPT_AMENDMENT.md": "7178f2ee7c5d226b69b88726ee645aaf7d9425b150764393690136da2c62e874",
+      "recipe/eval_recipe/fpct_e1/e1_a5_prompt_contract.json": "aba2a439ce56cd68bc7a614075f7efac1a5da36a77d7ae87b0ee5bf8c493db7f",
+      "recipe/eval_recipe/fpct_e1/e1_a5_prompt_schema.json": "1a5e139592b8afc804c730e028660b55b6df7a1dfadc864bc797eef84ca388bb",
+      "recipe/eval_recipe/fpct_e1/e1_a5_prompt_synthetic_gate.json": "464e646c336d33c97a03c603d283a95b1579508d63ae0f19d7c700ccf2dcfc02"
+    },
+    "never_operative_recovery_proposal": {
+      "path": "FPCT_E1_A5_DATA_HASH_RECOVERY_ADDENDUM.md",
+      "sha256": "4de16ef383c608c528003634e1cf0c16c9100f0bab1d32cb3868c83439ef3ce4",
+      "status": "HISTORICAL_DRAFT_SUPERSEDED_PROSPECTIVELY_BY_THIS_APPROVAL"
+    },
+    "blocked_execution": {
+      "execution_sha": "9b248d2094b684f5d9e9a218919a354b7d97468e",
+      "run_uid": "fpct-e1-a5-runtime-prompt-9b248d20-v1",
+      "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5-9b248d20-v1",
+      "native_blocked_receipt_sha256": "fe305b2c9d881b202f4a096646e9530e8d630a6fcfa095754d3101450ad7ab79",
+      "committed_failure_closure_path": "recipe/eval_recipe/fpct_e1/executions/9b248d20/input_lock_failure_receipt.json",
+      "committed_failure_closure_sha256": "76e4dafcb1bf7673a3a4d1cbd124ba4099f8de8bca6af411cdbb9f83b32e3da4",
+      "resume_allowed": false,
+      "artifact_reuse_allowed": false
+    },
+    "v7_gate_role": "HISTORICAL_PREDECESSOR_ONLY",
+    "v7_gate_verified_against_v8_tree": false
+  },
+  "base_scientific_contract": {
+    "path": "recipe/eval_recipe/fpct_e1/e1_a5_prompt_contract.json",
+    "sha256": "aba2a439ce56cd68bc7a614075f7efac1a5da36a77d7ae87b0ee5bf8c493db7f",
+    "selected_prompt": "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT",
+    "population": "E0-design",
+    "distinct_content_groups": 326,
+    "task_order": [
+      "ai2-arc",
+      "openbookqa",
+      "mmlu-redux"
+    ],
+    "task_counts": {
+      "ai2-arc": 128,
+      "openbookqa": 70,
+      "mmlu-redux": 128
+    },
+    "start_group_ordinal_one_based": 1,
+    "all_prompt_tokenizer_alignment_streaming_rules_inherited_unchanged": true
+  },
+  "asset_identity": {
+    "materialized_e0_dev_data_tree": {
+      "file_count": 51,
+      "bytes": 233569,
+      "e0_declared_tree_algorithm": "relative_path_nul_file_sha256_bytes_v1",
+      "e0_declared_tree_sha256": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73",
+      "generic_asset_tree_algorithm": "canonical_json_file_manifest_v1",
+      "generic_asset_tree_sha256": "12f537cade1a30f6fd4e7a146c58311412f8824a6845ea4e6f7a6b5651bcb405"
+    },
+    "e0_declared_domain": {
+      "domain_id": "e0_declared_tree_v1",
+      "algorithm": "relative_path_nul_file_sha256_bytes_v1",
+      "implementation_module": "script.experiment.fpct_e1_capture_runner",
+      "implementation_symbol": "_e0_declared_tree_sha256",
+      "normative_comparison_role": "FROZEN_E0_DECLARED_IDENTITY_ONLY"
+    },
+    "generic_asset_domain": {
+      "domain_id": "a5_generic_asset_tree_v1",
+      "algorithm": "canonical_json_file_manifest_v1",
+      "implementation_module": "script.experiment.fpct_e1_prepare_input_lock",
+      "implementation_symbol": "_generic_asset_tree",
+      "normative_comparison_role": "SAME_DOMAIN_PREDECESSOR_AND_BEFORE_AFTER_TAMPER_ONLY"
+    },
+    "cross_domain_comparison_allowed": false,
+    "cross_domain_equality_required": false
+  },
+  "producer_field_contract": {
+    "input_asset_state_e0_data_assets": {
+      "generic_algorithm_field": "tree_algorithm",
+      "generic_sha256_field": "tree_sha256",
+      "declared_algorithm_field": "e0_declared_tree_algorithm",
+      "declared_sha256_field": "e0_declared_tree_sha256",
+      "generic_tree_algorithm": "canonical_json_file_manifest_v1",
+      "e0_declared_tree_algorithm": "relative_path_nul_file_sha256_bytes_v1",
+      "all_four_fields_required": true
+    },
+    "manifest_provenance_required_fields": [
+      "e0_declared_tree_algorithm",
+      "e0_declared_tree_sha256",
+      "generic_asset_tree_algorithm",
+      "generic_asset_tree_sha256",
+      "input_assets_before_sha256",
+      "input_assets_after_sha256",
+      "input_assets_unchanged"
+    ],
+    "manifest_inherited_v7_hard_gate_checks_preserved": true,
+    "manifest_hash_domain_checks_field": "hash_domain_checks",
+    "go_receipt_required_additions": [
+      "input_lock_manifest_sha256",
+      "e0_declared_tree_algorithm",
+      "e0_declared_tree_sha256",
+      "generic_asset_tree_algorithm",
+      "generic_asset_tree_sha256",
+      "hash_domain_checks"
+    ],
+    "compact_sidecar_binds_both_hash_domains": true,
+    "go_receipt_binds_both_hash_domains": true,
+    "blocked_receipt_hash_domain_binding_rule": "REQUIRED_IF_AND_ONLY_IF_HASH_DOMAIN_VALUES_WERE_COMPUTED_OR_AVAILABLE",
+    "blocked_receipt_precomputation_failure_may_omit_hash_domains": true,
+    "completed_verifier_recomputes_both_hash_domains": true,
+    "unqualified_hash_may_satisfy_frozen_e0_identity": false
+  },
+  "versioned_artifacts": {
+    "amendment": "FPCT_E1_A5R1_HASH_DOMAIN_AMENDMENT.md",
+    "contract": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_contract.json",
+    "schema": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_schema.json",
+    "pre_natural_gate": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_synthetic_gate.json",
+    "input_lock_protocol_id": "fpct_e1_e0_design_input_lock_v4_a5r1_hash_domains",
+    "old_v7_files_may_be_overwritten": false
+  },
+  "pre_natural_gate": {
+    "status_before_execution": "PENDING_NOT_RUN",
+    "go_status": "GO_PRE_NATURAL_A5R1_HASH_DOMAIN_HARD_GATE",
+    "transactional_publish": true,
+    "natural_e0_design_accessed": false,
+    "model_or_checkpoint_loaded": false,
+    "model_forward_run": false,
+    "gpu_or_kubernetes_used": false,
+    "old_v7_gate_may_substitute": false,
+    "old_v7_gate_verified_against_current_tree": false,
+    "tracked_files_sha256_complete": true,
+    "execution_tree_sha256_formula": "sha256(canonical_json(tracked_files_sha256))",
+    "evidence_sha256_formula": "sha256(canonical_json(gate_without_evidence_sha256))",
+    "required_hash_domain_tests": [
+      "independent_declared_reference_oracle_pass",
+      "independent_generic_reference_oracle_pass",
+      "deliberate_cross_domain_divergence_accepted",
+      "swapped_domain_values_fail_closed_pass",
+      "missing_or_unqualified_domain_value_fails_closed_pass",
+      "tamper_matrix_pass",
+      "generic_before_after_equality_pass",
+      "completed_verifier_dual_recompute_fixture_pass",
+      "v7_four_object_sha_immutability_pass",
+      "blocked_execution_and_root_nonreuse_pass",
+      "atomic_failure_publishes_no_go_pass"
+    ]
+  },
+  "fresh_execution": {
+    "commit": "PENDING_CLEAN_PUSHED_A5R1_COMMIT",
+    "uid_pattern": "^fpct-e1-a5r1-hash-domains-[0-9a-f]{8}-v1$",
+    "root_pattern": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5r1-[0-9a-f]{8}-v1$",
+    "new_empty_root_required": true,
+    "new_immutable_source_snapshot_and_receipt_required": true,
+    "restart_from_group_one": true,
+    "resume_cursor_allowed": false,
+    "blocked_9b248d20_artifact_reuse_allowed": false,
+    "ordered_stages": [
+      "v8_contract_code_tests",
+      "v8_synthetic_gate_go",
+      "commit_and_push",
+      "local_upstream_equal_and_clean",
+      "new_immutable_source_snapshot_and_receipt",
+      "new_empty_uid_and_root",
+      "pre_group_one_dual_hash_domain_attestation",
+      "full_326_group_cpu_census_from_group_one",
+      "post_census_dual_hash_domain_attestation",
+      "complete_independent_verifier",
+      "A5_INPUT_LOCK_GO_receipt"
+    ]
+  },
+  "input_lock_hard_gate": {
+    "go_status": "A5_INPUT_LOCK_GO",
+    "failure_status": "A5_INPUT_LOCK_BLOCKED",
+    "required_true": [
+      "e0_declared_domain_present",
+      "e0_declared_algorithm_exact",
+      "e0_declared_sha_matches_frozen_e0",
+      "a5_generic_domain_present",
+      "a5_generic_algorithm_exact",
+      "a5_generic_sha_matches_same_domain_predecessor",
+      "a5_generic_before_equals_after",
+      "completed_verifier_recomputes_both_domains",
+      "all_inherited_a5_v7_input_lock_checks"
+    ],
+    "required_false": [
+      "cross_domain_comparison_detected",
+      "old_v7_artifact_modified",
+      "blocked_execution_artifact_reused",
+      "model_or_checkpoint_loaded",
+      "model_forward_run",
+      "gpu_or_cuda_used",
+      "kubernetes_used",
+      "training",
+      "e1_pilot_consumed",
+      "confirmatory_consumed"
+    ],
+    "failure_resume_allowed": false,
+    "failure_artifact_reuse_allowed": false,
+    "go_scientific_result": false,
+    "go_automatically_authorizes_e1_2": false
+  },
+  "authorization_after_input_lock_go": {
+    "input_provenance_report": true,
+    "e1_2": false,
+    "e1_3": false,
+    "e1_pilot": false,
+    "confirmatory": false,
+    "model_forward": false,
+    "gpu_or_training": false,
+    "next_state": "HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED"
+  }
+}

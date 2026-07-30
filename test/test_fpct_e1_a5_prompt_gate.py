@@ -221,13 +221,17 @@ def test_all_config_attestation_rejects_index_or_config_tamper(
     tmp_path: Path, corruption: str
 ) -> None:
     from script.experiment.fpct_e1_prepare_input_lock import (
+        A5_PROMPT_CONTRACT_RELATIVE,
         _load_a5_prompt_contract,
         _verify_all_e0_prompt_configs,
     )
 
-    contract_relative = gate.A5_CONTRACT_RELATIVE
+    contract_relatives = (
+        A5_PROMPT_CONTRACT_RELATIVE,
+        gate.A5_CONTRACT_RELATIVE,
+    )
     index_relative = Path("recipe/eval_recipe/fpct_e0/rendered/config_index.json")
-    for relative in (contract_relative, index_relative):
+    for relative in (*contract_relatives, index_relative):
         destination = tmp_path / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(REPO_ROOT / relative, destination)

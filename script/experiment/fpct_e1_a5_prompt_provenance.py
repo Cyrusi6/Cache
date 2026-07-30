@@ -19,12 +19,29 @@ from typing import Any, Mapping, Sequence
 
 A5_PROTOCOL_ID = "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt"
 A5_AMENDMENT_ID = "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5_RUNTIME_PROMPT"
+A5R1_PROTOCOL_ID = "fpct_e1_mechanism_audit_v8_a5r1_hash_domains"
+A5R1_AMENDMENT_ID = "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS"
 HISTORICAL_EXACT = "EXACT_HISTORICAL_AND_PRODUCTION_MATCH"
 EXTRA_CHOICES_ONLY = "EXTRA_CHOICES_ONLY"
 PROMPT_RELATIONS = frozenset((HISTORICAL_EXACT, EXTRA_CHOICES_ONLY))
 TASK_ORDER = ("ai2-arc", "openbookqa", "mmlu-redux")
 EXPECTED_TASK_COUNTS = {"ai2-arc": 128, "openbookqa": 70, "mmlu-redux": 128}
 GOLD_ANSWERS = frozenset(("A", "B", "C", "D"))
+
+
+def _validated_protocol_header(
+    schema_version: int, protocol_id: str,
+) -> tuple[int, str]:
+    """Allow the immutable v7 contract and its prospective v8 successor only."""
+
+    supported = {
+        (7, A5_PROTOCOL_ID),
+        (8, A5R1_PROTOCOL_ID),
+    }
+    header = (schema_version, protocol_id)
+    if header not in supported:
+        raise ValueError("unsupported A5 prompt provenance protocol header")
+    return header
 
 # 80fb295 is the original scientific source.  The effective decode-recovery
 # evaluation image is 6a51ad4.  Its complete evaluator/aligner/data-loading
@@ -286,7 +303,12 @@ def dual_anchor_record(
     production_logical_row_count: int,
     production_physical_chunk_count: int,
     historical_content_sha256: str,
+    schema_version: int = 7,
+    protocol_id: str = A5_PROTOCOL_ID,
 ) -> dict[str, Any]:
+    schema_version, protocol_id = _validated_protocol_header(
+        schema_version, protocol_id
+    )
     projected = historical_projected_example(task, example)
     historical_question, historical_choices, historical_labels = full_question_choices(
         task, projected
@@ -333,8 +355,8 @@ def dual_anchor_record(
     }
     first4_sha = sha256_bytes(canonical_json_bytes(first4_payload))
     return {
-        "schema_version": 7,
-        "protocol_id": A5_PROTOCOL_ID,
+        "schema_version": schema_version,
+        "protocol_id": protocol_id,
         "artifact_type": "a5_prompt_census_record",
         "task": task,
         "content_group_sha256": content_group_sha256,
@@ -413,8 +435,14 @@ def summarize_dual_anchor_census(
     records: Sequence[Mapping[str, Any]],
     *,
     expected_task_counts: Mapping[str, int] = EXPECTED_TASK_COUNTS,
+    schema_version: int = 7,
+    protocol_id: str = A5_PROTOCOL_ID,
 ) -> dict[str, Any]:
     """Fail-closed full-population reduction in canonical task/group order."""
+
+    schema_version, protocol_id = _validated_protocol_header(
+        schema_version, protocol_id
+    )
 
     task_rank = {task: index for index, task in enumerate(TASK_ORDER)}
     ordered = sorted(
@@ -436,6 +464,11 @@ def summarize_dual_anchor_census(
         raise ValueError("A5 census contains duplicate group/sample identity")
     counts = {task: 0 for task in TASK_ORDER}
     for row in ordered:
+        if (
+            row.get("schema_version") != schema_version
+            or row.get("protocol_id") != protocol_id
+        ):
+            raise ValueError("A5 census row protocol header is inconsistent")
         task = row.get("task")
         if task not in counts:
             raise ValueError("A5 census contains an unexpected task")
@@ -493,8 +526,8 @@ def summarize_dual_anchor_census(
             ),
         }
     return {
-        "schema_version": 7,
-        "protocol_id": A5_PROTOCOL_ID,
+        "schema_version": schema_version,
+        "protocol_id": protocol_id,
         "artifact_type": "a5_dual_anchor_census_summary",
         "population": "e0_design",
         "group_count": len(ordered),
@@ -517,11 +550,16 @@ def build_census_manifest(
     run_uid: str,
     record_artifact: Mapping[str, Any],
     expected_task_counts: Mapping[str, int] = EXPECTED_TASK_COUNTS,
+    schema_version: int = 7,
+    protocol_id: str = A5_PROTOCOL_ID,
 ) -> dict[str, Any]:
     """Build the strict A5 schema manifest after semantic census validation."""
 
     summary = summarize_dual_anchor_census(
-        records, expected_task_counts=expected_task_counts
+        records,
+        expected_task_counts=expected_task_counts,
+        schema_version=schema_version,
+        protocol_id=protocol_id,
     )
     ordered = list(summary["records"])
     affected_task_counts = {
@@ -551,8 +589,8 @@ def build_census_manifest(
     ):
         raise ValueError("A5 census record artifact descriptor is invalid")
     return {
-        "schema_version": 7,
-        "protocol_id": A5_PROTOCOL_ID,
+        "schema_version": schema_version,
+        "protocol_id": protocol_id,
         "artifact_type": "a5_prompt_census_manifest",
         "status": "COMPLETE_PRE_MODEL_CENSUS",
         "execution_sha": execution_sha,

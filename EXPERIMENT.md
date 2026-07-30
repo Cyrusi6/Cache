@@ -564,3 +564,29 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
   successor execution 或自然 census。
 - 未加载 model/checkpoint、未运行 forward/GPU/Kubernetes/training，未进入
   E1-2/E1-3，未访问 E1-pilot/confirmatory。
+
+### 2026-07-30 FPCT-E1 A5R1 pre-natural dual-hash gate
+
+- Approval=`APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS`；用户原始
+  回复=`可以`。授权范围仅为 v8 hash-domain repair、CPU/offline synthetic gate、
+  新 commit/snapshot/root 与从 group 1 开始的 CPU input lock。
+- Configuration：declared algorithm/value=
+  `relative_path_nul_file_sha256_bytes_v1` /
+  `f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73`；
+  generic algorithm/value=`canonical_json_file_manifest_v1` /
+  `12f537cade1a30f6fd4e7a146c58311412f8824a6845ea4e6f7a6b5651bcb405`。
+  禁止跨域 equality；旧 v7 gate=`464e646c...` 只作 historical predecessor。
+- Verification：v8 gate=`GO`；`291 passed / 0 failed`，test-output SHA256=
+  `652e62bfb95a6acc1cfe156aa67b7c8010856105f85ef329f5dfa8847fe96250`；
+  gate/evidence SHA256=
+  `a2e53784fa46d2f63963bdb41e327a4e17936cce2bff765802b34f3d87869a9f` /
+  `14225f02046f0fe626b3fab1cd8d07d5e45e873ac54f3d2e0ba78d78a6fdd003`。
+  Stress=`1,000,384` logical/emitted rows、245 chunks、replay exact；peak RSS=
+  `676,876,288 B`，threshold=`813,060,096 B`。独立 verify 与 v7 SHA closure GO。
+- Non-operative attempts：一次 direct-file import failure；一次完整 CPU compute
+  在最后 publish 因 sibling worktree read-only 失败。两次均未生成 gate/partial
+  artifact。`681532e9...` precommit gate 随后因 schema/terminal-atomicity 缺口
+  被隔离为 local-only invalid evidence；修复并重新完整执行后才得到唯一正式 gate。
+- 当前没有自然 census/output；successor commit/snapshot/UID/root 仍 pending。
+  0 model/checkpoint load、0 forward、0 GPU/CUDA/K8s/training；E1-2/E1-3 与
+  E1-pilot/confirmatory 继续 NOT AUTHORIZED/sealed。

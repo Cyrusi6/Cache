@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import ast
+import copy
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -10,7 +12,7 @@ import sys
 import pytest
 import torch
 import script.experiment.fpct_e1_prepare_input_lock as prepare
-import script.analysis.fpct_e1_a5_prompt_gate as a5_prompt_gate
+import script.analysis.fpct_e1_a5r1_hash_domain_gate as a5_prompt_gate
 
 from script.experiment.fpct_e1_prepare_input_lock import (
     HISTORICAL_MAX_LONG_FORM_ROWS_PER_SAMPLE,
@@ -44,7 +46,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 def _direct_prepare_command(tmp_path: Path) -> list[str]:
     execution_sha = "a" * 40
-    run_root = tmp_path / f"fpct-e1-a5-{execution_sha[:8]}-v1"
+    run_root = tmp_path / f"fpct-e1-a5r1-{execution_sha[:8]}-v1"
     return [
         sys.executable,
         str(REPO_ROOT / "script/experiment/fpct_e1_prepare_input_lock.py"),
@@ -63,7 +65,7 @@ def _direct_prepare_command(tmp_path: Path) -> list[str]:
         "--source-snapshot-receipt",
         str(REPO_ROOT / prepare.SOURCE_SNAPSHOT_RECEIPT_NAME),
         "--run-uid",
-        f"fpct-e1-a5-runtime-prompt-{execution_sha[:8]}-v1",
+        f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
         "--run-root",
         str(run_root),
     ]
@@ -463,11 +465,157 @@ def test_asset_tree_digest_is_a_real_before_after_hash(tmp_path: Path) -> None:
     assert before["files"][0]["sha256"] != after["files"][0]["sha256"]
 
 
+def test_e0_data_tree_records_two_explicit_noninterchangeable_hash_domains(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "e0-data"
+    root.mkdir()
+    (root / "a.json").write_text('{"a":1}\n', encoding="utf-8")
+    (root / "b.json").write_text('{"b":2}\n', encoding="utf-8")
+
+    observed = prepare._e0_data_asset_tree(root)
+    independent_declared = hashlib.sha256()
+    for path in sorted(root.iterdir()):
+        independent_declared.update(path.name.encode("utf-8") + b"\0")
+        independent_declared.update(
+            bytes.fromhex(prepare.sha256_file(path))
+        )
+
+    assert observed["tree_algorithm"] == prepare.GENERIC_ASSET_TREE_ALGORITHM
+    assert (
+        observed["e0_declared_tree_algorithm"]
+        == prepare.E0_DECLARED_TREE_ALGORITHM
+    )
+    assert observed["e0_declared_tree_sha256"] == independent_declared.hexdigest()
+    assert observed["tree_sha256"] != observed["e0_declared_tree_sha256"]
+
+
+def test_a5r1_runtime_asset_attestation_rejects_swapped_hash_domains() -> None:
+    declared = "1" * 64
+    generic = "2" * 64
+    expected = {
+        "generic_asset_tree_algorithm": prepare.GENERIC_ASSET_TREE_ALGORITHM,
+        "generic_asset_tree_sha256": generic,
+        "e0_declared_tree_algorithm": prepare.E0_DECLARED_TREE_ALGORITHM,
+        "e0_declared_tree_sha256": declared,
+        "file_count": 1,
+        "bytes": 1,
+    }
+    swapped = {
+        "tree_algorithm": prepare.GENERIC_ASSET_TREE_ALGORITHM,
+        "tree_sha256": declared,
+        "e0_declared_tree_algorithm": prepare.E0_DECLARED_TREE_ALGORITHM,
+        "e0_declared_tree_sha256": generic,
+        "file_count": 1,
+        "bytes": 1,
+    }
+    with pytest.raises(ValueError, match="development tree SHA changed"):
+        prepare._attest_a5_runtime_assets(
+            contract={
+                "asset_identity": {"materialized_e0_dev_data_tree": expected}
+            },
+            runtime_assets={},
+            receiver=object(),
+            sender=object(),
+            e0_data_assets=swapped,
+        )
+
+
+def test_a5r1_hash_domain_checks_detect_same_domain_tamper(
+    tmp_path: Path,
+) -> None:
+    predecessor = tmp_path / "v7.json"
+    predecessor.write_text('{"v":7}\n', encoding="utf-8")
+    e0_data_assets = {
+        "tree_algorithm": prepare.GENERIC_ASSET_TREE_ALGORITHM,
+        "tree_sha256": "2" * 64,
+        "e0_declared_tree_algorithm": prepare.E0_DECLARED_TREE_ALGORITHM,
+        "e0_declared_tree_sha256": "1" * 64,
+        "file_count": 1,
+        "bytes": 1,
+    }
+    state = {"e0_data_assets": e0_data_assets}
+    contract = {
+        "asset_identity": {
+            "materialized_e0_dev_data_tree": {
+                "generic_asset_tree_algorithm": prepare.GENERIC_ASSET_TREE_ALGORITHM,
+                "generic_asset_tree_sha256": "2" * 64,
+                "e0_declared_tree_algorithm": prepare.E0_DECLARED_TREE_ALGORITHM,
+                "e0_declared_tree_sha256": "1" * 64,
+                "file_count": 1,
+                "bytes": 1,
+            }
+        },
+        "immutable_predecessors": {
+            "v7_objects": {"v7.json": prepare.sha256_file(predecessor)},
+            "blocked_execution": {
+                "execution_sha": "9b248d20" + "0" * 32,
+                "run_uid": "old",
+                "run_root": "/old",
+            },
+        },
+    }
+    identity = {"execution_sha": "a" * 40, "run_uid": "new", "run_root": "/new"}
+    checks = prepare._a5r1_hash_domain_checks(
+        repo_root=tmp_path,
+        contract=contract,
+        input_assets_before=state,
+        input_assets_after=state,
+        execution_identity=identity,
+    )
+    assert all(checks[name] is True for name in prepare.A5R1_HASH_REQUIRED_TRUE)
+    assert all(checks[name] is False for name in prepare.A5R1_HASH_REQUIRED_FALSE)
+
+    tampered = {
+        "e0_data_assets": {**e0_data_assets, "tree_sha256": "3" * 64}
+    }
+    checks = prepare._a5r1_hash_domain_checks(
+        repo_root=tmp_path,
+        contract=contract,
+        input_assets_before=state,
+        input_assets_after=tampered,
+        execution_identity=identity,
+    )
+    assert checks["a5_generic_before_equals_after"] is False
+    assert checks["a5_generic_sha_matches_same_domain_predecessor"] is False
+
+
+def test_a5r1_contract_overlay_inherits_v7_science_but_locks_base_path_and_sha(
+    tmp_path: Path,
+) -> None:
+    effective = prepare._load_a5_prompt_contract(REPO_ROOT)
+    assert effective["schema_version"] == prepare.A5_ARTIFACT_SCHEMA_VERSION
+    assert effective["population"]["distinct_content_groups"] == 326
+    assert "e0_renderer_oracle" in effective
+    assert "receiver" in effective["asset_identity"]
+    assert "sender" in effective["asset_identity"]
+    assert "materialized_e0_dev_data_tree" in effective["asset_identity"]
+
+    successor_relative = prepare.A5_PROMPT_CONTRACT_RELATIVE
+    base_relative = Path("recipe/eval_recipe/fpct_e1/e1_a5_prompt_contract.json")
+    for relative in (successor_relative, base_relative):
+        destination = tmp_path / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes((REPO_ROOT / relative).read_bytes())
+    base = tmp_path / base_relative
+    base.write_bytes(base.read_bytes() + b"\n")
+    with pytest.raises(ValueError, match="scientific contract changed"):
+        prepare._load_a5_prompt_contract(tmp_path)
+
+    base.write_bytes((REPO_ROOT / base_relative).read_bytes())
+    successor_path = tmp_path / successor_relative
+    successor = json.loads(successor_path.read_text(encoding="utf-8"))
+    successor["base_scientific_contract"]["path"] = "alternate/base.json"
+    successor_path.write_text(json.dumps(successor), encoding="utf-8")
+    with pytest.raises(ValueError, match="contract path changed"):
+        prepare._load_a5_prompt_contract(tmp_path)
+
+
 def test_execution_identity_requires_new_canonical_empty_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     execution_sha = "a" * 40
-    run_root = tmp_path / f"fpct-e1-a5-{execution_sha[:8]}-v1"
+    run_root = tmp_path / f"fpct-e1-a5r1-{execution_sha[:8]}-v1"
     snapshot = run_root / "source_snapshot"
     snapshot.mkdir(parents=True)
     receipt = snapshot / prepare.SOURCE_SNAPSHOT_RECEIPT_NAME
@@ -485,7 +633,7 @@ def test_execution_identity_requires_new_canonical_empty_root(
         execution_sha=execution_sha,
         source_snapshot_root=snapshot,
         source_snapshot_receipt=receipt,
-        run_uid=f"fpct-e1-a5-runtime-prompt-{execution_sha[:8]}-v1",
+        run_uid=f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
         run_root=run_root,
         output_root=output,
         sealed_prepare_execution={
@@ -502,7 +650,7 @@ def test_execution_identity_requires_new_canonical_empty_root(
         execution_sha=execution_sha,
         source_snapshot_root=snapshot,
         source_snapshot_receipt=receipt,
-        run_uid=f"fpct-e1-a5-runtime-prompt-{execution_sha[:8]}-v1",
+        run_uid=f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
         run_root=run_root,
         output_root=output,
         sealed_prepare_execution={
@@ -513,22 +661,91 @@ def test_execution_identity_requires_new_canonical_empty_root(
         },
         _test_only_run_parent=tmp_path,
     )
-    with pytest.raises(ValueError, match="historical abandoned"):
+    quarantine_payload = prepare.canonical_json_bytes({"status": "invalid-go"})
+    quarantine_digest = hashlib.sha256(quarantine_payload).hexdigest()
+    quarantine = (
+        output
+        / f".{prepare.GO_RECEIPT_NAME}.invalid.{quarantine_digest}.json"
+    )
+    quarantine.write_bytes(quarantine_payload)
+    # This is the one extra owned state needed to recover a process death after
+    # canonical GO unlink but before terminal BLOCKED publication.
+    with pytest.raises(RuntimeError, match="bound input manifest is missing"):
         validate_a5_execution_identity(
-            execution_sha="07755a40" + "0" * 32,
+            execution_sha=execution_sha,
             source_snapshot_root=snapshot,
             source_snapshot_receipt=receipt,
-            run_uid="fpct-e1-a5-runtime-prompt-07755a40-v1",
+            run_uid=f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
             run_root=run_root,
             output_root=output,
             sealed_prepare_execution={
                 "pytest_verified_test_sentinel": True,
                 "repo_root": str(snapshot.absolute()),
-                "execution_sha": "07755a40" + "0" * 32,
+                "execution_sha": execution_sha,
                 "production_eligible": False,
             },
             _test_only_run_parent=tmp_path,
         )
+    (output / "e0_design_input_manifest.json").write_text(
+        "{}\n", encoding="utf-8"
+    )
+    validate_a5_execution_identity(
+        execution_sha=execution_sha,
+        source_snapshot_root=snapshot,
+        source_snapshot_receipt=receipt,
+        run_uid=f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
+        run_root=run_root,
+        output_root=output,
+        sealed_prepare_execution={
+            "pytest_verified_test_sentinel": True,
+            "repo_root": str(snapshot.absolute()),
+            "execution_sha": execution_sha,
+            "production_eligible": False,
+        },
+        _test_only_run_parent=tmp_path,
+    )
+    quarantine.unlink()
+    mismatched_quarantine = (
+        output / f".{prepare.GO_RECEIPT_NAME}.invalid.{'0' * 64}.json"
+    )
+    mismatched_quarantine.write_bytes(quarantine_payload)
+    with pytest.raises(RuntimeError, match="filename/bytes SHA differs"):
+        validate_a5_execution_identity(
+            execution_sha=execution_sha,
+            source_snapshot_root=snapshot,
+            source_snapshot_receipt=receipt,
+            run_uid=f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
+            run_root=run_root,
+            output_root=output,
+            sealed_prepare_execution={
+                "pytest_verified_test_sentinel": True,
+                "repo_root": str(snapshot.absolute()),
+                "execution_sha": execution_sha,
+                "production_eligible": False,
+            },
+            _test_only_run_parent=tmp_path,
+        )
+    mismatched_quarantine.unlink()
+    for historical_prefix in ("07755a40", "9b248d20"):
+        historical_sha = historical_prefix + "0" * 32
+        with pytest.raises(ValueError, match="historical abandoned"):
+            validate_a5_execution_identity(
+                execution_sha=historical_sha,
+                source_snapshot_root=snapshot,
+                source_snapshot_receipt=receipt,
+                run_uid=(
+                    f"fpct-e1-a5r1-hash-domains-{historical_prefix}-v1"
+                ),
+                run_root=run_root,
+                output_root=output,
+                sealed_prepare_execution={
+                    "pytest_verified_test_sentinel": True,
+                    "repo_root": str(snapshot.absolute()),
+                    "execution_sha": historical_sha,
+                    "production_eligible": False,
+                },
+                _test_only_run_parent=tmp_path,
+            )
 
 
 def test_compact_geometry_is_self_contained_and_pass_b_reads_only_parquet(
@@ -643,7 +860,8 @@ def _completed_input_lock_fixture(
     schema_sha256 = prepare.sha256_file(schema_path)
     gate = {
         "protocol_id": prepare.A5_PROTOCOL_ID,
-        "status": "GO_PRE_NATURAL_SYNTHETIC_HARD_GATE",
+        "artifact_type": prepare.A5_SYNTHETIC_GATE_ARTIFACT_TYPE,
+        "status": prepare.A5_SYNTHETIC_GATE_STATUS,
         "natural_e0_design_accessed": False,
         "estimated_physical_bytes_per_row": 4096,
         "checks": {
@@ -692,7 +910,32 @@ def _completed_input_lock_fixture(
     monkeypatch.setattr(
         prepare, "attest_e0_renderer_identity", lambda root: renderer_source_identity
     )
-    monkeypatch.setattr(prepare, "_load_a5_prompt_contract", lambda root: {})
+    predecessor = repo_root / "historical-v7.json"
+    predecessor.write_text('{"frozen":true}\n', encoding="utf-8")
+    frozen_tree = {
+        "generic_asset_tree_algorithm": prepare.GENERIC_ASSET_TREE_ALGORITHM,
+        "generic_asset_tree_sha256": "3" * 64,
+        "e0_declared_tree_algorithm": prepare.E0_DECLARED_TREE_ALGORITHM,
+        "e0_declared_tree_sha256": "4" * 64,
+        "file_count": 1,
+        "bytes": 1,
+    }
+    fixture_contract = {
+        "asset_identity": {"materialized_e0_dev_data_tree": frozen_tree},
+        "immutable_predecessors": {
+            "v7_objects": {
+                "historical-v7.json": prepare.sha256_file(predecessor),
+            },
+            "blocked_execution": {
+                "execution_sha": "9b248d2094b684f5d9e9a218919a354b7d97468e",
+                "run_uid": "fpct-e1-a5-runtime-prompt-9b248d20-v1",
+                "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5-9b248d20-v1",
+            },
+        },
+    }
+    monkeypatch.setattr(
+        prepare, "_load_a5_prompt_contract", lambda root: fixture_contract
+    )
     monkeypatch.setattr(
         prepare,
         "_verify_all_e0_prompt_configs",
@@ -705,10 +948,10 @@ def _completed_input_lock_fixture(
     source_receipt_path.write_text('{"source":"locked"}\n', encoding="utf-8")
     execution_payload = {
         "schema_version": 1,
-        "protocol_id": "fpct_e1_a5_input_lock_execution_identity_v1",
+        "protocol_id": "fpct_e1_a5r1_input_lock_execution_identity_v1",
         "execution_sha": "a" * 40,
         "execution_prefix": "a" * 8,
-        "run_uid": "fpct-e1-a5-runtime-prompt-aaaaaaaa-v1",
+        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
         "run_root": str(tmp_path.absolute()),
         "source_snapshot_root": str(repo_root.absolute()),
         "source_snapshot_receipt": {
@@ -735,7 +978,14 @@ def _completed_input_lock_fixture(
     asset_state_holder = {
         "value": {
             "tracked_source_assets": [],
-            "e0_data_assets": {"tree_sha256": "3" * 64},
+            "e0_data_assets": {
+                "tree_algorithm": prepare.GENERIC_ASSET_TREE_ALGORITHM,
+                "tree_sha256": "3" * 64,
+                "e0_declared_tree_algorithm": prepare.E0_DECLARED_TREE_ALGORITHM,
+                "e0_declared_tree_sha256": "4" * 64,
+                "file_count": 1,
+                "bytes": 1,
+            },
             "runtime_assets": {},
             "source_snapshot_verification": {
                 "status": "GO_MOUNTED_SOURCE_SNAPSHOT"
@@ -805,7 +1055,7 @@ def _completed_input_lock_fixture(
         )
         census_records.append(
             {
-                "schema_version": 7,
+                "schema_version": prepare.A5_ARTIFACT_SCHEMA_VERSION,
                 "protocol_id": prepare.A5_PROTOCOL_ID,
                 "artifact_type": "a5_prompt_census_record",
                 "task": item["task"],
@@ -839,7 +1089,7 @@ def _completed_input_lock_fixture(
     census_manifest = prepare.build_census_manifest(
         census_records,
         execution_sha="a" * 40,
-        run_uid="fpct-e1-a5-runtime-prompt-aaaaaaaa-v1",
+        run_uid="fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
         record_artifact={
             "relative_path": prepare.PROMPT_CENSUS_RECORDS_NAME,
             "sha256": prepare.sha256_file(census_records_path),
@@ -847,6 +1097,8 @@ def _completed_input_lock_fixture(
             "row_count": len(census_records),
         },
         expected_task_counts=counts,
+        schema_version=prepare.A5_ARTIFACT_SCHEMA_VERSION,
+        protocol_id=prepare.A5_PROTOCOL_ID,
     )
     census_manifest_path = output_root / prepare.PROMPT_CENSUS_NAME
     prepare.atomic_json(census_manifest_path, census_manifest)
@@ -906,7 +1158,7 @@ def _completed_input_lock_fixture(
             },
             "prompt_config_identity": prompt_config_identity,
             "runtime_prompt_assets": {
-                "materialized_e0_dev_data_tree_sha256": "3" * 64
+                "materialized_e0_dev_data_tree": frozen_tree
             },
         },
         "e1_pilot_consumed": False,
@@ -959,10 +1211,18 @@ def _completed_input_lock_fixture(
             "bounded_peak_rss",
         )
     }
+    hash_domain_checks = prepare._a5r1_hash_domain_checks(
+        repo_root=repo_root,
+        contract=fixture_contract,
+        input_assets_before=asset_state_holder["value"],
+        input_assets_after=asset_state_holder["value"],
+        execution_identity=identity,
+    )
     completed = {
-        "schema_version": 7,
+        "schema_version": prepare.A5_ARTIFACT_SCHEMA_VERSION,
         "protocol_id": prepare.A5_PROTOCOL_ID,
-        "artifact_type": "a5_input_lock_manifest",
+        "input_lock_protocol_id": prepare.PROTOCOL_ID,
+        "artifact_type": prepare.A5_INPUT_LOCK_MANIFEST_ARTIFACT_TYPE,
         "status": "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
         "split_role": "e0_design",
         "execution": {
@@ -985,7 +1245,10 @@ def _completed_input_lock_fixture(
             "runtime_prompt_assets_sha256": prepare.nested_sha256(
                 sidecar["a5_prompt_provenance"]["runtime_prompt_assets"]
             ),
-            "materialized_e0_dev_data_tree_sha256": "3" * 64,
+            "e0_declared_tree_algorithm": prepare.E0_DECLARED_TREE_ALGORITHM,
+            "e0_declared_tree_sha256": "4" * 64,
+            "generic_asset_tree_algorithm": prepare.GENERIC_ASSET_TREE_ALGORITHM,
+            "generic_asset_tree_sha256": "3" * 64,
             "input_assets_before_sha256": "d" * 64,
             "input_assets_after_sha256": "d" * 64,
             "input_assets_unchanged": True,
@@ -1027,6 +1290,7 @@ def _completed_input_lock_fixture(
             "whole_table_materialization_detected": False,
         },
         "hard_gate_checks": hard_checks,
+        "hash_domain_checks": hash_domain_checks,
         "zero_counts": {
             "unexpected_prompt_difference_count": 0,
             "missing_rows": 0,
@@ -1042,14 +1306,15 @@ def _completed_input_lock_fixture(
             "training": False,
             "e1_pilot_consumed": False,
             "confirmatory_consumed": False,
+            "e1_2_or_e1_3_authorized": False,
         },
         "e1_2_or_e1_3_authorized": False,
     }
     prepare.atomic_json(manifest_path, completed)
     go_receipt = {
-        "schema_version": 7,
+        "schema_version": prepare.A5_ARTIFACT_SCHEMA_VERSION,
         "protocol_id": prepare.A5_PROTOCOL_ID,
-        "artifact_type": "a5_input_lock_receipt",
+        "artifact_type": prepare.A5_INPUT_LOCK_GO_ARTIFACT_TYPE,
         "status": "A5_INPUT_LOCK_GO",
         "execution_sha": "a" * 40,
         "run_uid": execution_payload["run_uid"],
@@ -1058,7 +1323,13 @@ def _completed_input_lock_fixture(
             "source_snapshot_receipt"
         ]["file_sha256"],
         "prompt_census_manifest_sha256": prepare.sha256_file(census_manifest_path),
+        "input_lock_manifest_sha256": prepare.sha256_file(manifest_path),
+        "e0_declared_tree_algorithm": prepare.E0_DECLARED_TREE_ALGORITHM,
+        "e0_declared_tree_sha256": "4" * 64,
+        "generic_asset_tree_algorithm": prepare.GENERIC_ASSET_TREE_ALGORITHM,
+        "generic_asset_tree_sha256": "3" * 64,
         "checks": hard_checks,
+        "hash_domain_checks": hash_domain_checks,
         "firewall": {
             "old_execution_artifact_reused": False,
             "whole_table_materialization_detected": False,
@@ -1087,6 +1358,53 @@ def _completed_input_lock_fixture(
         "asset_state_holder": asset_state_holder,
         "streamed": streamed,
     }
+
+
+def _retarget_completed_fixture_hash_domain(
+    fixture: dict[str, object],
+    *,
+    input_field: str,
+    projection_field: str,
+) -> None:
+    """Make every shallow artifact agree with one forged domain value."""
+
+    sidecar_path = Path(fixture["sidecar_path"])
+    sidecar = torch.load(sidecar_path, map_location="cpu", weights_only=False)
+    forged_sha = "9" * 64
+    asset_state = copy.deepcopy(sidecar["input_asset_state"])
+    asset_state["e0_data_assets"][input_field] = forged_sha
+    aggregate_payload = {
+        key: value for key, value in asset_state.items() if key != "aggregate_sha256"
+    }
+    asset_state["aggregate_sha256"] = prepare.nested_sha256(aggregate_payload)
+    sidecar["input_asset_state"] = asset_state
+    runtime_tree = sidecar["a5_prompt_provenance"]["runtime_prompt_assets"][
+        "materialized_e0_dev_data_tree"
+    ]
+    runtime_tree[projection_field] = forged_sha
+    torch.save(sidecar, sidecar_path)
+    fixture["asset_state_holder"]["value"] = copy.deepcopy(asset_state)
+
+    manifest_path = Path(fixture["manifest_path"])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["provenance"][projection_field] = forged_sha
+    manifest["provenance"]["runtime_prompt_assets_sha256"] = prepare.nested_sha256(
+        sidecar["a5_prompt_provenance"]["runtime_prompt_assets"]
+    )
+    manifest["provenance"]["input_assets_before_sha256"] = asset_state[
+        "aggregate_sha256"
+    ]
+    manifest["provenance"]["input_assets_after_sha256"] = asset_state[
+        "aggregate_sha256"
+    ]
+    manifest["sidecar"].update(
+        {
+            "bytes": sidecar_path.stat().st_size,
+            "file_sha256": prepare.sha256_file(sidecar_path),
+            "semantic_sha256": prepare.nested_sha256(sidecar),
+        }
+    )
+    manifest_path.write_bytes(prepare.canonical_json_bytes(manifest))
 
 
 def _small_geometry_for_hostile_preflight(
@@ -1238,6 +1556,35 @@ def test_completed_manifest_resume_deeply_replays_without_writes(
     }
     assert resumed == fixture["completed"]
     assert after == before
+
+
+@pytest.mark.parametrize(
+    ("input_field", "projection_field"),
+    (
+        ("tree_sha256", "generic_asset_tree_sha256"),
+        ("e0_declared_tree_sha256", "e0_declared_tree_sha256"),
+    ),
+)
+def test_completed_verifier_recomputes_each_hash_domain_and_rejects_forgery(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    input_field: str,
+    projection_field: str,
+) -> None:
+    fixture = _completed_input_lock_fixture(tmp_path, monkeypatch)
+    _retarget_completed_fixture_hash_domain(
+        fixture,
+        input_field=input_field,
+        projection_field=projection_field,
+    )
+    with pytest.raises(RuntimeError, match="prompt provenance binding changed"):
+        prepare._prepare_input_lock_after_identity(
+            repo_root=Path(fixture["repo_root"]),
+            e0_data_root=Path(fixture["e0_data_root"]),
+            output_sidecar=Path(fixture["sidecar_path"]),
+            output_manifest=Path(fixture["manifest_path"]),
+            execution_identity=fixture["identity"],
+        )
 
 
 def test_completed_manifest_resume_cleans_only_owned_crash_debris(
@@ -1397,8 +1744,8 @@ def test_sidecar_absence_proof_and_blocked_receipt(tmp_path: Path) -> None:
 
     monkey_identity = {
         "execution_sha": "a" * 40,
-        "run_uid": "fpct-e1-a5-runtime-prompt-aaaaaaaa-v1",
-        "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5-aaaaaaaa-v1",
+        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r1-aaaaaaaa-v1",
         "source_snapshot_root": str(REPO_ROOT),
     }
     _publish_blocked_receipt(
@@ -1409,7 +1756,7 @@ def test_sidecar_absence_proof_and_blocked_receipt(tmp_path: Path) -> None:
     assert blocked["resume_allowed"] is False
     assert blocked["artifact_reuse_allowed"] is False
     assert blocked["scientific_result"] is False
-    assert blocked["downstream_e1_2_or_e1_3_authorized"] is False
+    assert blocked["e1_2_or_e1_3_authorized"] is False
 
 
 def test_a5_bounded_rss_uses_streaming_stress_evidence_not_checks_map() -> None:
@@ -1504,7 +1851,7 @@ def test_prepare_cli_hostile_pythonpath_cannot_spoof_bootstrap(
     assert not list(tmp_path.rglob("A5_INPUT_LOCK_BLOCKED.json"))
 
 
-def test_public_lock_turns_integrity_failure_into_terminal_blocked_receipt(
+def test_pre_go_verifier_failure_publishes_only_blocked_receipt(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     snapshot = tmp_path / "snapshot"
@@ -1517,10 +1864,360 @@ def test_public_lock_turns_integrity_failure_into_terminal_blocked_receipt(
         lambda **kwargs: {
             "identity_sha256": "a" * 64,
             "execution_sha": "a" * 40,
-            "run_uid": "fpct-e1-a5-runtime-prompt-aaaaaaaa-v1",
+            "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
             "run_root": str(tmp_path),
             "source_snapshot_root": str(snapshot),
         },
+    )
+    monkeypatch.setattr(
+        a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
+    )
+    monkeypatch.setattr(
+        prepare,
+        "_prepare_input_lock_after_identity",
+        lambda **kwargs: (_ for _ in ()).throw(
+            RuntimeError("A5_PRE_GO_VERIFIER_FAILED:injected")
+        ),
+    )
+    with pytest.raises(RuntimeError, match="PRE_GO_VERIFIER"):
+        prepare.prepare_input_lock(
+            repo_root=snapshot,
+            e0_data_root=tmp_path / "data",
+            output_sidecar=output / "sidecar.pt",
+            output_manifest=output / "manifest.json",
+            execution_sha="a" * 40,
+            source_snapshot_root=snapshot,
+            source_snapshot_receipt=snapshot / "receipt.json",
+            run_uid="fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+            run_root=tmp_path,
+            _test_only_sealed_execution=(
+                prepare._verified_test_sealed_prepare_sentinel(
+                    snapshot, "a" * 40
+                )
+            ),
+        )
+    blocked = json.loads((output / prepare.BLOCKED_RECEIPT_NAME).read_text())
+    assert blocked["status"] == "A5_INPUT_LOCK_BLOCKED"
+    assert blocked["failed_check"] == "a5_pre_go_verifier_failed"
+    assert not (output / prepare.GO_RECEIPT_NAME).exists()
+    assert "e0_declared_tree_sha256" not in blocked
+    assert "generic_asset_tree_sha256" not in blocked
+
+
+def test_go_publish_is_final_fallible_operation_in_producer() -> None:
+    tree = ast.parse(
+        (REPO_ROOT / "script/experiment/fpct_e1_prepare_input_lock.py").read_text(
+            encoding="utf-8"
+        )
+    )
+    function = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "_prepare_input_lock_after_identity"
+    )
+    publish, terminal_return = function.body[-2:]
+    assert isinstance(publish, ast.Expr)
+    assert isinstance(publish.value, ast.Call)
+    assert isinstance(publish.value.func, ast.Name)
+    assert publish.value.func.id == "atomic_json"
+    assert isinstance(terminal_return, ast.Return)
+    assert isinstance(terminal_return.value, ast.Name)
+    assert terminal_return.value.id == "verified_manifest"
+    assert not any(isinstance(node, ast.Call) for node in ast.walk(terminal_return))
+
+
+def test_go_atomic_publish_failure_publishes_only_blocked_receipt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    output = tmp_path / "input_lock"
+    output.mkdir()
+    identity = {
+        "identity_sha256": "a" * 64,
+        "execution_sha": "a" * 40,
+        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_root": str(tmp_path),
+        "source_snapshot_root": str(snapshot),
+    }
+    monkeypatch.setattr(
+        prepare, "validate_a5_execution_identity", lambda **kwargs: identity
+    )
+    monkeypatch.setattr(
+        a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
+    )
+    original_atomic_json = prepare.atomic_json
+
+    def fail_only_go_publish(path: Path, value: object) -> None:
+        if path.name == prepare.GO_RECEIPT_NAME:
+            raise OSError("injected GO atomic publish failure")
+        original_atomic_json(path, value)
+
+    monkeypatch.setattr(prepare, "atomic_json", fail_only_go_publish)
+
+    def injected_go_publish(**kwargs: object) -> dict[str, object]:
+        prepare.atomic_json(
+            output / prepare.GO_RECEIPT_NAME,
+            {"status": "A5_INPUT_LOCK_GO"},
+        )
+        raise AssertionError("unreachable after injected atomic failure")
+
+    monkeypatch.setattr(
+        prepare, "_prepare_input_lock_after_identity", injected_go_publish
+    )
+    with pytest.raises(OSError, match="GO atomic publish"):
+        prepare.prepare_input_lock(
+            repo_root=snapshot,
+            e0_data_root=tmp_path / "data",
+            output_sidecar=output / "sidecar.pt",
+            output_manifest=output / "manifest.json",
+            execution_sha="a" * 40,
+            source_snapshot_root=snapshot,
+            source_snapshot_receipt=snapshot / "receipt.json",
+            run_uid=identity["run_uid"],
+            run_root=tmp_path,
+            _test_only_sealed_execution=(
+                prepare._verified_test_sealed_prepare_sentinel(
+                    snapshot, "a" * 40
+                )
+            ),
+        )
+    assert (output / prepare.BLOCKED_RECEIPT_NAME).is_file()
+    assert not (output / prepare.GO_RECEIPT_NAME).exists()
+
+
+def test_completed_resume_verifier_failure_quarantines_go_before_blocked(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    output = tmp_path / "input_lock"
+    output.mkdir()
+    identity = {
+        "identity_sha256": "a" * 64,
+        "execution_sha": "a" * 40,
+        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_root": str(tmp_path),
+        "source_snapshot_root": str(snapshot),
+    }
+    monkeypatch.setattr(
+        prepare, "validate_a5_execution_identity", lambda **kwargs: identity
+    )
+    monkeypatch.setattr(
+        a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
+    )
+    go_path = output / prepare.GO_RECEIPT_NAME
+    invalid_go = {"status": "A5_INPUT_LOCK_GO", "invalid": True}
+    prepare.atomic_json(go_path, invalid_go)
+    monkeypatch.setattr(
+        prepare,
+        "_prepare_input_lock_after_identity",
+        lambda **kwargs: (_ for _ in ()).throw(
+            RuntimeError("A5_COMPLETED_RESUME_VERIFIER_FAILED:injected")
+        ),
+    )
+    with pytest.raises(RuntimeError, match="COMPLETED_RESUME_VERIFIER"):
+        prepare.prepare_input_lock(
+            repo_root=snapshot,
+            e0_data_root=tmp_path / "data",
+            output_sidecar=output / "sidecar.pt",
+            output_manifest=output / "manifest.json",
+            execution_sha="a" * 40,
+            source_snapshot_root=snapshot,
+            source_snapshot_receipt=snapshot / "receipt.json",
+            run_uid=identity["run_uid"],
+            run_root=tmp_path,
+            _test_only_sealed_execution=(
+                prepare._verified_test_sealed_prepare_sentinel(
+                    snapshot, "a" * 40
+                )
+            ),
+        )
+    assert not go_path.exists()
+    assert (output / prepare.BLOCKED_RECEIPT_NAME).is_file()
+    quarantined = list(
+        output.glob(f".{prepare.GO_RECEIPT_NAME}.invalid.*.json")
+    )
+    assert len(quarantined) == 1
+    assert json.loads(quarantined[0].read_text(encoding="utf-8")) == invalid_go
+
+
+def test_go_quarantine_resumes_after_copy_before_unlink_crash(
+    tmp_path: Path,
+) -> None:
+    go_path = tmp_path / prepare.GO_RECEIPT_NAME
+    payload = prepare.canonical_json_bytes({"status": "invalid-go"})
+    go_path.write_bytes(payload)
+    digest = hashlib.sha256(payload).hexdigest()
+    quarantine = tmp_path / f".{prepare.GO_RECEIPT_NAME}.invalid.{digest}.json"
+    # Simulate a crash after the immutable quarantine copy won but before the
+    # canonical GO name was unlinked.
+    quarantine.write_bytes(payload)
+    observed = prepare._quarantine_canonical_go_before_blocked(tmp_path)
+    assert observed == quarantine
+    assert quarantine.read_bytes() == payload
+    assert not go_path.exists()
+    assert prepare._quarantine_canonical_go_before_blocked(tmp_path) is None
+
+
+@pytest.mark.parametrize("canonical_go_present", [False, True])
+def test_public_lock_recovers_terminal_quarantine_as_blocked(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    canonical_go_present: bool,
+) -> None:
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    output = tmp_path / "input_lock"
+    output.mkdir()
+    e0_data = tmp_path / "data"
+    e0_data.mkdir()
+    (e0_data / "row.json").write_text('{"row":1}\n', encoding="utf-8")
+    identity = {
+        "identity_sha256": "a" * 64,
+        "execution_sha": "a" * 40,
+        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_root": str(tmp_path),
+        "source_snapshot_root": str(snapshot),
+    }
+    monkeypatch.setattr(
+        prepare, "validate_a5_execution_identity", lambda **kwargs: identity
+    )
+    monkeypatch.setattr(
+        a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
+    )
+    prepare_called = False
+
+    def forbid_prepare(**kwargs: object) -> dict[str, object]:
+        nonlocal prepare_called
+        prepare_called = True
+        raise AssertionError("quarantined terminal failure must not resume prepare")
+
+    monkeypatch.setattr(
+        prepare, "_prepare_input_lock_after_identity", forbid_prepare
+    )
+    quarantine_payload = prepare.canonical_json_bytes({"status": "invalid-go"})
+    quarantine_digest = hashlib.sha256(quarantine_payload).hexdigest()
+    quarantine = (
+        output
+        / f".{prepare.GO_RECEIPT_NAME}.invalid.{quarantine_digest}.json"
+    )
+    quarantine.write_bytes(quarantine_payload)
+    (output / "manifest.json").write_text("{}\n", encoding="utf-8")
+    if canonical_go_present:
+        # The other resumable crash point is after the immutable copy won but
+        # immediately before the canonical GO unlink.
+        (output / prepare.GO_RECEIPT_NAME).write_bytes(quarantine_payload)
+
+    with pytest.raises(RuntimeError, match="TERMINAL_RECOVERY_REQUIRED"):
+        prepare.prepare_input_lock(
+            repo_root=snapshot,
+            e0_data_root=e0_data,
+            output_sidecar=output / "sidecar.pt",
+            output_manifest=output / "manifest.json",
+            execution_sha="a" * 40,
+            source_snapshot_root=snapshot,
+            source_snapshot_receipt=snapshot / "receipt.json",
+            run_uid=identity["run_uid"],
+            run_root=tmp_path,
+            _test_only_sealed_execution=(
+                prepare._verified_test_sealed_prepare_sentinel(
+                    snapshot, "a" * 40
+                )
+            ),
+        )
+    assert prepare_called is False
+    assert quarantine.read_bytes() == quarantine_payload
+    assert not (output / prepare.GO_RECEIPT_NAME).exists()
+    blocked = json.loads((output / prepare.BLOCKED_RECEIPT_NAME).read_text())
+    assert blocked["status"] == "A5_INPUT_LOCK_BLOCKED"
+    assert blocked["failed_check"] == "a5_terminal_recovery_required"
+
+
+def test_go_quarantine_validation_rejects_multiple_and_symlink(
+    tmp_path: Path,
+) -> None:
+    payload_one = prepare.canonical_json_bytes({"status": "invalid-one"})
+    payload_two = prepare.canonical_json_bytes({"status": "invalid-two"})
+    digest_one = hashlib.sha256(payload_one).hexdigest()
+    digest_two = hashlib.sha256(payload_two).hexdigest()
+    quarantine_one = (
+        tmp_path
+        / f".{prepare.GO_RECEIPT_NAME}.invalid.{digest_one}.json"
+    )
+    quarantine_two = (
+        tmp_path
+        / f".{prepare.GO_RECEIPT_NAME}.invalid.{digest_two}.json"
+    )
+    quarantine_one.write_bytes(payload_one)
+    quarantine_two.write_bytes(payload_two)
+    with pytest.raises(RuntimeError, match="multiple invalid GO quarantines"):
+        prepare._validated_go_quarantines(tmp_path)
+
+    quarantine_two.unlink()
+    quarantine_one.unlink()
+    backing = tmp_path / "quarantine-backing.json"
+    backing.write_bytes(payload_one)
+    quarantine_one.symlink_to(backing)
+    with pytest.raises(RuntimeError, match="non-symlink regular file"):
+        prepare._validated_go_quarantines(tmp_path)
+
+
+def test_blocked_publish_refuses_any_canonical_go_directory_entry(
+    tmp_path: Path,
+) -> None:
+    dangling = tmp_path / prepare.GO_RECEIPT_NAME
+    dangling.symlink_to(tmp_path / "missing-go-target.json")
+    identity = {
+        "execution_sha": "a" * 40,
+        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_root": str(tmp_path),
+        "source_snapshot_root": str(tmp_path),
+    }
+    with pytest.raises(RuntimeError, match="while canonical GO exists"):
+        prepare._publish_blocked_receipt(
+            tmp_path,
+            RuntimeError("injected failure"),
+            identity,
+        )
+    assert not (tmp_path / prepare.BLOCKED_RECEIPT_NAME).exists()
+
+
+def test_go_quarantine_mismatched_existing_copy_fails_closed(
+    tmp_path: Path,
+) -> None:
+    go_path = tmp_path / prepare.GO_RECEIPT_NAME
+    payload = prepare.canonical_json_bytes({"status": "invalid-go"})
+    go_path.write_bytes(payload)
+    digest = hashlib.sha256(payload).hexdigest()
+    quarantine = tmp_path / f".{prepare.GO_RECEIPT_NAME}.invalid.{digest}.json"
+    quarantine.write_bytes(b"different bytes\n")
+    with pytest.raises(RuntimeError, match="winner bytes differ"):
+        prepare._quarantine_canonical_go_before_blocked(tmp_path)
+    assert go_path.read_bytes() == payload
+    assert quarantine.read_bytes() == b"different bytes\n"
+
+
+def test_public_lock_blocked_receipt_best_effort_binds_both_hash_domains(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    output = tmp_path / "input_lock"
+    output.mkdir()
+    e0_data = tmp_path / "data"
+    e0_data.mkdir()
+    (e0_data / "row.json").write_text('{"row":1}\n', encoding="utf-8")
+    identity = {
+        "identity_sha256": "a" * 64,
+        "execution_sha": "a" * 40,
+        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_root": str(tmp_path),
+        "source_snapshot_root": str(snapshot),
+    }
+    monkeypatch.setattr(
+        prepare, "validate_a5_execution_identity", lambda **kwargs: identity
     )
     monkeypatch.setattr(
         a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
@@ -1535,13 +2232,13 @@ def test_public_lock_turns_integrity_failure_into_terminal_blocked_receipt(
     with pytest.raises(RuntimeError, match="PREFLIGHT"):
         prepare.prepare_input_lock(
             repo_root=snapshot,
-            e0_data_root=tmp_path / "data",
+            e0_data_root=e0_data,
             output_sidecar=output / "sidecar.pt",
             output_manifest=output / "manifest.json",
             execution_sha="a" * 40,
             source_snapshot_root=snapshot,
             source_snapshot_receipt=snapshot / "receipt.json",
-            run_uid="fpct-e1-a5-runtime-prompt-aaaaaaaa-v1",
+            run_uid=identity["run_uid"],
             run_root=tmp_path,
             _test_only_sealed_execution=(
                 prepare._verified_test_sealed_prepare_sentinel(
@@ -1550,5 +2247,13 @@ def test_public_lock_turns_integrity_failure_into_terminal_blocked_receipt(
             ),
         )
     blocked = json.loads((output / prepare.BLOCKED_RECEIPT_NAME).read_text())
-    assert blocked["status"] == "A5_INPUT_LOCK_BLOCKED"
-    assert blocked["failed_check"] == "a5_preflight_failed"
+    expected = prepare._e0_data_hash_domain_projection(
+        prepare._e0_data_asset_tree(e0_data)
+    )
+    for field in (
+        "e0_declared_tree_algorithm",
+        "e0_declared_tree_sha256",
+        "generic_asset_tree_algorithm",
+        "generic_asset_tree_sha256",
+    ):
+        assert blocked[field] == expected[field]
