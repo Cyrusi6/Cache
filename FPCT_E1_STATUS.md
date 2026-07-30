@@ -1,9 +1,9 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R1 CPU input-lock failure closure
-> 当前状态：`A5_INPUT_LOCK_BLOCKED / NO USABLE CENSUS / E1-2 NOT AUTHORIZED`
-> 下一步：人工审查 choice-cardinality failure；当前 execution/root 永久禁止 resume/reuse
-> 更新时间：2026-07-30（Asia/Shanghai）
+> 当前阶段：A5R2 choice-cardinality recovery pre-natural lock
+> 当前状态：`A5R2 SYNTHETIC GATE GO / NATURAL 326-ROW AUDIT NOT RUN / E1-2 NOT AUTHORIZED`
+> 下一步：在新的 clean commit/snapshot/UID/root 上仅执行一次 label-free 326-row choice audit 与条件式 CPU input-lock
+> 更新时间：2026-07-31（Asia/Shanghai）
 
 ## 隔离身份
 
@@ -349,3 +349,49 @@ Normative sources：
 - 当前 execution/root 永久 resume/reuse=`false`。未加载 model/checkpoint，未
   运行 model forward、GPU、CUDA、Kubernetes 或 training；E1-2/E1-3 未进入，
   E1-pilot 与 confirmatory 继续 sealed。
+
+## 2026-07-31 A5R2 choice-cardinality 前瞻锁
+
+### 人工批准与修订边界
+
+- 用户已在新的自然 population audit、tokenization/alignment、模型输出或
+  E1-pilot outcome 之前批准
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R2_CHOICE_CARDINALITY_RECOVERY`。
+- A5R2 只修复 materialized choice cardinality 的输入/provenance 合同：ARC
+  接受实际 `n>=2`，其中 2/3-choice row 是真实 low-cardinality；OpenBookQA 与
+  MMLU-Redux 仍要求 exact four choices。Production runtime 使用完整、未 padding、
+  未 truncation 的 choice list；historical projection 继续使用 `min(4,n)`。
+- 失败 execution=`37be816ad611b8b0d916bd98c840c5f31efe2b50` 及其 root
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5r1-37be816a-v1` 永久 no-resume/no-reuse；
+  不读取或复用其 partial state。
+- Label firewall 保持不变：audit 只允许 question、choices 与冻结的定位/provenance
+  metadata；不得读取 correctness、accuracy、beneficial/harmful、model prediction
+  或任何 selector outcome。
+
+Normative sources 与 SHA256：
+
+- `FPCT_E1_A5R2_CHOICE_CARDINALITY_AMENDMENT.md` =
+  `89753bcbdec66d07c36bcfc3a5c636e66704cddce5546ac0e321d7a9ea053384`；
+- `recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_contract.json` =
+  `a4bdf4a229d26b367fb8ea7c90adf39d72e94c56daf4d095346bf673c5c2eb1b`；
+- `recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_schema.json` =
+  `9cb387628e4b8fcf6c978e082b8c3380dbc62406c6aa460892c679872d656d7f`。
+
+### Pre-natural synthetic gate 与当前授权
+
+| 阶段 | 状态 | 证据/依赖 | 授权边界 |
+|---|---|---|---|
+| A5R2 protocol/contract/schema | `GO — HUMAN DECISION LOCKED` | 上述三项 SHA256 | 仅输入/provenance 合同修订 |
+| A5R2 pre-natural synthetic gate | `GO` | `325 passed / 0 failed`；tracked tree=`60946d56e4c11ebcff8ac44b94b8bcdedbd6a6c5aea71ed168f854d6dce996ca`；evidence=`8788694b7715676a84e453f80b3bb596c5688a7660fa916964ab15ddaf9213c4`；artifact=`cfc8c7da3bb074b0a4fcb23276af8d8404516b656337abb5c3034724272d2cd9` | CPU/offline/no-natural synthetic evidence only |
+| A5R2 clean commit/snapshot/UID/root | `PENDING` | synthetic GO 后的新 immutable execution identity | 禁止复用 `37be816a` |
+| Label-free 326-row choice audit | `AUTHORIZED BUT NOT RUN` | clean local/upstream + fresh snapshot/root | 只能执行一次；先 audit，后条件式 CPU input-lock |
+| CPU input-lock | `CONDITIONAL / NOT RUN` | audit taxonomy 必须为 GO 且无 invalid row | 即使 GO 也不自动授权 E1-2 |
+| E1-2 / E1-3 | `NOT AUTHORIZED` | 独立后续授权 | 禁止 model/checkpoint load 或 forward |
+| E1-pilot / confirmatory | `SEALED / NOT RUN / NOT READ` | operator freeze 后独立授权 | exploratory pilot 仍无 confirmatory eligibility |
+
+Gate 只证明 variable-cardinality parser、allowlisted projection、ordinal/summary/
+lock、dual data-tree/source-snapshot binding、atomic publish 与 fail-closed taxonomy
+在 synthetic fixtures 上满足合同；它不是自然 choice distribution、input-lock、
+mechanism activation 或 task improvement 的证据。到本记录冻结时，新的 326-row
+自然 audit 尚未运行或读取；未加载 model/checkpoint，未运行 model forward、GPU、
+CUDA、Kubernetes 或 training，且未进入 E1-2/E1-3。

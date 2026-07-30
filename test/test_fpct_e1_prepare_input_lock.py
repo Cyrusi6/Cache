@@ -12,7 +12,7 @@ import sys
 import pytest
 import torch
 import script.experiment.fpct_e1_prepare_input_lock as prepare
-import script.analysis.fpct_e1_a5r1_hash_domain_gate as a5_prompt_gate
+import script.analysis.fpct_e1_a5r2_choice_cardinality_gate as a5_prompt_gate
 
 from script.experiment.fpct_e1_prepare_input_lock import (
     HISTORICAL_MAX_LONG_FORM_ROWS_PER_SAMPLE,
@@ -44,9 +44,39 @@ from script.experiment.fpct_e1_capture_runner import (
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _inherited_v8_streaming_evidence() -> dict[str, object]:
+    checks = {
+        name: True
+        for name in (
+            "row_key_reference_equivalence",
+            "weights_reference_equivalence",
+            "topology_reference_equivalence",
+            "chunk_partition_semantic_equivalence",
+            "aggregate_partition_equivalence",
+            "bounded_peak_rss",
+            "atomic_no_overwrite",
+            "crash_resume_equivalence",
+        )
+    }
+    return {
+        "source_gate_path": (
+            "recipe/eval_recipe/fpct_e1/"
+            "e1_a5r1_hash_domain_synthetic_gate.json"
+        ),
+        "source_gate_sha256": "a2e53784fa46d2f63963bdb41e327a4e17936cce2bff765802b34f3d87869a9f",
+        "evidence_role": (
+            "IMMUTABLE_V8_PREDECESSOR_RESOURCE_EVIDENCE_NOT_V9_REMEASUREMENT"
+        ),
+        "estimated_physical_bytes_per_row": 4096,
+        "streaming_stress": {"bounded_peak_rss": True},
+        "streaming_contract_checks": checks,
+        "cross_resource_or_hash_domain_substitution_allowed": False,
+    }
+
+
 def _direct_prepare_command(tmp_path: Path) -> list[str]:
     execution_sha = "a" * 40
-    run_root = tmp_path / f"fpct-e1-a5r1-{execution_sha[:8]}-v1"
+    run_root = tmp_path / f"fpct-e1-a5r2-{execution_sha[:8]}-v1"
     return [
         sys.executable,
         str(REPO_ROOT / "script/experiment/fpct_e1_prepare_input_lock.py"),
@@ -65,7 +95,7 @@ def _direct_prepare_command(tmp_path: Path) -> list[str]:
         "--source-snapshot-receipt",
         str(REPO_ROOT / prepare.SOURCE_SNAPSHOT_RECEIPT_NAME),
         "--run-uid",
-        f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
+        f"fpct-e1-a5r2-choice-cardinality-{execution_sha[:8]}-v1",
         "--run-root",
         str(run_root),
     ]
@@ -592,22 +622,48 @@ def test_a5r1_contract_overlay_inherits_v7_science_but_locks_base_path_and_sha(
     assert "materialized_e0_dev_data_tree" in effective["asset_identity"]
 
     successor_relative = prepare.A5_PROMPT_CONTRACT_RELATIVE
-    base_relative = Path("recipe/eval_recipe/fpct_e1/e1_a5_prompt_contract.json")
-    for relative in (successor_relative, base_relative):
+    successor_source = json.loads(
+        (REPO_ROOT / successor_relative).read_text(encoding="utf-8")
+    )
+    v8_relative = Path(successor_source["v8_inheritance"]["contract_path"])
+    v8_source = json.loads((REPO_ROOT / v8_relative).read_text(encoding="utf-8"))
+    base_relative = Path(v8_source["base_scientific_contract"]["path"])
+    closure_relative = Path(
+        successor_source["immutable_predecessor"]["closure_path"]
+    )
+    relatives = {
+        successor_relative,
+        v8_relative,
+        base_relative,
+        closure_relative,
+        *(
+            Path(relative)
+            for relative in successor_source["immutable_predecessor"][
+                "v8_objects"
+            ]
+        ),
+        *(
+            Path(relative)
+            for relative in successor_source["scientific_invariants"][
+                "population_source_sha256"
+            ]
+        ),
+    }
+    for relative in relatives:
         destination = tmp_path / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_bytes((REPO_ROOT / relative).read_bytes())
     base = tmp_path / base_relative
     base.write_bytes(base.read_bytes() + b"\n")
-    with pytest.raises(ValueError, match="scientific contract changed"):
+    with pytest.raises(ValueError, match="inherited v7 scientific contract changed"):
         prepare._load_a5_prompt_contract(tmp_path)
 
     base.write_bytes((REPO_ROOT / base_relative).read_bytes())
     successor_path = tmp_path / successor_relative
     successor = json.loads(successor_path.read_text(encoding="utf-8"))
-    successor["base_scientific_contract"]["path"] = "alternate/base.json"
+    successor["v8_inheritance"]["contract_path"] = "alternate/base.json"
     successor_path.write_text(json.dumps(successor), encoding="utf-8")
-    with pytest.raises(ValueError, match="contract path changed"):
+    with pytest.raises(ValueError, match="inherited v8 contract identity changed"):
         prepare._load_a5_prompt_contract(tmp_path)
 
 
@@ -615,7 +671,7 @@ def test_execution_identity_requires_new_canonical_empty_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     execution_sha = "a" * 40
-    run_root = tmp_path / f"fpct-e1-a5r1-{execution_sha[:8]}-v1"
+    run_root = tmp_path / f"fpct-e1-a5r2-{execution_sha[:8]}-v1"
     snapshot = run_root / "source_snapshot"
     snapshot.mkdir(parents=True)
     receipt = snapshot / prepare.SOURCE_SNAPSHOT_RECEIPT_NAME
@@ -633,7 +689,7 @@ def test_execution_identity_requires_new_canonical_empty_root(
         execution_sha=execution_sha,
         source_snapshot_root=snapshot,
         source_snapshot_receipt=receipt,
-        run_uid=f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
+        run_uid=f"fpct-e1-a5r2-choice-cardinality-{execution_sha[:8]}-v1",
         run_root=run_root,
         output_root=output,
         sealed_prepare_execution={
@@ -650,7 +706,7 @@ def test_execution_identity_requires_new_canonical_empty_root(
         execution_sha=execution_sha,
         source_snapshot_root=snapshot,
         source_snapshot_receipt=receipt,
-        run_uid=f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
+        run_uid=f"fpct-e1-a5r2-choice-cardinality-{execution_sha[:8]}-v1",
         run_root=run_root,
         output_root=output,
         sealed_prepare_execution={
@@ -675,7 +731,7 @@ def test_execution_identity_requires_new_canonical_empty_root(
             execution_sha=execution_sha,
             source_snapshot_root=snapshot,
             source_snapshot_receipt=receipt,
-            run_uid=f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
+            run_uid=f"fpct-e1-a5r2-choice-cardinality-{execution_sha[:8]}-v1",
             run_root=run_root,
             output_root=output,
             sealed_prepare_execution={
@@ -693,7 +749,7 @@ def test_execution_identity_requires_new_canonical_empty_root(
         execution_sha=execution_sha,
         source_snapshot_root=snapshot,
         source_snapshot_receipt=receipt,
-        run_uid=f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
+        run_uid=f"fpct-e1-a5r2-choice-cardinality-{execution_sha[:8]}-v1",
         run_root=run_root,
         output_root=output,
         sealed_prepare_execution={
@@ -714,7 +770,7 @@ def test_execution_identity_requires_new_canonical_empty_root(
             execution_sha=execution_sha,
             source_snapshot_root=snapshot,
             source_snapshot_receipt=receipt,
-            run_uid=f"fpct-e1-a5r1-hash-domains-{execution_sha[:8]}-v1",
+            run_uid=f"fpct-e1-a5r2-choice-cardinality-{execution_sha[:8]}-v1",
             run_root=run_root,
             output_root=output,
             sealed_prepare_execution={
@@ -726,7 +782,7 @@ def test_execution_identity_requires_new_canonical_empty_root(
             _test_only_run_parent=tmp_path,
         )
     mismatched_quarantine.unlink()
-    for historical_prefix in ("07755a40", "9b248d20"):
+    for historical_prefix in ("07755a40", "9b248d20", "37be816a"):
         historical_sha = historical_prefix + "0" * 32
         with pytest.raises(ValueError, match="historical abandoned"):
             validate_a5_execution_identity(
@@ -734,7 +790,7 @@ def test_execution_identity_requires_new_canonical_empty_root(
                 source_snapshot_root=snapshot,
                 source_snapshot_receipt=receipt,
                 run_uid=(
-                    f"fpct-e1-a5r1-hash-domains-{historical_prefix}-v1"
+                    f"fpct-e1-a5r2-choice-cardinality-{historical_prefix}-v1"
                 ),
                 run_root=run_root,
                 output_root=output,
@@ -758,20 +814,8 @@ def test_compact_geometry_is_self_contained_and_pass_b_reads_only_parquet(
     monkeypatch.setattr(prepare, "validate_streaming_schema_artifact", lambda value: None)
     items = [_geometry_item(task, index) for index, task in enumerate(counts)]
     gate = {
-        "estimated_physical_bytes_per_row": 4096,
-        "checks": {
-            name: True
-            for name in (
-                "row_key_reference_equivalence",
-                "weights_reference_equivalence",
-                "topology_reference_equivalence",
-                "chunk_partition_semantic_equivalence",
-                "aggregate_partition_equivalence",
-                "bounded_peak_rss",
-                "atomic_no_overwrite",
-                "crash_resume_equivalence",
-            )
-        },
+        "protocol_id": prepare.A5_PROTOCOL_ID,
+        "inherited_v8_streaming_evidence": _inherited_v8_streaming_evidence(),
     }
     asset_state = {"aggregate_sha256": "d" * 64}
     identity = {"identity_sha256": "e" * 64}
@@ -849,7 +893,7 @@ def _completed_input_lock_fixture(
         prepare, "validate_streaming_schema_artifact", lambda *args, **kwargs: None
     )
     monkeypatch.setattr(
-        a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
+        a5_prompt_gate, "validate_a5r2_schema_artifact", lambda *args, **kwargs: None
     )
     repo_root = tmp_path / "source_snapshot"
     schema_path = repo_root / prepare.A4_STREAMING_SCHEMA_RELATIVE
@@ -862,36 +906,17 @@ def _completed_input_lock_fixture(
         "protocol_id": prepare.A5_PROTOCOL_ID,
         "artifact_type": prepare.A5_SYNTHETIC_GATE_ARTIFACT_TYPE,
         "status": prepare.A5_SYNTHETIC_GATE_STATUS,
-        "natural_e0_design_accessed": False,
-        "estimated_physical_bytes_per_row": 4096,
         "checks": {
-            name: True
-            for name in (
-                "row_key_reference_equivalence",
-                "weights_reference_equivalence",
-                "topology_reference_equivalence",
-                "chunk_partition_semantic_equivalence",
-                "aggregate_partition_equivalence",
-                "bounded_peak_rss",
-                "atomic_no_overwrite",
-                "crash_resume_equivalence",
-            )
+            "natural_e0_design_accessed": False,
+            "model_or_checkpoint_loaded": False,
+            "model_forward_run": False,
+            "gpu_cuda_or_kubernetes_used": False,
+            "training": False,
+            "e1_2_or_e1_3_authorized": False,
         },
-        "streaming_contract_checks": {
-            name: True
-            for name in (
-                "row_key_reference_equivalence",
-                "weights_reference_equivalence",
-                "topology_reference_equivalence",
-                "chunk_partition_semantic_equivalence",
-                "aggregate_partition_equivalence",
-                "bounded_peak_rss",
-                "atomic_no_overwrite",
-                "crash_resume_equivalence",
-            )
-        },
+        "inherited_v8_streaming_evidence": _inherited_v8_streaming_evidence(),
     }
-    monkeypatch.setattr(a5_prompt_gate, "verify_a5_gate", lambda *args, **kwargs: gate)
+    monkeypatch.setattr(a5_prompt_gate, "verify_gate", lambda *args, **kwargs: gate)
     monkeypatch.setattr(
         prepare, "load_e0_design_lock", lambda path: {"sha256": "1" * 64}
     )
@@ -922,6 +947,14 @@ def _completed_input_lock_fixture(
     }
     fixture_contract = {
         "asset_identity": {"materialized_e0_dev_data_tree": frozen_tree},
+        "v8_inheritance": {
+            "contract_path": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_contract.json",
+            "contract_sha256": "643151b67d98c84c1120b52705b0fe837fb4106664f10200ada1a692c744a0b1",
+            "schema_path": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_schema.json",
+            "schema_sha256": "7bd2478f7ef3cfd32e752056cf161b8575b84a1f65088c84a0d2c37aec43704b",
+            "gate_path": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_synthetic_gate.json",
+            "gate_sha256": "a2e53784fa46d2f63963bdb41e327a4e17936cce2bff765802b34f3d87869a9f",
+        },
         "immutable_predecessors": {
             "v7_objects": {
                 "historical-v7.json": prepare.sha256_file(predecessor),
@@ -948,10 +981,10 @@ def _completed_input_lock_fixture(
     source_receipt_path.write_text('{"source":"locked"}\n', encoding="utf-8")
     execution_payload = {
         "schema_version": 1,
-        "protocol_id": "fpct_e1_a5r1_input_lock_execution_identity_v1",
+        "protocol_id": "fpct_e1_a5r2_input_lock_execution_identity_v1",
         "execution_sha": "a" * 40,
         "execution_prefix": "a" * 8,
-        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_uid": "fpct-e1-a5r2-choice-cardinality-aaaaaaaa-v1",
         "run_root": str(tmp_path.absolute()),
         "source_snapshot_root": str(repo_root.absolute()),
         "source_snapshot_receipt": {
@@ -974,6 +1007,40 @@ def _completed_input_lock_fixture(
         **execution_payload,
         "identity_sha256": prepare.sha256_file(identity_path),
     }
+    audit_root = tmp_path / prepare.CHOICE_AUDIT_ROOT_NAME
+    audit_root.mkdir()
+    audit_ledger_path = audit_root / prepare.CHOICE_AUDIT_LEDGER_NAME
+    audit_summary_path = audit_root / prepare.CHOICE_AUDIT_SUMMARY_NAME
+    audit_lock_path = audit_root / prepare.CHOICE_AUDIT_LOCK_NAME
+    audit_ledger_path.write_text('{"fixture":true}\n', encoding="utf-8")
+    audit_summary_path.write_text('{"fixture":true}\n', encoding="utf-8")
+    audit_lock_payload = {
+        "status": "A5R2_CHOICE_AUDIT_GO",
+        "mechanical_decision": "A5R2_CHOICE_AUDIT_GO",
+        "audit_semantic_sha256": "e" * 64,
+        "correction_actions_selected": ["NONE"],
+    }
+    prepare.atomic_json(audit_lock_path, audit_lock_payload)
+    choice_audit = {
+        "lock": audit_lock_payload,
+        "records": [],
+        "lock_artifact": prepare._choice_audit_artifact_descriptor(
+            audit_lock_path, 1
+        ),
+        "ledger_artifact": prepare._choice_audit_artifact_descriptor(
+            audit_ledger_path, 3
+        ),
+        "summary_artifact": prepare._choice_audit_artifact_descriptor(
+            audit_summary_path, 1
+        ),
+    }
+    monkeypatch.setattr(
+        prepare,
+        "_verify_a5r2_choice_audit",
+        lambda **kwargs: choice_audit,
+    )
+    choice_binding = prepare._choice_audit_binding(choice_audit, identity)
+    choice_audit_lock_sha256 = choice_binding["lock"]["sha256"]
 
     asset_state_holder = {
         "value": {
@@ -1041,17 +1108,34 @@ def _completed_input_lock_fixture(
         item["expected_chunk_count"] = 1
         item.update(
             {
+                "descriptor": {"source_row_id": str(index)},
+                "gold_answer": "A",
+                "gold_response": "A",
+                "feature": {"fixture": True},
+                "alignment_lock": {"fixture": True},
+                "prompt_generation_inputs": {"fixture": True},
+                "prompt_generation_inputs_sha256": "7" * 64,
+                "raw_topology_ledger": {"fixture": True},
+                "instruction_end": 1,
+                "rendered_prompt_sha256": "8" * 64,
                 "production_rendered_prompt_sha256": "8" * 64,
                 "historical_rendered_prompt_sha256": "9" * 64,
                 "production_alignment_sha256": "a" * 64,
                 "historical_alignment_sha256": "b" * 64,
-                "raw_full_row_sha256": f"{index + 10:064x}",
+                "label_free_runtime_row_sha256": f"{index + 10:064x}",
+                "choice_audit_row_sha256": f"{index + 20:064x}",
+                "choice_root_cause_class": "DIRECT_VALID",
+                "choice_audit_lock_sha256": choice_audit_lock_sha256,
                 "prompt_relation": "EXACT_HISTORICAL_AND_PRODUCTION_MATCH",
                 "choice_difference_only": False,
             }
         )
         item["item_semantic_sha256"] = prepare.nested_sha256(
-            {key: value for key, value in item.items() if key != "item_semantic_sha256"}
+            {
+                key: value
+                for key, value in item.items()
+                if key not in {"feature", "item_semantic_sha256"}
+            }
         )
         census_records.append(
             {
@@ -1064,12 +1148,15 @@ def _completed_input_lock_fixture(
                 "source_row_id": str(index),
                 "historical_choice_count": 4,
                 "production_choice_count": 4,
-                "raw_choice_labels": list("ABCD"),
+                "source_choice_labels": list("ABCD"),
+                "runtime_ordinal_labels": list("ABCD"),
                 "gold_answer": "A",
                 "historical_first4_question_choices_sha256": "c" * 64,
                 "historical_rendered_prompt_sha256": "9" * 64,
                 "historical_alignment_sha256": "b" * 64,
-                "raw_full_row_sha256": item["raw_full_row_sha256"],
+                "label_free_runtime_row_sha256": item[
+                    "label_free_runtime_row_sha256"
+                ],
                 "production_rendered_prompt_sha256": "8" * 64,
                 "production_alignment_sha256": "a" * 64,
                 "historical_prompt_token_count": 10,
@@ -1079,6 +1166,10 @@ def _completed_input_lock_fixture(
                 "production_physical_chunk_count": 1,
                 "prompt_relation": item["prompt_relation"],
                 "choice_difference_only": False,
+                "choice_audit_row_sha256": item["choice_audit_row_sha256"],
+                "choice_audit_lock_sha256": choice_audit_lock_sha256,
+                "choice_root_cause_class": "DIRECT_VALID",
+                "choice_audit_forbidden_outcome_field_access_count": 0,
             }
         )
     census_records_path = output_root / prepare.PROMPT_CENSUS_RECORDS_NAME
@@ -1089,7 +1180,7 @@ def _completed_input_lock_fixture(
     census_manifest = prepare.build_census_manifest(
         census_records,
         execution_sha="a" * 40,
-        run_uid="fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        run_uid="fpct-e1-a5r2-choice-cardinality-aaaaaaaa-v1",
         record_artifact={
             "relative_path": prepare.PROMPT_CENSUS_RECORDS_NAME,
             "sha256": prepare.sha256_file(census_records_path),
@@ -1099,6 +1190,7 @@ def _completed_input_lock_fixture(
         expected_task_counts=counts,
         schema_version=prepare.A5_ARTIFACT_SCHEMA_VERSION,
         protocol_id=prepare.A5_PROTOCOL_ID,
+        choice_audit_lock_sha256=choice_audit_lock_sha256,
     )
     census_manifest_path = output_root / prepare.PROMPT_CENSUS_NAME
     prepare.atomic_json(census_manifest_path, census_manifest)
@@ -1126,10 +1218,12 @@ def _completed_input_lock_fixture(
     sidecar = {
         "schema_version": prepare.SCHEMA_VERSION,
         "protocol_id": prepare.PROTOCOL_ID,
-        "status": "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
+        "status": "A5R2_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
+        "split_role": "e0_design",
         "items": items,
         "dimensions": dimensions,
         "execution_identity": identity,
+        "choice_audit": choice_binding,
         "input_asset_state": asset_state_holder["value"],
         "source": {
             "split_sha256": "1" * 64,
@@ -1145,6 +1239,7 @@ def _completed_input_lock_fixture(
             for role, path in runtime_roots.items()
         },
         "runtime_assets": runtime_assets,
+        "task_contract": counts,
         "a5_prompt_provenance": {
             "renderer_identity": {
                 **renderer_source_identity,
@@ -1178,6 +1273,8 @@ def _completed_input_lock_fixture(
             "protocol_id": prepare.A4_PROTOCOL_ID,
             "schema_sha256": schema_sha256,
             "physical_chunk_rows": prepare.PHYSICAL_CHUNK_ROWS,
+            "expanded_logical_rows_present": False,
+            "compact_geometry_only": True,
             "synthetic_gate": {
                 "path": str(gate_path.absolute()),
                 "sha256": prepare.sha256_file(gate_path),
@@ -1192,20 +1289,22 @@ def _completed_input_lock_fixture(
     hard_checks = {
         name: True
         for name in (
-            "historical_projection_anchor_unchanged",
+            "historical_min4_projection_anchor_unchanged",
             "e0_design_membership_unchanged",
             "renderer_source_identity_attested",
             "production_renderer_exactly_attested",
             "production_data_tree_exactly_attested",
             "all_326_groups_resolved",
-            "all_first4_choices_equal_historical",
-            "all_gold_answers_in_A_B_C_D",
+            "all_task_cardinalities_valid",
+            "all_gold_answers_within_runtime_choices",
             "all_prompt_differences_classified",
             "historical_to_runtime_mapping_complete",
             "production_prompt_replay_equal",
             "production_alignment_replay_equal",
-            "choice_order_preserved",
-            "raw_full_row_hashes_complete",
+            "source_choice_order_preserved",
+            "label_free_runtime_row_hashes_complete",
+            "choice_audit_lock_bound_and_unchanged",
+            "choice_corrections_match_locked_taxonomy",
             "logical_row_coverage_exact",
             "streaming_semantic_replay_equal",
             "bounded_peak_rss",
@@ -1223,7 +1322,7 @@ def _completed_input_lock_fixture(
         "protocol_id": prepare.A5_PROTOCOL_ID,
         "input_lock_protocol_id": prepare.PROTOCOL_ID,
         "artifact_type": prepare.A5_INPUT_LOCK_MANIFEST_ARTIFACT_TYPE,
-        "status": "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
+        "status": "A5R2_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
         "split_role": "e0_design",
         "execution": {
             "execution_sha": "a" * 40,
@@ -1235,6 +1334,10 @@ def _completed_input_lock_fixture(
             "source_snapshot_tree_sha256": "7" * 64,
         },
         "task_counts": counts,
+        "choice_audit": choice_binding,
+        "inherited_v8_contract_binding": prepare._inherited_v8_contract_binding(
+            fixture_contract
+        ),
         "provenance": {
             "renderer_source_identity_sha256": prepare.nested_sha256(
                 sidecar["a5_prompt_provenance"]["renderer_identity"]
@@ -1268,6 +1371,7 @@ def _completed_input_lock_fixture(
             "canonical_semantic_stream_sha256": census_manifest[
                 "canonical_semantic_stream_sha256"
             ],
+            "choice_audit_lock_sha256": choice_audit_lock_sha256,
         },
         "sidecar": {
             "contract_version": prepare.SCHEMA_VERSION,
@@ -1276,7 +1380,16 @@ def _completed_input_lock_fixture(
             "file_sha256": prepare.sha256_file(sidecar_path),
             "semantic_sha256": prepare.nested_sha256(sidecar),
             "item_count": len(items),
+            "choice_audit_lock_sha256": choice_audit_lock_sha256,
             "expanded_logical_rows_present": False,
+            "custom_verifier": {
+                "exact_top_level_key_set_verified": True,
+                "exact_item_key_set_verified": True,
+                "semantic_sha256_recomputed_after_cpu_reload": True,
+                "choice_audit_lock_sha256_recomputed_and_equal": True,
+                "expanded_logical_rows_present": False,
+                "model_or_checkpoint_tensor_present": False,
+            },
         },
         "streaming": {
             "protocol_id": prepare.A4_PROTOCOL_ID,
@@ -1315,7 +1428,7 @@ def _completed_input_lock_fixture(
         "schema_version": prepare.A5_ARTIFACT_SCHEMA_VERSION,
         "protocol_id": prepare.A5_PROTOCOL_ID,
         "artifact_type": prepare.A5_INPUT_LOCK_GO_ARTIFACT_TYPE,
-        "status": "A5_INPUT_LOCK_GO",
+        "status": "A5R2_INPUT_LOCK_GO",
         "execution_sha": "a" * 40,
         "run_uid": execution_payload["run_uid"],
         "run_root": execution_payload["run_root"],
@@ -1324,6 +1437,11 @@ def _completed_input_lock_fixture(
         ]["file_sha256"],
         "prompt_census_manifest_sha256": prepare.sha256_file(census_manifest_path),
         "input_lock_manifest_sha256": prepare.sha256_file(manifest_path),
+        "choice_audit_lock": dict(choice_binding["lock"]),
+        "choice_audit_lock_sha256": choice_audit_lock_sha256,
+        "inherited_v8_contract_binding": prepare._inherited_v8_contract_binding(
+            fixture_contract
+        ),
         "e0_declared_tree_algorithm": prepare.E0_DECLARED_TREE_ALGORITHM,
         "e0_declared_tree_sha256": "4" * 64,
         "generic_asset_tree_algorithm": prepare.GENERIC_ASSET_TREE_ALGORITHM,
@@ -1339,11 +1457,18 @@ def _completed_input_lock_fixture(
             "gpu_or_kubernetes_used": False,
             "e1_pilot_consumed": False,
             "confirmatory_consumed": False,
+            "e1_2_or_e1_3_authorized": False,
         },
         "zero_counts": completed["zero_counts"],
-        "resume_from_group_one": True,
-        "downstream_e1_2_authorized": False,
+        "audit_restarted_from_group_one": True,
+        "input_lock_restarted_from_group_one": True,
+        "scientific_result": False,
+        "resume_allowed": False,
+        "artifact_reuse_allowed": False,
+        "e1_2_or_e1_3_authorized": False,
+        "next_state": "HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED",
     }
+    go_receipt["evidence_sha256"] = prepare._a5r2_evidence_sha256(go_receipt)
     prepare.atomic_json(output_root / prepare.GO_RECEIPT_NAME, go_receipt)
     return {
         "repo_root": repo_root,
@@ -1419,20 +1544,8 @@ def _small_geometry_for_hostile_preflight(
     output.mkdir()
     items = [_geometry_item(task, index) for index, task in enumerate(counts)]
     gate = {
-        "estimated_physical_bytes_per_row": 4096,
-        "checks": {
-            name: True
-            for name in (
-                "row_key_reference_equivalence",
-                "weights_reference_equivalence",
-                "topology_reference_equivalence",
-                "chunk_partition_semantic_equivalence",
-                "aggregate_partition_equivalence",
-                "bounded_peak_rss",
-                "atomic_no_overwrite",
-                "crash_resume_equivalence",
-            )
-        },
+        "protocol_id": prepare.A5_PROTOCOL_ID,
+        "inherited_v8_streaming_evidence": _inherited_v8_streaming_evidence(),
     }
     assets = {"aggregate_sha256": "d" * 64}
     identity = {"identity_sha256": "e" * 64}
@@ -1724,7 +1837,11 @@ def test_geometry_lock_rejects_changed_asset_hash_without_go(
             output_dir=tmp_path,
             items=items,
             schema_sha256="a" * 64,
-            synthetic_gate={"estimated_physical_bytes_per_row": 4096},
+            synthetic_gate={
+                "inherited_v8_streaming_evidence": (
+                    _inherited_v8_streaming_evidence()
+                )
+            },
             input_assets_before={"aggregate_sha256": "1" * 64},
             input_assets_after={"aggregate_sha256": "2" * 64},
             execution_identity={"identity_sha256": "3" * 64},
@@ -1744,15 +1861,19 @@ def test_sidecar_absence_proof_and_blocked_receipt(tmp_path: Path) -> None:
 
     monkey_identity = {
         "execution_sha": "a" * 40,
-        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
-        "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r1-aaaaaaaa-v1",
+        "run_uid": "fpct-e1-a5r2-choice-cardinality-aaaaaaaa-v1",
+        "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-aaaaaaaa-v1",
         "source_snapshot_root": str(REPO_ROOT),
     }
     _publish_blocked_receipt(
-        tmp_path, ValueError("disk preflight failed"), monkey_identity
+        tmp_path,
+        ValueError("disk preflight failed"),
+        monkey_identity,
+        repo_root=REPO_ROOT,
+        e0_data_root=tmp_path,
     )
     blocked = json.loads((tmp_path / prepare.BLOCKED_RECEIPT_NAME).read_text())
-    assert blocked["status"] == "A5_INPUT_LOCK_BLOCKED"
+    assert blocked["status"] == "A5R2_INPUT_LOCK_BLOCKED"
     assert blocked["resume_allowed"] is False
     assert blocked["artifact_reuse_allowed"] is False
     assert blocked["scientific_result"] is False
@@ -1762,7 +1883,7 @@ def test_sidecar_absence_proof_and_blocked_receipt(tmp_path: Path) -> None:
 def test_a5_bounded_rss_uses_streaming_stress_evidence_not_checks_map() -> None:
     synthetic_gate = {
         "checks": {},
-        "streaming_stress": {"bounded_peak_rss": True},
+        "inherited_v8_streaming_evidence": _inherited_v8_streaming_evidence(),
     }
     assert prepare._a5_bounded_peak_rss_gate(
         {"bounded_peak_rss": True}, synthetic_gate
@@ -1770,9 +1891,10 @@ def test_a5_bounded_rss_uses_streaming_stress_evidence_not_checks_map() -> None:
     assert not prepare._a5_bounded_peak_rss_gate(
         {"bounded_peak_rss": False}, synthetic_gate
     )
-    assert not prepare._a5_bounded_peak_rss_gate(
-        {"bounded_peak_rss": True}, {"checks": {"bounded_peak_rss": True}}
-    )
+    with pytest.raises(ValueError, match="inherited v8 streaming evidence"):
+        prepare._a5_bounded_peak_rss_gate(
+            {"bounded_peak_rss": True}, {"checks": {"bounded_peak_rss": True}}
+        )
 
 
 def test_a5_sidecar_synthetic_gate_binding_is_path_and_byte_exact(
@@ -1812,7 +1934,7 @@ def test_prepare_cli_direct_invocation_fails_before_input_access(
     assert result.returncode != 0
     assert "canonical python -I fpct_bootstrap.py" in result.stderr
     assert marker.read_bytes() == before
-    assert not list(tmp_path.rglob("A5_INPUT_LOCK_BLOCKED.json"))
+    assert not list(tmp_path.rglob(prepare.BLOCKED_RECEIPT_NAME))
 
 
 def test_prepare_cli_hostile_pythonpath_cannot_spoof_bootstrap(
@@ -1848,7 +1970,7 @@ def test_prepare_cli_hostile_pythonpath_cannot_spoof_bootstrap(
     assert result.returncode != 0
     assert "outside the snapshot" in result.stderr
     assert marker.read_bytes() == before
-    assert not list(tmp_path.rglob("A5_INPUT_LOCK_BLOCKED.json"))
+    assert not list(tmp_path.rglob(prepare.BLOCKED_RECEIPT_NAME))
 
 
 def test_pre_go_verifier_failure_publishes_only_blocked_receipt(
@@ -1864,13 +1986,13 @@ def test_pre_go_verifier_failure_publishes_only_blocked_receipt(
         lambda **kwargs: {
             "identity_sha256": "a" * 64,
             "execution_sha": "a" * 40,
-            "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+            "run_uid": "fpct-e1-a5r2-choice-cardinality-aaaaaaaa-v1",
             "run_root": str(tmp_path),
             "source_snapshot_root": str(snapshot),
         },
     )
     monkeypatch.setattr(
-        a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
+        a5_prompt_gate, "validate_a5r2_schema_artifact", lambda *args, **kwargs: None
     )
     monkeypatch.setattr(
         prepare,
@@ -1888,7 +2010,7 @@ def test_pre_go_verifier_failure_publishes_only_blocked_receipt(
             execution_sha="a" * 40,
             source_snapshot_root=snapshot,
             source_snapshot_receipt=snapshot / "receipt.json",
-            run_uid="fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+            run_uid="fpct-e1-a5r2-choice-cardinality-aaaaaaaa-v1",
             run_root=tmp_path,
             _test_only_sealed_execution=(
                 prepare._verified_test_sealed_prepare_sentinel(
@@ -1897,8 +2019,9 @@ def test_pre_go_verifier_failure_publishes_only_blocked_receipt(
             ),
         )
     blocked = json.loads((output / prepare.BLOCKED_RECEIPT_NAME).read_text())
-    assert blocked["status"] == "A5_INPUT_LOCK_BLOCKED"
-    assert blocked["failed_check"] == "a5_pre_go_verifier_failed"
+    assert blocked["status"] == "A5R2_INPUT_LOCK_BLOCKED"
+    assert blocked["failure_stage"] == "PRECOMPUTATION"
+    assert blocked["failure_code"] == "A5_PRE_GO_VERIFIER_FAILED"
     assert not (output / prepare.GO_RECEIPT_NAME).exists()
     assert "e0_declared_tree_sha256" not in blocked
     assert "generic_asset_tree_sha256" not in blocked
@@ -1937,7 +2060,7 @@ def test_go_atomic_publish_failure_publishes_only_blocked_receipt(
     identity = {
         "identity_sha256": "a" * 64,
         "execution_sha": "a" * 40,
-        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_uid": "fpct-e1-a5r2-choice-cardinality-aaaaaaaa-v1",
         "run_root": str(tmp_path),
         "source_snapshot_root": str(snapshot),
     }
@@ -1945,7 +2068,7 @@ def test_go_atomic_publish_failure_publishes_only_blocked_receipt(
         prepare, "validate_a5_execution_identity", lambda **kwargs: identity
     )
     monkeypatch.setattr(
-        a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
+        a5_prompt_gate, "validate_a5r2_schema_artifact", lambda *args, **kwargs: None
     )
     original_atomic_json = prepare.atomic_json
 
@@ -1959,7 +2082,7 @@ def test_go_atomic_publish_failure_publishes_only_blocked_receipt(
     def injected_go_publish(**kwargs: object) -> dict[str, object]:
         prepare.atomic_json(
             output / prepare.GO_RECEIPT_NAME,
-            {"status": "A5_INPUT_LOCK_GO"},
+            {"status": "A5R2_INPUT_LOCK_GO"},
         )
         raise AssertionError("unreachable after injected atomic failure")
 
@@ -1997,7 +2120,7 @@ def test_completed_resume_verifier_failure_quarantines_go_before_blocked(
     identity = {
         "identity_sha256": "a" * 64,
         "execution_sha": "a" * 40,
-        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_uid": "fpct-e1-a5r2-choice-cardinality-aaaaaaaa-v1",
         "run_root": str(tmp_path),
         "source_snapshot_root": str(snapshot),
     }
@@ -2005,10 +2128,10 @@ def test_completed_resume_verifier_failure_quarantines_go_before_blocked(
         prepare, "validate_a5_execution_identity", lambda **kwargs: identity
     )
     monkeypatch.setattr(
-        a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
+        a5_prompt_gate, "validate_a5r2_schema_artifact", lambda *args, **kwargs: None
     )
     go_path = output / prepare.GO_RECEIPT_NAME
-    invalid_go = {"status": "A5_INPUT_LOCK_GO", "invalid": True}
+    invalid_go = {"status": "A5R2_INPUT_LOCK_GO", "invalid": True}
     prepare.atomic_json(go_path, invalid_go)
     monkeypatch.setattr(
         prepare,
@@ -2077,7 +2200,7 @@ def test_public_lock_recovers_terminal_quarantine_as_blocked(
     identity = {
         "identity_sha256": "a" * 64,
         "execution_sha": "a" * 40,
-        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_uid": "fpct-e1-a5r2-choice-cardinality-aaaaaaaa-v1",
         "run_root": str(tmp_path),
         "source_snapshot_root": str(snapshot),
     }
@@ -2085,7 +2208,7 @@ def test_public_lock_recovers_terminal_quarantine_as_blocked(
         prepare, "validate_a5_execution_identity", lambda **kwargs: identity
     )
     monkeypatch.setattr(
-        a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
+        a5_prompt_gate, "validate_a5r2_schema_artifact", lambda *args, **kwargs: None
     )
     prepare_called = False
 
@@ -2131,8 +2254,9 @@ def test_public_lock_recovers_terminal_quarantine_as_blocked(
     assert quarantine.read_bytes() == quarantine_payload
     assert not (output / prepare.GO_RECEIPT_NAME).exists()
     blocked = json.loads((output / prepare.BLOCKED_RECEIPT_NAME).read_text())
-    assert blocked["status"] == "A5_INPUT_LOCK_BLOCKED"
-    assert blocked["failed_check"] == "a5_terminal_recovery_required"
+    assert blocked["status"] == "A5R2_INPUT_LOCK_BLOCKED"
+    assert blocked["failure_stage"] == "COMPLETED_VERIFICATION"
+    assert blocked["failure_code"] == "A5_TERMINAL_RECOVERY_REQUIRED"
 
 
 def test_go_quarantine_validation_rejects_multiple_and_symlink(
@@ -2171,7 +2295,7 @@ def test_blocked_publish_refuses_any_canonical_go_directory_entry(
     dangling.symlink_to(tmp_path / "missing-go-target.json")
     identity = {
         "execution_sha": "a" * 40,
-        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_uid": "fpct-e1-a5r2-choice-cardinality-aaaaaaaa-v1",
         "run_root": str(tmp_path),
         "source_snapshot_root": str(tmp_path),
     }
@@ -2180,6 +2304,8 @@ def test_blocked_publish_refuses_any_canonical_go_directory_entry(
             tmp_path,
             RuntimeError("injected failure"),
             identity,
+            repo_root=REPO_ROOT,
+            e0_data_root=tmp_path,
         )
     assert not (tmp_path / prepare.BLOCKED_RECEIPT_NAME).exists()
 
@@ -2212,7 +2338,7 @@ def test_public_lock_blocked_receipt_best_effort_binds_both_hash_domains(
     identity = {
         "identity_sha256": "a" * 64,
         "execution_sha": "a" * 40,
-        "run_uid": "fpct-e1-a5r1-hash-domains-aaaaaaaa-v1",
+        "run_uid": "fpct-e1-a5r2-choice-cardinality-aaaaaaaa-v1",
         "run_root": str(tmp_path),
         "source_snapshot_root": str(snapshot),
     }
@@ -2220,7 +2346,7 @@ def test_public_lock_blocked_receipt_best_effort_binds_both_hash_domains(
         prepare, "validate_a5_execution_identity", lambda **kwargs: identity
     )
     monkeypatch.setattr(
-        a5_prompt_gate, "validate_a5_schema_artifact", lambda *args, **kwargs: None
+        a5_prompt_gate, "validate_a5r2_schema_artifact", lambda *args, **kwargs: None
     )
     monkeypatch.setattr(
         prepare,
@@ -2247,13 +2373,8 @@ def test_public_lock_blocked_receipt_best_effort_binds_both_hash_domains(
             ),
         )
     blocked = json.loads((output / prepare.BLOCKED_RECEIPT_NAME).read_text())
-    expected = prepare._e0_data_hash_domain_projection(
-        prepare._e0_data_asset_tree(e0_data)
-    )
-    for field in (
-        "e0_declared_tree_algorithm",
-        "e0_declared_tree_sha256",
-        "generic_asset_tree_algorithm",
-        "generic_asset_tree_sha256",
-    ):
-        assert blocked[field] == expected[field]
+    assert blocked["choice_audit_lock"] is None
+    assert blocked["complete_choice_audit_lock_published"] is False
+    assert blocked["partial_audit_staging_published"] is False
+    assert blocked["failure_stage"] == "PRECOMPUTATION"
+    assert blocked["failure_code"] == "A5_PREFLIGHT_FAILED"

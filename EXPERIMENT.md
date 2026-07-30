@@ -619,3 +619,34 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 0 model/checkpoint load、0 forward、0 GPU/CUDA/K8s/training；未进入 E1-2/E1-3，
   未读取 E1-pilot/confirmatory。任何修复都需要新 prospective amendment、commit、
   snapshot、UID/root；不得复用 `37be816a`。
+
+### 2026-07-31 FPCT-E1 A5R2 pre-natural choice-cardinality gate
+
+- Approval=
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R2_CHOICE_CARDINALITY_RECOVERY`；批准发生在
+  新自然 choice audit、tokenization/alignment、模型输出和 E1-pilot outcome 前。
+  A5R2 允许 ARC 的实际 `n>=2` cardinality（2/3-choice 是合法 low-cardinality），
+  OpenBookQA/MMLU-Redux 仍要求 exact-four；production choice list 不 padding、不
+  truncation，historical count 固定为 `min(4,n)`。
+- Configuration：protocol/contract/schema SHA256=
+  `89753bcbdec66d07c36bcfc3a5c636e66704cddce5546ac0e321d7a9ea053384` /
+  `a4bdf4a229d26b367fb8ea7c90adf39d72e94c56daf4d095346bf673c5c2eb1b` /
+  `9cb387628e4b8fcf6c978e082b8c3380dbc62406c6aa460892c679872d656d7f`。
+  Audit projection 仅包含 question、choices 和冻结的定位/provenance metadata；
+  label/answer/correctness/prediction/accuracy/selector outcome 不进入 row、hash、
+  log 或 summary。
+- Verification：CPU/offline pre-natural synthetic gate=`GO`；`325 passed / 0
+  failed`；tracked tree SHA256=
+  `60946d56e4c11ebcff8ac44b94b8bcdedbd6a6c5aea71ed168f854d6dce996ca`；
+  evidence SHA256=
+  `8788694b7715676a84e453f80b3bb596c5688a7660fa916964ab15ddaf9213c4`；
+  gate artifact SHA256=
+  `cfc8c7da3bb074b0a4fcb23276af8d8404516b656337abb5c3034724272d2cd9`。
+  Gate 验证 variable-cardinality parser、完整 326-row synthetic census、taxonomy、
+  ordinal/summary/audit lock、dual hash binding、atomic/no-overwrite 与 tamper
+  fail-closed；不包含任何自然 population 统计。
+- Execution status：到本记录冻结时，新的 326-row label-free natural audit 未运行、
+  未读取；clean successor commit/snapshot/UID/root 尚未物化，CPU input-lock 也未
+  运行。A5R1 execution/root `37be816a...` 永久禁止 resume/reuse。未加载
+  model/checkpoint，未运行 forward/GPU/CUDA/Kubernetes/training，未进入
+  E1-2/E1-3；E1-pilot 和 confirmatory 保持 sealed。

@@ -1716,3 +1716,36 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
   SHA256=`ec3ae949b557da957a1a1f295f41b91b8522420445b5479a945b1f59b5de8e8a`。
   未加载 model/checkpoint，未运行 forward/GPU/K8s/training，未访问 E1-pilot/
   confirmatory；main/Phase2A 未修改。
+
+### 2026-07-31 FPCT-E1 A5R2 choice-cardinality pre-natural lock
+
+- 研究目标：修复 A5R1 将所有 task 的 materialized row 强制解释为四选项所造成的
+  输入合同错误，同时保持 prompt、alignment、operator、threshold、split、
+  checkpoint、estimand 与 claim boundary 不变。ARC 以真实 `n>=2` 作为合法
+  cardinality，OpenBookQA/MMLU-Redux 继续 exact-four；production runtime 不
+  padding/truncation，historical projection 固定 `min(4,n)`。
+- 人工决定：用户在任何新自然 choice audit、tokenization/alignment、模型输出或
+  E1-pilot outcome 前批准
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R2_CHOICE_CARDINALITY_RECOVERY`。
+  授权覆盖合同/代码/tests、CPU/offline/no-natural synthetic gate、全新 clean
+  commit/snapshot/UID/root，以及随后一次 label-free 326-row audit 与条件式 CPU
+  input-lock；不授权 E1-2/E1-3、model/checkpoint forward、GPU/K8s 或 training。
+- Normative SHA256：amendment=
+  `89753bcbdec66d07c36bcfc3a5c636e66704cddce5546ac0e321d7a9ea053384`；
+  contract=`a4bdf4a229d26b367fb8ea7c90adf39d72e94c56daf4d095346bf673c5c2eb1b`；
+  schema=`9cb387628e4b8fcf6c978e082b8c3380dbc62406c6aa460892c679872d656d7f`。
+- Verification：pre-natural synthetic gate=`GO`，`325 passed / 0 failed`；tracked
+  execution-tree SHA256=
+  `60946d56e4c11ebcff8ac44b94b8bcdedbd6a6c5aea71ed168f854d6dce996ca`；
+  evidence SHA256=
+  `8788694b7715676a84e453f80b3bb596c5688a7660fa916964ab15ddaf9213c4`；
+  gate artifact SHA256=
+  `cfc8c7da3bb074b0a4fcb23276af8d8404516b656337abb5c3034724272d2cd9`。
+  Gate 覆盖 variable-cardinality provenance、allowlisted label-free projection、
+  326-row synthetic census、dual-anchor/source-snapshot binding、atomic publish、
+  tamper replay 与 terminal BLOCKED transition；这是 synthetic correctness，不是
+  自然 support、mechanism 或 accuracy evidence。
+- 当前状态：新的自然 326-row audit 尚未运行或读取；clean execution commit、
+  source snapshot、UID/root 与 input-lock 仍待建立/执行。`37be816a` 及其 root
+  永久 no-resume/no-reuse。0 model/checkpoint load、0 forward、0 GPU/CUDA/K8s、
+  0 training；E1-2/E1-3 未进入，E1-pilot/confirmatory 继续 sealed。

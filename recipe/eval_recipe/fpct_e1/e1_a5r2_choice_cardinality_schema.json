@@ -1,0 +1,1345 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fpct.local/schema/e1_a5r2_choice_cardinality_schema.json",
+  "title": "FPCT-E1 A5R2 choice-cardinality artifacts",
+  "description": "Strict v9 schemas. V8 input-lock artifacts remain independently governed by the immutable v8 schema and are referenced by digest only.",
+  "oneOf": [
+    {"$ref": "#/$defs/a5r2Contract"},
+    {"$ref": "#/$defs/auditRow"},
+    {"$ref": "#/$defs/auditSummary"},
+    {"$ref": "#/$defs/auditLock"},
+    {"$ref": "#/$defs/syntheticGate"},
+    {"$ref": "#/$defs/v9CensusRecord"},
+    {"$ref": "#/$defs/v9CensusManifest"},
+    {"$ref": "#/$defs/v9DualAnchorSummary"},
+    {"$ref": "#/$defs/v9InputLockManifest"},
+    {"$ref": "#/$defs/inputGoReceipt"},
+    {"$ref": "#/$defs/inputBlockedReceipt"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "gitSha40": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "nonNegativeInteger": {"type": "integer", "minimum": 0},
+    "positiveInteger": {"type": "integer", "minimum": 1},
+    "protocolId": {"const": "fpct_e1_mechanism_audit_v9_a5r2_choice_cardinality"},
+    "runUid": {"type": "string", "pattern": "^fpct-e1-a5r2-choice-cardinality-[0-9a-f]{8}-v1$"},
+    "runRoot": {"type": "string", "pattern": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-[0-9a-f]{8}-v1$"},
+    "task": {"enum": ["ai2-arc", "openbookqa", "mmlu-redux"]},
+    "taskCounts": {
+      "type": "object",
+      "required": ["ai2-arc", "openbookqa", "mmlu-redux"],
+      "additionalProperties": false,
+      "properties": {
+        "ai2-arc": {"const": 128},
+        "openbookqa": {"const": 70},
+        "mmlu-redux": {"const": 128}
+      }
+    },
+    "fileBinding": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "artifactDescriptor": {
+      "type": "object",
+      "required": ["relative_path", "sha256", "bytes", "row_count"],
+      "additionalProperties": false,
+      "properties": {
+        "relative_path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "bytes": {"$ref": "#/$defs/nonNegativeInteger"},
+        "row_count": {"$ref": "#/$defs/nonNegativeInteger"}
+      }
+    },
+    "v8ObjectMap": {
+      "type": "object",
+      "required": [
+        "FPCT_E1_A5R1_HASH_DOMAIN_AMENDMENT.md",
+        "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_contract.json",
+        "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_schema.json",
+        "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_synthetic_gate.json"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "FPCT_E1_A5R1_HASH_DOMAIN_AMENDMENT.md": {"const": "8eafb29d3d736740730e10505ebd8217e779e5ef4d3a128cfb0db3a10a018068"},
+        "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_contract.json": {"const": "643151b67d98c84c1120b52705b0fe837fb4106664f10200ada1a692c744a0b1"},
+        "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_schema.json": {"const": "7bd2478f7ef3cfd32e752056cf161b8575b84a1f65088c84a0d2c37aec43704b"},
+        "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_synthetic_gate.json": {"const": "a2e53784fa46d2f63963bdb41e327a4e17936cce2bff765802b34f3d87869a9f"}
+      }
+    },
+    "contractApproval": {
+      "type": "object",
+      "required": ["approved", "decision_date", "timezone", "user_response_verbatim", "prospective_before_successor_natural_scan", "classification", "scientific_input_operator_estimand_threshold_population_changed"],
+      "additionalProperties": false,
+      "properties": {
+        "approved": {"const": true},
+        "decision_date": {"const": "2026-07-30"},
+        "timezone": {"const": "Asia/Shanghai"},
+        "user_response_verbatim": {"const": "批准"},
+        "prospective_before_successor_natural_scan": {"const": true},
+        "classification": {"const": "PROSPECTIVE_CHOICE_REPRESENTATION_AND_CARDINALITY_CORRECTION"},
+        "scientific_input_operator_estimand_threshold_population_changed": {"const": false}
+      }
+    },
+    "contractScope": {
+      "type": "object",
+      "required": ["protocol_contract_schema_code_tests", "cpu_offline_no_natural_synthetic_gate", "fresh_commit_push_snapshot_uid_root", "label_free_326_row_choice_audit", "conditional_cpu_input_lock_from_group_one", "model_or_checkpoint_load", "model_forward", "gpu_cuda_or_kubernetes", "training", "e1_2", "e1_3", "e1_pilot_or_confirmatory"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_contract_schema_code_tests": {"const": true},
+        "cpu_offline_no_natural_synthetic_gate": {"const": true},
+        "fresh_commit_push_snapshot_uid_root": {"const": true},
+        "label_free_326_row_choice_audit": {"const": true},
+        "conditional_cpu_input_lock_from_group_one": {"const": true},
+        "model_or_checkpoint_load": {"const": false},
+        "model_forward": {"const": false},
+        "gpu_cuda_or_kubernetes": {"const": false},
+        "training": {"const": false},
+        "e1_2": {"const": false},
+        "e1_3": {"const": false},
+        "e1_pilot_or_confirmatory": {"const": false}
+      }
+    },
+    "contractPredecessor": {
+      "type": "object",
+      "required": ["base_commit", "blocked_execution_sha", "blocked_run_uid", "blocked_run_root", "closure_path", "closure_sha256", "failed_check", "root_cause_before_a5r2", "resume_allowed", "artifact_reuse_allowed", "v8_objects"],
+      "additionalProperties": false,
+      "properties": {
+        "base_commit": {"const": "f782128774dd88081194c2873efd707044d1db2c"},
+        "blocked_execution_sha": {"const": "37be816ad611b8b0d916bd98c840c5f31efe2b50"},
+        "blocked_run_uid": {"const": "fpct-e1-a5r1-hash-domains-37be816a-v1"},
+        "blocked_run_root": {"const": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r1-37be816a-v1"},
+        "closure_path": {"const": "recipe/eval_recipe/fpct_e1/executions/37be816a/input_lock_failure_receipt.json"},
+        "closure_sha256": {"const": "ec3ae949b557da957a1a1f295f41b91b8522420445b5479a945b1f59b5de8e8a"},
+        "failed_check": {"const": "a5_materialized_row_has_fewer_than_four_choices"},
+        "root_cause_before_a5r2": {"const": "MATERIALIZED_CHOICE_CARDINALITY_CONTRACT_FAILURE_UNLOCATED"},
+        "resume_allowed": {"const": false},
+        "artifact_reuse_allowed": {"const": false},
+        "v8_objects": {"$ref": "#/$defs/v8ObjectMap"}
+      }
+    },
+    "contractV8Inheritance": {
+      "type": "object",
+      "required": ["protocol_id", "schema_path", "schema_sha256", "contract_path", "contract_sha256", "gate_path", "gate_sha256", "receipt_validation_rule", "successor_natural_receipt_protocol", "v8_natural_receipt_required", "inherited_checks_replayed_in_v9", "v9_may_override_or_weaken_v8_fields", "all_v8_dual_hash_prompt_tokenizer_alignment_streaming_atomicity_rules_inherited"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_id": {"const": "fpct_e1_mechanism_audit_v8_a5r1_hash_domains"},
+        "schema_path": {"const": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_schema.json"},
+        "schema_sha256": {"const": "7bd2478f7ef3cfd32e752056cf161b8575b84a1f65088c84a0d2c37aec43704b"},
+        "contract_path": {"const": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_contract.json"},
+        "contract_sha256": {"const": "643151b67d98c84c1120b52705b0fe837fb4106664f10200ada1a692c744a0b1"},
+        "gate_path": {"const": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_synthetic_gate.json"},
+        "gate_sha256": {"const": "a2e53784fa46d2f63963bdb41e327a4e17936cce2bff765802b34f3d87869a9f"},
+        "receipt_validation_rule": {"const": "HISTORICAL_V8_NATURAL_RECEIPT_IF_REFERENCED_MUST_VALIDATE_INDEPENDENTLY"},
+        "successor_natural_receipt_protocol": {"const": "fpct_e1_mechanism_audit_v9_a5r2_choice_cardinality"},
+        "v8_natural_receipt_required": {"const": false},
+        "inherited_checks_replayed_in_v9": {"const": true},
+        "v9_may_override_or_weaken_v8_fields": {"const": false},
+        "all_v8_dual_hash_prompt_tokenizer_alignment_streaming_atomicity_rules_inherited": {"const": true}
+      }
+    },
+    "v8StreamingBaseline": {
+      "type": "object",
+      "required": ["chunk_count", "emitted_rows", "logical_rows", "max_observed_canonical_row_bytes", "max_physical_chunk_bytes", "peak_rss_bytes", "physical_file_bytes", "replay_semantic_stream_sha256", "semantic_stream_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "chunk_count": {"const": 2},
+        "emitted_rows": {"const": 4480},
+        "logical_rows": {"const": 4480},
+        "max_observed_canonical_row_bytes": {"const": 1990},
+        "max_physical_chunk_bytes": {"const": 782797},
+        "peak_rss_bytes": {"const": 676876288},
+        "physical_file_bytes": {"const": 905272},
+        "replay_semantic_stream_sha256": {"const": "d80d7e251e99abdd84538eb4b2f90fa753dc0a647b1e841f0760fca2658bb226"},
+        "semantic_stream_sha256": {"const": "d80d7e251e99abdd84538eb4b2f90fa753dc0a647b1e841f0760fca2658bb226"}
+      }
+    },
+    "v8StreamingStressCase": {
+      "type": "object",
+      "required": ["chunk_count", "emitted_rows", "logical_rows", "max_observed_canonical_row_bytes", "max_physical_chunk_bytes", "peak_rss_bytes", "physical_file_bytes", "replay_semantic_stream_sha256", "semantic_stream_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "chunk_count": {"const": 245},
+        "emitted_rows": {"const": 1000384},
+        "logical_rows": {"const": 1000384},
+        "max_observed_canonical_row_bytes": {"const": 1996},
+        "max_physical_chunk_bytes": {"const": 832994},
+        "peak_rss_bytes": {"const": 676876288},
+        "physical_file_bytes": {"const": 200576223},
+        "replay_semantic_stream_sha256": {"const": "b59f0b362a8e85c0d472a34e0541301bf26a9babe37e9991a843457e7d6e453e"},
+        "semantic_stream_sha256": {"const": "b59f0b362a8e85c0d472a34e0541301bf26a9babe37e9991a843457e7d6e453e"}
+      }
+    },
+    "v8StreamingStressEvidence": {
+      "type": "object",
+      "required": ["baseline", "bounded_peak_rss", "stress", "threshold_bytes"],
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {"$ref": "#/$defs/v8StreamingBaseline"},
+        "bounded_peak_rss": {"const": true},
+        "stress": {"$ref": "#/$defs/v8StreamingStressCase"},
+        "threshold_bytes": {"const": 813060096}
+      }
+    },
+    "v8StreamingContractChecks": {
+      "type": "object",
+      "required": ["aggregate_partition_equivalence", "atomic_no_overwrite", "bounded_peak_rss", "chunk_partition_semantic_equivalence", "crash_resume_equivalence", "row_key_reference_equivalence", "topology_reference_equivalence", "weights_reference_equivalence"],
+      "additionalProperties": false,
+      "properties": {
+        "aggregate_partition_equivalence": {"const": true},
+        "atomic_no_overwrite": {"const": true},
+        "bounded_peak_rss": {"const": true},
+        "chunk_partition_semantic_equivalence": {"const": true},
+        "crash_resume_equivalence": {"const": true},
+        "row_key_reference_equivalence": {"const": true},
+        "topology_reference_equivalence": {"const": true},
+        "weights_reference_equivalence": {"const": true}
+      }
+    },
+    "inheritedV8StreamingEvidence": {
+      "type": "object",
+      "required": ["source_gate_path", "source_gate_sha256", "evidence_role", "estimated_physical_bytes_per_row", "streaming_stress", "streaming_contract_checks", "cross_resource_or_hash_domain_substitution_allowed"],
+      "additionalProperties": false,
+      "properties": {
+        "source_gate_path": {"const": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_synthetic_gate.json"},
+        "source_gate_sha256": {"const": "a2e53784fa46d2f63963bdb41e327a4e17936cce2bff765802b34f3d87869a9f"},
+        "evidence_role": {"const": "IMMUTABLE_V8_PREDECESSOR_RESOURCE_EVIDENCE_NOT_V9_REMEASUREMENT"},
+        "estimated_physical_bytes_per_row": {"const": 4096},
+        "streaming_stress": {"$ref": "#/$defs/v8StreamingStressEvidence"},
+        "streaming_contract_checks": {"$ref": "#/$defs/v8StreamingContractChecks"},
+        "cross_resource_or_hash_domain_substitution_allowed": {"const": false}
+      }
+    },
+    "contractScientificInvariants": {
+      "type": "object",
+      "required": ["population", "distinct_content_groups", "task_order", "task_counts", "population_source_sha256", "start_group_ordinal_one_based", "group_identity_changed", "sample_identity_changed", "split_changed", "operator_changed", "tokenizer_or_alignment_changed", "scientific_threshold_changed"],
+      "additionalProperties": false,
+      "properties": {
+        "population": {"const": "E0-design"},
+        "distinct_content_groups": {"const": 326},
+        "task_order": {"const": ["ai2-arc", "openbookqa", "mmlu-redux"]},
+        "task_counts": {"$ref": "#/$defs/taskCounts"},
+        "population_source_sha256": {
+          "const": {
+            "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json": "030b4236ed9bec82b145227259733b32a8c76af63adf2fa0f1282e3638b5b11d",
+            "recipe/eval_recipe/fpct_e0/exploratory_dev_manifest.json": "25fe8c4dceeaa1174e1433a02ec86f312d909d7d58c3c9a8c7f2caa9d908216a"
+          }
+        },
+        "start_group_ordinal_one_based": {"const": 1},
+        "group_identity_changed": {"const": false},
+        "sample_identity_changed": {"const": false},
+        "split_changed": {"const": false},
+        "operator_changed": {"const": false},
+        "tokenizer_or_alignment_changed": {"const": false},
+        "scientific_threshold_changed": {"const": false}
+      }
+    },
+    "contractFirewall": {
+      "type": "object",
+      "required": ["allowed_row_fields", "forbidden_fields", "raw_full_row_sha256_forbidden", "choice_projection_sha256_required", "natural_text_persisted", "chat_template_tokenization_alignment_in_choice_audit", "pure_string_formatter_parity_allowed", "model_output_accessed"],
+      "additionalProperties": false,
+      "properties": {
+        "allowed_row_fields": {"const": ["question", "question_stem", "choices.text", "choices.label", "task", "dataset_id", "dataset_config", "dataset_split", "evaluation_question_id", "non_outcome_native_row_id", "hf_feature_metadata"]},
+        "forbidden_fields": {"const": ["answer", "answerKey", "correct_answer", "error_type", "prediction", "correctness", "beneficial", "harmful", "accuracy", "loss", "logits", "model_output"]},
+        "raw_full_row_sha256_forbidden": {"const": true},
+        "choice_projection_sha256_required": {"const": true},
+        "natural_text_persisted": {"const": false},
+        "chat_template_tokenization_alignment_in_choice_audit": {"const": false},
+        "pure_string_formatter_parity_allowed": {"const": true},
+        "model_output_accessed": {"const": false}
+      }
+    },
+    "contractChoiceView": {
+      "type": "object",
+      "required": ["supported_representations", "string_or_bytes_is_choice_sequence", "preserve_choice_order", "preserve_choice_text", "pseudo_choice_allowed", "production_choice_truncation_allowed", "replacement_row_search_allowed", "descriptor_or_index_remap_allowed", "source_option_labels_are_gold_labels", "runtime_labels_generated_by_unchanged_e0_formatter", "historical_content_formula", "historical_choice_count_formula", "padding_creates_prompt_choices"],
+      "additionalProperties": false,
+      "properties": {
+        "supported_representations": {"const": ["mapping_of_sequences", "sequence_of_mappings", "plain_mmlu_sequence", "feature_backed_sequence_to_list"]},
+        "string_or_bytes_is_choice_sequence": {"const": false},
+        "preserve_choice_order": {"const": true},
+        "preserve_choice_text": {"const": true},
+        "pseudo_choice_allowed": {"const": false},
+        "production_choice_truncation_allowed": {"const": false},
+        "replacement_row_search_allowed": {"const": false},
+        "descriptor_or_index_remap_allowed": {"const": false},
+        "source_option_labels_are_gold_labels": {"const": false},
+        "runtime_labels_generated_by_unchanged_e0_formatter": {"const": true},
+        "historical_content_formula": {"const": "question + first min(4,n) choices + empty padding to ten slots"},
+        "historical_choice_count_formula": {"const": "min(4, production_choice_count)"},
+        "padding_creates_prompt_choices": {"const": false}
+      }
+    },
+    "taskCardinalityArc": {
+      "type": "object",
+      "required": ["valid_rule", "low_cardinality_values", "invalid_rule"],
+      "additionalProperties": false,
+      "properties": {
+        "valid_rule": {"const": "n >= 2"},
+        "low_cardinality_values": {"const": [2, 3]},
+        "invalid_rule": {"const": "n < 2"}
+      }
+    },
+    "taskCardinalityFour": {
+      "type": "object",
+      "required": ["valid_rule", "required_count", "invalid_rule"],
+      "additionalProperties": false,
+      "properties": {
+        "valid_rule": {"const": "n == 4"},
+        "required_count": {"const": 4},
+        "invalid_rule": {"const": "n != 4"}
+      }
+    },
+    "contractTaskCardinality": {
+      "type": "object",
+      "required": ["ai2-arc", "openbookqa", "mmlu-redux"],
+      "additionalProperties": false,
+      "properties": {
+        "ai2-arc": {"$ref": "#/$defs/taskCardinalityArc"},
+        "openbookqa": {"$ref": "#/$defs/taskCardinalityFour"},
+        "mmlu-redux": {"$ref": "#/$defs/taskCardinalityFour"}
+      }
+    },
+    "correctionMap": {
+      "type": "object",
+      "required": ["DIRECT_VALID", "GENUINE_ARC_LOW_CARDINALITY", "HF_FEATURE_NORMALIZATION_ONLY", "DESCRIPTOR_INDEX_MISMATCH", "UNSUPPORTED_FEATURE_REPRESENTATION", "GENUINE_TASK_INVALID_CARDINALITY", "UNEXPLAINED_OTHER"],
+      "additionalProperties": false,
+      "properties": {
+        "DIRECT_VALID": {"const": "NONE"},
+        "GENUINE_ARC_LOW_CARDINALITY": {"const": "VARIABLE_CARDINALITY_CONTRACT_ONLY"},
+        "HF_FEATURE_NORMALIZATION_ONLY": {"const": "PROVENANCE_CANONICAL_VIEW_ONLY"},
+        "DESCRIPTOR_INDEX_MISMATCH": {"const": "BLOCK"},
+        "UNSUPPORTED_FEATURE_REPRESENTATION": {"const": "BLOCK"},
+        "GENUINE_TASK_INVALID_CARDINALITY": {"const": "BLOCK"},
+        "UNEXPLAINED_OTHER": {"const": "BLOCK"}
+      }
+    },
+    "contractTaxonomy": {
+      "type": "object",
+      "required": ["identity_status", "representation_status", "cardinality_status", "root_cause_precedence", "correction_actions", "normalization_requires_content_identity_match", "normalization_requires_formatter_byte_parity", "all_go_root_causes_require_formatter_byte_parity", "descriptor_mismatch_is_hard_stop"],
+      "additionalProperties": false,
+      "properties": {
+        "identity_status": {"const": ["MATCH", "DESCRIPTOR_INDEX_MISMATCH"]},
+        "representation_status": {"const": ["DIRECT", "HF_FEATURE_NORMALIZATION_REQUIRED", "UNSUPPORTED"]},
+        "cardinality_status": {"const": ["TASK_VALID", "TASK_INVALID"]},
+        "root_cause_precedence": {"const": ["DESCRIPTOR_INDEX_MISMATCH", "UNSUPPORTED_FEATURE_REPRESENTATION", "GENUINE_TASK_INVALID_CARDINALITY", "HF_FEATURE_NORMALIZATION_ONLY", "GENUINE_ARC_LOW_CARDINALITY", "DIRECT_VALID", "UNEXPLAINED_OTHER"]},
+        "correction_actions": {"$ref": "#/$defs/correctionMap"},
+        "normalization_requires_content_identity_match": {"const": true},
+        "normalization_requires_formatter_byte_parity": {"const": true},
+        "all_go_root_causes_require_formatter_byte_parity": {"const": true},
+        "descriptor_mismatch_is_hard_stop": {"const": true}
+      }
+    },
+    "contractFreshExecution": {
+      "type": "object",
+      "required": ["commit", "uid_pattern", "root_pattern", "new_empty_root_required", "new_immutable_source_snapshot_and_receipt_required", "restart_audit_from_group_one", "restart_input_lock_from_group_one", "resume_cursor_allowed", "failed_execution_artifact_reuse_allowed"],
+      "additionalProperties": false,
+      "properties": {
+        "commit": {"const": "PENDING_CLEAN_PUSHED_A5R2_COMMIT"},
+        "uid_pattern": {"const": "^fpct-e1-a5r2-choice-cardinality-[0-9a-f]{8}-v1$"},
+        "root_pattern": {"const": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-[0-9a-f]{8}-v1$"},
+        "new_empty_root_required": {"const": true},
+        "new_immutable_source_snapshot_and_receipt_required": {"const": true},
+        "restart_audit_from_group_one": {"const": true},
+        "restart_input_lock_from_group_one": {"const": true},
+        "resume_cursor_allowed": {"const": false},
+        "failed_execution_artifact_reuse_allowed": {"const": false}
+      }
+    },
+    "contractAuditGate": {
+      "type": "object",
+      "required": ["go_status", "blocked_status", "required_population_count", "required_task_counts", "required_zero_root_causes", "formatter_byte_parity_required_for_all_go_rows", "all_content_group_hashes_match", "all_sample_group_split_identities_unchanged", "forbidden_outcome_field_access_count", "independent_reduction_and_hash_verification_required", "e0_data_tree_dual_domains_verified_before_audit", "source_snapshot_receipt_and_tree_verified_before_audit", "failure_resume_allowed", "failure_artifact_reuse_allowed"],
+      "additionalProperties": false,
+      "properties": {
+        "go_status": {"const": "A5R2_CHOICE_AUDIT_GO"},
+        "blocked_status": {"const": "A5R2_CHOICE_AUDIT_BLOCKED"},
+        "required_population_count": {"const": 326},
+        "required_task_counts": {"$ref": "#/$defs/taskCounts"},
+        "required_zero_root_causes": {"const": ["DESCRIPTOR_INDEX_MISMATCH", "UNSUPPORTED_FEATURE_REPRESENTATION", "GENUINE_TASK_INVALID_CARDINALITY", "UNEXPLAINED_OTHER"]},
+        "formatter_byte_parity_required_for_all_go_rows": {"const": true},
+        "all_content_group_hashes_match": {"const": true},
+        "all_sample_group_split_identities_unchanged": {"const": true},
+        "forbidden_outcome_field_access_count": {"const": 0},
+        "independent_reduction_and_hash_verification_required": {"const": true},
+        "e0_data_tree_dual_domains_verified_before_audit": {"const": true},
+        "source_snapshot_receipt_and_tree_verified_before_audit": {"const": true},
+        "failure_resume_allowed": {"const": false},
+        "failure_artifact_reuse_allowed": {"const": false}
+      }
+    },
+    "contractInputLockGate": {
+      "type": "object",
+      "required": ["go_status", "blocked_status", "choice_audit_go_required", "choice_audit_lock_unchanged_required", "only_predeclared_correction_actions_allowed", "all_inherited_v8_checks_required", "complete_input_lock_restart_from_group_one_required", "independent_completed_verifier_required", "go_is_scientific_result", "failure_resume_allowed", "failure_artifact_reuse_allowed"],
+      "additionalProperties": false,
+      "properties": {
+        "go_status": {"const": "A5R2_INPUT_LOCK_GO"},
+        "blocked_status": {"const": "A5R2_INPUT_LOCK_BLOCKED"},
+        "choice_audit_go_required": {"const": true},
+        "choice_audit_lock_unchanged_required": {"const": true},
+        "only_predeclared_correction_actions_allowed": {"const": true},
+        "all_inherited_v8_checks_required": {"const": true},
+        "complete_input_lock_restart_from_group_one_required": {"const": true},
+        "independent_completed_verifier_required": {"const": true},
+        "go_is_scientific_result": {"const": false},
+        "failure_resume_allowed": {"const": false},
+        "failure_artifact_reuse_allowed": {"const": false}
+      }
+    },
+    "contractAuditCompleteness": {
+      "type": "object",
+      "required": ["parseable_task_invalid_row_emitted_to_complete_audit", "parseable_task_invalid_complete_lock_status", "parseable_task_invalid_failure_stage", "unparseable_empty_ambiguous_or_unsupported_row_may_be_fabricated", "unparseable_failure_stage", "unparseable_failed_group_ordinal_required", "unparseable_choice_audit_lock_must_be_null", "partial_ledger_or_staging_artifact_may_be_published", "go_requires_complete_326_row_audit_lock"],
+      "additionalProperties": false,
+      "properties": {
+        "parseable_task_invalid_row_emitted_to_complete_audit": {"const": true},
+        "parseable_task_invalid_complete_lock_status": {"const": "A5R2_CHOICE_AUDIT_BLOCKED"},
+        "parseable_task_invalid_failure_stage": {"const": "CHOICE_AUDIT_COMPLETE_MECHANICAL_BLOCK"},
+        "unparseable_empty_ambiguous_or_unsupported_row_may_be_fabricated": {"const": false},
+        "unparseable_failure_stage": {"const": "CHOICE_AUDIT"},
+        "unparseable_failed_group_ordinal_required": {"const": true},
+        "unparseable_choice_audit_lock_must_be_null": {"const": true},
+        "partial_ledger_or_staging_artifact_may_be_published": {"const": false},
+        "go_requires_complete_326_row_audit_lock": {"const": true}
+      }
+    },
+    "contractAuditAtomicPublication": {
+      "type": "object",
+      "required": ["final_directory", "staging_directory_must_be_unpublished_sibling", "canonical_artifacts", "ordered_operations", "summary_artifact_required", "partial_staging_is_published_artifact", "final_directory_overwrite_allowed", "sidecar_normative_audit_key", "sidecar_alias_choice_cardinality_audit_allowed"],
+      "additionalProperties": false,
+      "properties": {
+        "final_directory": {"const": "choice_audit"},
+        "staging_directory_must_be_unpublished_sibling": {"const": true},
+        "canonical_artifacts": {"const": ["choice_cardinality_audit_rows.jsonl", "choice_cardinality_audit_summary.json", "choice_cardinality_audit_lock.json"]},
+        "ordered_operations": {"const": ["write_ledger_to_staging", "fsync_ledger", "write_summary_to_staging", "fsync_summary", "write_lock_to_staging", "fsync_lock", "fsync_staging_directory", "verify_all_staged_artifacts", "atomic_rename_staging_to_choice_audit", "fsync_run_root", "independent_reread_final_artifacts"]},
+        "summary_artifact_required": {"const": true},
+        "partial_staging_is_published_artifact": {"const": false},
+        "final_directory_overwrite_allowed": {"const": false},
+        "sidecar_normative_audit_key": {"const": "choice_audit"},
+        "sidecar_alias_choice_cardinality_audit_allowed": {"const": false}
+      }
+    },
+    "contractNaturalArtifacts": {
+      "type": "object",
+      "required": ["v9_census_row_required", "v9_census_manifest_required", "v9_dual_anchor_summary_required", "v9_top_level_input_lock_manifest_required", "choice_audit_row_sha256_bound_per_census_row", "choice_audit_lock_sha256_bound_in_census_manifest_sidecar_and_input_manifest", "historical_choice_count_formula_reverified", "v7_raw_full_row_sha256_field_allowed", "v9_label_free_runtime_row_sha256_required", "torch_sidecar_json_schema_applicable", "sidecar_normative_audit_key", "sidecar_alias_choice_cardinality_audit_allowed", "torch_sidecar_custom_verifier", "v8_natural_receipt_must_be_fabricated", "v9_natural_receipt_is_operative"],
+      "additionalProperties": false,
+      "properties": {
+        "v9_census_row_required": {"const": true},
+        "v9_census_manifest_required": {"const": true},
+        "v9_dual_anchor_summary_required": {"const": true},
+        "v9_top_level_input_lock_manifest_required": {"const": true},
+        "choice_audit_row_sha256_bound_per_census_row": {"const": true},
+        "choice_audit_lock_sha256_bound_in_census_manifest_sidecar_and_input_manifest": {"const": true},
+        "historical_choice_count_formula_reverified": {"const": "min(4, production_choice_count)"},
+        "v7_raw_full_row_sha256_field_allowed": {"const": false},
+        "v9_label_free_runtime_row_sha256_required": {"const": true},
+        "torch_sidecar_json_schema_applicable": {"const": false},
+        "sidecar_normative_audit_key": {"const": "choice_audit"},
+        "sidecar_alias_choice_cardinality_audit_allowed": {"const": false},
+        "torch_sidecar_custom_verifier": {
+          "type": "object",
+          "required": ["exact_top_level_key_set_required", "exact_item_key_set_required", "top_level_keys", "item_keys", "item_count", "semantic_sha256_recomputed_after_cpu_reload", "choice_audit_lock_sha256_recomputed_and_equal", "expanded_logical_rows_present", "model_or_checkpoint_tensor_present"],
+          "additionalProperties": false,
+          "properties": {
+            "exact_top_level_key_set_required": {"const": true},
+            "exact_item_key_set_required": {"const": true},
+            "top_level_keys": {"const": ["schema_version", "protocol_id", "status", "split_role", "items", "dimensions", "streaming_contract", "execution_identity", "a5_prompt_provenance", "choice_audit", "input_asset_state", "source", "tokenizers", "runtime_assets", "task_contract", "e1_pilot_consumed", "model_or_checkpoint_loaded", "cuda_initialized", "firewall", "expanded_row_absence_proof"]},
+            "item_keys": {"const": ["task", "sample_sha256", "content_group_sha256", "descriptor", "gold_answer", "gold_response", "feature", "alignment_lock", "prompt_generation_inputs", "prompt_generation_inputs_sha256", "provenance", "answer_queries", "certified_parents", "Q_s", "P_s", "N_s", "answer_query_sequence_sha256", "parent_sequence_sha256", "expected_chunk_count", "expected_long_form_rows", "raw_topology_ledger", "raw_topology_compact", "raw_topology_compact_sha256", "instruction_end", "rendered_prompt_sha256", "production_rendered_prompt_sha256", "historical_rendered_prompt_sha256", "production_alignment_sha256", "historical_alignment_sha256", "label_free_runtime_row_sha256", "choice_audit_row_sha256", "choice_root_cause_class", "choice_audit_lock_sha256", "prompt_relation", "choice_difference_only", "item_semantic_sha256"]},
+            "item_count": {"const": 326},
+            "semantic_sha256_recomputed_after_cpu_reload": {"const": true},
+            "choice_audit_lock_sha256_recomputed_and_equal": {"const": true},
+            "expanded_logical_rows_present": {"const": false},
+            "model_or_checkpoint_tensor_present": {"const": false}
+          }
+        },
+        "v8_natural_receipt_must_be_fabricated": {"const": false},
+        "v9_natural_receipt_is_operative": {"const": true}
+      }
+    },
+    "contractVersionedArtifacts": {
+      "type": "object",
+      "required": ["amendment", "contract", "schema", "future_pre_natural_gate", "future_choice_audit_lock", "old_v7_or_v8_files_may_be_overwritten"],
+      "additionalProperties": false,
+      "properties": {
+        "amendment": {"const": "FPCT_E1_A5R2_CHOICE_CARDINALITY_AMENDMENT.md"},
+        "contract": {"const": "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_contract.json"},
+        "schema": {"const": "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_schema.json"},
+        "future_pre_natural_gate": {"const": "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_synthetic_gate.json"},
+        "future_choice_audit_lock": {"const": "choice_audit/choice_cardinality_audit_lock.json"},
+        "old_v7_or_v8_files_may_be_overwritten": {"const": false}
+      }
+    },
+    "contractAuthorization": {
+      "type": "object",
+      "required": ["input_provenance_report", "e1_2", "e1_3", "e1_pilot", "confirmatory", "model_or_checkpoint_load", "model_forward", "gpu_cuda_or_kubernetes", "training", "next_state"],
+      "additionalProperties": false,
+      "properties": {
+        "input_provenance_report": {"const": true},
+        "e1_2": {"const": false},
+        "e1_3": {"const": false},
+        "e1_pilot": {"const": false},
+        "confirmatory": {"const": false},
+        "model_or_checkpoint_load": {"const": false},
+        "model_forward": {"const": false},
+        "gpu_cuda_or_kubernetes": {"const": false},
+        "training": {"const": false},
+        "next_state": {"const": "HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED"}
+      }
+    },
+    "a5r2Contract": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "artifact_type", "amendment_id", "approval", "operative_scope", "immutable_predecessor", "v8_inheritance", "inherited_v8_streaming_evidence", "scientific_invariants", "label_free_firewall", "choice_view", "task_cardinality", "taxonomy", "ordered_stages", "fresh_execution", "audit_gate", "audit_completeness", "audit_atomic_publication", "input_lock_gate", "natural_artifact_contract", "versioned_artifacts", "authorization_after_input_lock_go"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r2_choice_cardinality_contract"},
+        "amendment_id": {"const": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R2_CHOICE_CARDINALITY_RECOVERY"},
+        "approval": {"$ref": "#/$defs/contractApproval"},
+        "operative_scope": {"$ref": "#/$defs/contractScope"},
+        "immutable_predecessor": {"$ref": "#/$defs/contractPredecessor"},
+        "v8_inheritance": {"$ref": "#/$defs/contractV8Inheritance"},
+        "inherited_v8_streaming_evidence": {"$ref": "#/$defs/inheritedV8StreamingEvidence"},
+        "scientific_invariants": {"$ref": "#/$defs/contractScientificInvariants"},
+        "label_free_firewall": {"$ref": "#/$defs/contractFirewall"},
+        "choice_view": {"$ref": "#/$defs/contractChoiceView"},
+        "task_cardinality": {"$ref": "#/$defs/contractTaskCardinality"},
+        "taxonomy": {"$ref": "#/$defs/contractTaxonomy"},
+        "ordered_stages": {"const": ["v9_protocol_contract_schema_code_tests", "v9_pre_natural_synthetic_gate_go", "commit_and_push", "local_upstream_equal_and_clean", "fresh_immutable_source_snapshot_and_receipt", "fresh_empty_uid_and_root", "pre_audit_dual_hash_and_source_snapshot_attestation", "label_free_326_row_choice_audit_from_group_one", "atomic_choice_audit_ledger_summary_lock_publication", "independent_choice_audit_verification", "mechanical_choice_audit_decision", "conditional_v9_cpu_input_lock_replaying_inherited_v8_checks_from_group_one", "independent_completed_input_lock_verification", "v9_input_receipt", "stop_before_e1_2"]},
+        "fresh_execution": {"$ref": "#/$defs/contractFreshExecution"},
+        "audit_gate": {"$ref": "#/$defs/contractAuditGate"},
+        "audit_completeness": {"$ref": "#/$defs/contractAuditCompleteness"},
+        "audit_atomic_publication": {"$ref": "#/$defs/contractAuditAtomicPublication"},
+        "input_lock_gate": {"$ref": "#/$defs/contractInputLockGate"},
+        "natural_artifact_contract": {"$ref": "#/$defs/contractNaturalArtifacts"},
+        "versioned_artifacts": {"$ref": "#/$defs/contractVersionedArtifacts"},
+        "authorization_after_input_lock_go": {"$ref": "#/$defs/contractAuthorization"}
+      }
+    },
+    "identityStatus": {"enum": ["MATCH", "DESCRIPTOR_INDEX_MISMATCH"]},
+    "representationStatus": {"enum": ["DIRECT", "HF_FEATURE_NORMALIZATION_REQUIRED", "UNSUPPORTED"]},
+    "cardinalityStatus": {"enum": ["TASK_VALID", "TASK_INVALID"]},
+    "rootCause": {"enum": ["DESCRIPTOR_INDEX_MISMATCH", "UNSUPPORTED_FEATURE_REPRESENTATION", "GENUINE_TASK_INVALID_CARDINALITY", "HF_FEATURE_NORMALIZATION_ONLY", "GENUINE_ARC_LOW_CARDINALITY", "DIRECT_VALID", "UNEXPLAINED_OTHER"]},
+    "correctionAction": {"enum": ["NONE", "VARIABLE_CARDINALITY_CONTRACT_ONLY", "PROVENANCE_CANONICAL_VIEW_ONLY", "BLOCK"]},
+    "auditRow": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "artifact_type", "execution_sha", "run_uid", "group_ordinal", "task", "content_group_sha256", "sample_key_sha256", "dataset_id", "dataset_config", "dataset_split", "evaluation_question_id", "feature_schema_sha256", "materialized_container_kind", "legacy_extractor_choice_count", "canonical_choice_count", "source_choice_label_count", "runtime_ordinal_label_count", "question_nonempty", "choice_projection_sha256", "expected_content_group_sha256", "observed_content_group_sha256", "content_identity_match", "sample_identity_match", "native_row_id_status", "raw_prompt_sha256", "canonical_view_prompt_sha256", "formatter_byte_parity", "identity_status", "representation_status", "cardinality_status", "root_cause_class", "correction_action", "gold_or_outcome_field_accessed"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r2_choice_cardinality_audit_row"},
+        "execution_sha": {"$ref": "#/$defs/gitSha40"},
+        "run_uid": {"$ref": "#/$defs/runUid"},
+        "group_ordinal": {"type": "integer", "minimum": 1, "maximum": 326},
+        "task": {"$ref": "#/$defs/task"},
+        "content_group_sha256": {"$ref": "#/$defs/sha256"},
+        "sample_key_sha256": {"$ref": "#/$defs/sha256"},
+        "dataset_id": {"type": "string", "minLength": 1},
+        "dataset_config": {"type": "string", "minLength": 1},
+        "dataset_split": {"const": "test"},
+        "evaluation_question_id": {"$ref": "#/$defs/nonNegativeInteger"},
+        "feature_schema_sha256": {"$ref": "#/$defs/sha256"},
+        "materialized_container_kind": {"enum": ["mapping_of_sequences", "sequence_of_mappings", "plain_mmlu_sequence", "feature_backed_sequence_to_list", "unsupported"]},
+        "legacy_extractor_choice_count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "canonical_choice_count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "source_choice_label_count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "runtime_ordinal_label_count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "question_nonempty": {"const": true},
+        "choice_projection_sha256": {"$ref": "#/$defs/sha256"},
+        "expected_content_group_sha256": {"$ref": "#/$defs/sha256"},
+        "observed_content_group_sha256": {"$ref": "#/$defs/sha256"},
+        "content_identity_match": {"type": "boolean"},
+        "sample_identity_match": {"type": "boolean"},
+        "native_row_id_status": {"enum": ["MATCH", "NOT_AVAILABLE", "MISMATCH"]},
+        "raw_prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "canonical_view_prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "formatter_byte_parity": {"type": "boolean"},
+        "identity_status": {"$ref": "#/$defs/identityStatus"},
+        "representation_status": {"$ref": "#/$defs/representationStatus"},
+        "cardinality_status": {"$ref": "#/$defs/cardinalityStatus"},
+        "root_cause_class": {"$ref": "#/$defs/rootCause"},
+        "correction_action": {"$ref": "#/$defs/correctionAction"},
+        "gold_or_outcome_field_accessed": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"task": {"const": "ai2-arc"}, "cardinality_status": {"const": "TASK_VALID"}}, "required": ["task", "cardinality_status"]},
+          "then": {"properties": {"canonical_choice_count": {"minimum": 2}}}
+        },
+        {
+          "if": {"properties": {"task": {"enum": ["openbookqa", "mmlu-redux"]}, "cardinality_status": {"const": "TASK_VALID"}}, "required": ["task", "cardinality_status"]},
+          "then": {"properties": {"canonical_choice_count": {"const": 4}}}
+        },
+        {
+          "if": {"properties": {"root_cause_class": {"const": "DIRECT_VALID"}}, "required": ["root_cause_class"]},
+          "then": {"properties": {"identity_status": {"const": "MATCH"}, "representation_status": {"const": "DIRECT"}, "cardinality_status": {"const": "TASK_VALID"}, "formatter_byte_parity": {"const": true}, "correction_action": {"const": "NONE"}}}
+        },
+        {
+          "if": {"properties": {"root_cause_class": {"const": "GENUINE_ARC_LOW_CARDINALITY"}}, "required": ["root_cause_class"]},
+          "then": {"properties": {"task": {"const": "ai2-arc"}, "canonical_choice_count": {"enum": [2, 3]}, "identity_status": {"const": "MATCH"}, "representation_status": {"const": "DIRECT"}, "cardinality_status": {"const": "TASK_VALID"}, "content_identity_match": {"const": true}, "formatter_byte_parity": {"const": true}, "correction_action": {"const": "VARIABLE_CARDINALITY_CONTRACT_ONLY"}}}
+        },
+        {
+          "if": {"properties": {"root_cause_class": {"const": "HF_FEATURE_NORMALIZATION_ONLY"}}, "required": ["root_cause_class"]},
+          "then": {"properties": {"identity_status": {"const": "MATCH"}, "representation_status": {"const": "HF_FEATURE_NORMALIZATION_REQUIRED"}, "cardinality_status": {"const": "TASK_VALID"}, "content_identity_match": {"const": true}, "formatter_byte_parity": {"const": true}, "correction_action": {"const": "PROVENANCE_CANONICAL_VIEW_ONLY"}}}
+        },
+        {
+          "if": {"properties": {"root_cause_class": {"const": "DESCRIPTOR_INDEX_MISMATCH"}}, "required": ["root_cause_class"]},
+          "then": {"properties": {"identity_status": {"const": "DESCRIPTOR_INDEX_MISMATCH"}, "correction_action": {"const": "BLOCK"}}}
+        },
+        {
+          "if": {"properties": {"root_cause_class": {"const": "UNSUPPORTED_FEATURE_REPRESENTATION"}}, "required": ["root_cause_class"]},
+          "then": {"properties": {"representation_status": {"const": "UNSUPPORTED"}, "correction_action": {"const": "BLOCK"}}}
+        },
+        {
+          "if": {"properties": {"root_cause_class": {"const": "GENUINE_TASK_INVALID_CARDINALITY"}}, "required": ["root_cause_class"]},
+          "then": {"properties": {"cardinality_status": {"const": "TASK_INVALID"}, "correction_action": {"const": "BLOCK"}}}
+        },
+        {
+          "if": {"properties": {"root_cause_class": {"const": "UNEXPLAINED_OTHER"}}, "required": ["root_cause_class"]},
+          "then": {"properties": {"correction_action": {"const": "BLOCK"}}}
+        }
+      ]
+    },
+    "integerHistogram": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[0-9]+$"},
+      "additionalProperties": {"$ref": "#/$defs/nonNegativeInteger"}
+    },
+    "correctionActionCounts": {
+      "type": "object",
+      "required": ["NONE", "VARIABLE_CARDINALITY_CONTRACT_ONLY", "PROVENANCE_CANONICAL_VIEW_ONLY", "BLOCK"],
+      "additionalProperties": false,
+      "properties": {
+        "NONE": {"$ref": "#/$defs/nonNegativeInteger"},
+        "VARIABLE_CARDINALITY_CONTRACT_ONLY": {"$ref": "#/$defs/nonNegativeInteger"},
+        "PROVENANCE_CANONICAL_VIEW_ONLY": {"$ref": "#/$defs/nonNegativeInteger"},
+        "BLOCK": {"$ref": "#/$defs/nonNegativeInteger"}
+      }
+    },
+    "histogramsByTask": {
+      "type": "object",
+      "required": ["ai2-arc", "openbookqa", "mmlu-redux"],
+      "additionalProperties": false,
+      "properties": {
+        "ai2-arc": {"$ref": "#/$defs/integerHistogram"},
+        "openbookqa": {"$ref": "#/$defs/integerHistogram"},
+        "mmlu-redux": {"$ref": "#/$defs/integerHistogram"}
+      }
+    },
+    "auditSummary": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "artifact_type", "status", "execution_sha", "run_uid", "row_count", "task_counts", "expected_task_counts", "task_counts_match", "production_choice_count_distribution", "by_task_production_choice_count_distribution", "root_cause_counts", "correction_action_counts", "required_zero_root_causes_satisfied", "all_content_group_hashes_match", "all_sample_group_split_identities_unchanged", "all_task_cardinalities_valid", "all_rows_formatter_byte_equal", "zero_forbidden_outcome_access", "semantic_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r2_choice_cardinality_audit_summary"},
+        "status": {"enum": ["A5R2_CHOICE_AUDIT_GO", "A5R2_CHOICE_AUDIT_BLOCKED"]},
+        "execution_sha": {"$ref": "#/$defs/gitSha40"},
+        "run_uid": {"$ref": "#/$defs/runUid"},
+        "row_count": {"const": 326},
+        "task_counts": {"$ref": "#/$defs/taskCounts"},
+        "expected_task_counts": {"$ref": "#/$defs/taskCounts"},
+        "task_counts_match": {"type": "boolean"},
+        "production_choice_count_distribution": {"$ref": "#/$defs/integerHistogram"},
+        "by_task_production_choice_count_distribution": {"$ref": "#/$defs/histogramsByTask"},
+        "root_cause_counts": {"$ref": "#/$defs/taxonomyCounts"},
+        "correction_action_counts": {"$ref": "#/$defs/correctionActionCounts"},
+        "required_zero_root_causes_satisfied": {"type": "boolean"},
+        "all_content_group_hashes_match": {"type": "boolean"},
+        "all_sample_group_split_identities_unchanged": {"type": "boolean"},
+        "all_task_cardinalities_valid": {"type": "boolean"},
+        "all_rows_formatter_byte_equal": {"type": "boolean"},
+        "zero_forbidden_outcome_access": {"type": "boolean"},
+        "semantic_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "A5R2_CHOICE_AUDIT_GO"}}, "required": ["status"]},
+          "then": {"properties": {"task_counts_match": {"const": true}, "required_zero_root_causes_satisfied": {"const": true}, "all_content_group_hashes_match": {"const": true}, "all_sample_group_split_identities_unchanged": {"const": true}, "all_task_cardinalities_valid": {"const": true}, "all_rows_formatter_byte_equal": {"const": true}, "zero_forbidden_outcome_access": {"const": true}, "root_cause_counts": {"properties": {"DESCRIPTOR_INDEX_MISMATCH": {"const": 0}, "UNSUPPORTED_FEATURE_REPRESENTATION": {"const": 0}, "GENUINE_TASK_INVALID_CARDINALITY": {"const": 0}, "UNEXPLAINED_OTHER": {"const": 0}}}}}
+        }
+      ]
+    },
+    "taxonomyCounts": {
+      "type": "object",
+      "required": ["DESCRIPTOR_INDEX_MISMATCH", "UNSUPPORTED_FEATURE_REPRESENTATION", "GENUINE_TASK_INVALID_CARDINALITY", "HF_FEATURE_NORMALIZATION_ONLY", "GENUINE_ARC_LOW_CARDINALITY", "DIRECT_VALID", "UNEXPLAINED_OTHER"],
+      "additionalProperties": false,
+      "properties": {
+        "DESCRIPTOR_INDEX_MISMATCH": {"$ref": "#/$defs/nonNegativeInteger"},
+        "UNSUPPORTED_FEATURE_REPRESENTATION": {"$ref": "#/$defs/nonNegativeInteger"},
+        "GENUINE_TASK_INVALID_CARDINALITY": {"$ref": "#/$defs/nonNegativeInteger"},
+        "HF_FEATURE_NORMALIZATION_ONLY": {"$ref": "#/$defs/nonNegativeInteger"},
+        "GENUINE_ARC_LOW_CARDINALITY": {"$ref": "#/$defs/nonNegativeInteger"},
+        "DIRECT_VALID": {"$ref": "#/$defs/nonNegativeInteger"},
+        "UNEXPLAINED_OTHER": {"$ref": "#/$defs/nonNegativeInteger"}
+      }
+    },
+    "cardinalityBins": {
+      "type": "object",
+      "required": ["zero", "one", "two", "three", "four", "five_plus"],
+      "additionalProperties": false,
+      "properties": {
+        "zero": {"$ref": "#/$defs/nonNegativeInteger"},
+        "one": {"$ref": "#/$defs/nonNegativeInteger"},
+        "two": {"$ref": "#/$defs/nonNegativeInteger"},
+        "three": {"$ref": "#/$defs/nonNegativeInteger"},
+        "four": {"$ref": "#/$defs/nonNegativeInteger"},
+        "five_plus": {"$ref": "#/$defs/nonNegativeInteger"}
+      }
+    },
+    "cardinalityByTask": {
+      "type": "object",
+      "required": ["ai2-arc", "openbookqa", "mmlu-redux"],
+      "additionalProperties": false,
+      "properties": {
+        "ai2-arc": {"$ref": "#/$defs/cardinalityBins"},
+        "openbookqa": {"$ref": "#/$defs/cardinalityBins"},
+        "mmlu-redux": {"$ref": "#/$defs/cardinalityBins"}
+      }
+    },
+    "e0DataTreeBinding": {
+      "type": "object",
+      "required": ["file_count", "bytes", "e0_declared_tree_algorithm", "e0_declared_tree_sha256", "generic_asset_tree_algorithm", "generic_asset_tree_sha256", "both_domains_recomputed_before_audit_row_one", "cross_domain_comparison_detected"],
+      "additionalProperties": false,
+      "properties": {
+        "file_count": {"const": 51},
+        "bytes": {"const": 233569},
+        "e0_declared_tree_algorithm": {"const": "relative_path_nul_file_sha256_bytes_v1"},
+        "e0_declared_tree_sha256": {"const": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73"},
+        "generic_asset_tree_algorithm": {"const": "canonical_json_file_manifest_v1"},
+        "generic_asset_tree_sha256": {"const": "12f537cade1a30f6fd4e7a146c58311412f8824a6845ea4e6f7a6b5651bcb405"},
+        "both_domains_recomputed_before_audit_row_one": {"const": true},
+        "cross_domain_comparison_detected": {"const": false}
+      }
+    },
+    "sourceSnapshotBinding": {
+      "type": "object",
+      "required": ["receipt_path", "receipt_file_sha256", "receipt_sha256", "mounted_tree_sha256", "execution_sha", "independently_verified_before_audit_row_one"],
+      "additionalProperties": false,
+      "properties": {
+        "receipt_path": {"type": "string", "minLength": 1},
+        "receipt_file_sha256": {"$ref": "#/$defs/sha256"},
+        "receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "mounted_tree_sha256": {"$ref": "#/$defs/sha256"},
+        "execution_sha": {"$ref": "#/$defs/gitSha40"},
+        "independently_verified_before_audit_row_one": {"const": true}
+      }
+    },
+    "auditHardChecks": {
+      "type": "object",
+      "required": ["e0_data_tree_dual_domains_verified_before_audit", "source_snapshot_receipt_and_tree_verified_before_audit", "exact_population_and_task_counts", "unique_group_and_sample_identity", "canonical_order_from_group_one", "all_content_group_hashes_match", "all_sample_group_split_identities_unchanged", "all_task_cardinalities_valid", "all_rows_formatter_byte_equal", "no_pseudo_reorder_truncation_replacement_or_remap", "zero_forbidden_outcome_access", "predecessor_v8_unchanged", "independent_reduction_and_hash_verified"],
+      "additionalProperties": false,
+      "properties": {
+        "e0_data_tree_dual_domains_verified_before_audit": {"type": "boolean"},
+        "source_snapshot_receipt_and_tree_verified_before_audit": {"type": "boolean"},
+        "exact_population_and_task_counts": {"type": "boolean"},
+        "unique_group_and_sample_identity": {"type": "boolean"},
+        "canonical_order_from_group_one": {"type": "boolean"},
+        "all_content_group_hashes_match": {"type": "boolean"},
+        "all_sample_group_split_identities_unchanged": {"type": "boolean"},
+        "all_task_cardinalities_valid": {"type": "boolean"},
+        "all_rows_formatter_byte_equal": {"type": "boolean"},
+        "no_pseudo_reorder_truncation_replacement_or_remap": {"type": "boolean"},
+        "zero_forbidden_outcome_access": {"type": "boolean"},
+        "predecessor_v8_unchanged": {"type": "boolean"},
+        "independent_reduction_and_hash_verified": {"type": "boolean"}
+      }
+    },
+    "auditLock": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "artifact_type", "execution_sha", "run_uid", "run_root", "status", "population_count", "task_counts", "taxonomy_counts", "cardinality_by_task", "ledger", "summary", "e0_data_tree_binding", "source_snapshot_binding", "source_bindings", "hard_checks", "correction_actions_selected", "mechanical_decision", "audit_semantic_sha256", "evidence_sha256", "resume_allowed", "same_execution_input_lock_consumption_allowed", "model_or_checkpoint_loaded", "model_forward_run", "gpu_cuda_or_kubernetes_used", "training", "e1_2_or_e1_3_authorized", "e1_pilot_or_confirmatory_accessed"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r2_choice_cardinality_audit_lock"},
+        "execution_sha": {"$ref": "#/$defs/gitSha40"},
+        "run_uid": {"$ref": "#/$defs/runUid"},
+        "run_root": {"$ref": "#/$defs/runRoot"},
+        "status": {"enum": ["A5R2_CHOICE_AUDIT_GO", "A5R2_CHOICE_AUDIT_BLOCKED"]},
+        "population_count": {"const": 326},
+        "task_counts": {"$ref": "#/$defs/taskCounts"},
+        "taxonomy_counts": {"$ref": "#/$defs/taxonomyCounts"},
+        "cardinality_by_task": {"$ref": "#/$defs/cardinalityByTask"},
+        "ledger": {"$ref": "#/$defs/artifactDescriptor"},
+        "summary": {"$ref": "#/$defs/artifactDescriptor"},
+        "e0_data_tree_binding": {"$ref": "#/$defs/e0DataTreeBinding"},
+        "source_snapshot_binding": {"$ref": "#/$defs/sourceSnapshotBinding"},
+        "source_bindings": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/fileBinding"}},
+        "hard_checks": {"$ref": "#/$defs/auditHardChecks"},
+        "correction_actions_selected": {"type": "array", "uniqueItems": true, "items": {"enum": ["NONE", "VARIABLE_CARDINALITY_CONTRACT_ONLY", "PROVENANCE_CANONICAL_VIEW_ONLY"]}},
+        "mechanical_decision": {"enum": ["A5R2_CHOICE_AUDIT_GO", "A5R2_CHOICE_AUDIT_BLOCKED"]},
+        "audit_semantic_sha256": {"$ref": "#/$defs/sha256"},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"},
+        "resume_allowed": {"const": false},
+        "same_execution_input_lock_consumption_allowed": {"type": "boolean"},
+        "model_or_checkpoint_loaded": {"const": false},
+        "model_forward_run": {"const": false},
+        "gpu_cuda_or_kubernetes_used": {"const": false},
+        "training": {"const": false},
+        "e1_2_or_e1_3_authorized": {"const": false},
+        "e1_pilot_or_confirmatory_accessed": {"const": false}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "A5R2_CHOICE_AUDIT_GO"}}, "required": ["status"]},
+          "then": {
+            "properties": {
+              "mechanical_decision": {"const": "A5R2_CHOICE_AUDIT_GO"},
+              "correction_actions_selected": {"minItems": 1},
+              "same_execution_input_lock_consumption_allowed": {"const": true},
+              "taxonomy_counts": {"properties": {"DESCRIPTOR_INDEX_MISMATCH": {"const": 0}, "UNSUPPORTED_FEATURE_REPRESENTATION": {"const": 0}, "GENUINE_TASK_INVALID_CARDINALITY": {"const": 0}, "UNEXPLAINED_OTHER": {"const": 0}}},
+              "hard_checks": {"properties": {"e0_data_tree_dual_domains_verified_before_audit": {"const": true}, "source_snapshot_receipt_and_tree_verified_before_audit": {"const": true}, "exact_population_and_task_counts": {"const": true}, "unique_group_and_sample_identity": {"const": true}, "canonical_order_from_group_one": {"const": true}, "all_content_group_hashes_match": {"const": true}, "all_sample_group_split_identities_unchanged": {"const": true}, "all_task_cardinalities_valid": {"const": true}, "all_rows_formatter_byte_equal": {"const": true}, "no_pseudo_reorder_truncation_replacement_or_remap": {"const": true}, "zero_forbidden_outcome_access": {"const": true}, "predecessor_v8_unchanged": {"const": true}, "independent_reduction_and_hash_verified": {"const": true}}}
+            }
+          },
+          "else": {"properties": {"mechanical_decision": {"const": "A5R2_CHOICE_AUDIT_BLOCKED"}, "correction_actions_selected": {"maxItems": 0}, "same_execution_input_lock_consumption_allowed": {"const": false}}}
+        }
+      ]
+    },
+    "taskCountsNonNegative": {
+      "type": "object",
+      "required": ["ai2-arc", "openbookqa", "mmlu-redux"],
+      "additionalProperties": false,
+      "properties": {
+        "ai2-arc": {"$ref": "#/$defs/nonNegativeInteger"},
+        "openbookqa": {"$ref": "#/$defs/nonNegativeInteger"},
+        "mmlu-redux": {"$ref": "#/$defs/nonNegativeInteger"}
+      }
+    },
+    "choiceLabels": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 26,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "promptRelation": {"enum": ["EXACT_HISTORICAL_AND_PRODUCTION_MATCH", "EXTRA_CHOICES_ONLY"]},
+    "v9CensusRecord": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "artifact_type", "task", "content_group_sha256", "sample_key_sha256", "source_row_id", "historical_choice_count", "production_choice_count", "source_choice_labels", "runtime_ordinal_labels", "gold_answer", "historical_first4_question_choices_sha256", "historical_rendered_prompt_sha256", "historical_alignment_sha256", "label_free_runtime_row_sha256", "production_rendered_prompt_sha256", "production_alignment_sha256", "historical_prompt_token_count", "production_prompt_token_count", "production_certified_parent_count", "production_logical_row_count", "production_physical_chunk_count", "prompt_relation", "choice_difference_only", "choice_audit_row_sha256", "choice_audit_lock_sha256", "choice_root_cause_class", "choice_audit_forbidden_outcome_field_access_count"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5_prompt_census_record"},
+        "task": {"$ref": "#/$defs/task"},
+        "content_group_sha256": {"$ref": "#/$defs/sha256"},
+        "sample_key_sha256": {"$ref": "#/$defs/sha256"},
+        "source_row_id": {"type": "string", "minLength": 1},
+        "historical_choice_count": {"type": "integer", "minimum": 2, "maximum": 4},
+        "production_choice_count": {"type": "integer", "minimum": 2, "maximum": 26},
+        "source_choice_labels": {"$ref": "#/$defs/choiceLabels"},
+        "runtime_ordinal_labels": {"$ref": "#/$defs/choiceLabels"},
+        "gold_answer": {"enum": ["A", "B", "C", "D"]},
+        "historical_first4_question_choices_sha256": {"$ref": "#/$defs/sha256"},
+        "historical_rendered_prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "historical_alignment_sha256": {"$ref": "#/$defs/sha256"},
+        "label_free_runtime_row_sha256": {"$ref": "#/$defs/sha256"},
+        "production_rendered_prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "production_alignment_sha256": {"$ref": "#/$defs/sha256"},
+        "historical_prompt_token_count": {"$ref": "#/$defs/positiveInteger"},
+        "production_prompt_token_count": {"$ref": "#/$defs/positiveInteger"},
+        "production_certified_parent_count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "production_logical_row_count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "production_physical_chunk_count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "prompt_relation": {"$ref": "#/$defs/promptRelation"},
+        "choice_difference_only": {"type": "boolean"},
+        "choice_audit_row_sha256": {"$ref": "#/$defs/sha256"},
+        "choice_audit_lock_sha256": {"$ref": "#/$defs/sha256"},
+        "choice_root_cause_class": {"enum": ["DIRECT_VALID", "GENUINE_ARC_LOW_CARDINALITY", "HF_FEATURE_NORMALIZATION_ONLY"]},
+        "choice_audit_forbidden_outcome_field_access_count": {"const": 0}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"task": {"const": "ai2-arc"}}, "required": ["task"]},
+          "then": {"properties": {"production_choice_count": {"minimum": 2}}},
+          "else": {"properties": {"production_choice_count": {"const": 4}, "historical_choice_count": {"const": 4}}}
+        },
+        {
+          "if": {"properties": {"prompt_relation": {"const": "EXACT_HISTORICAL_AND_PRODUCTION_MATCH"}}, "required": ["prompt_relation"]},
+          "then": {"properties": {"production_choice_count": {"maximum": 4}, "choice_difference_only": {"const": false}}},
+          "else": {"properties": {"historical_choice_count": {"const": 4}, "production_choice_count": {"minimum": 5}, "choice_difference_only": {"const": true}}}
+        },
+        {
+          "if": {"properties": {"production_choice_count": {"const": 2}}, "required": ["production_choice_count"]},
+          "then": {"properties": {"historical_choice_count": {"const": 2}}}
+        },
+        {
+          "if": {"properties": {"production_choice_count": {"const": 3}}, "required": ["production_choice_count"]},
+          "then": {"properties": {"historical_choice_count": {"const": 3}}}
+        },
+        {
+          "if": {"properties": {"production_choice_count": {"const": 4}}, "required": ["production_choice_count"]},
+          "then": {"properties": {"historical_choice_count": {"const": 4}}}
+        },
+        {
+          "if": {"properties": {"choice_root_cause_class": {"const": "GENUINE_ARC_LOW_CARDINALITY"}}, "required": ["choice_root_cause_class"]},
+          "then": {"properties": {"task": {"const": "ai2-arc"}, "production_choice_count": {"enum": [2, 3]}, "historical_choice_count": {"enum": [2, 3]}}}
+        }
+      ]
+    },
+    "distributionSummary": {
+      "type": "object",
+      "required": ["count", "sum", "min", "p50", "p95", "max", "argmax_content_group_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "sum": {"$ref": "#/$defs/nonNegativeInteger"},
+        "min": {"$ref": "#/$defs/nonNegativeInteger"},
+        "p50": {"$ref": "#/$defs/nonNegativeInteger"},
+        "p95": {"$ref": "#/$defs/nonNegativeInteger"},
+        "max": {"$ref": "#/$defs/nonNegativeInteger"},
+        "argmax_content_group_sha256": {"oneOf": [{"const": null}, {"$ref": "#/$defs/sha256"}]}
+      }
+    },
+    "v9AnchorMapping": {
+      "type": "object",
+      "required": ["task", "content_group_sha256", "sample_key_sha256", "historical_first4_question_choices_sha256", "historical_rendered_prompt_sha256", "historical_alignment_sha256", "label_free_runtime_row_sha256", "production_rendered_prompt_sha256", "production_alignment_sha256", "prompt_relation", "choice_audit_row_sha256", "choice_root_cause_class"],
+      "additionalProperties": false,
+      "properties": {
+        "task": {"$ref": "#/$defs/task"},
+        "content_group_sha256": {"$ref": "#/$defs/sha256"},
+        "sample_key_sha256": {"$ref": "#/$defs/sha256"},
+        "historical_first4_question_choices_sha256": {"$ref": "#/$defs/sha256"},
+        "historical_rendered_prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "historical_alignment_sha256": {"$ref": "#/$defs/sha256"},
+        "label_free_runtime_row_sha256": {"$ref": "#/$defs/sha256"},
+        "production_rendered_prompt_sha256": {"$ref": "#/$defs/sha256"},
+        "production_alignment_sha256": {"$ref": "#/$defs/sha256"},
+        "prompt_relation": {"$ref": "#/$defs/promptRelation"},
+        "choice_audit_row_sha256": {"$ref": "#/$defs/sha256"},
+        "choice_root_cause_class": {"enum": ["DIRECT_VALID", "GENUINE_ARC_LOW_CARDINALITY", "HF_FEATURE_NORMALIZATION_ONLY"]}
+      }
+    },
+    "v9CensusManifest": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "artifact_type", "status", "execution_sha", "run_uid", "population_count", "task_counts", "affected_task_counts", "unaffected_task_counts", "historical_choice_count_distribution", "production_choice_count_distribution", "affected_content_group_sha256", "historical_to_production_anchor_map", "production_prompt_token_count_distribution", "production_certified_parent_count_distribution", "production_logical_row_count_distribution", "production_physical_chunk_count_distribution", "unexpected_prompt_difference_count", "missing_row_count", "duplicate_row_count", "canonical_semantic_stream_sha256", "choice_audit_lock_sha256", "artifacts"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5_prompt_census_manifest"},
+        "status": {"const": "COMPLETE_PRE_MODEL_CENSUS"},
+        "execution_sha": {"$ref": "#/$defs/gitSha40"},
+        "run_uid": {"$ref": "#/$defs/runUid"},
+        "population_count": {"const": 326},
+        "task_counts": {"$ref": "#/$defs/taskCounts"},
+        "affected_task_counts": {"$ref": "#/$defs/taskCountsNonNegative"},
+        "unaffected_task_counts": {"$ref": "#/$defs/taskCountsNonNegative"},
+        "historical_choice_count_distribution": {"$ref": "#/$defs/integerHistogram"},
+        "production_choice_count_distribution": {"$ref": "#/$defs/integerHistogram"},
+        "affected_content_group_sha256": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/sha256"}},
+        "historical_to_production_anchor_map": {"type": "array", "minItems": 326, "maxItems": 326, "items": {"$ref": "#/$defs/v9AnchorMapping"}},
+        "production_prompt_token_count_distribution": {"$ref": "#/$defs/distributionSummary"},
+        "production_certified_parent_count_distribution": {"$ref": "#/$defs/distributionSummary"},
+        "production_logical_row_count_distribution": {"$ref": "#/$defs/distributionSummary"},
+        "production_physical_chunk_count_distribution": {"$ref": "#/$defs/distributionSummary"},
+        "unexpected_prompt_difference_count": {"const": 0},
+        "missing_row_count": {"const": 0},
+        "duplicate_row_count": {"const": 0},
+        "canonical_semantic_stream_sha256": {"$ref": "#/$defs/sha256"},
+        "choice_audit_lock_sha256": {"$ref": "#/$defs/sha256"},
+        "artifacts": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/artifactDescriptor"}}
+      }
+    },
+    "v9TaskCensusSummary": {
+      "type": "object",
+      "required": ["group_count", "affected_group_count", "unaffected_group_count", "historical_choice_count_distribution", "production_choice_count_distribution", "production_prompt_token_count_distribution", "production_certified_parent_count_distribution", "production_logical_row_count_distribution", "production_physical_chunk_count_distribution"],
+      "additionalProperties": false,
+      "properties": {
+        "group_count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "affected_group_count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "unaffected_group_count": {"$ref": "#/$defs/nonNegativeInteger"},
+        "historical_choice_count_distribution": {"$ref": "#/$defs/integerHistogram"},
+        "production_choice_count_distribution": {"$ref": "#/$defs/integerHistogram"},
+        "production_prompt_token_count_distribution": {"$ref": "#/$defs/integerHistogram"},
+        "production_certified_parent_count_distribution": {"$ref": "#/$defs/integerHistogram"},
+        "production_logical_row_count_distribution": {"$ref": "#/$defs/integerHistogram"},
+        "production_physical_chunk_count_distribution": {"$ref": "#/$defs/integerHistogram"}
+      }
+    },
+    "v9ByTaskCensus": {
+      "type": "object",
+      "required": ["ai2-arc", "openbookqa", "mmlu-redux"],
+      "additionalProperties": false,
+      "properties": {
+        "ai2-arc": {"$ref": "#/$defs/v9TaskCensusSummary"},
+        "openbookqa": {"$ref": "#/$defs/v9TaskCensusSummary"},
+        "mmlu-redux": {"$ref": "#/$defs/v9TaskCensusSummary"}
+      }
+    },
+    "v9DualAnchorSummary": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "artifact_type", "population", "group_count", "task_counts", "by_task", "affected_content_group_sha256", "unexpected_prompt_difference_count", "missing_rows", "duplicate_rows", "historical_to_runtime_mapping_complete", "choice_audit_lock_sha256", "records", "semantic_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5_dual_anchor_census_summary"},
+        "population": {"const": "e0_design"},
+        "group_count": {"const": 326},
+        "task_counts": {"$ref": "#/$defs/taskCounts"},
+        "by_task": {"$ref": "#/$defs/v9ByTaskCensus"},
+        "affected_content_group_sha256": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/sha256"}},
+        "unexpected_prompt_difference_count": {"const": 0},
+        "missing_rows": {"const": 0},
+        "duplicate_rows": {"const": 0},
+        "historical_to_runtime_mapping_complete": {"const": true},
+        "choice_audit_lock_sha256": {"$ref": "#/$defs/sha256"},
+        "records": {"type": "array", "minItems": 326, "maxItems": 326, "items": {"$ref": "#/$defs/v9CensusRecord"}},
+        "semantic_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "boundArtifact": {
+      "type": "object",
+      "required": ["path", "bytes", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "bytes": {"$ref": "#/$defs/positiveInteger"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "v9ExecutionBinding": {
+      "type": "object",
+      "required": ["execution_sha", "run_uid", "run_root", "source_snapshot_receipt_sha256", "source_snapshot_tree_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "execution_sha": {"$ref": "#/$defs/gitSha40"},
+        "run_uid": {"$ref": "#/$defs/runUid"},
+        "run_root": {"$ref": "#/$defs/runRoot"},
+        "source_snapshot_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "source_snapshot_tree_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "manifestProvenance": {
+      "type": "object",
+      "required": ["renderer_source_identity_sha256", "prompt_config_identity_sha256", "runtime_prompt_assets_sha256", "e0_declared_tree_algorithm", "e0_declared_tree_sha256", "generic_asset_tree_algorithm", "generic_asset_tree_sha256", "input_assets_before_sha256", "input_assets_after_sha256", "input_assets_unchanged"],
+      "additionalProperties": false,
+      "properties": {
+        "renderer_source_identity_sha256": {"$ref": "#/$defs/sha256"},
+        "prompt_config_identity_sha256": {"$ref": "#/$defs/sha256"},
+        "runtime_prompt_assets_sha256": {"$ref": "#/$defs/sha256"},
+        "e0_declared_tree_algorithm": {"const": "relative_path_nul_file_sha256_bytes_v1"},
+        "e0_declared_tree_sha256": {"const": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73"},
+        "generic_asset_tree_algorithm": {"const": "canonical_json_file_manifest_v1"},
+        "generic_asset_tree_sha256": {"const": "12f537cade1a30f6fd4e7a146c58311412f8824a6845ea4e6f7a6b5651bcb405"},
+        "input_assets_before_sha256": {"$ref": "#/$defs/sha256"},
+        "input_assets_after_sha256": {"$ref": "#/$defs/sha256"},
+        "input_assets_unchanged": {"const": true}
+      }
+    },
+    "censusBinding": {
+      "type": "object",
+      "required": ["manifest", "records", "record_count", "canonical_semantic_stream_sha256", "choice_audit_lock_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "manifest": {"$ref": "#/$defs/boundArtifact"},
+        "records": {"$ref": "#/$defs/boundArtifact"},
+        "record_count": {"const": 326},
+        "canonical_semantic_stream_sha256": {"$ref": "#/$defs/sha256"},
+        "choice_audit_lock_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "choiceAuditBinding": {
+      "type": "object",
+      "required": ["lock", "ledger", "status", "audit_semantic_sha256", "correction_actions_selected"],
+      "additionalProperties": false,
+      "properties": {
+        "lock": {"$ref": "#/$defs/boundArtifact"},
+        "ledger": {"$ref": "#/$defs/boundArtifact"},
+        "status": {"const": "A5R2_CHOICE_AUDIT_GO"},
+        "audit_semantic_sha256": {"$ref": "#/$defs/sha256"},
+        "correction_actions_selected": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["NONE", "VARIABLE_CARDINALITY_CONTRACT_ONLY", "PROVENANCE_CANONICAL_VIEW_ONLY"]}}
+      }
+    },
+    "sidecarVerifierContract": {
+      "type": "object",
+      "required": ["exact_top_level_key_set_verified", "exact_item_key_set_verified", "semantic_sha256_recomputed_after_cpu_reload", "choice_audit_lock_sha256_recomputed_and_equal", "expanded_logical_rows_present", "model_or_checkpoint_tensor_present"],
+      "additionalProperties": false,
+      "properties": {
+        "exact_top_level_key_set_verified": {"const": true},
+        "exact_item_key_set_verified": {"const": true},
+        "semantic_sha256_recomputed_after_cpu_reload": {"const": true},
+        "choice_audit_lock_sha256_recomputed_and_equal": {"const": true},
+        "expanded_logical_rows_present": {"const": false},
+        "model_or_checkpoint_tensor_present": {"const": false}
+      }
+    },
+    "sidecarBinding": {
+      "type": "object",
+      "required": ["contract_version", "path", "bytes", "file_sha256", "semantic_sha256", "item_count", "choice_audit_lock_sha256", "expanded_logical_rows_present", "custom_verifier"],
+      "additionalProperties": false,
+      "properties": {
+        "contract_version": {"const": 5},
+        "path": {"type": "string", "minLength": 1},
+        "bytes": {"$ref": "#/$defs/positiveInteger"},
+        "file_sha256": {"$ref": "#/$defs/sha256"},
+        "semantic_sha256": {"$ref": "#/$defs/sha256"},
+        "item_count": {"const": 326},
+        "choice_audit_lock_sha256": {"$ref": "#/$defs/sha256"},
+        "expanded_logical_rows_present": {"const": false},
+        "custom_verifier": {"$ref": "#/$defs/sidecarVerifierContract"}
+      }
+    },
+    "streamingBinding": {
+      "type": "object",
+      "required": ["protocol_id", "schema_sha256", "physical_chunk_rows", "synthetic_gate_sha256", "geometry_lock_receipt_sha256", "streaming_template_lock_receipt_sha256", "logical_row_coverage_exact", "streaming_semantic_replay_equal", "whole_table_materialization_detected"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_id": {"const": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming"},
+        "schema_sha256": {"$ref": "#/$defs/sha256"},
+        "physical_chunk_rows": {"const": 4096},
+        "synthetic_gate_sha256": {"$ref": "#/$defs/sha256"},
+        "geometry_lock_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "streaming_template_lock_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "logical_row_coverage_exact": {"const": true},
+        "streaming_semantic_replay_equal": {"const": true},
+        "whole_table_materialization_detected": {"const": false}
+      }
+    },
+    "v9InputHardChecks": {
+      "type": "object",
+      "required": ["historical_min4_projection_anchor_unchanged", "e0_design_membership_unchanged", "renderer_source_identity_attested", "production_renderer_exactly_attested", "production_data_tree_exactly_attested", "all_326_groups_resolved", "all_task_cardinalities_valid", "all_gold_answers_within_runtime_choices", "all_prompt_differences_classified", "historical_to_runtime_mapping_complete", "production_prompt_replay_equal", "production_alignment_replay_equal", "source_choice_order_preserved", "label_free_runtime_row_hashes_complete", "choice_audit_lock_bound_and_unchanged", "choice_corrections_match_locked_taxonomy", "logical_row_coverage_exact", "streaming_semantic_replay_equal", "bounded_peak_rss"],
+      "additionalProperties": false,
+      "properties": {
+        "historical_min4_projection_anchor_unchanged": {"const": true},
+        "e0_design_membership_unchanged": {"const": true},
+        "renderer_source_identity_attested": {"const": true},
+        "production_renderer_exactly_attested": {"const": true},
+        "production_data_tree_exactly_attested": {"const": true},
+        "all_326_groups_resolved": {"const": true},
+        "all_task_cardinalities_valid": {"const": true},
+        "all_gold_answers_within_runtime_choices": {"const": true},
+        "all_prompt_differences_classified": {"const": true},
+        "historical_to_runtime_mapping_complete": {"const": true},
+        "production_prompt_replay_equal": {"const": true},
+        "production_alignment_replay_equal": {"const": true},
+        "source_choice_order_preserved": {"const": true},
+        "label_free_runtime_row_hashes_complete": {"const": true},
+        "choice_audit_lock_bound_and_unchanged": {"const": true},
+        "choice_corrections_match_locked_taxonomy": {"const": true},
+        "logical_row_coverage_exact": {"const": true},
+        "streaming_semantic_replay_equal": {"const": true},
+        "bounded_peak_rss": {"const": true}
+      }
+    },
+    "dualHashChecks": {
+      "type": "object",
+      "required": ["e0_declared_domain_present", "e0_declared_algorithm_exact", "e0_declared_sha_matches_frozen_e0", "a5_generic_domain_present", "a5_generic_algorithm_exact", "a5_generic_sha_matches_same_domain_predecessor", "a5_generic_before_equals_after", "completed_verifier_recomputes_both_domains", "cross_domain_comparison_detected", "old_v7_artifact_modified", "blocked_execution_artifact_reused"],
+      "additionalProperties": false,
+      "properties": {
+        "e0_declared_domain_present": {"const": true},
+        "e0_declared_algorithm_exact": {"const": true},
+        "e0_declared_sha_matches_frozen_e0": {"const": true},
+        "a5_generic_domain_present": {"const": true},
+        "a5_generic_algorithm_exact": {"const": true},
+        "a5_generic_sha_matches_same_domain_predecessor": {"const": true},
+        "a5_generic_before_equals_after": {"const": true},
+        "completed_verifier_recomputes_both_domains": {"const": true},
+        "cross_domain_comparison_detected": {"const": false},
+        "old_v7_artifact_modified": {"const": false},
+        "blocked_execution_artifact_reused": {"const": false}
+      }
+    },
+    "zeroCounts": {
+      "type": "object",
+      "required": ["unexpected_prompt_difference_count", "missing_rows", "duplicate_rows"],
+      "additionalProperties": false,
+      "properties": {"unexpected_prompt_difference_count": {"const": 0}, "missing_rows": {"const": 0}, "duplicate_rows": {"const": 0}}
+    },
+    "manifestFirewall": {
+      "type": "object",
+      "required": ["old_execution_artifact_reused", "model_instantiated", "model_or_checkpoint_loaded", "model_forward_run", "gpu_or_cuda_used", "kubernetes_used", "training", "e1_pilot_consumed", "confirmatory_consumed", "e1_2_or_e1_3_authorized"],
+      "additionalProperties": false,
+      "properties": {"old_execution_artifact_reused": {"const": false}, "model_instantiated": {"const": false}, "model_or_checkpoint_loaded": {"const": false}, "model_forward_run": {"const": false}, "gpu_or_cuda_used": {"const": false}, "kubernetes_used": {"const": false}, "training": {"const": false}, "e1_pilot_consumed": {"const": false}, "confirmatory_consumed": {"const": false}, "e1_2_or_e1_3_authorized": {"const": false}}
+    },
+    "v9InputLockManifest": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "input_lock_protocol_id", "artifact_type", "status", "split_role", "execution", "task_counts", "inherited_v8_contract_binding", "choice_audit", "provenance", "census", "sidecar", "streaming", "hard_gate_checks", "hash_domain_checks", "zero_counts", "firewall", "e1_2_or_e1_3_authorized"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "input_lock_protocol_id": {"const": "fpct_e1_e0_design_input_lock_v5_a5r2_choice_cardinality"},
+        "artifact_type": {"const": "a5r2_input_lock_manifest"},
+        "status": {"const": "A5R2_INPUT_LOCK_GO_NO_MODEL_OUTPUT"},
+        "split_role": {"const": "e0_design"},
+        "execution": {"$ref": "#/$defs/v9ExecutionBinding"},
+        "task_counts": {"$ref": "#/$defs/taskCounts"},
+        "inherited_v8_contract_binding": {"$ref": "#/$defs/inheritedV8ContractBinding"},
+        "choice_audit": {"$ref": "#/$defs/choiceAuditBinding"},
+        "provenance": {"$ref": "#/$defs/manifestProvenance"},
+        "census": {"$ref": "#/$defs/censusBinding"},
+        "sidecar": {"$ref": "#/$defs/sidecarBinding"},
+        "streaming": {"$ref": "#/$defs/streamingBinding"},
+        "hard_gate_checks": {"$ref": "#/$defs/v9InputHardChecks"},
+        "hash_domain_checks": {"$ref": "#/$defs/dualHashChecks"},
+        "zero_counts": {"$ref": "#/$defs/zeroCounts"},
+        "firewall": {"$ref": "#/$defs/manifestFirewall"},
+        "e1_2_or_e1_3_authorized": {"const": false}
+      }
+    },
+    "gateChecks": {
+      "type": "object",
+      "required": ["contract_validates", "schema_self_consistent", "approval_verbatim_bound", "f782_base_bound", "37be_failure_closure_bound", "v8_four_object_immutability_pass", "inherited_v8_streaming_evidence_exact_pass", "taxonomy_precedence_pass", "task_cardinality_cases_pass", "historical_min_four_formula_pass", "label_free_firewall_pass", "descriptor_mismatch_hard_stop_pass", "normalization_prompt_parity_gate_pass", "audit_go_and_blocked_mutations_pass", "v8_inheritance_boundary_pass", "fresh_uid_root_nonreuse_pass", "atomic_failure_publishes_no_go_pass", "natural_e0_design_accessed", "model_or_checkpoint_loaded", "model_forward_run", "gpu_cuda_or_kubernetes_used", "training", "e1_2_or_e1_3_authorized"],
+      "additionalProperties": false,
+      "properties": {
+        "contract_validates": {"const": true},
+        "schema_self_consistent": {"const": true},
+        "approval_verbatim_bound": {"const": true},
+        "f782_base_bound": {"const": true},
+        "37be_failure_closure_bound": {"const": true},
+        "v8_four_object_immutability_pass": {"const": true},
+        "inherited_v8_streaming_evidence_exact_pass": {"const": true},
+        "taxonomy_precedence_pass": {"const": true},
+        "task_cardinality_cases_pass": {"const": true},
+        "historical_min_four_formula_pass": {"const": true},
+        "label_free_firewall_pass": {"const": true},
+        "descriptor_mismatch_hard_stop_pass": {"const": true},
+        "normalization_prompt_parity_gate_pass": {"const": true},
+        "audit_go_and_blocked_mutations_pass": {"const": true},
+        "v8_inheritance_boundary_pass": {"const": true},
+        "fresh_uid_root_nonreuse_pass": {"const": true},
+        "atomic_failure_publishes_no_go_pass": {"const": true},
+        "natural_e0_design_accessed": {"const": false},
+        "model_or_checkpoint_loaded": {"const": false},
+        "model_forward_run": {"const": false},
+        "gpu_cuda_or_kubernetes_used": {"const": false},
+        "training": {"const": false},
+        "e1_2_or_e1_3_authorized": {"const": false}
+      }
+    },
+    "syntheticGate": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "artifact_type", "status", "base_commit", "blocked_execution_sha", "blocked_failure_closure_sha256", "v8_objects", "inherited_v8_streaming_evidence", "v9_artifacts", "tracked_files", "execution_tree_sha256", "checks", "test_count", "test_output_sha256", "evidence_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r2_choice_cardinality_synthetic_gate"},
+        "status": {"const": "GO_PRE_NATURAL_A5R2_CHOICE_CARDINALITY_HARD_GATE"},
+        "base_commit": {"const": "f782128774dd88081194c2873efd707044d1db2c"},
+        "blocked_execution_sha": {"const": "37be816ad611b8b0d916bd98c840c5f31efe2b50"},
+        "blocked_failure_closure_sha256": {"const": "ec3ae949b557da957a1a1f295f41b91b8522420445b5479a945b1f59b5de8e8a"},
+        "v8_objects": {"$ref": "#/$defs/v8ObjectMap"},
+        "inherited_v8_streaming_evidence": {"$ref": "#/$defs/inheritedV8StreamingEvidence"},
+        "v9_artifacts": {"type": "array", "minItems": 3, "uniqueItems": true, "items": {"$ref": "#/$defs/fileBinding"}},
+        "tracked_files": {"type": "array", "minItems": 3, "uniqueItems": true, "items": {"$ref": "#/$defs/fileBinding"}},
+        "execution_tree_sha256": {"$ref": "#/$defs/sha256"},
+        "checks": {"$ref": "#/$defs/gateChecks"},
+        "test_count": {"$ref": "#/$defs/positiveInteger"},
+        "test_output_sha256": {"$ref": "#/$defs/sha256"},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "inheritedV8ContractBinding": {
+      "type": "object",
+      "required": ["protocol_id", "contract_path", "contract_sha256", "schema_path", "schema_sha256", "gate_path", "gate_sha256", "objects_independently_validated", "inherited_checks_replayed", "historical_v8_natural_receipt_referenced"],
+      "additionalProperties": false,
+      "properties": {
+        "protocol_id": {"const": "fpct_e1_mechanism_audit_v8_a5r1_hash_domains"},
+        "contract_path": {"const": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_contract.json"},
+        "contract_sha256": {"const": "643151b67d98c84c1120b52705b0fe837fb4106664f10200ada1a692c744a0b1"},
+        "schema_path": {"const": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_schema.json"},
+        "schema_sha256": {"const": "7bd2478f7ef3cfd32e752056cf161b8575b84a1f65088c84a0d2c37aec43704b"},
+        "gate_path": {"const": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_synthetic_gate.json"},
+        "gate_sha256": {"const": "a2e53784fa46d2f63963bdb41e327a4e17936cce2bff765802b34f3d87869a9f"},
+        "objects_independently_validated": {"const": true},
+        "inherited_checks_replayed": {"const": true},
+        "historical_v8_natural_receipt_referenced": {"const": false}
+      }
+    },
+    "goReceiptFirewall": {
+      "type": "object",
+      "required": ["old_execution_artifact_reused", "whole_table_materialization_detected", "model_instantiated", "model_or_checkpoint_loaded", "model_forward_run", "gpu_or_kubernetes_used", "e1_pilot_consumed", "confirmatory_consumed", "e1_2_or_e1_3_authorized"],
+      "additionalProperties": false,
+      "properties": {"old_execution_artifact_reused": {"const": false}, "whole_table_materialization_detected": {"const": false}, "model_instantiated": {"const": false}, "model_or_checkpoint_loaded": {"const": false}, "model_forward_run": {"const": false}, "gpu_or_kubernetes_used": {"const": false}, "e1_pilot_consumed": {"const": false}, "confirmatory_consumed": {"const": false}, "e1_2_or_e1_3_authorized": {"const": false}}
+    },
+    "inputGoReceipt": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "artifact_type", "status", "execution_sha", "run_uid", "run_root", "source_snapshot_receipt_sha256", "prompt_census_manifest_sha256", "input_lock_manifest_sha256", "choice_audit_lock", "choice_audit_lock_sha256", "inherited_v8_contract_binding", "e0_declared_tree_algorithm", "e0_declared_tree_sha256", "generic_asset_tree_algorithm", "generic_asset_tree_sha256", "checks", "hash_domain_checks", "firewall", "zero_counts", "audit_restarted_from_group_one", "input_lock_restarted_from_group_one", "scientific_result", "resume_allowed", "artifact_reuse_allowed", "e1_2_or_e1_3_authorized", "next_state", "evidence_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r2_input_lock_go_receipt"},
+        "status": {"const": "A5R2_INPUT_LOCK_GO"},
+        "execution_sha": {"$ref": "#/$defs/gitSha40"},
+        "run_uid": {"$ref": "#/$defs/runUid"},
+        "run_root": {"$ref": "#/$defs/runRoot"},
+        "source_snapshot_receipt_sha256": {"$ref": "#/$defs/sha256"},
+        "prompt_census_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "input_lock_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "choice_audit_lock": {"$ref": "#/$defs/boundArtifact"},
+        "choice_audit_lock_sha256": {"$ref": "#/$defs/sha256"},
+        "inherited_v8_contract_binding": {"$ref": "#/$defs/inheritedV8ContractBinding"},
+        "e0_declared_tree_algorithm": {"const": "relative_path_nul_file_sha256_bytes_v1"},
+        "e0_declared_tree_sha256": {"const": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73"},
+        "generic_asset_tree_algorithm": {"const": "canonical_json_file_manifest_v1"},
+        "generic_asset_tree_sha256": {"const": "12f537cade1a30f6fd4e7a146c58311412f8824a6845ea4e6f7a6b5651bcb405"},
+        "checks": {"$ref": "#/$defs/v9InputHardChecks"},
+        "hash_domain_checks": {"$ref": "#/$defs/dualHashChecks"},
+        "firewall": {"$ref": "#/$defs/goReceiptFirewall"},
+        "zero_counts": {"$ref": "#/$defs/zeroCounts"},
+        "audit_restarted_from_group_one": {"const": true},
+        "input_lock_restarted_from_group_one": {"const": true},
+        "scientific_result": {"const": false},
+        "resume_allowed": {"const": false},
+        "artifact_reuse_allowed": {"const": false},
+        "e1_2_or_e1_3_authorized": {"const": false},
+        "next_state": {"const": "HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED"},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "inputBlockedReceipt": {
+      "type": "object",
+      "required": ["schema_version", "protocol_id", "artifact_type", "status", "execution_sha", "run_uid", "run_root", "failure_stage", "failure_code", "failure_detail_sha256", "failed_group_ordinal", "choice_audit_lock", "inherited_v8_contract_binding", "partial_audit_staging_published", "complete_choice_audit_lock_published", "resume_allowed", "artifact_reuse_allowed", "scientific_result", "model_or_checkpoint_loaded", "model_forward_run", "gpu_cuda_or_kubernetes_used", "training", "e1_2_or_e1_3_authorized", "e1_pilot_or_confirmatory_accessed", "next_state", "evidence_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 9},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r2_input_lock_blocked_receipt"},
+        "status": {"const": "A5R2_INPUT_LOCK_BLOCKED"},
+        "execution_sha": {"$ref": "#/$defs/gitSha40"},
+        "run_uid": {"$ref": "#/$defs/runUid"},
+        "run_root": {"$ref": "#/$defs/runRoot"},
+        "failure_stage": {"enum": ["PRECOMPUTATION", "CHOICE_AUDIT", "CHOICE_AUDIT_COMPLETE_MECHANICAL_BLOCK", "CHOICE_AUDIT_VERIFICATION", "CORRECTION", "V9_INPUT_LOCK", "COMPLETED_VERIFICATION"]},
+        "failure_code": {"type": "string", "pattern": "^[A-Z0-9_]+$", "minLength": 1},
+        "failure_detail_sha256": {"$ref": "#/$defs/sha256"},
+        "failed_group_ordinal": {"oneOf": [{"const": null}, {"type": "integer", "minimum": 1, "maximum": 326}]},
+        "choice_audit_lock": {"oneOf": [{"const": null}, {"$ref": "#/$defs/artifactDescriptor"}]},
+        "inherited_v8_contract_binding": {"$ref": "#/$defs/inheritedV8ContractBinding"},
+        "partial_audit_staging_published": {"const": false},
+        "complete_choice_audit_lock_published": {"type": "boolean"},
+        "resume_allowed": {"const": false},
+        "artifact_reuse_allowed": {"const": false},
+        "scientific_result": {"const": false},
+        "model_or_checkpoint_loaded": {"const": false},
+        "model_forward_run": {"const": false},
+        "gpu_cuda_or_kubernetes_used": {"const": false},
+        "training": {"const": false},
+        "e1_2_or_e1_3_authorized": {"const": false},
+        "e1_pilot_or_confirmatory_accessed": {"const": false},
+        "next_state": {"const": "HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED"},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"failure_stage": {"const": "CHOICE_AUDIT"}}, "required": ["failure_stage"]},
+          "then": {"properties": {"failed_group_ordinal": {"type": "integer", "minimum": 1, "maximum": 326}, "choice_audit_lock": {"const": null}, "complete_choice_audit_lock_published": {"const": false}}}
+        },
+        {
+          "if": {"properties": {"failure_stage": {"const": "CHOICE_AUDIT_COMPLETE_MECHANICAL_BLOCK"}}, "required": ["failure_stage"]},
+          "then": {"properties": {"failed_group_ordinal": {"type": "integer", "minimum": 1, "maximum": 326}, "choice_audit_lock": {"$ref": "#/$defs/artifactDescriptor"}, "complete_choice_audit_lock_published": {"const": true}}}
+        },
+        {
+          "if": {"properties": {"failure_stage": {"const": "V9_INPUT_LOCK"}}, "required": ["failure_stage"]},
+          "then": {"properties": {"choice_audit_lock": {"$ref": "#/$defs/artifactDescriptor"}, "complete_choice_audit_lock_published": {"const": true}}}
+        }
+      ]
+    }
+  }
+}

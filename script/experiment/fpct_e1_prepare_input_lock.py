@@ -12,6 +12,8 @@ template universe before any E1 model output is produced.
 from __future__ import annotations
 
 import argparse
+import ctypes
+import errno
 import hashlib
 import importlib
 import json
@@ -107,29 +109,34 @@ from script.analysis.fpct_e1_streaming_verify import (
     write_parquet_stream_artifact,
 )
 from script.experiment.fpct_e1_a5_prompt_provenance import (
+    A5R2_AMENDMENT_ID,
+    A5R2_PROTOCOL_ID,
     A5R1_AMENDMENT_ID,
     A5R1_PROTOCOL_ID,
     EXTRA_CHOICES_ONLY,
     HISTORICAL_EXACT,
     attest_e0_renderer_identity,
     build_census_manifest,
+    build_choice_cardinality_audit_lock_v9,
+    choice_audit_projection_v9,
+    choice_cardinality_record_v9,
+    choice_payload_v9,
     dual_anchor_record,
-    full_question_choices,
-    historical_projected_example,
-    raw_full_row_sha256,
+    historical_projected_example_v9,
     summarize_dual_anchor_census,
+    summarize_choice_cardinality_audit_v9,
 )
 
 
-SCHEMA_VERSION = 4
-PROTOCOL_ID = "fpct_e1_e0_design_input_lock_v4_a5r1_hash_domains"
-A5_PROTOCOL_ID = A5R1_PROTOCOL_ID
-A5_ARTIFACT_SCHEMA_VERSION = 8
-A5_SYNTHETIC_GATE_ARTIFACT_TYPE = "a5r1_hash_domain_synthetic_gate"
-A5_SYNTHETIC_GATE_STATUS = "GO_PRE_NATURAL_A5R1_HASH_DOMAIN_HARD_GATE"
-A5_INPUT_LOCK_MANIFEST_ARTIFACT_TYPE = "a5r1_input_lock_manifest"
-A5_INPUT_LOCK_GO_ARTIFACT_TYPE = "a5r1_input_lock_receipt"
-A5_INPUT_LOCK_BLOCKED_ARTIFACT_TYPE = "a5r1_input_lock_blocked_receipt"
+SCHEMA_VERSION = 5
+PROTOCOL_ID = "fpct_e1_e0_design_input_lock_v5_a5r2_choice_cardinality"
+A5_PROTOCOL_ID = A5R2_PROTOCOL_ID
+A5_ARTIFACT_SCHEMA_VERSION = 9
+A5_SYNTHETIC_GATE_ARTIFACT_TYPE = "a5r2_choice_cardinality_synthetic_gate"
+A5_SYNTHETIC_GATE_STATUS = "GO_PRE_NATURAL_A5R2_CHOICE_CARDINALITY_HARD_GATE"
+A5_INPUT_LOCK_MANIFEST_ARTIFACT_TYPE = "a5r2_input_lock_manifest"
+A5_INPUT_LOCK_GO_ARTIFACT_TYPE = "a5r2_input_lock_go_receipt"
+A5_INPUT_LOCK_BLOCKED_ARTIFACT_TYPE = "a5r2_input_lock_blocked_receipt"
 GENERIC_ASSET_TREE_ALGORITHM = "canonical_json_file_manifest_v1"
 E0_DECLARED_TREE_ALGORITHM = "relative_path_nul_file_sha256_bytes_v1"
 A5R1_HASH_REQUIRED_TRUE = frozenset(
@@ -167,30 +174,144 @@ A4_HISTORICAL_SYNTHETIC_GATE_RELATIVE = Path(
     "recipe/eval_recipe/fpct_e1/e1_streaming_synthetic_gate.json"
 )
 A5_PROMPT_CONTRACT_RELATIVE = Path(
-    "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_contract.json"
+    "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_contract.json"
 )
 A5_PROMPT_SCHEMA_RELATIVE = Path(
-    "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_schema.json"
+    "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_schema.json"
 )
 A5_SYNTHETIC_GATE_RELATIVE = Path(
-    "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_synthetic_gate.json"
+    "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_synthetic_gate.json"
 )
+A5R2_POPULATION_SOURCE_SHA256 = {
+    "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json": (
+        "030b4236ed9bec82b145227259733b32a8c76af63adf2fa0f1282e3638b5b11d"
+    ),
+    "recipe/eval_recipe/fpct_e0/exploratory_dev_manifest.json": (
+        "25fe8c4dceeaa1174e1433a02ec86f312d909d7d58c3c9a8c7f2caa9d908216a"
+    ),
+}
 SOURCE_SNAPSHOT_RECEIPT_NAME = ".fpct_e1_source_snapshot_receipt.json"
 INPUT_LOCK_ROOT_NAME = "input_lock"
-RUN_UID_TEMPLATE = "fpct-e1-a5r1-hash-domains-{prefix}-v1"
-RUN_ROOT_TEMPLATE = "fpct-e1-a5r1-{prefix}-v1"
+RUN_UID_TEMPLATE = "fpct-e1-a5r2-choice-cardinality-{prefix}-v1"
+RUN_ROOT_TEMPLATE = "fpct-e1-a5r2-{prefix}-v1"
 HISTORICAL_EXECUTION_PREFIXES = frozenset(
-    ("744a943", "d1698177", "612697df", "07755a40", "9b248d20")
+    (
+        "744a943",
+        "d1698177",
+        "612697df",
+        "07755a40",
+        "9b248d20",
+        "37be816a",
+    )
 )
 EXECUTION_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
-BLOCKED_RECEIPT_NAME = "A5_INPUT_LOCK_BLOCKED.json"
-GO_RECEIPT_NAME = "A5_INPUT_LOCK_GO.json"
+BLOCKED_RECEIPT_NAME = "A5R2_INPUT_LOCK_BLOCKED.json"
+GO_RECEIPT_NAME = "A5R2_INPUT_LOCK_GO.json"
 GO_QUARANTINE_PATTERN = re.compile(
     rf"^\.{re.escape(GO_RECEIPT_NAME)}\.invalid\.([0-9a-f]{{64}})\.json$"
 )
-RUN_IDENTITY_NAME = "a5_input_lock_execution_identity.json"
+RUN_IDENTITY_NAME = "a5r2_input_lock_execution_identity.json"
 PROMPT_CENSUS_NAME = "a5_prompt_census_manifest.json"
 PROMPT_CENSUS_RECORDS_NAME = "a5_prompt_census_records.jsonl"
+CHOICE_AUDIT_ROOT_NAME = "choice_audit"
+CHOICE_AUDIT_LEDGER_NAME = "choice_cardinality_audit_rows.jsonl"
+CHOICE_AUDIT_SUMMARY_NAME = "choice_cardinality_audit_summary.json"
+CHOICE_AUDIT_LOCK_NAME = "choice_cardinality_audit_lock.json"
+SIDECAR_TOP_LEVEL_KEYS_V5 = frozenset(
+    {
+        "schema_version",
+        "protocol_id",
+        "status",
+        "split_role",
+        "items",
+        "dimensions",
+        "streaming_contract",
+        "execution_identity",
+        "choice_audit",
+        "a5_prompt_provenance",
+        "input_asset_state",
+        "source",
+        "tokenizers",
+        "runtime_assets",
+        "task_contract",
+        "e1_pilot_consumed",
+        "model_or_checkpoint_loaded",
+        "cuda_initialized",
+        "firewall",
+        "expanded_row_absence_proof",
+    }
+)
+SIDECAR_ITEM_KEYS_V5 = frozenset(
+    {
+        "task",
+        "sample_sha256",
+        "content_group_sha256",
+        "descriptor",
+        "gold_answer",
+        "gold_response",
+        "feature",
+        "alignment_lock",
+        "prompt_generation_inputs",
+        "prompt_generation_inputs_sha256",
+        "provenance",
+        "answer_queries",
+        "certified_parents",
+        "Q_s",
+        "P_s",
+        "N_s",
+        "answer_query_sequence_sha256",
+        "parent_sequence_sha256",
+        "expected_chunk_count",
+        "expected_long_form_rows",
+        "raw_topology_ledger",
+        "raw_topology_compact",
+        "raw_topology_compact_sha256",
+        "instruction_end",
+        "rendered_prompt_sha256",
+        "production_rendered_prompt_sha256",
+        "historical_rendered_prompt_sha256",
+        "production_alignment_sha256",
+        "historical_alignment_sha256",
+        "label_free_runtime_row_sha256",
+        "choice_audit_row_sha256",
+        "choice_root_cause_class",
+        "choice_audit_lock_sha256",
+        "prompt_relation",
+        "choice_difference_only",
+        "item_semantic_sha256",
+    }
+)
+
+
+class A5R2InputLockError(RuntimeError):
+    """Safe terminal context for one fail-closed A5R2 stage/row."""
+
+    def __init__(
+        self,
+        failure_stage: str,
+        failure_code: str,
+        *,
+        failed_group_ordinal: int | None = None,
+    ) -> None:
+        if failure_stage not in {
+            "PRECOMPUTATION",
+            "CHOICE_AUDIT",
+            "CHOICE_AUDIT_COMPLETE_MECHANICAL_BLOCK",
+            "CHOICE_AUDIT_VERIFICATION",
+            "CORRECTION",
+            "V9_INPUT_LOCK",
+            "COMPLETED_VERIFICATION",
+        }:
+            raise ValueError("invalid A5R2 failure stage")
+        normalized = re.sub(r"[^A-Z0-9]+", "_", failure_code.upper()).strip("_")
+        if not normalized:
+            raise ValueError("invalid A5R2 failure code")
+        if failed_group_ordinal is not None and not 1 <= failed_group_ordinal <= 326:
+            raise ValueError("invalid A5R2 failed group ordinal")
+        self.failure_stage = failure_stage
+        self.failure_code = normalized
+        self.failed_group_ordinal = failed_group_ordinal
+        super().__init__(f"{failure_stage}:{normalized}")
 
 SEALED_PREPARE_SOURCE_CLOSURE = {
     "capture_runner": Path("script/experiment/fpct_e1_capture_runner.py"),
@@ -473,6 +594,46 @@ def _fsync_directory(path: Path) -> None:
         os.close(descriptor)
 
 
+def _rename_directory_no_replace(source: Path, destination: Path) -> None:
+    """Atomically publish one directory without replacing any destination.
+
+    ``os.rename`` may replace a concurrently created empty directory, which is
+    incompatible with the immutable choice-audit publication contract.  The
+    formal runtime is Linux, so fail closed unless ``renameat2`` with
+    ``RENAME_NOREPLACE`` is available.
+    """
+
+    source = source.absolute()
+    destination = destination.absolute()
+    if source.parent != destination.parent:
+        raise ValueError("A5R2 audit publication must stay on one filesystem")
+    libc = ctypes.CDLL(None, use_errno=True)
+    renameat2 = getattr(libc, "renameat2", None)
+    if renameat2 is None:
+        raise RuntimeError("A5R2 atomic no-replace directory rename unavailable")
+    renameat2.argtypes = [
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_int,
+        ctypes.c_char_p,
+        ctypes.c_uint,
+    ]
+    renameat2.restype = ctypes.c_int
+    result = renameat2(
+        -100,  # AT_FDCWD
+        os.fsencode(source),
+        -100,
+        os.fsencode(destination),
+        1,  # RENAME_NOREPLACE
+    )
+    if result == 0:
+        return
+    error_number = ctypes.get_errno()
+    if error_number in {errno.EEXIST, errno.ENOTEMPTY}:
+        raise FileExistsError(error_number, os.strerror(error_number), destination)
+    raise OSError(error_number, os.strerror(error_number), destination)
+
+
 def publish_bytes_no_overwrite(path: Path, payload: bytes) -> str:
     """Publish immutable bytes atomically and verify any concurrent winner.
 
@@ -513,6 +674,20 @@ def atomic_json(path: Path, value: Any) -> None:
 
 def nested_sha256(value: Any) -> str:
     return hashlib.sha256(canonical_json_bytes(_to_python(value))).hexdigest()
+
+
+def _a5r2_evidence_sha256(value: Mapping[str, Any]) -> str:
+    payload = {
+        key: child for key, child in value.items() if key != "evidence_sha256"
+    }
+    encoded = json.dumps(
+        payload,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def task_membership_sha256(
@@ -1422,10 +1597,16 @@ def _a5r1_hash_domain_checks(
     blocked = contract.get("immutable_predecessors", {}).get(
         "blocked_execution", {}
     )
+    blocked_a5r1 = contract.get("immutable_predecessor", {})
     blocked_execution_artifact_reused = bool(
         execution_identity.get("execution_sha") == blocked.get("execution_sha")
         or execution_identity.get("run_uid") == blocked.get("run_uid")
         or execution_identity.get("run_root") == blocked.get("run_root")
+        or execution_identity.get("execution_sha")
+        == blocked_a5r1.get("blocked_execution_sha")
+        or execution_identity.get("run_uid") == blocked_a5r1.get("blocked_run_uid")
+        or execution_identity.get("run_root")
+        == blocked_a5r1.get("blocked_run_root")
     )
     return {
         "e0_declared_domain_present": bool(before["e0_declared_tree_sha256"]),
@@ -1513,52 +1694,912 @@ def _load_a5_prompt_contract(repo_root: Path) -> dict[str, Any]:
         successor.get("schema_version") != A5_ARTIFACT_SCHEMA_VERSION
         or successor.get("protocol_id") != A5_PROTOCOL_ID
         or successor.get("amendment_id")
-        != A5R1_AMENDMENT_ID
-        or successor.get("approval", {}).get("selected_option")
-        != "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT"
+        != A5R2_AMENDMENT_ID
+        or successor.get("approval", {}).get("approved") is not True
+        or successor.get("approval", {}).get(
+            "prospective_before_successor_natural_scan"
+        )
+        is not True
     ):
         raise ValueError("A5 prompt contract identity/approval is invalid")
-    base_record = successor.get("base_scientific_contract", {})
+    if successor.get("scientific_invariants", {}).get(
+        "population_source_sha256"
+    ) != A5R2_POPULATION_SOURCE_SHA256:
+        raise ValueError("A5R2 frozen population-source contract changed")
+    for relative, expected_sha256 in A5R2_POPULATION_SOURCE_SHA256.items():
+        source = repo_root / relative
+        if (
+            not source.is_file()
+            or source.is_symlink()
+            or sha256_file(source) != expected_sha256
+        ):
+            raise ValueError(f"A5R2 frozen population source changed: {relative}")
+    v8_record = successor.get("v8_inheritance", {})
+    if (
+        v8_record.get("protocol_id") != A5R1_PROTOCOL_ID
+        or v8_record.get("contract_path")
+        != "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_contract.json"
+    ):
+        raise ValueError("A5R2 inherited v8 contract identity changed")
+    v8_path = repo_root / str(v8_record.get("contract_path", ""))
+    if (
+        not v8_path.is_file()
+        or v8_path.is_symlink()
+        or sha256_file(v8_path) != v8_record.get("contract_sha256")
+    ):
+        raise ValueError("A5R2 inherited v8 contract changed")
+    v8 = json.loads(v8_path.read_text(encoding="utf-8"))
+    if (
+        v8.get("schema_version") != 8
+        or v8.get("protocol_id") != A5R1_PROTOCOL_ID
+        or v8.get("amendment_id") != A5R1_AMENDMENT_ID
+    ):
+        raise ValueError("A5R2 inherited v8 contract is invalid")
+    immutable_v8 = successor.get("immutable_predecessor", {}).get(
+        "v8_objects", {}
+    )
+    if not isinstance(immutable_v8, Mapping) or not immutable_v8:
+        raise ValueError("A5R2 immutable v8 closure is missing")
+    for relative, digest in immutable_v8.items():
+        predecessor = repo_root / str(relative)
+        if (
+            not predecessor.is_file()
+            or predecessor.is_symlink()
+            or sha256_file(predecessor) != digest
+        ):
+            raise ValueError("A5R2 immutable v8 object changed")
+    closure = successor.get("immutable_predecessor", {})
+    closure_path = repo_root / str(closure.get("closure_path", ""))
+    if (
+        not closure_path.is_file()
+        or closure_path.is_symlink()
+        or sha256_file(closure_path) != closure.get("closure_sha256")
+        or closure.get("resume_allowed") is not False
+        or closure.get("artifact_reuse_allowed") is not False
+    ):
+        raise ValueError("A5R2 blocked A5R1 closure changed")
+    base_record = v8.get("base_scientific_contract", {})
     if base_record.get("path") != "recipe/eval_recipe/fpct_e1/e1_a5_prompt_contract.json":
-        raise ValueError("A5R1 inherited v7 scientific contract path changed")
+        raise ValueError("A5R2 inherited v7 scientific contract path changed")
     base_path = repo_root / str(base_record.get("path", ""))
     if (
         not base_path.is_file()
         or base_path.is_symlink()
         or sha256_file(base_path) != base_record.get("sha256")
     ):
-        raise ValueError("A5R1 inherited v7 scientific contract changed")
+        raise ValueError("A5R2 inherited v7 scientific contract changed")
     base = json.loads(base_path.read_text(encoding="utf-8"))
     if (
         base.get("schema_version") != 7
         or base.get("protocol_id")
         != "fpct_e1_mechanism_audit_v7_actual_e0_runtime_prompt"
     ):
-        raise ValueError("A5R1 inherited v7 scientific contract is invalid")
-    contract = {**base, **successor}
+        raise ValueError("A5R2 inherited v7 scientific contract is invalid")
+    contract = {**base, **v8, **successor}
     contract["asset_identity"] = {
         **base.get("asset_identity", {}),
+        **v8.get("asset_identity", {}),
         **successor.get("asset_identity", {}),
     }
+    contract["immutable_predecessors"] = dict(
+        v8.get("immutable_predecessors", {})
+    )
     contract["a5_pre_natural_gate"] = {
         **base.get("a5_pre_natural_gate", {}),
         "path": successor.get("versioned_artifacts", {}).get(
-            "pre_natural_gate"
+            "future_pre_natural_gate"
         ),
     }
     population = contract.get("population", {})
+    scientific = successor.get("scientific_invariants", {})
     if (
         population.get("distinct_content_groups") != 326
         or population.get("task_order") != list(TASKS)
         or population.get("task_counts") != TASK_GROUP_COUNTS
         or population.get("start_group_ordinal_one_based") != 1
         or population.get("old_group_161_resume_allowed") is not False
+        or scientific.get("distinct_content_groups") != 326
+        or scientific.get("task_order") != list(TASKS)
+        or scientific.get("task_counts") != TASK_GROUP_COUNTS
+        or scientific.get("start_group_ordinal_one_based") != 1
     ):
         raise ValueError("A5 prompt contract population/order changed")
     gate = contract.get("a5_pre_natural_gate", {})
     if gate.get("path") != A5_SYNTHETIC_GATE_RELATIVE.as_posix():
         raise ValueError("A5 prompt contract synthetic-gate path changed")
     return contract
+
+
+def _a5r2_dataset_identity(
+    task: str, descriptor: Mapping[str, Any]
+) -> tuple[str, str, str]:
+    """Return the frozen label-free dataset/config/split identity."""
+
+    if task == "ai2-arc":
+        return "allenai/ai2_arc", "ARC-Challenge", "test"
+    if task == "openbookqa":
+        return "openbookqa", "main", "test"
+    if task == "mmlu-redux":
+        subject = str(descriptor.get("subject", ""))
+        if not subject:
+            raise ValueError("A5R2 MMLU descriptor subject is empty")
+        return "edinburgh-dawg/mmlu-redux-2.0", subject, "test"
+    raise ValueError(f"unsupported A5R2 audit task: {task}")
+
+
+def _load_a5r2_choice_audit_example(
+    *,
+    task: str,
+    descriptor: Mapping[str, Any],
+    data_root: Path,
+    cache: Mapping[tuple[str, str], Any] | dict[tuple[str, str], Any],
+) -> tuple[Mapping[str, Any], dict[str, Any]]:
+    """Load through the production loader and record its exact request."""
+
+    dataset_id, dataset_config, dataset_split = _a5r2_dataset_identity(
+        task, descriptor
+    )
+    evaluation_question_id = int(descriptor["evaluation_question_id"])
+    example = _load_task_example(
+        task=task,
+        descriptor=descriptor,
+        data_root=data_root,
+        cache=cache,
+    )
+    return example, {
+        "dataset_id": dataset_id,
+        "dataset_config": dataset_config,
+        "dataset_split": dataset_split,
+        "evaluation_question_id": evaluation_question_id,
+        # The materialized E0 rows expose no dataset-native ID in the same
+        # domain as the historical source_row_id.
+        "non_outcome_native_row_id": None,
+    }
+
+
+def _a5r2_feature_schema_sha256(task: str, example: Mapping[str, Any]) -> str:
+    """Hash choice-container structure without reading or hashing row outcomes."""
+
+    raw = example.get("choices")
+    if isinstance(raw, Mapping):
+        payload = {
+            "task": task,
+            "container": "mapping",
+            "keys": sorted(str(key) for key in raw if str(key) in {"text", "label"}),
+            "text_container_type": type(raw.get("text")).__name__,
+            "label_container_type": type(raw.get("label")).__name__,
+        }
+    elif isinstance(raw, (list, tuple)):
+        member_keys = []
+        for member in raw:
+            if isinstance(member, Mapping):
+                member_keys.append(
+                    sorted(
+                        str(key)
+                        for key in member
+                        if str(key) in {"text", "label"}
+                    )
+                )
+            else:
+                member_keys.append([])
+        payload = {
+            "task": task,
+            "container": type(raw).__name__,
+            "member_keys": member_keys,
+        }
+    else:
+        payload = {
+            "task": task,
+            "container": type(raw).__name__,
+            "finite_conversion_methods": sorted(
+                name
+                for name in ("to_pylist", "as_py", "tolist")
+                if callable(getattr(raw, name, None))
+            ),
+        }
+    return nested_sha256(payload)
+
+
+def _a5r2_allowlisted_choice_row(
+    task: str, example: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Drop every non-prompt field before any A5R2 audit projection call."""
+
+    if task == "ai2-arc":
+        question_key = "question"
+    elif task == "openbookqa":
+        question_key = "question_stem"
+    elif task == "mmlu-redux":
+        question_key = "question"
+    else:
+        raise ValueError(f"unsupported A5R2 audit task: {task}")
+    question = example.get(question_key)
+    raw_choices = example.get("choices")
+    if isinstance(raw_choices, Mapping):
+        choices: Any = {
+            key: raw_choices[key]
+            for key in ("text", "label")
+            if key in raw_choices
+        }
+    elif isinstance(raw_choices, list):
+        choices = [
+            (
+                {
+                    key: member[key]
+                    for key in ("text", "label")
+                    if key in member
+                }
+                if isinstance(member, Mapping)
+                else member
+            )
+            for member in raw_choices
+        ]
+    elif isinstance(raw_choices, tuple):
+        choices = tuple(raw_choices)
+    else:
+        # Feature-backed values are held only through this allowlisted key; the
+        # full example is deleted by the caller before pure audit/formatter use.
+        choices = raw_choices
+    return {question_key: question, "choices": choices}
+
+
+def _a5r2_choice_descriptor_pair(
+    task: str,
+    descriptor: Mapping[str, Any],
+    allowlisted_example: Mapping[str, Any],
+    loader_trace: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Build expected/observed views from structural, non-outcome provenance."""
+
+    dataset_id, dataset_config, dataset_split = _a5r2_dataset_identity(
+        task, descriptor
+    )
+    question_id = int(descriptor["evaluation_question_id"])
+    feature_schema_sha256 = _a5r2_feature_schema_sha256(
+        task, allowlisted_example
+    )
+    # The frozen E0 descriptor records an original source-row ordinal, not a
+    # dataset-native ID carried by the materialized dev row.  Do not invent an
+    # equivalence between those domains; content/sample hashes below bind the
+    # row, while native ID is explicitly unavailable on both views.
+    expected = {
+        "dataset_id": dataset_id,
+        "dataset_config": dataset_config,
+        "dataset_split": dataset_split,
+        "evaluation_question_id": question_id,
+        "non_outcome_native_row_id": None,
+        "feature_schema_sha256": feature_schema_sha256,
+    }
+    observed = {
+        "dataset_id": str(loader_trace["dataset_id"]),
+        "dataset_config": str(loader_trace["dataset_config"]),
+        "dataset_split": str(loader_trace["dataset_split"]),
+        "evaluation_question_id": int(loader_trace["evaluation_question_id"]),
+        "non_outcome_native_row_id": loader_trace.get(
+            "non_outcome_native_row_id"
+        ),
+        "feature_schema_sha256": feature_schema_sha256,
+    }
+    return {"expected": expected, "observed": observed}
+
+
+def _load_frozen_a5r2_dev(repo_root: Path) -> dict[str, Any]:
+    """Independently reload the frozen membership and E0 row descriptors."""
+
+    for relative, expected_sha256 in A5R2_POPULATION_SOURCE_SHA256.items():
+        source = repo_root / relative
+        if (
+            not source.is_file()
+            or source.is_symlink()
+            or sha256_file(source) != expected_sha256
+        ):
+            raise RuntimeError(f"A5R2 frozen population source changed: {relative}")
+    split = load_e0_design_lock(
+        repo_root / "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"
+    )
+    return verify_e0_dev_anchor(repo_root / E0_DEV_MANIFEST_RELATIVE, split)
+
+
+def _a5r2_frozen_identity_checks(
+    records: Sequence[Mapping[str, Any]],
+    dev: Mapping[str, Any],
+) -> dict[str, bool]:
+    """Compare a ledger with the exact frozen membership, order and loader coordinates."""
+
+    ordered_descriptors = [
+        (group, descriptor)
+        for task_name in TASKS
+        for group, descriptor in sorted(dev["records"].items())
+        if descriptor["task"] == task_name
+    ]
+    expected_members = [
+        (
+            str(descriptor["task"]),
+            str(group),
+            str(descriptor["sample_sha256"]),
+        )
+        for group, descriptor in ordered_descriptors
+    ]
+    observed_members = [
+        (
+            str(record.get("task")),
+            str(record.get("content_group_sha256")),
+            str(record.get("sample_key_sha256")),
+        )
+        for record in records
+    ]
+    membership_verified = (
+        len(expected_members) == len(observed_members) == sum(TASK_GROUP_COUNTS.values())
+        and len(set(observed_members)) == len(observed_members)
+        and set(observed_members) == set(expected_members)
+    )
+    order_verified = observed_members == expected_members and all(
+        int(record.get("group_ordinal", -1)) == ordinal
+        for ordinal, record in enumerate(records, start=1)
+    )
+    loader_coordinates_verified = order_verified
+    if loader_coordinates_verified:
+        for record, (group, descriptor) in zip(records, ordered_descriptors):
+            dataset_id, dataset_config, dataset_split = _a5r2_dataset_identity(
+                str(descriptor["task"]), descriptor
+            )
+            if (
+                record.get("dataset_id") != dataset_id
+                or record.get("dataset_config") != dataset_config
+                or record.get("dataset_split") != dataset_split
+                or record.get("evaluation_question_id")
+                != int(descriptor["evaluation_question_id"])
+                or record.get("expected_content_group_sha256") != str(group)
+                or record.get("native_row_id_status") != "NOT_AVAILABLE"
+            ):
+                loader_coordinates_verified = False
+                break
+    return {
+        "frozen_group_sample_membership_verified": membership_verified,
+        "frozen_canonical_order_verified": order_verified,
+        "frozen_loader_coordinates_verified": loader_coordinates_verified,
+    }
+
+
+def _a5r2_choice_audit_source_bindings(repo_root: Path) -> list[dict[str, str]]:
+    relatives = (
+        Path("FPCT_E1_A5R2_CHOICE_CARDINALITY_AMENDMENT.md"),
+        A5_PROMPT_CONTRACT_RELATIVE,
+        A5_PROMPT_SCHEMA_RELATIVE,
+        A5_SYNTHETIC_GATE_RELATIVE,
+        Path("recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"),
+        E0_DEV_MANIFEST_RELATIVE,
+    )
+    bindings: list[dict[str, str]] = []
+    for relative in relatives:
+        path = repo_root / relative
+        if not path.is_file() or path.is_symlink():
+            raise FileNotFoundError(path)
+        bindings.append({"path": relative.as_posix(), "sha256": sha256_file(path)})
+    return bindings
+
+
+def _a5r2_pre_audit_asset_bindings(
+    *,
+    e0_data_root: Path,
+    contract: Mapping[str, Any],
+    execution_identity: Mapping[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Recompute both data domains and source receipt before audit row one."""
+
+    observed = _e0_data_hash_domain_projection(_e0_data_asset_tree(e0_data_root))
+    expected = contract.get("asset_identity", {}).get(
+        "materialized_e0_dev_data_tree", {}
+    )
+    for field in (
+        "e0_declared_tree_algorithm",
+        "e0_declared_tree_sha256",
+        "generic_asset_tree_algorithm",
+        "generic_asset_tree_sha256",
+        "file_count",
+        "bytes",
+    ):
+        if observed.get(field) != expected.get(field):
+            raise A5R2InputLockError(
+                "PRECOMPUTATION", "PRE_AUDIT_E0_DATA_TREE_BINDING_MISMATCH"
+            )
+    data_binding = {
+        **observed,
+        "both_domains_recomputed_before_audit_row_one": True,
+        "cross_domain_comparison_detected": False,
+    }
+    from script.experiment.fpct_e1_source_snapshot_lock import (
+        verify_source_snapshot_receipt,
+    )
+
+    receipt_record = execution_identity["source_snapshot_receipt"]
+    receipt_path = Path(str(receipt_record["path"]))
+    observed_receipt_file_sha256 = sha256_file(receipt_path)
+    if observed_receipt_file_sha256 != receipt_record["file_sha256"]:
+        raise A5R2InputLockError(
+            "PRECOMPUTATION", "PRE_AUDIT_SOURCE_RECEIPT_FILE_SHA_MISMATCH"
+        )
+    verification = verify_source_snapshot_receipt(
+        receipt_path,
+        Path(str(execution_identity["source_snapshot_root"])),
+        str(execution_identity["execution_sha"]),
+    )
+    if verification != receipt_record["verification"]:
+        raise A5R2InputLockError(
+            "PRECOMPUTATION", "PRE_AUDIT_SOURCE_SNAPSHOT_REPLAY_MISMATCH"
+        )
+    source_binding = {
+        "receipt_path": str(receipt_path),
+        "receipt_file_sha256": observed_receipt_file_sha256,
+        "receipt_sha256": str(verification["receipt_sha256"]),
+        "mounted_tree_sha256": str(
+            verification["mounted_tree_canonical_sha256"]
+        ),
+        "execution_sha": str(execution_identity["execution_sha"]),
+        "independently_verified_before_audit_row_one": True,
+    }
+    return data_binding, source_binding
+
+
+def _read_choice_cardinality_audit_ledger(path: Path) -> list[dict[str, Any]]:
+    path = _canonical_regular_file(path, "A5R2 choice-audit ledger")
+    records: list[dict[str, Any]] = []
+    with path.open("rb") as handle:
+        for line in handle:
+            if not line.endswith(b"\n") or line in {b"\n", b"\r\n"}:
+                raise RuntimeError("A5R2 choice-audit JSONL framing changed")
+            try:
+                record = json.loads(line.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise RuntimeError("A5R2 choice-audit JSONL is malformed") from error
+            if not isinstance(record, dict) or canonical_json_bytes(record) != line:
+                raise RuntimeError("A5R2 choice-audit JSONL is not canonical")
+            records.append(record)
+    return records
+
+
+def _choice_audit_artifact_descriptor(path: Path, row_count: int) -> dict[str, Any]:
+    return {
+        "relative_path": f"{CHOICE_AUDIT_ROOT_NAME}/{path.name}",
+        "sha256": sha256_file(path),
+        "bytes": path.stat().st_size,
+        "row_count": row_count,
+    }
+
+
+def _bound_artifact(path: Path) -> dict[str, Any]:
+    path = _canonical_regular_file(path, "A5R2 bound artifact")
+    return {
+        "path": str(path),
+        "bytes": path.stat().st_size,
+        "sha256": sha256_file(path),
+    }
+
+
+def _choice_audit_binding(
+    choice_audit: Mapping[str, Any], execution_identity: Mapping[str, Any]
+) -> dict[str, Any]:
+    audit_root = Path(str(execution_identity["run_root"])) / CHOICE_AUDIT_ROOT_NAME
+    return {
+        "lock": _bound_artifact(audit_root / CHOICE_AUDIT_LOCK_NAME),
+        "ledger": _bound_artifact(audit_root / CHOICE_AUDIT_LEDGER_NAME),
+        "status": choice_audit["lock"]["status"],
+        "audit_semantic_sha256": choice_audit["lock"][
+            "audit_semantic_sha256"
+        ],
+        "correction_actions_selected": list(
+            choice_audit["lock"]["correction_actions_selected"]
+        ),
+    }
+
+
+def _inherited_v8_contract_binding(
+    contract: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    inherited = (
+        contract["v8_inheritance"]
+        if contract is not None
+        else {
+            "contract_path": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_contract.json",
+            "contract_sha256": "643151b67d98c84c1120b52705b0fe837fb4106664f10200ada1a692c744a0b1",
+            "schema_path": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_schema.json",
+            "schema_sha256": "7bd2478f7ef3cfd32e752056cf161b8575b84a1f65088c84a0d2c37aec43704b",
+            "gate_path": "recipe/eval_recipe/fpct_e1/e1_a5r1_hash_domain_synthetic_gate.json",
+            "gate_sha256": "a2e53784fa46d2f63963bdb41e327a4e17936cce2bff765802b34f3d87869a9f",
+        }
+    )
+    return {
+        "protocol_id": A5R1_PROTOCOL_ID,
+        "contract_path": inherited["contract_path"],
+        "contract_sha256": inherited["contract_sha256"],
+        "schema_path": inherited["schema_path"],
+        "schema_sha256": inherited["schema_sha256"],
+        "gate_path": inherited["gate_path"],
+        "gate_sha256": inherited["gate_sha256"],
+        "objects_independently_validated": True,
+        "inherited_checks_replayed": True,
+        "historical_v8_natural_receipt_referenced": False,
+    }
+
+
+def _validate_a5r2_schema_artifact(value: Mapping[str, Any], repo_root: Path) -> None:
+    from script.analysis.fpct_e1_a5r2_choice_cardinality_gate import (
+        validate_a5r2_schema_artifact,
+    )
+
+    validate_a5r2_schema_artifact(value, repo_root=repo_root)
+
+
+def _verify_a5r2_choice_audit(
+    *,
+    repo_root: Path,
+    e0_data_root: Path,
+    execution_identity: Mapping[str, Any],
+    a5_contract: Mapping[str, Any],
+    require_go: bool,
+    audit_root_override: Path | None = None,
+) -> dict[str, Any]:
+    """Independently reread/reduce the immutable label-free choice audit."""
+
+    audit_root = (
+        audit_root_override
+        if audit_root_override is not None
+        else Path(str(execution_identity["run_root"])) / CHOICE_AUDIT_ROOT_NAME
+    )
+    audit_root = _canonical_real_directory(audit_root, "A5R2 choice-audit root")
+    expected_names = {
+        CHOICE_AUDIT_LEDGER_NAME,
+        CHOICE_AUDIT_SUMMARY_NAME,
+        CHOICE_AUDIT_LOCK_NAME,
+    }
+    if {path.name for path in audit_root.iterdir()} != expected_names:
+        raise RuntimeError("A5R2 choice-audit root contains incomplete/unbound state")
+    ledger_path = audit_root / CHOICE_AUDIT_LEDGER_NAME
+    lock_path = _canonical_regular_file(
+        audit_root / CHOICE_AUDIT_LOCK_NAME, "A5R2 choice-audit lock"
+    )
+    records = _read_choice_cardinality_audit_ledger(ledger_path)
+    for record in records:
+        _validate_a5r2_schema_artifact(record, repo_root)
+    summary_path = _canonical_regular_file(
+        audit_root / CHOICE_AUDIT_SUMMARY_NAME, "A5R2 choice-audit summary"
+    )
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    if not isinstance(summary, dict):
+        raise RuntimeError("A5R2 choice-audit summary is not an object")
+    _validate_a5r2_schema_artifact(summary, repo_root)
+    rebuilt_summary = summarize_choice_cardinality_audit_v9(
+        records, expected_task_counts=TASK_GROUP_COUNTS
+    )
+    if rebuilt_summary != summary:
+        raise RuntimeError("A5R2 choice-audit summary does not independently recompute")
+    locked = json.loads(lock_path.read_text(encoding="utf-8"))
+    if not isinstance(locked, dict):
+        raise RuntimeError("A5R2 choice-audit lock is not an object")
+    _validate_a5r2_schema_artifact(locked, repo_root)
+    descriptor = _choice_audit_artifact_descriptor(ledger_path, len(records))
+    source_bindings = _a5r2_choice_audit_source_bindings(repo_root)
+    frozen_identity = _a5r2_frozen_identity_checks(
+        records, _load_frozen_a5r2_dev(repo_root)
+    )
+    if (
+        frozen_identity["frozen_group_sample_membership_verified"] is not True
+        or frozen_identity["frozen_canonical_order_verified"] is not True
+    ):
+        raise RuntimeError(
+            "A5R2 choice-audit ledger differs from frozen membership/order"
+        )
+    e0_data_tree_binding, source_snapshot_binding = (
+        _a5r2_pre_audit_asset_bindings(
+            e0_data_root=e0_data_root,
+            contract=a5_contract,
+            execution_identity=execution_identity,
+        )
+    )
+    rebuilt = build_choice_cardinality_audit_lock_v9(
+        records,
+        execution_sha=str(execution_identity["execution_sha"]),
+        run_uid=str(execution_identity["run_uid"]),
+        run_root=str(execution_identity["run_root"]),
+        ledger_artifact=descriptor,
+        summary_artifact=_choice_audit_artifact_descriptor(summary_path, 1),
+        e0_data_tree_binding=e0_data_tree_binding,
+        source_snapshot_binding=source_snapshot_binding,
+        source_bindings=source_bindings,
+        predecessor_v8_unchanged=True,
+        independent_reduction_and_hash_verified=True,
+        **frozen_identity,
+        expected_task_counts=TASK_GROUP_COUNTS,
+    )
+    if rebuilt != locked:
+        raise RuntimeError("A5R2 choice-audit lock does not independently recompute")
+    if require_go and (
+        locked.get("status") != "A5R2_CHOICE_AUDIT_GO"
+        or locked.get("mechanical_decision") != "A5R2_CHOICE_AUDIT_GO"
+    ):
+        raise RuntimeError("A5R2 choice audit did not mechanically authorize input lock")
+    return {
+        "lock": locked,
+        "records": records,
+        "lock_artifact": _choice_audit_artifact_descriptor(lock_path, 1),
+        "ledger_artifact": descriptor,
+        "summary_artifact": _choice_audit_artifact_descriptor(summary_path, 1),
+    }
+
+
+def _run_a5r2_choice_cardinality_audit(
+    *,
+    repo_root: Path,
+    e0_data_root: Path,
+    dev: Mapping[str, Any],
+    execution_identity: Mapping[str, Any],
+    a5_contract: Mapping[str, Any],
+    formatter_class: type,
+    reference_model_config: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Run the complete label-free audit before chat templates/tokenizers/alignment."""
+
+    e0_data_tree_binding, source_snapshot_binding = (
+        _a5r2_pre_audit_asset_bindings(
+            e0_data_root=e0_data_root,
+            contract=a5_contract,
+            execution_identity=execution_identity,
+        )
+    )
+    ordered_descriptors = [
+        (group, descriptor)
+        for task_name in TASKS
+        for group, descriptor in sorted(dev["records"].items())
+        if descriptor["task"] == task_name
+    ]
+    expected_count = sum(TASK_GROUP_COUNTS.values())
+    if len(ordered_descriptors) != expected_count:
+        raise ValueError("A5R2 choice-audit population/order is incomplete")
+    audit_root = Path(str(execution_identity["run_root"])) / CHOICE_AUDIT_ROOT_NAME
+    try:
+        audit_root.lstat()
+    except FileNotFoundError:
+        pass
+    else:
+        raise RuntimeError("A5R2 choice-audit root already exists; resume/reuse forbidden")
+
+    dataset_cache: dict[tuple[str, str], Any] = {}
+    formatters: dict[str, Any] = {}
+    records: list[dict[str, Any]] = []
+    for group_ordinal, (group, descriptor) in enumerate(
+        ordered_descriptors, start=1
+    ):
+        try:
+            task = str(descriptor["task"])
+            materialized_example, loader_trace = _load_a5r2_choice_audit_example(
+                task=task,
+                descriptor=descriptor,
+                data_root=e0_data_root,
+                cache=dataset_cache,
+            )
+            allowlisted_example = _a5r2_allowlisted_choice_row(
+                task, materialized_example
+            )
+            del materialized_example
+            descriptor_pair = _a5r2_choice_descriptor_pair(
+                task, descriptor, allowlisted_example, loader_trace
+            )
+            projection = choice_audit_projection_v9(
+                task, descriptor_pair, allowlisted_example
+            )
+            if task not in formatters:
+                formatter = formatter_class.__new__(formatter_class)
+                formatter.dataset_name = task
+                formatter.model_config = dict(reference_model_config)
+                formatter.eval_config = {
+                    "dataset": task,
+                    "use_cot": False,
+                    "use_template": True,
+                }
+                formatters[task] = formatter
+            formatter = formatters[task]
+            raw_prompt = formatter.format_example(
+                projection["raw_formatter_example"], use_cot=False
+            )
+            canonical_prompt = formatter.format_example(
+                projection["canonical_formatter_example"], use_cot=False
+            )
+            if not isinstance(raw_prompt, str) or not isinstance(
+                canonical_prompt, str
+            ):
+                raise ValueError("A5R2 pure formatter did not return strings")
+            try:
+                _legacy_question, legacy_choices = _question_choices(
+                    task, allowlisted_example
+                )
+                legacy_choice_count = len(legacy_choices)
+            except (TypeError, ValueError, AttributeError):
+                legacy_choice_count = 0
+            expected_sample = canonical_sample_sha256(
+                task, str(descriptor["subject"]), str(descriptor["source_row_id"])
+            )
+            record = choice_cardinality_record_v9(
+                execution_sha=str(execution_identity["execution_sha"]),
+                run_uid=str(execution_identity["run_uid"]),
+                group_ordinal=group_ordinal,
+                task=task,
+                content_group_sha256=str(group),
+                sample_key_sha256=str(descriptor["sample_sha256"]),
+                observed_sample_key_sha256=expected_sample,
+                descriptor=descriptor_pair,
+                projection=projection,
+                raw_prompt_sha256=_sha256_bytes(raw_prompt.encode("utf-8")),
+                canonical_prompt_sha256=_sha256_bytes(
+                    canonical_prompt.encode("utf-8")
+                ),
+                formatter_byte_parity=raw_prompt.encode("utf-8")
+                == canonical_prompt.encode("utf-8"),
+                legacy_choice_count=legacy_choice_count,
+            )
+            _validate_a5r2_schema_artifact(record, repo_root)
+            records.append(record)
+        except A5R2InputLockError:
+            raise
+        except (
+            IndexError,
+            KeyError,
+            OSError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+        ) as error:
+            raise A5R2InputLockError(
+                "CHOICE_AUDIT",
+                _blocked_check_name(error),
+                failed_group_ordinal=group_ordinal,
+            ) from error
+
+    summary = summarize_choice_cardinality_audit_v9(
+        records, expected_task_counts=TASK_GROUP_COUNTS
+    )
+    frozen_identity = _a5r2_frozen_identity_checks(records, dev)
+    if (
+        frozen_identity["frozen_group_sample_membership_verified"] is not True
+        or frozen_identity["frozen_canonical_order_verified"] is not True
+    ):
+        raise A5R2InputLockError(
+            "CHOICE_AUDIT_VERIFICATION", "FROZEN_MEMBERSHIP_OR_ORDER_MISMATCH"
+        )
+    ledger_payload = b"".join(canonical_json_bytes(record) for record in records)
+    replay_records = [
+        json.loads(line)
+        for line in ledger_payload.decode("utf-8").splitlines()
+        if line
+    ]
+    if summarize_choice_cardinality_audit_v9(
+        replay_records, expected_task_counts=TASK_GROUP_COUNTS
+    ) != summary:
+        raise RuntimeError("A5R2 choice-audit in-memory independent replay differs")
+    summary_payload = canonical_json_bytes(summary)
+    ledger_descriptor = {
+        "relative_path": (
+            f"{CHOICE_AUDIT_ROOT_NAME}/{CHOICE_AUDIT_LEDGER_NAME}"
+        ),
+        "sha256": hashlib.sha256(ledger_payload).hexdigest(),
+        "bytes": len(ledger_payload),
+        "row_count": len(records),
+    }
+    summary_descriptor = {
+        "relative_path": (
+            f"{CHOICE_AUDIT_ROOT_NAME}/{CHOICE_AUDIT_SUMMARY_NAME}"
+        ),
+        "sha256": hashlib.sha256(summary_payload).hexdigest(),
+        "bytes": len(summary_payload),
+        "row_count": 1,
+    }
+    locked = build_choice_cardinality_audit_lock_v9(
+        replay_records,
+        execution_sha=str(execution_identity["execution_sha"]),
+        run_uid=str(execution_identity["run_uid"]),
+        run_root=str(execution_identity["run_root"]),
+        ledger_artifact=ledger_descriptor,
+        summary_artifact=summary_descriptor,
+        e0_data_tree_binding=e0_data_tree_binding,
+        source_snapshot_binding=source_snapshot_binding,
+        source_bindings=_a5r2_choice_audit_source_bindings(repo_root),
+        predecessor_v8_unchanged=True,
+        independent_reduction_and_hash_verified=True,
+        **frozen_identity,
+        expected_task_counts=TASK_GROUP_COUNTS,
+    )
+    _validate_a5r2_schema_artifact(locked, repo_root)
+
+    staging_root = Path(
+        tempfile.mkdtemp(prefix=".choice_audit.staging.", dir=audit_root.parent)
+    )
+    try:
+        published_sha = publish_bytes_no_overwrite(
+            staging_root / CHOICE_AUDIT_LEDGER_NAME, ledger_payload
+        )
+        if published_sha != ledger_descriptor["sha256"]:
+            raise RuntimeError("A5R2 staged choice-audit ledger SHA differs")
+        published_summary_sha = publish_bytes_no_overwrite(
+            staging_root / CHOICE_AUDIT_SUMMARY_NAME, summary_payload
+        )
+        if published_summary_sha != summary_descriptor["sha256"]:
+            raise RuntimeError("A5R2 staged choice-audit summary SHA differs")
+        atomic_json(staging_root / CHOICE_AUDIT_LOCK_NAME, locked)
+        try:
+            staged = _verify_a5r2_choice_audit(
+                repo_root=repo_root,
+                e0_data_root=e0_data_root,
+                execution_identity=execution_identity,
+                a5_contract=a5_contract,
+                require_go=False,
+                audit_root_override=staging_root,
+            )
+        except (
+            IndexError,
+            KeyError,
+            OSError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+        ) as error:
+            raise A5R2InputLockError(
+                "CHOICE_AUDIT_VERIFICATION", _blocked_check_name(error)
+            ) from error
+        if staged["lock"] != locked:
+            raise A5R2InputLockError(
+                "CHOICE_AUDIT_VERIFICATION", "STAGED_AUDIT_LOCK_CHANGED"
+            )
+        _fsync_directory(staging_root)
+        try:
+            audit_root.lstat()
+        except FileNotFoundError:
+            pass
+        else:
+            raise RuntimeError("A5R2 choice-audit final appeared before publication")
+        _rename_directory_no_replace(staging_root, audit_root)
+        _fsync_directory(audit_root.parent)
+    finally:
+        if staging_root.exists():
+            shutil.rmtree(staging_root)
+    try:
+        verified = _verify_a5r2_choice_audit(
+            repo_root=repo_root,
+            e0_data_root=e0_data_root,
+            execution_identity=execution_identity,
+            a5_contract=a5_contract,
+            require_go=False,
+        )
+    except (
+        IndexError,
+        KeyError,
+        OSError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+    ) as error:
+        raise A5R2InputLockError(
+            "CHOICE_AUDIT_VERIFICATION", _blocked_check_name(error)
+        ) from error
+    if verified["lock"] != locked:
+        raise RuntimeError("A5R2 published choice-audit lock changed")
+    if locked.get("mechanical_decision") != "A5R2_CHOICE_AUDIT_GO":
+        blocked_row = next(
+            (
+                row
+                for row in replay_records
+                if row.get("correction_action") == "BLOCK"
+            ),
+            None,
+        )
+        raise A5R2InputLockError(
+            "CHOICE_AUDIT_COMPLETE_MECHANICAL_BLOCK",
+            "A5R2_CHOICE_AUDIT_MECHANICAL_BLOCK",
+            failed_group_ordinal=(
+                int(blocked_row["group_ordinal"])
+                if blocked_row is not None
+                else None
+            ),
+        )
+    return verified
 
 
 def _verify_all_e0_prompt_configs(
@@ -1839,6 +2880,7 @@ def validate_a5_execution_identity(
     allowed_run_entries = {
         "source_snapshot",
         INPUT_LOCK_ROOT_NAME,
+        CHOICE_AUDIT_ROOT_NAME,
         *downstream_root_names,
     }
     unexpected = sorted(
@@ -1875,7 +2917,7 @@ def validate_a5_execution_identity(
             raise ValueError("sealed prepare execution attestation is inconsistent")
     identity = {
         "schema_version": 1,
-        "protocol_id": "fpct_e1_a5r1_input_lock_execution_identity_v1",
+        "protocol_id": "fpct_e1_a5r2_input_lock_execution_identity_v1",
         "execution_sha": execution_sha,
         "execution_prefix": prefix,
         "run_uid": run_uid,
@@ -2218,7 +3260,9 @@ def _write_geometry_lock(
         ]
     )
     total_rows = sum(int(row["N_s"]) for row in geometry_rows)
-    bytes_per_row = synthetic_gate.get("estimated_physical_bytes_per_row")
+    bytes_per_row = _a5_inherited_v8_streaming_evidence(synthetic_gate).get(
+        "estimated_physical_bytes_per_row"
+    )
     if (
         isinstance(bytes_per_row, bool)
         or not isinstance(bytes_per_row, int)
@@ -2651,7 +3695,9 @@ def _write_streaming_template_lock(
         validate_streaming_schema_artifact(index)
         atomic_json(index_path, index)
     synthetic_checks = (
-        synthetic_gate.get("streaming_contract_checks", {})
+        _a5_inherited_v8_streaming_evidence(synthetic_gate).get(
+            "streaming_contract_checks", {}
+        )
         if synthetic_gate.get("protocol_id") == A5_PROTOCOL_ID
         else synthetic_gate.get("checks", {})
     )
@@ -2761,10 +3807,6 @@ def _verify_a5_census_artifacts(
 ) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """Strictly reopen every canonical JSONL row and independently reduce it."""
 
-    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
-        validate_a5_schema_artifact,
-    )
-
     records_path = _canonical_regular_file(
         output_root / PROMPT_CENSUS_RECORDS_NAME, "A5 census JSONL"
     )
@@ -2782,13 +3824,16 @@ def _verify_a5_census_artifacts(
                 raise RuntimeError("A5 census JSONL is malformed") from error
             if not isinstance(value, dict) or canonical_json_bytes(value) != line:
                 raise RuntimeError("A5 census JSONL is not canonical one-row-per-line")
-            validate_a5_schema_artifact(value, repo_root=repo_root)
+            _validate_a5r2_schema_artifact(value, repo_root)
             records.append(value)
     expected_population = sum(TASK_GROUP_COUNTS.values())
     if len(records) != expected_population:
         raise RuntimeError("A5 census JSONL row count differs from frozen population")
     census_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    validate_a5_schema_artifact(census_manifest, repo_root=repo_root)
+    _validate_a5r2_schema_artifact(census_manifest, repo_root)
+    choice_audit_lock_sha256 = completed.get("choice_audit", {}).get(
+        "lock", {}
+    ).get("sha256")
     rebuilt = build_census_manifest(
         records,
         execution_sha=str(execution_identity["execution_sha"]),
@@ -2802,6 +3847,7 @@ def _verify_a5_census_artifacts(
         expected_task_counts=TASK_GROUP_COUNTS,
         schema_version=A5_ARTIFACT_SCHEMA_VERSION,
         protocol_id=A5_PROTOCOL_ID,
+        choice_audit_lock_sha256=choice_audit_lock_sha256,
     )
     if rebuilt != census_manifest:
         raise RuntimeError("A5 census manifest does not independently recompute")
@@ -2818,6 +3864,10 @@ def _verify_a5_census_artifacts(
         census_binding.get("record_count") != len(records)
         or census_binding.get("canonical_semantic_stream_sha256")
         != census_manifest["canonical_semantic_stream_sha256"]
+        or census_binding.get("choice_audit_lock_sha256")
+        != choice_audit_lock_sha256
+        or census_manifest.get("choice_audit_lock_sha256")
+        != choice_audit_lock_sha256
     ):
         raise RuntimeError("A5 top-level census semantic binding changed")
     items = locked_payload.get("items")
@@ -2847,7 +3897,10 @@ def _verify_a5_census_artifacts(
                 ("historical_rendered_prompt_sha256", "historical_rendered_prompt_sha256"),
                 ("production_alignment_sha256", "production_alignment_sha256"),
                 ("historical_alignment_sha256", "historical_alignment_sha256"),
-                ("raw_full_row_sha256", "raw_full_row_sha256"),
+                ("label_free_runtime_row_sha256", "label_free_runtime_row_sha256"),
+                ("choice_audit_row_sha256", "choice_audit_row_sha256"),
+                ("choice_root_cause_class", "choice_root_cause_class"),
+                ("choice_audit_lock_sha256", "choice_audit_lock_sha256"),
                 ("prompt_relation", "prompt_relation"),
                 ("choice_difference_only", "choice_difference_only"),
             )
@@ -2948,10 +4001,7 @@ def _verify_completed_input_lock(
     """
 
     import torch
-    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
-        validate_a5_schema_artifact,
-        verify_a5_gate,
-    )
+    from script.analysis.fpct_e1_a5r2_choice_cardinality_gate import verify_gate
 
     output_root = output_manifest.absolute().parent
     _clean_owned_completed_crash_debris(
@@ -2977,7 +4027,7 @@ def _verify_completed_input_lock(
     ):
         raise FileNotFoundError("A5 streaming schema/synthetic gate is unavailable")
     streaming_schema_sha256 = sha256_file(streaming_schema_path)
-    validate_a5_schema_artifact(completed, repo_root=repo_root)
+    _validate_a5r2_schema_artifact(completed, repo_root)
 
     if (
         completed.get("schema_version") != A5_ARTIFACT_SCHEMA_VERSION
@@ -2985,7 +4035,7 @@ def _verify_completed_input_lock(
         or completed.get("input_lock_protocol_id") != PROTOCOL_ID
         or completed.get("artifact_type") != A5_INPUT_LOCK_MANIFEST_ARTIFACT_TYPE
         or completed.get("status")
-        != "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT"
+        != "A5R2_INPUT_LOCK_GO_NO_MODEL_OUTPUT"
         or completed.get("execution", {}).get("execution_sha")
         != execution_identity.get("execution_sha")
         or completed.get("execution", {}).get("run_uid")
@@ -3028,12 +4078,18 @@ def _verify_completed_input_lock(
     ):
         raise RuntimeError("completed A5 source-snapshot execution binding changed")
 
-    synthetic_gate = verify_a5_gate(synthetic_gate_path, repo_root=repo_root)
+    synthetic_gate = verify_gate(synthetic_gate_path, repo_root=repo_root)
+    synthetic_checks = synthetic_gate.get("checks", {})
     if (
         synthetic_gate.get("protocol_id") != A5_PROTOCOL_ID
         or synthetic_gate.get("artifact_type") != A5_SYNTHETIC_GATE_ARTIFACT_TYPE
         or synthetic_gate.get("status") != A5_SYNTHETIC_GATE_STATUS
-        or synthetic_gate.get("natural_e0_design_accessed") is not False
+        or synthetic_checks.get("natural_e0_design_accessed") is not False
+        or synthetic_checks.get("model_or_checkpoint_loaded") is not False
+        or synthetic_checks.get("model_forward_run") is not False
+        or synthetic_checks.get("gpu_cuda_or_kubernetes_used") is not False
+        or synthetic_checks.get("training") is not False
+        or synthetic_checks.get("e1_2_or_e1_3_authorized") is not False
     ):
         raise RuntimeError("completed lock synthetic gate/source binding changed")
     sidecar_record = completed.get("sidecar", {})
@@ -3047,6 +4103,49 @@ def _verify_completed_input_lock(
     locked_payload = torch.load(output_sidecar, map_location="cpu", weights_only=False)
     if not isinstance(locked_payload, Mapping):
         raise RuntimeError("completed compact sidecar is not a mapping")
+    items_for_key_check = locked_payload.get("items")
+    if (
+        set(locked_payload) != SIDECAR_TOP_LEVEL_KEYS_V5
+        or not isinstance(items_for_key_check, list)
+        or any(set(item) != SIDECAR_ITEM_KEYS_V5 for item in items_for_key_check)
+    ):
+        raise RuntimeError("completed A5R2 sidecar exact key contract changed")
+    a5_contract = _load_a5_prompt_contract(repo_root)
+    choice_audit = _verify_a5r2_choice_audit(
+        repo_root=repo_root,
+        e0_data_root=e0_data_root,
+        execution_identity=execution_identity,
+        a5_contract=a5_contract,
+        require_go=True,
+    )
+    expected_choice_binding = _choice_audit_binding(
+        choice_audit, execution_identity
+    )
+    if (
+        completed.get("choice_audit") != expected_choice_binding
+        or locked_payload.get("choice_audit")
+        != expected_choice_binding
+    ):
+        raise RuntimeError("completed A5R2 choice-audit binding changed")
+    expected_custom_verifier = {
+        "exact_top_level_key_set_verified": True,
+        "exact_item_key_set_verified": True,
+        "semantic_sha256_recomputed_after_cpu_reload": True,
+        "choice_audit_lock_sha256_recomputed_and_equal": True,
+        "expanded_logical_rows_present": False,
+        "model_or_checkpoint_tensor_present": False,
+    }
+    if (
+        sidecar_record.get("choice_audit_lock_sha256")
+        != expected_choice_binding["lock"]["sha256"]
+        or sidecar_record.get("custom_verifier") != expected_custom_verifier
+        or sidecar_record.get("semantic_sha256") != nested_sha256(locked_payload)
+    ):
+        raise RuntimeError("completed A5R2 sidecar custom verification changed")
+    if completed.get("inherited_v8_contract_binding") != (
+        _inherited_v8_contract_binding(a5_contract)
+    ):
+        raise RuntimeError("completed inherited v8 contract binding changed")
     streaming_contract = locked_payload.get("streaming_contract", {})
     synthetic_record = streaming_contract.get("synthetic_gate", {})
     if (
@@ -3073,7 +4172,7 @@ def _verify_completed_input_lock(
         locked_payload.get("schema_version") != SCHEMA_VERSION
         or locked_payload.get("protocol_id") != PROTOCOL_ID
         or locked_payload.get("status")
-        != "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT"
+        != "A5R2_INPUT_LOCK_GO_NO_MODEL_OUTPUT"
         or locked_payload.get("execution_identity") != dict(execution_identity)
         or expanded_row_absence_proof(locked_payload)
         != locked_payload.get("expanded_row_absence_proof")
@@ -3301,9 +4400,10 @@ def _verify_completed_input_lock(
     )
     expected_row_volume = _global_row_volume(sidecar_items)
     expected_physical_rows = sum(int(row["N_s"]) for row in ordered_geometry)
-    expected_disk_bytes = (
-        expected_physical_rows
-        * int(synthetic_gate["estimated_physical_bytes_per_row"])
+    expected_disk_bytes = expected_physical_rows * int(
+        _a5_inherited_v8_streaming_evidence(synthetic_gate)[
+            "estimated_physical_bytes_per_row"
+        ]
     )
     expected_inode_count = (
         sum(int(row["expected_chunk_count"]) for row in ordered_geometry)
@@ -3452,7 +4552,7 @@ def _verify_completed_input_lock(
         if not go_receipt_path.is_file() or go_receipt_path.is_symlink():
             raise RuntimeError("completed A5 input lock lacks GO receipt")
         go_receipt = json.loads(go_receipt_path.read_text(encoding="utf-8"))
-        validate_a5_schema_artifact(go_receipt, repo_root=repo_root)
+        _validate_a5r2_schema_artifact(go_receipt, repo_root)
         if (
             go_receipt.get("execution_sha") != execution_identity["execution_sha"]
             or go_receipt.get("run_uid") != execution_identity["run_uid"]
@@ -3473,7 +4573,7 @@ def _verify_completed_input_lock(
             or go_receipt.get("hash_domain_checks")
             != completed.get("hash_domain_checks")
             or go_receipt.get("zero_counts") != completed.get("zero_counts")
-            or go_receipt.get("downstream_e1_2_authorized") is not False
+            or go_receipt.get("e1_2_or_e1_3_authorized") is not False
         ):
             raise RuntimeError("completed A5 GO receipt binding changed")
     elif go_receipt_path.exists():
@@ -3544,16 +4644,20 @@ def _prepare_input_lock_after_identity(
     if not streaming_schema_path.is_file() or not synthetic_gate_path.is_file():
         raise FileNotFoundError("A5 streaming schema/synthetic gate is unavailable")
     streaming_schema_sha256 = sha256_file(streaming_schema_path)
-    from script.analysis.fpct_e1_a5r1_hash_domain_gate import verify_a5_gate
+    from script.analysis.fpct_e1_a5r2_choice_cardinality_gate import verify_gate
 
-    synthetic_gate = verify_a5_gate(synthetic_gate_path, repo_root=repo_root)
+    synthetic_gate = verify_gate(synthetic_gate_path, repo_root=repo_root)
+    synthetic_checks = synthetic_gate.get("checks", {})
     if (
         synthetic_gate.get("protocol_id") != A5_PROTOCOL_ID
         or synthetic_gate.get("artifact_type") != A5_SYNTHETIC_GATE_ARTIFACT_TYPE
         or synthetic_gate.get("status") != A5_SYNTHETIC_GATE_STATUS
-        or synthetic_gate.get("natural_e0_design_accessed") is not False
-        or synthetic_gate.get("model_or_checkpoint_loaded") is not False
-        or synthetic_gate.get("gpu_or_kubernetes_used") is not False
+        or synthetic_checks.get("natural_e0_design_accessed") is not False
+        or synthetic_checks.get("model_or_checkpoint_loaded") is not False
+        or synthetic_checks.get("model_forward_run") is not False
+        or synthetic_checks.get("gpu_cuda_or_kubernetes_used") is not False
+        or synthetic_checks.get("training") is not False
+        or synthetic_checks.get("e1_2_or_e1_3_authorized") is not False
     ):
         raise ValueError("A5 pre-natural synthetic gate is absent or incompatible")
     renderer_identity = attest_e0_renderer_identity(repo_root)
@@ -3563,6 +4667,25 @@ def _prepare_input_lock_after_identity(
         repo_root / "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"
     )
     dev = verify_e0_dev_anchor(repo_root / E0_DEV_MANIFEST_RELATIVE, split)
+    reference_config = yaml.safe_load(
+        (
+            repo_root
+            / "recipe/eval_recipe/fpct_e0/rendered/eval_2026072201_Y_FF_ai2-arc.yaml"
+        ).read_text(encoding="utf-8")
+    )
+    choice_audit = _run_a5r2_choice_cardinality_audit(
+        repo_root=repo_root,
+        e0_data_root=e0_data_root,
+        dev=dev,
+        execution_identity=execution_identity,
+        a5_contract=a5_contract,
+        formatter_class=UnifiedEvaluator,
+        reference_model_config=reference_config["model"],
+    )
+    if choice_audit["lock"].get("mechanical_decision") != "A5R2_CHOICE_AUDIT_GO":
+        raise A5R2InputLockError(
+            "CHOICE_AUDIT_VERIFICATION", "CHOICE_AUDIT_DID_NOT_REACH_GO"
+        )
     receiver_name = "Qwen/Qwen3-0.6B"
     sender_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
     receiver_path = Path(resolve_model_path(receiver_name))
@@ -3613,11 +4736,6 @@ def _prepare_input_lock_after_identity(
     runtime_prompt_assets["chat_template_fallback_used"] = False
     dimensions = _config_dimensions(receiver_path)
 
-    reference_config = yaml.safe_load(
-        (repo_root / "recipe/eval_recipe/fpct_e0/rendered/eval_2026072201_Y_FF_ai2-arc.yaml").read_text(
-            encoding="utf-8"
-        )
-    )
     rosetta_config = reference_config["model"]["rosetta_config"]
     aligner = _build_aligner(receiver, sender, rosetta_config)
     dataset_cache: dict[tuple[str, str], Any] = {}
@@ -3631,6 +4749,15 @@ def _prepare_input_lock_after_identity(
     ]
     if len(ordered_descriptors) != sum(TASK_GROUP_COUNTS.values()):
         raise ValueError("A5 census population/order is incomplete")
+    audit_rows_by_group = {
+        str(record["content_group_sha256"]): record
+        for record in choice_audit["records"]
+    }
+    if set(audit_rows_by_group) != set(dev["records"]):
+        raise A5R2InputLockError(
+            "CORRECTION", "CHOICE_AUDIT_GROUP_BINDING_INCOMPLETE"
+        )
+    choice_audit_lock_sha256 = str(choice_audit["lock_artifact"]["sha256"])
     census_records: list[dict[str, Any]] = []
     for group_ordinal, (group, descriptor) in enumerate(
         ordered_descriptors, start=1
@@ -3644,10 +4771,12 @@ def _prepare_input_lock_after_identity(
             data_root=e0_data_root,
             cache=dataset_cache,
         )
-        question, choices = _question_choices(task, example)
-        production_question, production_choices, production_labels = (
-            full_question_choices(task, example)
-        )
+        production_payload = choice_payload_v9(task, example)
+        production_question = str(production_payload["question"])
+        production_choices = list(production_payload["production_choices"])
+        production_labels = list(production_payload["source_choice_labels"])
+        historical_count = min(4, len(production_choices))
+        question, choices = production_question, production_choices[:historical_count]
         if question != production_question or choices != production_choices[:4]:
             raise ValueError("A5 historical first-four projection changed")
         historical_content_sha256 = canonical_content_sha256(question, choices)
@@ -3667,7 +4796,7 @@ def _prepare_input_lock_after_identity(
             "use_cot": False,
             "use_template": True,
         }
-        projected_example = historical_projected_example(task, example)
+        projected_example = historical_projected_example_v9(task, example)
         historical_prompt = formatter.format_example(
             projected_example, use_cot=False
         )
@@ -3800,7 +4929,11 @@ def _prepare_input_lock_after_identity(
             schema_version=A5_ARTIFACT_SCHEMA_VERSION,
             protocol_id=A5_PROTOCOL_ID,
         )
-        if census_record["raw_choice_labels"] != production_labels:
+        audit_row = audit_rows_by_group[str(group)]
+        census_record["choice_audit_row_sha256"] = nested_sha256(audit_row)
+        census_record["choice_root_cause_class"] = audit_row["root_cause_class"]
+        census_record["choice_audit_lock_sha256"] = choice_audit_lock_sha256
+        if census_record["source_choice_labels"] != production_labels:
             raise ValueError("A5 census lost production choice labels/order")
         census_records.append(census_record)
         item = {
@@ -3833,7 +4966,16 @@ def _prepare_input_lock_after_identity(
             "historical_rendered_prompt_sha256": historical_rendered_sha,
             "production_alignment_sha256": production_alignment_sha,
             "historical_alignment_sha256": historical_alignment_sha,
-            "raw_full_row_sha256": raw_full_row_sha256(example),
+            "label_free_runtime_row_sha256": census_record[
+                "label_free_runtime_row_sha256"
+            ],
+            "choice_audit_row_sha256": census_record[
+                "choice_audit_row_sha256"
+            ],
+            "choice_root_cause_class": census_record[
+                "choice_root_cause_class"
+            ],
+            "choice_audit_lock_sha256": choice_audit_lock_sha256,
             "prompt_relation": census_record["prompt_relation"],
             "choice_difference_only": census_record["choice_difference_only"],
         }
@@ -3844,12 +4986,8 @@ def _prepare_input_lock_after_identity(
         task_counts[task] += 1
     if task_counts != TASK_GROUP_COUNTS:
         raise ValueError("input-lock population differs from frozen 128/70/128")
-    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
-        validate_a5_schema_artifact,
-    )
-
     for census_record in census_records:
-        validate_a5_schema_artifact(census_record, repo_root=repo_root)
+        _validate_a5r2_schema_artifact(census_record, repo_root)
     census_records_path = output_root / PROMPT_CENSUS_RECORDS_NAME
     census_records_payload = b"".join(
         canonical_json_bytes(record) for record in census_records
@@ -3870,8 +5008,9 @@ def _prepare_input_lock_after_identity(
         expected_task_counts=TASK_GROUP_COUNTS,
         schema_version=A5_ARTIFACT_SCHEMA_VERSION,
         protocol_id=A5_PROTOCOL_ID,
+        choice_audit_lock_sha256=choice_audit_lock_sha256,
     )
-    validate_a5_schema_artifact(census_manifest, repo_root=repo_root)
+    _validate_a5r2_schema_artifact(census_manifest, repo_root)
     census_manifest_path = output_root / PROMPT_CENSUS_NAME
     atomic_json(census_manifest_path, census_manifest)
     for role, model_path in (("receiver", receiver_path), ("sender", sender_path)):
@@ -4005,7 +5144,7 @@ def _prepare_input_lock_after_identity(
     payload = {
         "schema_version": SCHEMA_VERSION,
         "protocol_id": PROTOCOL_ID,
-        "status": "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
+        "status": "A5R2_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
         "split_role": "e0_design",
         "items": items,
         "dimensions": dimensions,
@@ -4020,6 +5159,9 @@ def _prepare_input_lock_after_identity(
             "streaming_template_lock": streaming_template_lock,
         },
         "execution_identity": dict(execution_identity),
+        "choice_audit": _choice_audit_binding(
+            choice_audit, execution_identity
+        ),
         "a5_prompt_provenance": {
             "renderer_identity": {
                 **renderer_identity,
@@ -4131,12 +5273,13 @@ def _prepare_input_lock_after_identity(
         Path(streaming_template_lock["receipt"]["path"]).read_text(encoding="utf-8")
     )
     hard_gate_checks = {
-        "historical_projection_anchor_unchanged": bool(
+        "historical_min4_projection_anchor_unchanged": bool(
             payload["a5_prompt_provenance"][
                 "historical_projection_anchor_unchanged"
             ]
             and all(
-                record["historical_choice_count"] == 4
+                record["historical_choice_count"]
+                == min(4, record["production_choice_count"])
                 for record in census_records
             )
         ),
@@ -4169,15 +5312,24 @@ def _prepare_input_lock_after_identity(
             census_manifest["population_count"] == expected_group_count
             and len(census_records) == expected_group_count
         ),
-        "all_first4_choices_equal_historical": bool(
+        "all_task_cardinalities_valid": bool(
             all(
-                record["historical_choice_count"] == 4
-                and record["production_choice_count"] >= 4
+                (
+                    record["task"] == "ai2-arc"
+                    and record["production_choice_count"] >= 2
+                )
+                or (
+                    record["task"] in {"openbookqa", "mmlu-redux"}
+                    and record["production_choice_count"] == 4
+                )
                 for record in census_records
             )
         ),
-        "all_gold_answers_in_A_B_C_D": bool(
-            all(record["gold_answer"] in {"A", "B", "C", "D"} for record in census_records)
+        "all_gold_answers_within_runtime_choices": bool(
+            all(
+                record["gold_answer"] in record["runtime_ordinal_labels"]
+                for record in census_records
+            )
         ),
         "all_prompt_differences_classified": bool(
             census_manifest["unexpected_prompt_difference_count"] == 0
@@ -4202,20 +5354,44 @@ def _prepare_input_lock_after_identity(
         "production_alignment_replay_equal": bool(
             renderer_lock.get("production_alignment_replay_equal") is True
         ),
-        "choice_order_preserved": bool(
+        "source_choice_order_preserved": bool(
             all(
-                record["raw_choice_labels"]
-                == [
-                    chr(65 + index)
-                    for index in range(record["production_choice_count"])
-                ]
+                len(record["source_choice_labels"])
+                == record["production_choice_count"]
+                and len(set(record["source_choice_labels"]))
+                == record["production_choice_count"]
+                and record["runtime_ordinal_labels"]
+                == [chr(65 + index) for index in range(record["production_choice_count"])]
                 for record in census_records
             )
         ),
-        "raw_full_row_hashes_complete": bool(
+        "label_free_runtime_row_hashes_complete": bool(
             all(
-                re.fullmatch(r"[0-9a-f]{64}", record["raw_full_row_sha256"])
+                re.fullmatch(
+                    r"[0-9a-f]{64}", record["label_free_runtime_row_sha256"]
+                )
                 is not None
+                for record in census_records
+            )
+        ),
+        "choice_audit_lock_bound_and_unchanged": bool(
+            choice_audit["lock"]["status"] == "A5R2_CHOICE_AUDIT_GO"
+            and choice_audit["lock"]["mechanical_decision"]
+            == "A5R2_CHOICE_AUDIT_GO"
+            and census_manifest.get("choice_audit_lock_sha256")
+            == choice_audit_lock_sha256
+            and all(
+                record["choice_audit_lock_sha256"]
+                == choice_audit_lock_sha256
+                for record in census_records
+            )
+        ),
+        "choice_corrections_match_locked_taxonomy": bool(
+            all(
+                record["choice_root_cause_class"]
+                == audit_rows_by_group[record["content_group_sha256"]][
+                    "root_cause_class"
+                ]
                 for record in census_records
             )
         ),
@@ -4246,7 +5422,7 @@ def _prepare_input_lock_after_identity(
         "protocol_id": A5_PROTOCOL_ID,
         "input_lock_protocol_id": PROTOCOL_ID,
         "artifact_type": A5_INPUT_LOCK_MANIFEST_ARTIFACT_TYPE,
-        "status": "A5_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
+        "status": "A5R2_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
         "split_role": "e0_design",
         "execution": {
             "execution_sha": str(execution_identity["execution_sha"]),
@@ -4258,6 +5434,10 @@ def _prepare_input_lock_after_identity(
             "source_snapshot_tree_sha256": source_tree_sha256,
         },
         "task_counts": dict(TASK_GROUP_COUNTS),
+        "choice_audit": _choice_audit_binding(choice_audit, execution_identity),
+        "inherited_v8_contract_binding": _inherited_v8_contract_binding(
+            a5_contract
+        ),
         "provenance": {
             "renderer_source_identity_sha256": nested_sha256(
                 payload["a5_prompt_provenance"]["renderer_identity"]
@@ -4295,6 +5475,7 @@ def _prepare_input_lock_after_identity(
             "canonical_semantic_stream_sha256": census_manifest[
                 "canonical_semantic_stream_sha256"
             ],
+            "choice_audit_lock_sha256": choice_audit_lock_sha256,
         },
         "sidecar": {
             "contract_version": SCHEMA_VERSION,
@@ -4303,7 +5484,16 @@ def _prepare_input_lock_after_identity(
             "file_sha256": sha256_file(output_sidecar),
             "semantic_sha256": nested_sha256(payload),
             "item_count": len(items),
+            "choice_audit_lock_sha256": choice_audit_lock_sha256,
             "expanded_logical_rows_present": False,
+            "custom_verifier": {
+                "exact_top_level_key_set_verified": True,
+                "exact_item_key_set_verified": True,
+                "semantic_sha256_recomputed_after_cpu_reload": True,
+                "choice_audit_lock_sha256_recomputed_and_equal": True,
+                "expanded_logical_rows_present": False,
+                "model_or_checkpoint_tensor_present": False,
+            },
         },
         "streaming": {
             "protocol_id": A4_PROTOCOL_ID,
@@ -4347,11 +5537,7 @@ def _prepare_input_lock_after_identity(
         },
         "e1_2_or_e1_3_authorized": False,
     }
-    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
-        validate_a5_schema_artifact,
-    )
-
-    validate_a5_schema_artifact(manifest, repo_root=repo_root)
+    _validate_a5r2_schema_artifact(manifest, repo_root)
     atomic_json(output_manifest, manifest)
     verified_manifest = _verify_completed_input_lock(
         repo_root=repo_root,
@@ -4365,7 +5551,7 @@ def _prepare_input_lock_after_identity(
         "schema_version": A5_ARTIFACT_SCHEMA_VERSION,
         "protocol_id": A5_PROTOCOL_ID,
         "artifact_type": A5_INPUT_LOCK_GO_ARTIFACT_TYPE,
-        "status": "A5_INPUT_LOCK_GO",
+        "status": "A5R2_INPUT_LOCK_GO",
         "execution_sha": str(execution_identity["execution_sha"]),
         "run_uid": str(execution_identity["run_uid"]),
         "run_root": str(execution_identity["run_root"]),
@@ -4374,6 +5560,13 @@ def _prepare_input_lock_after_identity(
         ),
         "prompt_census_manifest_sha256": sha256_file(census_manifest_path),
         "input_lock_manifest_sha256": sha256_file(output_manifest),
+        "choice_audit_lock": dict(verified_manifest["choice_audit"]["lock"]),
+        "choice_audit_lock_sha256": verified_manifest["choice_audit"]["lock"][
+            "sha256"
+        ],
+        "inherited_v8_contract_binding": dict(
+            verified_manifest["inherited_v8_contract_binding"]
+        ),
         "e0_declared_tree_algorithm": verified_manifest["provenance"][
             "e0_declared_tree_algorithm"
         ],
@@ -4386,6 +5579,9 @@ def _prepare_input_lock_after_identity(
         "generic_asset_tree_sha256": verified_manifest["provenance"][
             "generic_asset_tree_sha256"
         ],
+        # The terminal receipt repeats the exact 19-field v9 input-lock hard
+        # gate.  Receipt-only lifecycle assertions live in the firewall and
+        # must never be substituted for scientific/input integrity checks.
         "checks": dict(verified_manifest["hard_gate_checks"]),
         "hash_domain_checks": dict(verified_manifest["hash_domain_checks"]),
         "firewall": {
@@ -4397,12 +5593,19 @@ def _prepare_input_lock_after_identity(
             "gpu_or_kubernetes_used": False,
             "e1_pilot_consumed": False,
             "confirmatory_consumed": False,
+            "e1_2_or_e1_3_authorized": False,
         },
         "zero_counts": dict(verified_manifest["zero_counts"]),
-        "resume_from_group_one": True,
-        "downstream_e1_2_authorized": False,
+        "audit_restarted_from_group_one": True,
+        "input_lock_restarted_from_group_one": True,
+        "scientific_result": False,
+        "resume_allowed": False,
+        "artifact_reuse_allowed": False,
+        "e1_2_or_e1_3_authorized": False,
+        "next_state": "HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED",
     }
-    validate_a5_schema_artifact(go_receipt, repo_root=repo_root)
+    go_receipt["evidence_sha256"] = _a5r2_evidence_sha256(go_receipt)
+    _validate_a5r2_schema_artifact(go_receipt, repo_root)
     atomic_json(output_root / GO_RECEIPT_NAME, go_receipt)
     # GO is the final operation that may fail.  In particular, never run a
     # verifier after publishing the canonical terminal-success receipt: a
@@ -4423,9 +5626,29 @@ def _a5_bounded_peak_rss_gate(
 
     return bool(
         streaming_receipt.get("bounded_peak_rss") is True
-        and synthetic_gate.get("streaming_stress", {}).get("bounded_peak_rss")
+        and _a5_inherited_v8_streaming_evidence(synthetic_gate)
+        .get("streaming_stress", {})
+        .get("bounded_peak_rss")
         is True
     )
+
+
+def _a5_inherited_v8_streaming_evidence(
+    synthetic_gate: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    """Return only the v9 gate's explicitly inherited v8 resource evidence."""
+
+    evidence = synthetic_gate.get("inherited_v8_streaming_evidence")
+    if not isinstance(evidence, Mapping):
+        raise ValueError("A5R2 synthetic gate lacks inherited v8 streaming evidence")
+    if (
+        evidence.get("evidence_role")
+        != "IMMUTABLE_V8_PREDECESSOR_RESOURCE_EVIDENCE_NOT_V9_REMEASUREMENT"
+        or evidence.get("cross_resource_or_hash_domain_substitution_allowed")
+        is not False
+    ):
+        raise ValueError("A5R2 inherited v8 streaming evidence role changed")
+    return evidence
 
 
 def _a5_synthetic_gate_binding(path: Path) -> dict[str, str]:
@@ -4499,7 +5722,9 @@ def _publish_blocked_receipt(
     output_root: Path,
     error: Exception,
     execution_identity: Mapping[str, Any],
-    e0_data_hash_domains: Mapping[str, Any] | None = None,
+    *,
+    repo_root: Path,
+    e0_data_root: Path,
 ) -> None:
     """Emit the only terminal receipt permitted after a caught gate failure."""
 
@@ -4511,43 +5736,64 @@ def _publish_blocked_receipt(
     else:
         raise RuntimeError("refusing BLOCKED publication while canonical GO exists")
 
+    if isinstance(error, A5R2InputLockError):
+        failure_stage = error.failure_stage
+        failure_code = error.failure_code
+        failed_group_ordinal = error.failed_group_ordinal
+    else:
+        failure_stage = "PRECOMPUTATION"
+        failure_code = re.sub(
+            r"[^A-Z0-9]+", "_", _blocked_check_name(error).upper()
+        ).strip("_")
+        failed_group_ordinal = None
+    choice_audit_lock: dict[str, Any] | None = None
+    complete_choice_audit_lock_published = False
+    try:
+        verified_audit = _verify_a5r2_choice_audit(
+            repo_root=repo_root,
+            e0_data_root=e0_data_root,
+            execution_identity=execution_identity,
+            a5_contract=_load_a5_prompt_contract(repo_root),
+            require_go=False,
+        )
+        choice_audit_lock = dict(verified_audit["lock_artifact"])
+        complete_choice_audit_lock_published = True
+    except (IndexError, KeyError, OSError, RuntimeError, TypeError, ValueError):
+        choice_audit_lock = None
+        complete_choice_audit_lock_published = False
     payload = {
         "schema_version": A5_ARTIFACT_SCHEMA_VERSION,
         "protocol_id": A5_PROTOCOL_ID,
         "artifact_type": A5_INPUT_LOCK_BLOCKED_ARTIFACT_TYPE,
-        "status": "A5_INPUT_LOCK_BLOCKED",
+        "status": "A5R2_INPUT_LOCK_BLOCKED",
         "execution_sha": str(execution_identity["execution_sha"]),
         "run_uid": str(execution_identity["run_uid"]),
         "run_root": str(execution_identity["run_root"]),
-        "failed_check": _blocked_check_name(error),
+        "failure_stage": failure_stage,
+        "failure_code": failure_code,
         "failure_detail_sha256": _sha256_bytes(str(error).encode("utf-8")),
+        "failed_group_ordinal": failed_group_ordinal,
+        "choice_audit_lock": choice_audit_lock,
+        "inherited_v8_contract_binding": _inherited_v8_contract_binding(),
+        "partial_audit_staging_published": False,
+        "complete_choice_audit_lock_published": (
+            complete_choice_audit_lock_published
+        ),
         "resume_allowed": False,
         "artifact_reuse_allowed": False,
         "scientific_result": False,
+        "model_or_checkpoint_loaded": False,
+        "model_forward_run": False,
+        "gpu_cuda_or_kubernetes_used": False,
+        "training": False,
         "e1_2_or_e1_3_authorized": False,
+        "e1_pilot_or_confirmatory_accessed": False,
+        "next_state": "HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED",
     }
-    if e0_data_hash_domains is not None:
-        payload.update(
-            {
-                "e0_declared_tree_algorithm": e0_data_hash_domains[
-                    "e0_declared_tree_algorithm"
-                ],
-                "e0_declared_tree_sha256": e0_data_hash_domains[
-                    "e0_declared_tree_sha256"
-                ],
-                "generic_asset_tree_algorithm": e0_data_hash_domains[
-                    "generic_asset_tree_algorithm"
-                ],
-                "generic_asset_tree_sha256": e0_data_hash_domains[
-                    "generic_asset_tree_sha256"
-                ],
-            }
-        )
-    from script.analysis.fpct_e1_a5r1_hash_domain_gate import (
-        validate_a5_schema_artifact,
+    payload["evidence_sha256"] = _a5r2_evidence_sha256(payload)
+    _validate_a5r2_schema_artifact(
+        payload, Path(execution_identity["source_snapshot_root"])
     )
-
-    validate_a5_schema_artifact(payload, repo_root=Path(execution_identity["source_snapshot_root"]))
     atomic_json(output_root / BLOCKED_RECEIPT_NAME, payload)
 
 
@@ -4613,23 +5859,39 @@ def prepare_input_lock(
             output_manifest=output_manifest,
             execution_identity=identity,
         )
-    except (OSError, RuntimeError, ValueError) as error:
+    except (
+        IndexError,
+        KeyError,
+        OSError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+    ) as error:
         # Abrupt process death/KeyboardInterrupt is intentionally not caught;
         # immutable chunks plus the execution identity then support exact resume.
-        try:
-            blocked_hash_domains = _e0_data_hash_domain_projection(
-                _e0_data_asset_tree(e0_data_root)
-            )
-        except Exception:
-            # Hash provenance is best effort for failures that precede a usable
-            # E0 data root.  Never replace or obscure the original gate error.
-            blocked_hash_domains = None
+        terminal_error: Exception = error
+        if not isinstance(error, A5R2InputLockError):
+            if output_manifest.exists():
+                terminal_error = A5R2InputLockError(
+                    "COMPLETED_VERIFICATION", _blocked_check_name(error)
+                )
+            else:
+                audit_root = Path(str(identity["run_root"])) / CHOICE_AUDIT_ROOT_NAME
+                try:
+                    audit_root.lstat()
+                except FileNotFoundError:
+                    pass
+                else:
+                    terminal_error = A5R2InputLockError(
+                        "V9_INPUT_LOCK", _blocked_check_name(error)
+                    )
         _quarantine_canonical_go_before_blocked(output_root)
         _publish_blocked_receipt(
             output_root,
-            error,
+            terminal_error,
             identity,
-            e0_data_hash_domains=blocked_hash_domains,
+            repo_root=repo_root,
+            e0_data_root=e0_data_root,
         )
         raise
 
