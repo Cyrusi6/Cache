@@ -1774,3 +1774,28 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
   portable atomic no-replace 修复需要新的 prospective amendment、commit/snapshot/
   UID/root。0 model/checkpoint load、0 forward、0 GPU/CUDA/K8s/training；E1-2/E1-3
   未进入，E1-pilot/confirmatory 继续 sealed；main/Phase2A 未修改。
+
+### 2026-07-31 FPCT-E1 A5R3 portable publication pre-natural lock
+
+- 研究目标：只修复 A5R2 在 `/netdisk` 不支持 `renameat2(RENAME_NOREPLACE)` 的
+  publication primitive，不改变 A5R2 v9 的 326-group population/order、choice
+  semantics、taxonomy、threshold、prompt/tokenizer/alignment 或 FPCT operator。
+- 核心改动：用户以前瞻性原文 `可以` 批准 v10 operational overlay。实现 natural
+  row 1 前的 owner-only O_EXCL claim、reduction 后的固定 staging、一次普通
+  same-filesystem rename、永久 claim，以及作为 durable GO commit point 的 O_EXCL
+  completion receipt；consumer 必须独立验证 claim/final/receipt 全部交叉绑定。
+  Claim loser 只读退出，任何 crash/tamper root 均永久 no-resume/no-reuse。
+- 实验配置：CPU/offline synthetic-only；target `/netdisk/lijunsi/fpct-e1` 仅创建并
+  清理 synthetic scratch probe。Amendment/contract/schema SHA256=
+  `ccfb73bd...` / `2ba72cfb...` / `b24d1974...`；A5R2 四对象和 `e765d493`
+  closure 按 frozen SHA 继承，natural choice payload 继续 schema v9。
+- 验证结果：A5R3 gate `42 passed`，target ordinary rename/fsync/same-device probe
+  evidence=`28b8adda...`，tracked tree=`659151ff...`，gate evidence=`b4c090fa...`，
+  artifact SHA256=`92c63e3b...`。Inherited closure 首轮 `348 passed / 5 failed`；
+  四项 synthetic fixture active-gate binding 修正后通过，sealed-import 项在合同要求的
+  `/tmp/tmp*` domain 下通过，最终 353 项均有通过证据。`git diff --check`、strict
+  v10 JSON/schema 和 gate independent verification 通过。
+- 结论：A5R3 pre-natural gate GO 只授权下一 clean pushed SHA 在 fresh snapshot/UID/
+  root 从 group 1 运行一次 label-free audit；本记录尚未读取新的 natural row，尚未
+  tokenizer/alignment。0 model/checkpoint/forward、0 GPU/CUDA/K8s/training；E1-2、
+  E1-3、E1-pilot 和 confirmatory 均未授权。

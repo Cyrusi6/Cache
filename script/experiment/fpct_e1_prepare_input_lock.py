@@ -12,8 +12,6 @@ template universe before any E1 model output is produced.
 from __future__ import annotations
 
 import argparse
-import ctypes
-import errno
 import hashlib
 import importlib
 import json
@@ -132,8 +130,15 @@ SCHEMA_VERSION = 5
 PROTOCOL_ID = "fpct_e1_e0_design_input_lock_v5_a5r2_choice_cardinality"
 A5_PROTOCOL_ID = A5R2_PROTOCOL_ID
 A5_ARTIFACT_SCHEMA_VERSION = 9
-A5_SYNTHETIC_GATE_ARTIFACT_TYPE = "a5r2_choice_cardinality_synthetic_gate"
-A5_SYNTHETIC_GATE_STATUS = "GO_PRE_NATURAL_A5R2_CHOICE_CARDINALITY_HARD_GATE"
+A5_SYNTHETIC_GATE_PROTOCOL_ID = (
+    "fpct_e1_mechanism_audit_v10_a5r3_portable_publication"
+)
+A5_SYNTHETIC_GATE_ARTIFACT_TYPE = (
+    "a5r3_portable_publication_synthetic_gate"
+)
+A5_SYNTHETIC_GATE_STATUS = (
+    "GO_PRE_NATURAL_A5R3_PORTABLE_PUBLICATION_HARD_GATE"
+)
 A5_INPUT_LOCK_MANIFEST_ARTIFACT_TYPE = "a5r2_input_lock_manifest"
 A5_INPUT_LOCK_GO_ARTIFACT_TYPE = "a5r2_input_lock_go_receipt"
 A5_INPUT_LOCK_BLOCKED_ARTIFACT_TYPE = "a5r2_input_lock_blocked_receipt"
@@ -179,8 +184,20 @@ A5_PROMPT_CONTRACT_RELATIVE = Path(
 A5_PROMPT_SCHEMA_RELATIVE = Path(
     "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_schema.json"
 )
-A5_SYNTHETIC_GATE_RELATIVE = Path(
+A5R2_SYNTHETIC_GATE_RELATIVE = Path(
     "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_synthetic_gate.json"
+)
+A5R3_AMENDMENT_RELATIVE = Path(
+    "FPCT_E1_A5R3_PORTABLE_PUBLICATION_AMENDMENT.md"
+)
+A5R3_CONTRACT_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_contract.json"
+)
+A5R3_SCHEMA_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_schema.json"
+)
+A5_SYNTHETIC_GATE_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_synthetic_gate.json"
 )
 A5R2_POPULATION_SOURCE_SHA256 = {
     "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json": (
@@ -202,6 +219,7 @@ HISTORICAL_EXECUTION_PREFIXES = frozenset(
         "07755a40",
         "9b248d20",
         "37be816a",
+        "e765d493",
     )
 )
 EXECUTION_SHA_PATTERN = re.compile(r"^[0-9a-f]{40}$")
@@ -217,6 +235,13 @@ CHOICE_AUDIT_ROOT_NAME = "choice_audit"
 CHOICE_AUDIT_LEDGER_NAME = "choice_cardinality_audit_rows.jsonl"
 CHOICE_AUDIT_SUMMARY_NAME = "choice_cardinality_audit_summary.json"
 CHOICE_AUDIT_LOCK_NAME = "choice_cardinality_audit_lock.json"
+CHOICE_AUDIT_PUBLICATION_CLAIM_NAME = ".choice_audit.publication.claim.json"
+CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME = (
+    "choice_audit_publication_receipt.json"
+)
+CHOICE_AUDIT_PUBLICATION_CLAIM_PROTOCOL_ID = (
+    "fpct_e1_mechanism_audit_v10_a5r3_portable_publication"
+)
 SIDECAR_TOP_LEVEL_KEYS_V5 = frozenset(
     {
         "schema_version",
@@ -313,11 +338,18 @@ class A5R2InputLockError(RuntimeError):
         self.failed_group_ordinal = failed_group_ordinal
         super().__init__(f"{failure_stage}:{normalized}")
 
+
+class A5R3PublicationOwnershipError(RuntimeError):
+    """A non-owner observed an existing claim/final and must mutate nothing."""
+
 SEALED_PREPARE_SOURCE_CLOSURE = {
     "capture_runner": Path("script/experiment/fpct_e1_capture_runner.py"),
     "runtime_backend": Path("script/experiment/fpct_e1_runtime_backend.py"),
     "streaming_verify": Path("script/analysis/fpct_e1_streaming_verify.py"),
     "streaming_gate": Path("script/analysis/fpct_e1_streaming_synthetic_gate.py"),
+    "a5r3_publication_gate": Path(
+        "script/analysis/fpct_e1_a5r3_portable_publication_gate.py"
+    ),
     "source_snapshot_lock": Path(
         "script/experiment/fpct_e1_source_snapshot_lock.py"
     ),
@@ -327,6 +359,9 @@ SEALED_PREPARE_MODULE_NAMES = {
     "runtime_backend": "script.experiment.fpct_e1_runtime_backend",
     "streaming_verify": "script.analysis.fpct_e1_streaming_verify",
     "streaming_gate": "script.analysis.fpct_e1_streaming_synthetic_gate",
+    "a5r3_publication_gate": (
+        "script.analysis.fpct_e1_a5r3_portable_publication_gate"
+    ),
     "source_snapshot_lock": "script.experiment.fpct_e1_source_snapshot_lock",
 }
 _TEST_ONLY_SEALED_PREPARE_MARKER = object()
@@ -594,44 +629,511 @@ def _fsync_directory(path: Path) -> None:
         os.close(descriptor)
 
 
-def _rename_directory_no_replace(source: Path, destination: Path) -> None:
-    """Atomically publish one directory without replacing any destination.
+def _path_exists_no_follow(path: Path) -> bool:
+    try:
+        path.lstat()
+    except FileNotFoundError:
+        return False
+    return True
 
-    ``os.rename`` may replace a concurrently created empty directory, which is
-    incompatible with the immutable choice-audit publication contract.  The
-    formal runtime is Linux, so fail closed unless ``renameat2`` with
-    ``RENAME_NOREPLACE`` is available.
-    """
 
-    source = source.absolute()
-    destination = destination.absolute()
-    if source.parent != destination.parent:
-        raise ValueError("A5R2 audit publication must stay on one filesystem")
-    libc = ctypes.CDLL(None, use_errno=True)
-    renameat2 = getattr(libc, "renameat2", None)
-    if renameat2 is None:
-        raise RuntimeError("A5R2 atomic no-replace directory rename unavailable")
-    renameat2.argtypes = [
-        ctypes.c_int,
-        ctypes.c_char_p,
-        ctypes.c_int,
-        ctypes.c_char_p,
-        ctypes.c_uint,
-    ]
-    renameat2.restype = ctypes.c_int
-    result = renameat2(
-        -100,  # AT_FDCWD
-        os.fsencode(source),
-        -100,
-        os.fsencode(destination),
-        1,  # RENAME_NOREPLACE
-    )
-    if result == 0:
+def _choice_audit_publication_claim_path(run_root: Path) -> Path:
+    return run_root / CHOICE_AUDIT_PUBLICATION_CLAIM_NAME
+
+
+def _assert_secure_choice_audit_run_root(run_root: Path) -> None:
+    try:
+        metadata = run_root.lstat()
+    except FileNotFoundError as error:
+        raise RuntimeError("A5R3 publication run root is absent") from error
+    if not stat.S_ISDIR(metadata.st_mode) or run_root.is_symlink():
+        raise RuntimeError("A5R3 publication run root is not a real directory")
+    if metadata.st_uid != os.geteuid():
+        raise RuntimeError("A5R3 publication run root owner differs")
+    if stat.S_IMODE(metadata.st_mode) & 0o022:
+        raise RuntimeError(
+            "A5R3 publication run root is group/other writable"
+        )
+
+
+def _read_owner_publication_file(
+    path: Path, *, role: str
+) -> tuple[bytes, tuple[int, int, int, int, int]]:
+    """Read one owner-only artifact without following or accepting aliases."""
+
+    no_follow = getattr(os, "O_NOFOLLOW", None)
+    if no_follow is None:
+        raise RuntimeError("A5R3 publication requires O_NOFOLLOW")
+    descriptor = os.open(path, os.O_RDONLY | no_follow)
+    try:
+        metadata = os.fstat(descriptor)
+        if not stat.S_ISREG(metadata.st_mode):
+            raise RuntimeError(f"A5R3 {role} is not a regular file")
+        if stat.S_IMODE(metadata.st_mode) != 0o600:
+            raise RuntimeError(f"A5R3 {role} mode is not 0600")
+        if metadata.st_nlink != 1:
+            raise RuntimeError(f"A5R3 {role} has an unsafe link count")
+        if metadata.st_uid != os.geteuid():
+            raise RuntimeError(f"A5R3 {role} owner differs")
+        chunks: list[bytes] = []
+        while True:
+            chunk = os.read(descriptor, 65536)
+            if not chunk:
+                break
+            chunks.append(chunk)
+        return b"".join(chunks), (
+            int(metadata.st_dev),
+            int(metadata.st_ino),
+            int(metadata.st_uid),
+            int(metadata.st_mode),
+            int(metadata.st_nlink),
+        )
+    finally:
+        os.close(descriptor)
+
+
+def _verify_owner_publication_file(
+    path: Path,
+    payload: bytes,
+    *,
+    role: str,
+    owner_token: tuple[int, int, int, int, int] | None = None,
+) -> tuple[int, int, int, int, int]:
+    try:
+        observed, observed_token = _read_owner_publication_file(path, role=role)
+    except (FileNotFoundError, OSError, RuntimeError) as error:
+        raise RuntimeError(f"A5R3 {role} is absent, replaced, or unsafe") from error
+    if owner_token is not None and observed_token != owner_token:
+        raise RuntimeError(f"A5R3 {role} inode ownership token changed")
+    if observed != payload:
+        raise RuntimeError(f"A5R3 {role} bytes changed")
+    try:
+        decoded = json.loads(observed)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError(f"A5R3 {role} is not canonical JSON") from error
+    if not isinstance(decoded, dict) or canonical_json_bytes(decoded) != observed:
+        raise RuntimeError(f"A5R3 {role} is not canonical JSON")
+    return observed_token
+
+
+def _poison_owned_publication_file(
+    path: Path, owner_token: tuple[int, int, int, int, int]
+) -> None:
+    """Make a failed owner artifact visibly non-consumable without deleting it."""
+
+    try:
+        _payload, observed_token = _read_owner_publication_file(
+            path, role="failed publication artifact"
+        )
+    except BaseException:
         return
-    error_number = ctypes.get_errno()
-    if error_number in {errno.EEXIST, errno.ENOTEMPTY}:
-        raise FileExistsError(error_number, os.strerror(error_number), destination)
-    raise OSError(error_number, os.strerror(error_number), destination)
+    if observed_token != owner_token:
+        return
+    try:
+        os.chmod(path, 0o000, follow_symlinks=False)
+    except (NotImplementedError, OSError):
+        pass
+
+
+def _create_exclusive_owner_publication_file(
+    path: Path,
+    payload: bytes,
+    *,
+    role: str,
+    collision_is_non_owner: bool,
+) -> tuple[int, int, int, int, int]:
+    """O_EXCL-create, write, fsync and parent-fsync one immutable artifact."""
+
+    no_follow = getattr(os, "O_NOFOLLOW", None)
+    if no_follow is None:
+        raise RuntimeError("A5R3 publication requires O_NOFOLLOW")
+    flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY | no_follow
+    try:
+        descriptor = os.open(path, flags, 0o600)
+    except FileExistsError as error:
+        if collision_is_non_owner:
+            raise A5R3PublicationOwnershipError(
+                f"A5R3 {role} already exists; non-owner must mutate nothing"
+            ) from error
+        raise RuntimeError(f"A5R3 {role} already exists") from error
+    metadata = os.fstat(descriptor)
+    owner_token = (
+        int(metadata.st_dev),
+        int(metadata.st_ino),
+        int(metadata.st_uid),
+        int(metadata.st_mode),
+        int(metadata.st_nlink),
+    )
+    try:
+        if not stat.S_ISREG(metadata.st_mode):
+            raise RuntimeError(f"A5R3 {role} inode is not regular")
+        if stat.S_IMODE(metadata.st_mode) != 0o600:
+            raise RuntimeError(f"A5R3 {role} mode is not 0600")
+        offset = 0
+        while offset < len(payload):
+            written = os.write(descriptor, payload[offset:])
+            if written <= 0:
+                raise OSError(f"A5R3 {role} write made no progress")
+            offset += written
+        os.fsync(descriptor)
+    except BaseException:
+        os.close(descriptor)
+        _poison_owned_publication_file(path, owner_token)
+        raise
+    else:
+        os.close(descriptor)
+    try:
+        _fsync_directory(path.parent)
+        _verify_owner_publication_file(
+            path, payload, role=role, owner_token=owner_token
+        )
+    except BaseException:
+        _poison_owned_publication_file(path, owner_token)
+        raise
+    return owner_token
+
+
+def _validate_a5r3_publication_schema_artifact(
+    value: Mapping[str, Any], execution_identity: Mapping[str, Any]
+) -> None:
+    from script.analysis.fpct_e1_a5r3_portable_publication_gate import (
+        validate_a5r3_schema_artifact,
+    )
+
+    validate_a5r3_schema_artifact(
+        value,
+        repo_root=Path(str(execution_identity["source_snapshot_root"])),
+    )
+
+
+def _choice_audit_publication_claim_payload(
+    *,
+    execution_identity: Mapping[str, Any],
+    staging_root: Path,
+    audit_root: Path,
+) -> dict[str, Any]:
+    payload = {
+        "schema_version": 10,
+        "protocol_id": CHOICE_AUDIT_PUBLICATION_CLAIM_PROTOCOL_ID,
+        "artifact_type": "a5r3_choice_audit_publication_claim",
+        "execution_sha": str(execution_identity["execution_sha"]),
+        "run_uid": str(execution_identity["run_uid"]),
+        "run_root": str(execution_identity["run_root"]),
+        "source_staging_basename": staging_root.name,
+        "final_basename": audit_root.name,
+        "receipt_basename": CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME,
+        "choice_semantics_version": 9,
+    }
+    _validate_a5r3_publication_schema_artifact(payload, execution_identity)
+    return payload
+
+
+def _assert_choice_audit_publication_state_is_fresh(
+    *, run_root: Path, audit_root: Path
+) -> None:
+    _assert_secure_choice_audit_run_root(run_root)
+    claim_path = _choice_audit_publication_claim_path(run_root)
+    if _path_exists_no_follow(claim_path):
+        raise A5R3PublicationOwnershipError(
+            "A5R3 publication claim exists; non-owner/re-entry must mutate nothing"
+        )
+    receipt_path = run_root / CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME
+    if _path_exists_no_follow(receipt_path):
+        raise A5R3PublicationOwnershipError(
+            "A5R3 publication receipt exists; re-entry must mutate nothing"
+        )
+    staging_root = run_root / ".choice_audit.staging"
+    if _path_exists_no_follow(staging_root):
+        raise A5R3PublicationOwnershipError(
+            "A5R3 fixed staging exists; re-entry must mutate nothing"
+        )
+    if _path_exists_no_follow(audit_root):
+        raise A5R3PublicationOwnershipError(
+            "A5R3 choice-audit final exists; re-entry must mutate nothing"
+        )
+
+
+def _acquire_choice_audit_publication_claim(
+    *,
+    execution_identity: Mapping[str, Any],
+    staging_root: Path,
+    audit_root: Path,
+) -> tuple[dict[str, Any], bytes, tuple[int, int, int, int, int]]:
+    run_root = Path(str(execution_identity["run_root"])).absolute()
+    staging_root = staging_root.absolute()
+    audit_root = audit_root.absolute()
+    if staging_root.parent != run_root or audit_root.parent != run_root:
+        raise ValueError("A5R3 claim publication must stay inside one run root")
+    if staging_root.name != ".choice_audit.staging":
+        raise ValueError("A5R3 staging basename changed")
+    if audit_root.name != CHOICE_AUDIT_ROOT_NAME:
+        raise ValueError("A5R3 final basename changed")
+    _assert_choice_audit_publication_state_is_fresh(
+        run_root=run_root, audit_root=audit_root
+    )
+    claim = _choice_audit_publication_claim_payload(
+        execution_identity=execution_identity,
+        staging_root=staging_root,
+        audit_root=audit_root,
+    )
+    claim_payload = canonical_json_bytes(claim)
+    claim_path = _choice_audit_publication_claim_path(run_root)
+    owner_token = _create_exclusive_owner_publication_file(
+        claim_path,
+        claim_payload,
+        role="publication claim",
+        collision_is_non_owner=True,
+    )
+    return claim, claim_payload, owner_token
+
+
+def _create_choice_audit_staging_after_reduction(
+    *,
+    execution_identity: Mapping[str, Any],
+    staging_root: Path,
+    audit_root: Path,
+    claim_payload: bytes,
+    claim_owner_token: tuple[int, int, int, int, int],
+) -> None:
+    """Create fixed staging only after the complete reduction is in memory."""
+
+    run_root = Path(str(execution_identity["run_root"])).absolute()
+    staging_root = staging_root.absolute()
+    audit_root = audit_root.absolute()
+    claim_path = _choice_audit_publication_claim_path(run_root)
+    _verify_owner_publication_file(
+        claim_path,
+        claim_payload,
+        role="publication claim",
+        owner_token=claim_owner_token,
+    )
+    for path, role in (
+        (staging_root, "fixed staging"),
+        (audit_root, "choice-audit final"),
+        (
+            run_root / CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME,
+            "publication receipt",
+        ),
+    ):
+        if _path_exists_no_follow(path):
+            raise RuntimeError(f"A5R3 {role} appeared after claim acquisition")
+    try:
+        staging_root.mkdir(mode=0o700)
+        metadata = staging_root.lstat()
+        if (
+            not stat.S_ISDIR(metadata.st_mode)
+            or staging_root.is_symlink()
+            or metadata.st_uid != os.geteuid()
+            or stat.S_IMODE(metadata.st_mode) != 0o700
+            or metadata.st_dev != run_root.lstat().st_dev
+        ):
+            raise RuntimeError("A5R3 fixed staging identity or mode is unsafe")
+        _fsync_directory(run_root)
+    except BaseException:
+        # Claim and any staging inode remain forensic tombstones.
+        raise
+
+
+def _assert_published_choice_audit_bytes(
+    audit_root: Path, *, ledger_sha256: str, summary_sha256: str, lock_sha256: str
+) -> None:
+    expected = {
+        CHOICE_AUDIT_LEDGER_NAME: ledger_sha256,
+        CHOICE_AUDIT_SUMMARY_NAME: summary_sha256,
+        CHOICE_AUDIT_LOCK_NAME: lock_sha256,
+    }
+    try:
+        observed_names = {path.name for path in audit_root.iterdir()}
+    except (FileNotFoundError, NotADirectoryError, OSError) as error:
+        raise RuntimeError("A5R3 published final is absent or unsafe") from error
+    if observed_names != set(expected):
+        raise RuntimeError("A5R3 published final contains unexpected artifacts")
+    for name, expected_sha256 in expected.items():
+        path = _canonical_regular_file(
+            audit_root / name, f"A5R3 published choice-audit {name}"
+        )
+        if sha256_file(path) != expected_sha256:
+            raise RuntimeError("A5R3 published final artifact SHA changed")
+
+
+def _choice_audit_publication_receipt_payload(
+    *,
+    execution_identity: Mapping[str, Any],
+    claim_sha256: str,
+    staging_root: Path,
+    audit_root: Path,
+    ledger_artifact: Mapping[str, Any],
+    summary_artifact: Mapping[str, Any],
+    lock_artifact: Mapping[str, Any],
+) -> dict[str, Any]:
+    return {
+        "schema_version": 10,
+        "protocol_id": CHOICE_AUDIT_PUBLICATION_CLAIM_PROTOCOL_ID,
+        "artifact_type": "a5r3_choice_audit_publication_receipt",
+        "status": "A5R3_CHOICE_AUDIT_PUBLICATION_GO",
+        "execution_sha": str(execution_identity["execution_sha"]),
+        "run_uid": str(execution_identity["run_uid"]),
+        "run_root": str(execution_identity["run_root"]),
+        "claim_basename": CHOICE_AUDIT_PUBLICATION_CLAIM_NAME,
+        "claim_sha256": claim_sha256,
+        "source_staging_basename": staging_root.name,
+        "final_basename": audit_root.name,
+        "choice_semantics_version": 9,
+        "ledger_artifact": dict(ledger_artifact),
+        "summary_artifact": dict(summary_artifact),
+        "lock_artifact": dict(lock_artifact),
+        "publication_commit_point_reached": True,
+    }
+    _validate_a5r3_publication_schema_artifact(payload, execution_identity)
+    return payload
+
+
+def _verify_completed_choice_audit_publication(
+    *,
+    execution_identity: Mapping[str, Any],
+    audit_root: Path,
+) -> dict[str, Any]:
+    run_root = Path(str(execution_identity["run_root"])).absolute()
+    audit_root = audit_root.absolute()
+    _assert_secure_choice_audit_run_root(run_root)
+    claim_path = _choice_audit_publication_claim_path(run_root)
+    receipt_path = run_root / CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME
+    try:
+        claim_payload, _claim_token = _read_owner_publication_file(
+            claim_path, role="publication claim"
+        )
+    except (FileNotFoundError, OSError, RuntimeError) as error:
+        raise RuntimeError(
+            "A5R3 publication claim is absent, replaced, or unsafe"
+        ) from error
+    try:
+        receipt_payload, _receipt_token = _read_owner_publication_file(
+            receipt_path, role="publication receipt"
+        )
+    except (FileNotFoundError, OSError, RuntimeError) as error:
+        raise RuntimeError(
+            "A5R3 publication receipt is absent, replaced, or unsafe"
+        ) from error
+    try:
+        claim = json.loads(claim_payload)
+        receipt = json.loads(receipt_payload)
+    except (UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise RuntimeError("A5R3 publication envelope is invalid JSON") from error
+    if (
+        not isinstance(claim, dict)
+        or not isinstance(receipt, dict)
+        or canonical_json_bytes(claim) != claim_payload
+        or canonical_json_bytes(receipt) != receipt_payload
+    ):
+        raise RuntimeError("A5R3 publication envelope is not canonical JSON")
+    _validate_a5r3_publication_schema_artifact(claim, execution_identity)
+    _validate_a5r3_publication_schema_artifact(receipt, execution_identity)
+    expected_claim = _choice_audit_publication_claim_payload(
+        execution_identity=execution_identity,
+        staging_root=run_root / str(receipt.get("source_staging_basename", "")),
+        audit_root=audit_root,
+    )
+    if claim != expected_claim:
+        raise RuntimeError("A5R3 retained publication claim binding differs")
+    ledger_artifact = _choice_audit_artifact_descriptor(
+        audit_root / CHOICE_AUDIT_LEDGER_NAME, 326
+    )
+    summary_artifact = _choice_audit_artifact_descriptor(
+        audit_root / CHOICE_AUDIT_SUMMARY_NAME, 1
+    )
+    lock_artifact = _choice_audit_artifact_descriptor(
+        audit_root / CHOICE_AUDIT_LOCK_NAME, 1
+    )
+    expected_receipt = _choice_audit_publication_receipt_payload(
+        execution_identity=execution_identity,
+        claim_sha256=hashlib.sha256(claim_payload).hexdigest(),
+        staging_root=run_root / str(claim["source_staging_basename"]),
+        audit_root=audit_root,
+        ledger_artifact=ledger_artifact,
+        summary_artifact=summary_artifact,
+        lock_artifact=lock_artifact,
+    )
+    if receipt != expected_receipt:
+        raise RuntimeError("A5R3 durable publication receipt binding differs")
+    _assert_published_choice_audit_bytes(
+        audit_root,
+        ledger_sha256=ledger_artifact["sha256"],
+        summary_sha256=summary_artifact["sha256"],
+        lock_sha256=lock_artifact["sha256"],
+    )
+    return dict(receipt)
+
+
+def _publish_choice_audit_directory_with_claim(
+    *,
+    staging_root: Path,
+    audit_root: Path,
+    execution_identity: Mapping[str, Any],
+    claim_payload: bytes,
+    claim_owner_token: tuple[int, int, int, int, int],
+    ledger_artifact: Mapping[str, Any],
+    summary_artifact: Mapping[str, Any],
+    lock_artifact: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Rename verified staging, then durably publish the success receipt."""
+
+    staging_root = staging_root.absolute()
+    audit_root = audit_root.absolute()
+    run_root = Path(str(execution_identity["run_root"])).absolute()
+    if staging_root.parent != run_root or audit_root.parent != run_root:
+        raise ValueError("A5R3 claim publication must stay inside one run root")
+    if audit_root.name != CHOICE_AUDIT_ROOT_NAME:
+        raise ValueError("A5R3 choice-audit final basename changed")
+    claim_path = _choice_audit_publication_claim_path(run_root)
+    _verify_owner_publication_file(
+        claim_path,
+        claim_payload,
+        role="publication claim",
+        owner_token=claim_owner_token,
+    )
+    _assert_published_choice_audit_bytes(
+        staging_root,
+        ledger_sha256=str(ledger_artifact["sha256"]),
+        summary_sha256=str(summary_artifact["sha256"]),
+        lock_sha256=str(lock_artifact["sha256"]),
+    )
+    if _path_exists_no_follow(audit_root):
+        raise FileExistsError(
+            "A5R3 choice-audit final appeared after claim acquisition"
+        )
+    os.rename(staging_root, audit_root)
+    _fsync_directory(run_root)
+    _verify_owner_publication_file(
+        claim_path,
+        claim_payload,
+        role="publication claim",
+        owner_token=claim_owner_token,
+    )
+    _assert_published_choice_audit_bytes(
+        audit_root,
+        ledger_sha256=str(ledger_artifact["sha256"]),
+        summary_sha256=str(summary_artifact["sha256"]),
+        lock_sha256=str(lock_artifact["sha256"]),
+    )
+    receipt = _choice_audit_publication_receipt_payload(
+        execution_identity=execution_identity,
+        claim_sha256=hashlib.sha256(claim_payload).hexdigest(),
+        staging_root=staging_root,
+        audit_root=audit_root,
+        ledger_artifact=ledger_artifact,
+        summary_artifact=summary_artifact,
+        lock_artifact=lock_artifact,
+    )
+    receipt_payload = canonical_json_bytes(receipt)
+    _create_exclusive_owner_publication_file(
+        run_root / CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME,
+        receipt_payload,
+        role="publication receipt",
+        collision_is_non_owner=False,
+    )
+    return _verify_completed_choice_audit_publication(
+        execution_identity=execution_identity, audit_root=audit_root
+    )
 
 
 def publish_bytes_no_overwrite(path: Path, payload: bytes) -> str:
@@ -1657,6 +2159,10 @@ def input_asset_state(
         A4_HISTORICAL_SYNTHETIC_GATE_RELATIVE,
         A5_PROMPT_CONTRACT_RELATIVE,
         A5_PROMPT_SCHEMA_RELATIVE,
+        A5R2_SYNTHETIC_GATE_RELATIVE,
+        A5R3_AMENDMENT_RELATIVE,
+        A5R3_CONTRACT_RELATIVE,
+        A5R3_SCHEMA_RELATIVE,
         A5_SYNTHETIC_GATE_RELATIVE,
         Path("recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"),
         E0_DEV_MANIFEST_RELATIVE,
@@ -1685,6 +2191,29 @@ def input_asset_state(
         "source_snapshot_verification": dict(source_snapshot_verification),
     }
     return {**payload, "aggregate_sha256": nested_sha256(payload)}
+
+
+def _load_a5r3_publication_contract(repo_root: Path) -> dict[str, Any]:
+    """Validate the v10 operational overlay without changing v9 semantics."""
+
+    from script.analysis.fpct_e1_a5r3_portable_publication_gate import (
+        _load_contract,
+    )
+
+    overlay = _load_contract(repo_root)
+    artifacts = overlay.get("versioned_artifacts", {})
+    if (
+        overlay.get("protocol_id") != A5_SYNTHETIC_GATE_PROTOCOL_ID
+        or overlay.get("choice_semantics_version") != 9
+        or artifacts.get("amendment") != A5R3_AMENDMENT_RELATIVE.as_posix()
+        or artifacts.get("contract") != A5R3_CONTRACT_RELATIVE.as_posix()
+        or artifacts.get("schema") != A5R3_SCHEMA_RELATIVE.as_posix()
+        or artifacts.get("future_pre_natural_gate")
+        != A5_SYNTHETIC_GATE_RELATIVE.as_posix()
+        or artifacts.get("old_v9_files_may_be_overwritten") is not False
+    ):
+        raise ValueError("A5R3 publication overlay identity/version boundary changed")
+    return overlay
 
 
 def _load_a5_prompt_contract(repo_root: Path) -> dict[str, Any]:
@@ -1805,9 +2334,47 @@ def _load_a5_prompt_contract(repo_root: Path) -> dict[str, Any]:
     ):
         raise ValueError("A5 prompt contract population/order changed")
     gate = contract.get("a5_pre_natural_gate", {})
-    if gate.get("path") != A5_SYNTHETIC_GATE_RELATIVE.as_posix():
-        raise ValueError("A5 prompt contract synthetic-gate path changed")
+    if gate.get("path") != A5R2_SYNTHETIC_GATE_RELATIVE.as_posix():
+        raise ValueError("A5R2 prompt contract synthetic-gate path changed")
+    overlay = _load_a5r3_publication_contract(repo_root)
+    contract["a5r3_portable_publication"] = overlay
+    contract["a5_pre_natural_gate"] = {
+        **gate,
+        "path": A5_SYNTHETIC_GATE_RELATIVE.as_posix(),
+        "protocol_id": A5_SYNTHETIC_GATE_PROTOCOL_ID,
+        "choice_semantics_version": 9,
+    }
     return contract
+
+
+def _load_active_a5_synthetic_gate(repo_root: Path) -> dict[str, Any]:
+    """Verify v10 publication GO and attach immutable v8 stream evidence."""
+
+    from script.analysis.fpct_e1_a5r2_choice_cardinality_gate import (
+        verify_gate as verify_a5r2_gate,
+    )
+    from script.analysis.fpct_e1_a5r3_portable_publication_gate import (
+        verify_gate as verify_a5r3_gate,
+    )
+
+    overlay = _load_a5r3_publication_contract(repo_root)
+    active = verify_a5r3_gate(
+        repo_root / A5_SYNTHETIC_GATE_RELATIVE, repo_root=repo_root
+    )
+    predecessor_path = repo_root / A5R2_SYNTHETIC_GATE_RELATIVE
+    expected_sha256 = overlay["immutable_a5r2_objects"][
+        A5R2_SYNTHETIC_GATE_RELATIVE.as_posix()
+    ]
+    if sha256_file(predecessor_path) != expected_sha256:
+        raise ValueError("immutable A5R2 synthetic gate changed")
+    predecessor = verify_a5r2_gate(predecessor_path, repo_root=repo_root)
+    inherited = predecessor.get("inherited_v8_streaming_evidence")
+    if not isinstance(inherited, Mapping):
+        raise ValueError("A5R2 inherited v8 streaming evidence is absent")
+    return {
+        **active,
+        "inherited_v8_streaming_evidence": dict(inherited),
+    }
 
 
 def _a5r2_dataset_identity(
@@ -2066,6 +2633,10 @@ def _a5r2_choice_audit_source_bindings(repo_root: Path) -> list[dict[str, str]]:
         Path("FPCT_E1_A5R2_CHOICE_CARDINALITY_AMENDMENT.md"),
         A5_PROMPT_CONTRACT_RELATIVE,
         A5_PROMPT_SCHEMA_RELATIVE,
+        A5R2_SYNTHETIC_GATE_RELATIVE,
+        A5R3_AMENDMENT_RELATIVE,
+        A5R3_CONTRACT_RELATIVE,
+        A5R3_SCHEMA_RELATIVE,
         A5_SYNTHETIC_GATE_RELATIVE,
         Path("recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json"),
         E0_DEV_MANIFEST_RELATIVE,
@@ -2180,7 +2751,7 @@ def _choice_audit_binding(
     choice_audit: Mapping[str, Any], execution_identity: Mapping[str, Any]
 ) -> dict[str, Any]:
     audit_root = Path(str(execution_identity["run_root"])) / CHOICE_AUDIT_ROOT_NAME
-    return {
+    binding = {
         "lock": _bound_artifact(audit_root / CHOICE_AUDIT_LOCK_NAME),
         "ledger": _bound_artifact(audit_root / CHOICE_AUDIT_LEDGER_NAME),
         "status": choice_audit["lock"]["status"],
@@ -2191,6 +2762,9 @@ def _choice_audit_binding(
             choice_audit["lock"]["correction_actions_selected"]
         ),
     }
+    if "publication" in choice_audit:
+        binding["publication"] = dict(choice_audit["publication"])
+    return binding
 
 
 def _inherited_v8_contract_binding(
@@ -2241,6 +2815,13 @@ def _verify_a5r2_choice_audit(
 ) -> dict[str, Any]:
     """Independently reread/reduce the immutable label-free choice audit."""
 
+    publication: dict[str, Any] | None = None
+    if audit_root_override is None:
+        run_root = Path(str(execution_identity["run_root"]))
+        publication = _verify_completed_choice_audit_publication(
+            execution_identity=execution_identity,
+            audit_root=run_root / CHOICE_AUDIT_ROOT_NAME,
+        )
     audit_root = (
         audit_root_override
         if audit_root_override is not None
@@ -2318,13 +2899,16 @@ def _verify_a5r2_choice_audit(
         or locked.get("mechanical_decision") != "A5R2_CHOICE_AUDIT_GO"
     ):
         raise RuntimeError("A5R2 choice audit did not mechanically authorize input lock")
-    return {
+    result = {
         "lock": locked,
         "records": records,
         "lock_artifact": _choice_audit_artifact_descriptor(lock_path, 1),
         "ledger_artifact": descriptor,
         "summary_artifact": _choice_audit_artifact_descriptor(summary_path, 1),
     }
+    if publication is not None:
+        result["publication"] = publication
+    return result
 
 
 def _run_a5r2_choice_cardinality_audit(
@@ -2355,13 +2939,16 @@ def _run_a5r2_choice_cardinality_audit(
     expected_count = sum(TASK_GROUP_COUNTS.values())
     if len(ordered_descriptors) != expected_count:
         raise ValueError("A5R2 choice-audit population/order is incomplete")
-    audit_root = Path(str(execution_identity["run_root"])) / CHOICE_AUDIT_ROOT_NAME
-    try:
-        audit_root.lstat()
-    except FileNotFoundError:
-        pass
-    else:
-        raise RuntimeError("A5R2 choice-audit root already exists; resume/reuse forbidden")
+    run_root = Path(str(execution_identity["run_root"]))
+    audit_root = run_root / CHOICE_AUDIT_ROOT_NAME
+    staging_root = run_root / ".choice_audit.staging"
+    _claim, claim_payload, claim_owner_token = (
+        _acquire_choice_audit_publication_claim(
+            execution_identity=execution_identity,
+            staging_root=staging_root,
+            audit_root=audit_root,
+        )
+    )
 
     dataset_cache: dict[tuple[str, str], Any] = {}
     formatters: dict[str, Any] = {}
@@ -2476,6 +3063,7 @@ def _run_a5r2_choice_cardinality_audit(
     ) != summary:
         raise RuntimeError("A5R2 choice-audit in-memory independent replay differs")
     summary_payload = canonical_json_bytes(summary)
+    lock_payload: bytes
     ledger_descriptor = {
         "relative_path": (
             f"{CHOICE_AUDIT_ROOT_NAME}/{CHOICE_AUDIT_LEDGER_NAME}"
@@ -2508,58 +3096,76 @@ def _run_a5r2_choice_cardinality_audit(
         expected_task_counts=TASK_GROUP_COUNTS,
     )
     _validate_a5r2_schema_artifact(locked, repo_root)
+    lock_payload = canonical_json_bytes(locked)
+    lock_sha256 = hashlib.sha256(lock_payload).hexdigest()
+    lock_descriptor = {
+        "relative_path": f"{CHOICE_AUDIT_ROOT_NAME}/{CHOICE_AUDIT_LOCK_NAME}",
+        "sha256": lock_sha256,
+        "bytes": len(lock_payload),
+        "row_count": 1,
+    }
 
-    staging_root = Path(
-        tempfile.mkdtemp(prefix=".choice_audit.staging.", dir=audit_root.parent)
+    _create_choice_audit_staging_after_reduction(
+        execution_identity=execution_identity,
+        staging_root=staging_root,
+        audit_root=audit_root,
+        claim_payload=claim_payload,
+        claim_owner_token=claim_owner_token,
     )
+    published_sha = publish_bytes_no_overwrite(
+        staging_root / CHOICE_AUDIT_LEDGER_NAME, ledger_payload
+    )
+    if published_sha != ledger_descriptor["sha256"]:
+        raise RuntimeError("A5R2 staged choice-audit ledger SHA differs")
+    published_summary_sha = publish_bytes_no_overwrite(
+        staging_root / CHOICE_AUDIT_SUMMARY_NAME, summary_payload
+    )
+    if published_summary_sha != summary_descriptor["sha256"]:
+        raise RuntimeError("A5R2 staged choice-audit summary SHA differs")
+    published_lock_sha = publish_bytes_no_overwrite(
+        staging_root / CHOICE_AUDIT_LOCK_NAME, lock_payload
+    )
+    if published_lock_sha != lock_sha256:
+        raise RuntimeError("A5R2 staged choice-audit lock SHA differs")
     try:
-        published_sha = publish_bytes_no_overwrite(
-            staging_root / CHOICE_AUDIT_LEDGER_NAME, ledger_payload
+        staged = _verify_a5r2_choice_audit(
+            repo_root=repo_root,
+            e0_data_root=e0_data_root,
+            execution_identity=execution_identity,
+            a5_contract=a5_contract,
+            require_go=False,
+            audit_root_override=staging_root,
         )
-        if published_sha != ledger_descriptor["sha256"]:
-            raise RuntimeError("A5R2 staged choice-audit ledger SHA differs")
-        published_summary_sha = publish_bytes_no_overwrite(
-            staging_root / CHOICE_AUDIT_SUMMARY_NAME, summary_payload
+    except A5R3PublicationOwnershipError:
+        # A pre-existing claim/final/receipt belongs to another invocation or
+        # proves terminal re-entry.  The loser must not write even BLOCKED.
+        raise
+    except (
+        IndexError,
+        KeyError,
+        OSError,
+        RuntimeError,
+        TypeError,
+        ValueError,
+    ) as error:
+        raise A5R2InputLockError(
+            "CHOICE_AUDIT_VERIFICATION", _blocked_check_name(error)
+        ) from error
+    if staged["lock"] != locked:
+        raise A5R2InputLockError(
+            "CHOICE_AUDIT_VERIFICATION", "STAGED_AUDIT_LOCK_CHANGED"
         )
-        if published_summary_sha != summary_descriptor["sha256"]:
-            raise RuntimeError("A5R2 staged choice-audit summary SHA differs")
-        atomic_json(staging_root / CHOICE_AUDIT_LOCK_NAME, locked)
-        try:
-            staged = _verify_a5r2_choice_audit(
-                repo_root=repo_root,
-                e0_data_root=e0_data_root,
-                execution_identity=execution_identity,
-                a5_contract=a5_contract,
-                require_go=False,
-                audit_root_override=staging_root,
-            )
-        except (
-            IndexError,
-            KeyError,
-            OSError,
-            RuntimeError,
-            TypeError,
-            ValueError,
-        ) as error:
-            raise A5R2InputLockError(
-                "CHOICE_AUDIT_VERIFICATION", _blocked_check_name(error)
-            ) from error
-        if staged["lock"] != locked:
-            raise A5R2InputLockError(
-                "CHOICE_AUDIT_VERIFICATION", "STAGED_AUDIT_LOCK_CHANGED"
-            )
-        _fsync_directory(staging_root)
-        try:
-            audit_root.lstat()
-        except FileNotFoundError:
-            pass
-        else:
-            raise RuntimeError("A5R2 choice-audit final appeared before publication")
-        _rename_directory_no_replace(staging_root, audit_root)
-        _fsync_directory(audit_root.parent)
-    finally:
-        if staging_root.exists():
-            shutil.rmtree(staging_root)
+    _fsync_directory(staging_root)
+    publication = _publish_choice_audit_directory_with_claim(
+        staging_root=staging_root,
+        audit_root=audit_root,
+        execution_identity=execution_identity,
+        claim_payload=claim_payload,
+        claim_owner_token=claim_owner_token,
+        ledger_artifact=ledger_descriptor,
+        summary_artifact=summary_descriptor,
+        lock_artifact=lock_descriptor,
+    )
     try:
         verified = _verify_a5r2_choice_audit(
             repo_root=repo_root,
@@ -2581,6 +3187,8 @@ def _run_a5r2_choice_cardinality_audit(
         ) from error
     if verified["lock"] != locked:
         raise RuntimeError("A5R2 published choice-audit lock changed")
+    if verified.get("publication") != publication:
+        raise RuntimeError("A5R3 publication envelope changed after commit")
     if locked.get("mechanical_decision") != "A5R2_CHOICE_AUDIT_GO":
         blocked_row = next(
             (
@@ -2881,6 +3489,8 @@ def validate_a5_execution_identity(
         "source_snapshot",
         INPUT_LOCK_ROOT_NAME,
         CHOICE_AUDIT_ROOT_NAME,
+        CHOICE_AUDIT_PUBLICATION_CLAIM_NAME,
+        CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME,
         *downstream_root_names,
     }
     unexpected = sorted(
@@ -3694,13 +4304,9 @@ def _write_streaming_template_lock(
     else:
         validate_streaming_schema_artifact(index)
         atomic_json(index_path, index)
-    synthetic_checks = (
-        _a5_inherited_v8_streaming_evidence(synthetic_gate).get(
-            "streaming_contract_checks", {}
-        )
-        if synthetic_gate.get("protocol_id") == A5_PROTOCOL_ID
-        else synthetic_gate.get("checks", {})
-    )
+    synthetic_checks = _a5_inherited_v8_streaming_evidence(
+        synthetic_gate
+    ).get("streaming_contract_checks", {})
     required_synthetic = (
         "row_key_reference_equivalence",
         "weights_reference_equivalence",
@@ -4001,7 +4607,6 @@ def _verify_completed_input_lock(
     """
 
     import torch
-    from script.analysis.fpct_e1_a5r2_choice_cardinality_gate import verify_gate
 
     output_root = output_manifest.absolute().parent
     _clean_owned_completed_crash_debris(
@@ -4078,10 +4683,10 @@ def _verify_completed_input_lock(
     ):
         raise RuntimeError("completed A5 source-snapshot execution binding changed")
 
-    synthetic_gate = verify_gate(synthetic_gate_path, repo_root=repo_root)
+    synthetic_gate = _load_active_a5_synthetic_gate(repo_root)
     synthetic_checks = synthetic_gate.get("checks", {})
     if (
-        synthetic_gate.get("protocol_id") != A5_PROTOCOL_ID
+        synthetic_gate.get("protocol_id") != A5_SYNTHETIC_GATE_PROTOCOL_ID
         or synthetic_gate.get("artifact_type") != A5_SYNTHETIC_GATE_ARTIFACT_TYPE
         or synthetic_gate.get("status") != A5_SYNTHETIC_GATE_STATUS
         or synthetic_checks.get("natural_e0_design_accessed") is not False
@@ -4644,12 +5249,10 @@ def _prepare_input_lock_after_identity(
     if not streaming_schema_path.is_file() or not synthetic_gate_path.is_file():
         raise FileNotFoundError("A5 streaming schema/synthetic gate is unavailable")
     streaming_schema_sha256 = sha256_file(streaming_schema_path)
-    from script.analysis.fpct_e1_a5r2_choice_cardinality_gate import verify_gate
-
-    synthetic_gate = verify_gate(synthetic_gate_path, repo_root=repo_root)
+    synthetic_gate = _load_active_a5_synthetic_gate(repo_root)
     synthetic_checks = synthetic_gate.get("checks", {})
     if (
-        synthetic_gate.get("protocol_id") != A5_PROTOCOL_ID
+        synthetic_gate.get("protocol_id") != A5_SYNTHETIC_GATE_PROTOCOL_ID
         or synthetic_gate.get("artifact_type") != A5_SYNTHETIC_GATE_ARTIFACT_TYPE
         or synthetic_gate.get("status") != A5_SYNTHETIC_GATE_STATUS
         or synthetic_checks.get("natural_e0_design_accessed") is not False
@@ -5859,6 +6462,10 @@ def prepare_input_lock(
             output_manifest=output_manifest,
             execution_identity=identity,
         )
+    except A5R3PublicationOwnershipError:
+        # A pre-existing claim/final/receipt belongs to another invocation or
+        # proves terminal re-entry.  The loser must not write even BLOCKED.
+        raise
     except (
         IndexError,
         KeyError,

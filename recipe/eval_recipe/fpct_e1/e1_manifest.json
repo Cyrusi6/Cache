@@ -16,8 +16,8 @@
   "branch": "research/fpct-e1-mechanism-audit",
   "base_commit": "613958af38fad27e1ea933ccc0dda6d1af5cce89",
   "classification": "EXPLORATORY_MECHANISM_AUDIT_NOT_CONFIRMATORY",
-  "current_stage": "A5R2_CHOICE_AUDIT_ATOMIC_PUBLICATION_FAILURE_CLOSURE",
-  "current_status": "A5R2_INPUT_LOCK_BLOCKED_NO_USABLE_CHOICE_AUDIT_LOCK_E1_2_NOT_AUTHORIZED",
+  "current_stage": "A5R3_PORTABLE_PUBLICATION_PRE_NATURAL_EXECUTION_LOCK",
+  "current_status": "A5R3_PRE_NATURAL_GATE_GO_NATURAL_AUDIT_NOT_RUN_E1_2_NOT_AUTHORIZED",
   "e0_read_only": {
     "classification": "E0_NO_GO_FOR_FURTHER_SPEND",
     "result_document": {
@@ -51,6 +51,43 @@
     "role": "exploratory mechanism pilot",
     "confirmatory_eligibility": false,
     "prospective_before_e1_pilot_forward_or_outcome": true
+  },
+  "approved_a5r3_portable_publication_amendment": {
+    "approval_id": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R3_PORTABLE_PUBLICATION",
+    "approved_at": "2026-07-31",
+    "user_response_verbatim": "可以",
+    "base_commit": "55476286c84abb6925d9c11a6cffd6ef80a6a58f",
+    "classification": "V10_OPERATIONAL_OVERLAY_CHOICE_SEMANTICS_V9_UNCHANGED",
+    "sole_changed_dimension": "CHOICE_AUDIT_DIRECTORY_PUBLICATION_PRIMITIVE",
+    "amendment": {
+      "path": "FPCT_E1_A5R3_PORTABLE_PUBLICATION_AMENDMENT.md",
+      "sha256": "ccfb73bdfd396d5941e975b09143450189e75fffd4884482ce613cf03feb6cd4"
+    },
+    "contract": {
+      "path": "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_contract.json",
+      "sha256": "2ba72cfbccb5a1b7c9f46c02510f4763a2917210d3884c7b5d8223580db9e272"
+    },
+    "schema": {
+      "path": "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_schema.json",
+      "sha256": "b24d197481c01c917ad9d4063441f96ac23979bdb4b3db24855e551c7fb91460"
+    },
+    "synthetic_gate": {
+      "path": "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_synthetic_gate.json",
+      "sha256": "92c63e3b922405b8c0dcb42a642eeef7b528f1115ea7fc3ba4ab325c61c87bac",
+      "status": "GO_PRE_NATURAL_A5R3_PORTABLE_PUBLICATION_HARD_GATE",
+      "tests_passed": 42,
+      "tests_failed": 0,
+      "execution_tree_sha256": "659151ff0f3d2d45b6368a36783d4525f082415211fe50dc5e85de82b8c60a37",
+      "evidence_sha256": "b4c090fab3404020fd649262d198ac4f45237b47f8c2823b43ae64b5609e6399",
+      "target_filesystem_probe_evidence_sha256": "28b8adda2e833fe1f298425f79ba70b9f059a929770ae1a62c34b996cbc697fc"
+    },
+    "natural_choice_audit_run": false,
+    "cpu_input_lock_run": false,
+    "e1_2_or_e1_3_authorized": false,
+    "model_or_checkpoint_loaded": false,
+    "model_forward": false,
+    "gpu_or_kubernetes_used": false,
+    "training": false
   },
   "approved_a4_streaming_amendment": {
     "approval_id": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A4_STREAMING",
@@ -992,8 +1029,10 @@
     "a5r1_data_hash_recovery": "APPROVED_AND_CONSUMED_BY_TERMINAL_BLOCKED_37BE816A",
     "a5r2_choice_cardinality_recovery": "APPROVED_AND_CONSUMED_BY_TERMINAL_BLOCKED_E765D493",
     "a5r2_pre_natural_synthetic_gate": "GO_325_PASSED_0_FAILED",
-    "e0_design_label_free_choice_audit": "AUTHORIZATION_CONSUMED_PUBLICATION_BLOCKED_NO_USABLE_LOCK",
-    "e0_design_input_lock_rerun": "NOT_AUTHORIZED_AFTER_TERMINAL_BLOCKED_E765D493",
+    "a5r3_portable_publication_recovery": "APPROVED_PROSPECTIVE_BEFORE_SUCCESSOR_NATURAL_ACCESS",
+    "a5r3_pre_natural_synthetic_gate": "GO_42_PASSED_0_FAILED",
+    "e0_design_label_free_choice_audit": "CONDITIONALLY_AUTHORIZED_AFTER_CLEAN_PUSHED_A5R3_EXECUTION_SHA",
+    "e0_design_input_lock_rerun": "CONDITIONAL_ONLY_AFTER_COMPLETE_CHOICE_AUDIT_GO",
     "e0_design_mechanism_audit": "BLOCKED_NO_INPUT_LOCK_GO",
     "e0_design_centered_lambda_sweep": "BLOCKED_NO_FINALIZED_E1_2",
     "new_training": false,
@@ -1021,16 +1060,23 @@
     "a5r2_natural_choice_audit_started": true,
     "a5r2_cpu_input_lock_authorization_condition": "AUTHORIZATION_CONSUMED_TERMINAL_BLOCKED_NEW_PROSPECTIVE_AMENDMENT_REQUIRED",
     "a5r2_cpu_input_lock_started": false,
+    "a5r3_publication_overlay_gate_go": true,
+    "a5r3_publication_overlay_choice_semantics_version": 9,
+    "a5r3_natural_choice_audit_authorization_condition": "CLEAN_PUSHED_SHA_FRESH_SNAPSHOT_UID_ROOT_RESTART_GROUP_ONE",
+    "a5r3_natural_choice_audit_started": false,
+    "a5r3_cpu_input_lock_authorization_condition": "ONLY_AFTER_SAME_EXECUTION_COMPLETE_AUDIT_PUBLICATION_AND_MECHANICAL_GO",
+    "a5r3_cpu_input_lock_started": false,
     "requires_a5_input_lock_go": true,
     "blocked_execution_sha": "e765d493733d9eec94c152506a1c57781e26fb41",
     "predecessor_blocked_execution_sha": "37be816ad611b8b0d916bd98c840c5f31efe2b50",
     "historical_blocked_execution_sha": "07755a4039e89700e59af9e141026a57142f9da0",
     "blocked_execution_resume_or_reuse_allowed": false,
     "human_review_required": true,
-    "human_review_scope": "PORTABLE_ATOMIC_NO_REPLACE_PUBLICATION_RECOVERY_REQUIRES_NEW_PROSPECTIVE_AMENDMENT",
-    "human_decision": "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT; APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS; APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R2_CHOICE_CARDINALITY_RECOVERY",
+    "human_review_scope": "A5R3_APPROVED_AND_PRE_NATURAL_GATE_GO_E1_2_REMAINS_NOT_AUTHORIZED",
+    "human_decision": "ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT; APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R1_HASH_DOMAINS; APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R2_CHOICE_CARDINALITY_RECOVERY; APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R3_PORTABLE_PUBLICATION",
     "a5r1_human_decision_recorded": true,
     "a5r2_human_decision_recorded": true,
+    "a5r3_human_decision_recorded": true,
     "historical_attempt_resume_allowed": false,
     "e1_2_or_e1_3_authorized": false,
     "e1_pilot_forward_or_outcome": false,

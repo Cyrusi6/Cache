@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R2 CPU choice-audit atomic-publication failure closure
-> 当前状态：`A5R2 INPUT LOCK BLOCKED / NO USABLE CHOICE-AUDIT LOCK / E1-2 NOT AUTHORIZED`
-> 下一步：人工审查 portable atomic no-replace publication；`e765d493` execution/root 永久禁止 resume/reuse
+> 当前阶段：A5R3 portable publication pre-natural execution lock
+> 当前状态：`A5R3 PRE-NATURAL GATE GO / NATURAL AUDIT NOT RUN / E1-2 NOT AUTHORIZED`
+> 下一步：提交并推送 clean execution SHA；随后只在 fresh snapshot/UID/root 从 group 1 执行一次 326-row label-free audit
 > 更新时间：2026-07-31（Asia/Shanghai）
 
 ## 隔离身份
@@ -428,3 +428,39 @@ model/checkpoint，未运行 model forward、GPU、CUDA、Kubernetes 或 trainin
   commit、snapshot、UID/root；不得原地重跑。
 - 0 model/checkpoint load、0 model forward、0 GPU/CUDA/Kubernetes、0 training；
   E1-2/E1-3 未进入，E1-pilot/confirmatory 继续 sealed。
+
+## 2026-07-31 A5R3 portable publication pre-natural lock
+
+- 用户在 A5R2 terminal closure 已提交、推送并报告后，以原文 `可以` 做出
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R3_PORTABLE_PUBLICATION`。批准发生在
+  successor natural row、tokenizer/alignment、模型输出和 E1-pilot outcome 前。
+  唯一获准变化是 choice-audit directory publication primitive；326-group
+  population/order、choice parser/cardinality、taxonomy/actions、threshold、prompt、
+  tokenizer/alignment、operator 和 estimand 保持 A5R2 v9 不变。
+- A5R3 是 schema-v10 operational overlay，`choice_semantics_version=9`。发布顺序
+  冻结为：natural row 1 前 O_EXCL/no-follow 持久 claim；完整 reduction 后创建固定
+  staging；ordinary same-filesystem rename 一次；永久保留 claim；以 O_EXCL+fsync
+  `choice_audit_publication_receipt.json` 作为 durable commit point。只有 exact
+  claim + final 三 artifacts + receipt 的交叉绑定可供 downstream 只读消费；任何
+  crash/tamper/intermediate state 永久 BLOCKED 且不得 resume/reuse。
+- Normative amendment/contract/schema SHA256=
+  `ccfb73bdfd396d5941e975b09143450189e75fffd4884482ce613cf03feb6cd4` /
+  `2ba72cfbccb5a1b7c9f46c02510f4763a2917210d3884c7b5d8223580db9e272` /
+  `b24d197481c01c917ad9d4063441f96ac23979bdb4b3db24855e551c7fb91460`。
+  A5R2 四个 normative objects 与 `e765d493` closure 均按 frozen SHA 复验且未修改；
+  `e765d493` root/in-memory reduction/artifacts 永久不可复用。
+- CPU/offline synthetic hard gate=`GO_PRE_NATURAL_A5R3_PORTABLE_PUBLICATION_HARD_GATE`：
+  `42 passed`；target `/netdisk` scratch ordinary-rename/same-device/fsync probe=`GO`，
+  probe evidence=`28b8adda2e833fe1f298425f79ba70b9f059a929770ae1a62c34b996cbc697fc`；
+  tracked tree=`659151ff0f3d2d45b6368a36783d4525f082415211fe50dc5e85de82b8c60a37`；
+  gate evidence=`b4c090fab3404020fd649262d198ac4f45237b47f8c2823b43ae64b5609e6399`；
+  gate artifact SHA256=`92c63e3b922405b8c0dcb42a642eeef7b528f1115ea7fc3ba4ab325c61c87bac`。
+  Inherited CPU closure 共 353 项：首轮 `348 passed / 5 failed` 中四项为 synthetic
+  fixture 尚未指向新 active gate、一项为 contract-required `/tmp/tmp*` domain 被
+  非规范 TMPDIR 改写；修正 fixture 后四项通过，并在规范 `/tmp` domain 下单独验证
+  sealed-import 项通过。没有放宽 invariant 或 tolerance。
+- 本记录冻结时新的 natural choice audit、CPU tokenizer/alignment input-lock 均未
+  运行；clean execution commit/snapshot/UID/root 尚未生成。`math.md` SHA256 仍为
+  `98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad`。
+  0 model/checkpoint load、0 forward、0 GPU/CUDA/Kubernetes、0 training；E1-2/E1-3
+  未授权，E1-pilot/confirmatory 继续 sealed。

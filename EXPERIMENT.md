@@ -671,3 +671,20 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - No post-failure natural scan；未修改 protocol/code/threshold，未运行 tokenizer/
   alignment、model/checkpoint forward、GPU/CUDA/K8s 或 training。`e765d493` root
   永久 no-resume/no-reuse，E1-2/E1-3 未进入；后续修复需新的 prospective approval。
+
+### 2026-07-31 FPCT-E1 A5R3 portable publication pre-natural gate
+
+- Human approval：`可以`，在任何 successor natural access 前冻结；唯一 amendment
+  是 choice-audit publication primitive。A5R2 v9 population、parser、taxonomy、
+  threshold、prompt/tokenizer/alignment 与 operator/estimand 不变。
+- Protocol：natural row 1 前创建并 fsync retained O_EXCL claim；完整 reduction 后
+  创建 fixed staging；ordinary same-filesystem rename exactly once；以 O_EXCL+fsync
+  completion receipt 作为 durable commit point。只有 exact claim/final/receipt 可
+  消费，失败 root 不清理、不 resume、不 reuse。
+- CPU/offline synthetic gate：`42 passed`；`/netdisk` scratch rename/fsync/
+  same-device probe GO；tracked tree=`659151ff...`，gate evidence=`b4c090fa...`，
+  gate artifact SHA256=`92c63e3b922405b8c0dcb42a642eeef7b528f1115ea7fc3ba4ab325c61c87bac`。
+  Inherited 353-test closure 的五个初始 fixture/environment failures 均按既定合同
+  修正或在规范 temp-domain 复验通过，没有改变 scientific rule/tolerance。
+- 本记录不含新的 natural audit result、tokenizer/alignment、model/checkpoint、
+  forward、GPU/CUDA/Kubernetes 或 training；E1-2/E1-3/E1-pilot/confirmatory 未授权。

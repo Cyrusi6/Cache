@@ -1,0 +1,590 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fpct.local/schema/e1_a5r3_portable_publication_schema.json",
+  "title": "FPCT-E1 A5R3 portable publication artifacts",
+  "description": "Strict v10 schema for the prospective portable atomic no-replace publication amendment. Unchanged choice-audit and input-lock artifacts remain independently governed by the immutable v9 schema.",
+  "oneOf": [
+    {"$ref": "#/$defs/a5r3Contract"},
+    {"$ref": "#/$defs/publicationClaim"},
+    {"$ref": "#/$defs/syntheticGate"},
+    {"$ref": "#/$defs/publicationOutcome"}
+  ],
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "gitSha40": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "protocolId": {"const": "fpct_e1_mechanism_audit_v10_a5r3_portable_publication"},
+    "runUid": {"type": "string", "pattern": "^fpct-e1-a5r2-choice-cardinality-[0-9a-f]{8}-v1$"},
+    "runRoot": {"type": "string", "pattern": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-[0-9a-f]{8}-v1$"},
+    "fileBinding": {
+      "type": "object",
+      "required": ["path", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "artifactDescriptor": {
+      "type": "object",
+      "required": ["relative_path", "sha256", "bytes", "row_count"],
+      "additionalProperties": false,
+      "properties": {
+        "relative_path": {"type": "string", "pattern": "^choice_audit/[^/]+$"},
+        "sha256": {"$ref": "#/$defs/sha256"},
+        "bytes": {"type": "integer", "minimum": 1},
+        "row_count": {"type": "integer", "minimum": 1}
+      }
+    },
+    "approval": {
+      "const": {
+        "approved": true,
+        "decision_date": "2026-07-31",
+        "timezone": "Asia/Shanghai",
+        "user_response_verbatim": "可以",
+        "approval_id": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R3_PORTABLE_PUBLICATION",
+        "prospective_before_successor_natural_access": true,
+        "classification": "PROSPECTIVE_PORTABLE_ATOMIC_NO_REPLACE_PUBLICATION_ONLY"
+      }
+    },
+    "scope": {
+      "const": {
+        "sole_changed_dimension": "CHOICE_AUDIT_DIRECTORY_PUBLICATION_PRIMITIVE",
+        "protocol_contract_schema_code_tests": true,
+        "cpu_offline_no_natural_synthetic_gate": true,
+        "fresh_commit_push_snapshot_uid_root": true,
+        "label_free_326_row_choice_audit_from_group_one": true,
+        "conditional_cpu_input_lock_from_group_one": true,
+        "e1_2": false,
+        "e1_3": false,
+        "e1_pilot_or_confirmatory": false,
+        "model_or_checkpoint_load": false,
+        "model_forward": false,
+        "gpu_cuda_or_kubernetes": false,
+        "training": false
+      }
+    },
+    "predecessor": {
+      "const": {
+        "base_commit": "55476286c84abb6925d9c11a6cffd6ef80a6a58f",
+        "blocked_execution_sha": "e765d493733d9eec94c152506a1c57781e26fb41",
+        "blocked_run_uid": "fpct-e1-a5r2-choice-cardinality-e765d493-v1",
+        "blocked_run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-e765d493-v1",
+        "closure_path": "recipe/eval_recipe/fpct_e1/executions/e765d493/input_lock_failure_receipt.json",
+        "closure_sha256": "f6715f9d86b23ccc265f6ead7b24af47acaf1e1ecd9eb14552af7940d68f798c",
+        "failed_operation": "renameat2(RENAME_NOREPLACE)",
+        "failure_code": "ERRNO_22_INVALID_ARGUMENT",
+        "resume_allowed": false,
+        "artifact_or_observation_reuse_allowed": false,
+        "a5r1_blocked_execution_sha": "37be816ad611b8b0d916bd98c840c5f31efe2b50",
+        "a5r1_resume_or_reuse_allowed": false
+      }
+    },
+    "a5r2Objects": {
+      "const": {
+        "FPCT_E1_A5R2_CHOICE_CARDINALITY_AMENDMENT.md": "89753bcbdec66d07c36bcfc3a5c636e66704cddce5546ac0e321d7a9ea053384",
+        "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_contract.json": "a4bdf4a229d26b367fb8ea7c90adf39d72e94c56daf4d095346bf673c5c2eb1b",
+        "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_schema.json": "9cb387628e4b8fcf6c978e082b8c3380dbc62406c6aa460892c679872d656d7f",
+        "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_synthetic_gate.json": "cfc8c7da3bb074b0a4fcb23276af8d8404516b656337abb5c3034724272d2cd9"
+      }
+    },
+    "scientificContract": {
+      "const": {
+        "population": "E0-design",
+        "distinct_content_groups": 326,
+        "task_order": ["ai2-arc", "openbookqa", "mmlu-redux"],
+        "task_counts": {"ai2-arc": 128, "openbookqa": 70, "mmlu-redux": 128},
+        "restart_group_ordinal_one_based": 1,
+        "population_or_order_changed": false,
+        "choice_parsing_or_cardinality_changed": false,
+        "taxonomy_or_correction_actions_changed": false,
+        "threshold_changed": false,
+        "prompt_tokenizer_or_alignment_changed": false,
+        "operator_or_estimand_changed": false,
+        "a5r2_in_memory_reduction_may_be_used": false,
+        "label_free_firewall_unchanged": true
+      }
+    },
+    "versionBoundary": {
+      "const": {
+        "a5r3_operational_overlay_schema_version": 10,
+        "choice_semantics_version": 9,
+        "a5r2_choice_row_summary_lock_and_downstream_payload_schema_unchanged": true,
+        "silent_v9_mutation_allowed": false,
+        "a5r3_overlay_bound_in_claim_receipt_and_gate": true
+      }
+    },
+    "pathContract": {
+      "const": {
+        "run_root_is_fresh_exclusive_real_directory": true,
+        "all_transaction_paths_are_direct_children_of_run_root": true,
+        "claim_basename": ".choice_audit.publication.claim.json",
+        "staging_basename": ".choice_audit.staging",
+        "final_basename": "choice_audit",
+        "receipt_basename": "choice_audit_publication_receipt.json",
+        "canonical_final_artifacts": [
+          "choice_cardinality_audit_rows.jsonl",
+          "choice_cardinality_audit_summary.json",
+          "choice_cardinality_audit_lock.json"
+        ],
+        "additional_staging_or_final_entries_allowed": false,
+        "symlink_or_path_traversal_allowed": false,
+        "same_mounted_filesystem_required": true,
+        "directory_fd_relative_operations_required": false,
+        "fresh_owner_controlled_run_root_required": true
+      }
+    },
+    "claimContract": {
+      "const": {
+        "open_flags": ["O_WRONLY", "O_CREAT", "O_EXCL", "O_NOFOLLOW"],
+        "mode_octal": "0600",
+        "regular_file_required": true,
+        "link_count": 1,
+        "canonical_json_sort_keys": true,
+        "canonical_json_separators": [",", ":"],
+        "trailing_newline_is_normative": false,
+        "owner_fields": [
+          "protocol_id",
+          "execution_sha",
+          "run_uid",
+          "run_root",
+          "source_staging_basename",
+          "final_basename",
+          "receipt_basename",
+          "choice_semantics_version"
+        ],
+        "created_and_durably_verified_before_natural_row_one": true,
+        "result_dependent_artifact_hashes_allowed_in_claim": false,
+        "mutable_process_metadata_as_owner_authority_allowed": false,
+        "stable_owner_identity": "sha256(canonical_claim_bytes)",
+        "redundant_owner_id_field_allowed": false,
+        "in_process_fstat_tuple": ["st_dev", "st_ino", "st_uid", "st_mode", "st_nlink"],
+        "inode_identity_persisted": false,
+        "complete_bytes_and_safe_file_properties_reverified_at_every_boundary": true,
+        "owner_mismatch_is_terminal": true
+      }
+    },
+    "orderedOperations": {
+      "const": [
+        "verify_fresh_real_run_root_and_claim_staging_final_receipt_absent",
+        "create_exclusive_nofollow_claim",
+        "write_and_reread_canonical_claim",
+        "fsync_claim",
+        "fsync_run_root_after_claim",
+        "reverify_claim_before_natural_row_one",
+        "run_unchanged_label_free_326_row_audit_from_group_one",
+        "reverify_claim_and_staging_final_absent",
+        "create_exclusive_real_staging_directory",
+        "write_and_fsync_three_canonical_artifacts",
+        "fsync_staging_directory",
+        "independently_verify_staged_schema_bytes_hashes_rows_reduction_decision_and_exact_entries",
+        "reverify_claim_same_device_staging_identity_and_final_absence",
+        "ordinary_same_filesystem_rename_staging_to_final_exactly_once",
+        "fsync_run_root_after_rename",
+        "independently_verify_final_directory_and_artifacts",
+        "reverify_retained_claim",
+        "create_exclusive_nofollow_success_receipt_binding_claim_and_final_artifacts",
+        "fsync_success_receipt",
+        "fsync_run_root_after_success_receipt",
+        "independently_reread_retained_claim_final_and_success_receipt",
+        "durable_a5r3_choice_audit_publication_go_committed"
+      ]
+    },
+    "portablePublication": {
+      "type": "object",
+      "required": [
+        "serialization_model",
+        "authorized_commit_operation",
+        "rename_call_count",
+        "renameat2_allowed",
+        "os_replace_allowed",
+        "copy_delete_or_shutil_move_allowed",
+        "final_overwrite_allowed",
+        "ordered_operations",
+        "claim_is_created_before_staging",
+        "claim_is_created_before_natural_row_one",
+        "staged_artifacts_fully_fsynced_and_verified_before_rename",
+        "final_absence_rechecked_immediately_before_rename",
+        "claim_retained_permanently",
+        "success_receipt_is_durable_go_point",
+        "publication_commit_point_reached_is_persisted_in_success_receipt",
+        "python_return_is_success_evidence",
+        "success_receipt_binds_claim_sha_and_three_final_artifact_shas",
+        "success_status",
+        "publication_reentry_with_existing_final_allowed",
+        "read_only_consumer_requires_exact_claim_final_and_receipt",
+        "claim_loser_is_read_only_and_may_not_publish_blocked"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "serialization_model": {"const": "EXCLUSIVE_CLAIM_SINGLE_COMPLIANT_WRITER"},
+        "authorized_commit_operation": {"const": "ordinary_same_filesystem_rename(staging,final)"},
+        "rename_call_count": {"const": 1},
+        "renameat2_allowed": {"const": false},
+        "os_replace_allowed": {"const": false},
+        "copy_delete_or_shutil_move_allowed": {"const": false},
+        "final_overwrite_allowed": {"const": false},
+        "ordered_operations": {"$ref": "#/$defs/orderedOperations"},
+        "claim_is_created_before_staging": {"const": true},
+        "claim_is_created_before_natural_row_one": {"const": true},
+        "staged_artifacts_fully_fsynced_and_verified_before_rename": {"const": true},
+        "final_absence_rechecked_immediately_before_rename": {"const": true},
+        "claim_retained_permanently": {"const": true},
+        "success_receipt_is_durable_go_point": {"const": true},
+        "publication_commit_point_reached_is_persisted_in_success_receipt": {"const": true},
+        "python_return_is_success_evidence": {"const": false},
+        "success_receipt_binds_claim_sha_and_three_final_artifact_shas": {"const": true},
+        "success_status": {"const": "A5R3_CHOICE_AUDIT_PUBLICATION_GO"},
+        "publication_reentry_with_existing_final_allowed": {"const": false},
+        "read_only_consumer_requires_exact_claim_final_and_receipt": {"const": true},
+        "claim_loser_is_read_only_and_may_not_publish_blocked": {"const": true}
+      }
+    },
+    "failureContract": {
+      "const": {
+        "status": "A5R3_CHOICE_AUDIT_PUBLICATION_BLOCKED",
+        "any_preexisting_claim_staging_final_or_receipt_blocks_publisher_reentry": true,
+        "claim_owner_mismatch_is_terminal": true,
+        "rename_fsync_receipt_or_verification_failure_is_terminal": true,
+        "failed_transaction_cleanup_allowed": false,
+        "retained_objects_are_tombstones_and_forensic_evidence": true,
+        "resume_allowed": false,
+        "root_or_artifact_reuse_allowed": false,
+        "in_place_repair_allowed": false,
+        "partial_staging_is_published_artifact": false,
+        "crashed_final_is_retroactive_go": false,
+        "final_plus_claim_without_receipt_is_terminal_blocked": true,
+        "receipt_without_exact_claim_and_final_is_terminal_blocked": true,
+        "claim_loser_is_non_owner_not_blocked_writer": true,
+        "only_exact_claim_final_receipt_state_is_go": true
+      }
+    },
+    "crashPoints": {
+      "const": [
+        "after_claim_create_before_complete_write",
+        "after_claim_write_before_claim_fsync",
+        "after_claim_fsync_before_run_root_fsync",
+        "after_run_root_fsync_after_claim",
+        "after_staging_create",
+        "after_each_staged_artifact",
+        "after_staging_fsync",
+        "after_staged_verification",
+        "immediately_before_rename",
+        "immediately_after_rename",
+        "after_run_root_fsync_after_rename",
+        "immediately_before_success_receipt_create",
+        "immediately_after_success_receipt_create",
+        "after_success_receipt_fsync_before_run_root_fsync",
+        "before_final_claim_receipt_independent_reread"
+      ]
+    },
+    "syntheticGateContract": {
+      "const": {
+        "status_go": "GO_PRE_NATURAL_A5R3_PORTABLE_PUBLICATION_HARD_GATE",
+        "status_blocked": "A5R3_PRE_NATURAL_GATE_BLOCKED",
+        "natural_e0_design_accessed": false,
+        "target_filesystem_class_scratch_test_required": true,
+        "synthetic_scratch_is_production_root": false,
+        "exact_a5r2_bindings_required": true,
+        "ordinary_rename_success_required": true,
+        "concurrent_compliant_publishers_exactly_one_claim_winner_required": true,
+        "preexisting_path_regular_and_symlink_tests_required": true,
+        "claim_inode_link_owner_and_byte_tamper_tests_required": true,
+        "staging_and_final_artifact_tamper_tests_required": true,
+        "same_device_and_operation_failure_tests_required": true,
+        "all_crash_points_fail_closed_reentry_tests_required": true,
+        "publisher_reentry_after_success_is_read_only_and_refuses_mutation": true,
+        "claim_loser_read_only_no_blocked_pollution_required": true,
+        "renameat2_replace_copy_delete_static_absence_required": true,
+        "tokenizer_or_alignment_accessed": false,
+        "zero_model_gpu_training_or_later_stage_access_required": true,
+        "threshold_relaxation_after_failure_allowed": false
+      }
+    },
+    "freshExecution": {
+      "const": {
+        "commit": "PENDING_CLEAN_PUSHED_A5R3_COMMIT",
+        "uid_pattern": "^fpct-e1-a5r2-choice-cardinality-[0-9a-f]{8}-v1$",
+        "root_pattern": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-[0-9a-f]{8}-v1$",
+        "new_empty_root_required": true,
+        "new_immutable_source_snapshot_and_receipt_required": true,
+        "pre_row_one_source_and_data_binding_replay_required": true,
+        "publication_claim_acquired_before_natural_row_one": true,
+        "audit_restarts_from_group_one": true,
+        "input_lock_restarts_from_group_one": true,
+        "a5r1_or_a5r2_uid_root_snapshot_receipt_cursor_artifact_or_observation_reuse_allowed": false
+      }
+    },
+    "orderedAuthorization": {
+      "const": [
+        "v10_amendment_contract_schema_code_tests",
+        "v10_pre_natural_synthetic_gate_go",
+        "commit_and_push",
+        "clean_local_upstream_equality",
+        "fresh_snapshot_uid_and_empty_root",
+        "pre_row_one_source_and_data_binding_replay",
+        "durable_exclusive_claim_before_natural_row_one",
+        "label_free_326_row_choice_audit_from_group_one",
+        "portable_claim_serialized_publication",
+        "unchanged_a5r2_mechanical_audit_decision",
+        "conditional_cpu_input_lock_from_group_one",
+        "independent_completed_verification",
+        "stop_before_e1_2"
+      ]
+    },
+    "authorizationAfterGo": {
+      "const": {
+        "provenance_reporting": true,
+        "e1_2": false,
+        "e1_3": false,
+        "e1_pilot": false,
+        "confirmatory": false,
+        "model_or_checkpoint_load": false,
+        "model_forward": false,
+        "gpu_cuda_or_kubernetes": false,
+        "training": false,
+        "scientific_claim": false,
+        "next_state": "HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED"
+      }
+    },
+    "versionedArtifacts": {
+      "const": {
+        "amendment": "FPCT_E1_A5R3_PORTABLE_PUBLICATION_AMENDMENT.md",
+        "contract": "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_contract.json",
+        "schema": "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_schema.json",
+        "future_pre_natural_gate": "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_synthetic_gate.json",
+        "old_v9_files_may_be_overwritten": false
+      }
+    },
+    "a5r3Contract": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "choice_semantics_version",
+        "approval",
+        "scope",
+        "immutable_predecessor",
+        "immutable_a5r2_objects",
+        "unchanged_scientific_contract",
+        "version_boundary",
+        "path_contract",
+        "claim_contract",
+        "portable_publication",
+        "failure_contract",
+        "crash_points",
+        "synthetic_gate",
+        "fresh_execution",
+        "ordered_authorization",
+        "authorization_after_input_lock_go",
+        "versioned_artifacts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 10},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r3_portable_publication_contract"},
+        "choice_semantics_version": {"const": 9},
+        "approval": {"$ref": "#/$defs/approval"},
+        "scope": {"$ref": "#/$defs/scope"},
+        "immutable_predecessor": {"$ref": "#/$defs/predecessor"},
+        "immutable_a5r2_objects": {"$ref": "#/$defs/a5r2Objects"},
+        "unchanged_scientific_contract": {"$ref": "#/$defs/scientificContract"},
+        "version_boundary": {"$ref": "#/$defs/versionBoundary"},
+        "path_contract": {"$ref": "#/$defs/pathContract"},
+        "claim_contract": {"$ref": "#/$defs/claimContract"},
+        "portable_publication": {"$ref": "#/$defs/portablePublication"},
+        "failure_contract": {"$ref": "#/$defs/failureContract"},
+        "crash_points": {"$ref": "#/$defs/crashPoints"},
+        "synthetic_gate": {"$ref": "#/$defs/syntheticGateContract"},
+        "fresh_execution": {"$ref": "#/$defs/freshExecution"},
+        "ordered_authorization": {"$ref": "#/$defs/orderedAuthorization"},
+        "authorization_after_input_lock_go": {"$ref": "#/$defs/authorizationAfterGo"},
+        "versioned_artifacts": {"$ref": "#/$defs/versionedArtifacts"}
+      }
+    },
+    "publicationClaim": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "choice_semantics_version",
+        "execution_sha",
+        "run_uid",
+        "run_root",
+        "source_staging_basename",
+        "final_basename",
+        "receipt_basename"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 10},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r3_choice_audit_publication_claim"},
+        "choice_semantics_version": {"const": 9},
+        "execution_sha": {"$ref": "#/$defs/gitSha40"},
+        "run_uid": {"$ref": "#/$defs/runUid"},
+        "run_root": {"$ref": "#/$defs/runRoot"},
+        "source_staging_basename": {"const": ".choice_audit.staging"},
+        "final_basename": {"const": "choice_audit"},
+        "receipt_basename": {"const": "choice_audit_publication_receipt.json"}
+      }
+    },
+    "gateChecks": {
+      "type": "object",
+      "required": [
+        "contract_validates",
+        "schema_self_consistent",
+        "approval_and_base_bound",
+        "a5r2_closure_and_objects_immutable",
+        "publication_primitive_is_only_change",
+        "target_filesystem_scratch_ordinary_rename_pass",
+        "renameat2_replace_copy_delete_absent",
+        "exclusive_claim_concurrency_pass",
+        "preexisting_regular_and_symlink_paths_refused",
+        "claim_identity_owner_link_and_byte_tamper_refused",
+        "staged_and_final_tamper_refused",
+        "same_device_enforced",
+        "rename_fsync_receipt_failures_terminal",
+        "all_crash_points_fail_closed",
+        "successful_final_equals_verified_staging",
+        "retained_claim_and_success_receipt_cross_bindings_pass",
+        "publisher_reentry_is_read_only_and_refuses_mutation",
+        "claim_loser_read_only_no_blocked_pollution",
+        "natural_e0_design_accessed",
+        "tokenizer_or_alignment_accessed",
+        "model_or_checkpoint_loaded",
+        "model_forward_run",
+        "gpu_cuda_or_kubernetes_used",
+        "training",
+        "e1_pilot_or_confirmatory_accessed",
+        "e1_2_or_e1_3_authorized"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "contract_validates": {"const": true},
+        "schema_self_consistent": {"const": true},
+        "approval_and_base_bound": {"const": true},
+        "a5r2_closure_and_objects_immutable": {"const": true},
+        "publication_primitive_is_only_change": {"const": true},
+        "target_filesystem_scratch_ordinary_rename_pass": {"const": true},
+        "renameat2_replace_copy_delete_absent": {"const": true},
+        "exclusive_claim_concurrency_pass": {"const": true},
+        "preexisting_regular_and_symlink_paths_refused": {"const": true},
+        "claim_identity_owner_link_and_byte_tamper_refused": {"const": true},
+        "staged_and_final_tamper_refused": {"const": true},
+        "same_device_enforced": {"const": true},
+        "rename_fsync_receipt_failures_terminal": {"const": true},
+        "all_crash_points_fail_closed": {"const": true},
+        "successful_final_equals_verified_staging": {"const": true},
+        "retained_claim_and_success_receipt_cross_bindings_pass": {"const": true},
+        "publisher_reentry_is_read_only_and_refuses_mutation": {"const": true},
+        "claim_loser_read_only_no_blocked_pollution": {"const": true},
+        "natural_e0_design_accessed": {"const": false},
+        "tokenizer_or_alignment_accessed": {"const": false},
+        "model_or_checkpoint_loaded": {"const": false},
+        "model_forward_run": {"const": false},
+        "gpu_cuda_or_kubernetes_used": {"const": false},
+        "training": {"const": false},
+        "e1_pilot_or_confirmatory_accessed": {"const": false},
+        "e1_2_or_e1_3_authorized": {"const": false}
+      }
+    },
+    "syntheticGate": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "choice_semantics_version",
+        "status",
+        "base_commit",
+        "blocked_execution_sha",
+        "blocked_failure_closure_sha256",
+        "a5r2_objects",
+        "v10_artifacts",
+        "tracked_files",
+        "execution_tree_sha256",
+        "target_filesystem_probe",
+        "checks",
+        "crash_points_tested",
+        "test_count",
+        "test_output_sha256",
+        "evidence_sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 10},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r3_portable_publication_synthetic_gate"},
+        "choice_semantics_version": {"const": 9},
+        "status": {"const": "GO_PRE_NATURAL_A5R3_PORTABLE_PUBLICATION_HARD_GATE"},
+        "base_commit": {"const": "55476286c84abb6925d9c11a6cffd6ef80a6a58f"},
+        "blocked_execution_sha": {"const": "e765d493733d9eec94c152506a1c57781e26fb41"},
+        "blocked_failure_closure_sha256": {"const": "f6715f9d86b23ccc265f6ead7b24af47acaf1e1ecd9eb14552af7940d68f798c"},
+        "a5r2_objects": {"$ref": "#/$defs/a5r2Objects"},
+        "v10_artifacts": {"type": "array", "minItems": 3, "uniqueItems": true, "items": {"$ref": "#/$defs/fileBinding"}},
+        "tracked_files": {"type": "array", "minItems": 3, "uniqueItems": true, "items": {"$ref": "#/$defs/fileBinding"}},
+        "execution_tree_sha256": {"$ref": "#/$defs/sha256"},
+        "target_filesystem_probe": {
+          "type": "object",
+          "required": ["natural_data_accessed", "ordinary_rename_succeeded", "same_device", "scratch_only", "probe_evidence_sha256"],
+          "additionalProperties": false,
+          "properties": {
+            "natural_data_accessed": {"const": false},
+            "ordinary_rename_succeeded": {"const": true},
+            "same_device": {"const": true},
+            "scratch_only": {"const": true},
+            "probe_evidence_sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "checks": {"$ref": "#/$defs/gateChecks"},
+        "crash_points_tested": {"$ref": "#/$defs/crashPoints"},
+        "test_count": {"type": "integer", "minimum": 1},
+        "test_output_sha256": {"$ref": "#/$defs/sha256"},
+        "evidence_sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "publicationOutcome": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "choice_semantics_version",
+        "status",
+        "execution_sha",
+        "run_uid",
+        "run_root",
+        "claim_basename",
+        "claim_sha256",
+        "source_staging_basename",
+        "final_basename",
+        "ledger_artifact",
+        "summary_artifact",
+        "lock_artifact",
+        "publication_commit_point_reached"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {"const": 10},
+        "protocol_id": {"$ref": "#/$defs/protocolId"},
+        "artifact_type": {"const": "a5r3_choice_audit_publication_receipt"},
+        "choice_semantics_version": {"const": 9},
+        "status": {"const": "A5R3_CHOICE_AUDIT_PUBLICATION_GO"},
+        "execution_sha": {"$ref": "#/$defs/gitSha40"},
+        "run_uid": {"$ref": "#/$defs/runUid"},
+        "run_root": {"$ref": "#/$defs/runRoot"},
+        "claim_basename": {"const": ".choice_audit.publication.claim.json"},
+        "claim_sha256": {"$ref": "#/$defs/sha256"},
+        "source_staging_basename": {"const": ".choice_audit.staging"},
+        "final_basename": {"const": "choice_audit"},
+        "ledger_artifact": {"$ref": "#/$defs/artifactDescriptor"},
+        "summary_artifact": {"$ref": "#/$defs/artifactDescriptor"},
+        "lock_artifact": {"$ref": "#/$defs/artifactDescriptor"},
+        "publication_commit_point_reached": {"const": true}
+      }
+    }
+  }
+}

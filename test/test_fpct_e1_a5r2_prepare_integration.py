@@ -68,6 +68,27 @@ def _strict_tmp_aware_schema_validator(
     a5r2_gate.validate_a5r2_schema_artifact(candidate, repo_root=REPO_ROOT)
 
 
+def _strict_tmp_aware_a5r3_validator(
+    value: Mapping[str, Any], execution_identity: Mapping[str, Any]
+) -> None:
+    candidate = copy.deepcopy(dict(value))
+    candidate["run_root"] = SCHEMA_RUN_ROOT
+    a5r3_gate = __import__(
+        "script.analysis.fpct_e1_a5r3_portable_publication_gate",
+        fromlist=["validate_a5r3_schema_artifact"],
+    )
+    a5r3_gate.validate_a5r3_schema_artifact(candidate, repo_root=REPO_ROOT)
+
+
+@pytest.fixture(autouse=True)
+def _validate_a5r3_tmp_roots(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        prepare,
+        "_validate_a5r3_publication_schema_artifact",
+        _strict_tmp_aware_a5r3_validator,
+    )
+
+
 class _SyntheticFormatter:
     """Pure formatter with the same full-choice ordinal semantics as E0."""
 
@@ -247,6 +268,30 @@ def test_mocked_326_row_audit_publishes_three_files_and_strictly_replays(
         row["gold_or_outcome_field_accessed"] is False
         for row in verified["records"]
     )
+    claim_path = (
+        tmp_path
+        / "synthetic-a5r2-run"
+        / prepare.CHOICE_AUDIT_PUBLICATION_CLAIM_NAME
+    )
+    receipt_path = (
+        tmp_path
+        / "synthetic-a5r2-run"
+        / prepare.CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME
+    )
+    assert claim_path.is_file()
+    assert receipt_path.is_file()
+    assert claim_path.stat().st_mode & 0o777 == 0o600
+    assert receipt_path.stat().st_mode & 0o777 == 0o600
+    assert not (tmp_path / "synthetic-a5r2-run" / ".choice_audit.staging").exists()
+    claim = json.loads(claim_path.read_text(encoding="utf-8"))
+    receipt = json.loads(receipt_path.read_text(encoding="utf-8"))
+    assert prepare.canonical_json_bytes(claim) == claim_path.read_bytes()
+    assert prepare.canonical_json_bytes(receipt) == receipt_path.read_bytes()
+    assert receipt["claim_sha256"] == prepare.hashlib.sha256(
+        claim_path.read_bytes()
+    ).hexdigest()
+    assert receipt["status"] == "A5R3_CHOICE_AUDIT_PUBLICATION_GO"
+    assert verified["publication"] == receipt
     replay = prepare._verify_a5r2_choice_audit(
         repo_root=REPO_ROOT,
         e0_data_root=tmp_path / "synthetic-e0-data",
@@ -326,7 +371,9 @@ def test_staging_publish_failure_leaves_no_final_audit_or_usable_lock(
             reference_model_config={},
         )
     assert not (run_root / prepare.CHOICE_AUDIT_ROOT_NAME).exists()
-    assert not list(run_root.glob(".choice_audit.staging.*"))
+    assert (run_root / prepare.CHOICE_AUDIT_PUBLICATION_CLAIM_NAME).is_file()
+    assert (run_root / ".choice_audit.staging").is_dir()
+    assert not (run_root / prepare.CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME).exists()
     assert not list(run_root.rglob(prepare.CHOICE_AUDIT_LOCK_NAME))
 
 
@@ -339,14 +386,18 @@ def test_atomic_directory_publication_never_replaces_concurrent_empty_target(
     e0_data_root = tmp_path / "synthetic-e0-data"
     e0_data_root.mkdir()
     _install_audit_mocks(monkeypatch, examples, dev)
-    original_rename = prepare._rename_directory_no_replace
+    original_assert = prepare._assert_published_choice_audit_bytes
+    injected = False
 
-    def inject_competing_target(source: Path, destination: Path) -> None:
-        destination.mkdir()
-        original_rename(source, destination)
+    def inject_competing_target(path: Path, **kwargs: Any) -> None:
+        nonlocal injected
+        original_assert(path, **kwargs)
+        if not injected and path.name == ".choice_audit.staging":
+            injected = True
+            (run_root / prepare.CHOICE_AUDIT_ROOT_NAME).mkdir()
 
     monkeypatch.setattr(
-        prepare, "_rename_directory_no_replace", inject_competing_target
+        prepare, "_assert_published_choice_audit_bytes", inject_competing_target
     )
     with pytest.raises(FileExistsError):
         prepare._run_a5r2_choice_cardinality_audit(
@@ -361,8 +412,340 @@ def test_atomic_directory_publication_never_replaces_concurrent_empty_target(
     final_root = run_root / prepare.CHOICE_AUDIT_ROOT_NAME
     assert final_root.is_dir()
     assert list(final_root.iterdir()) == []
-    assert not list(run_root.glob(".choice_audit.staging.*"))
-    assert not list(run_root.rglob(prepare.CHOICE_AUDIT_LOCK_NAME))
+    assert (run_root / ".choice_audit.staging").is_dir()
+    assert (run_root / prepare.CHOICE_AUDIT_PUBLICATION_CLAIM_NAME).is_file()
+    assert not (run_root / prepare.CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME).exists()
+    assert not list(final_root.rglob(prepare.CHOICE_AUDIT_LOCK_NAME))
+
+
+@pytest.mark.parametrize("preexisting", ["claim", "staging", "final", "receipt"])
+def test_preexisting_publication_state_is_terminal_without_mutation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    preexisting: str,
+) -> None:
+    dev, examples = _synthetic_population()
+    run_root = tmp_path / "synthetic-a5r2-run"
+    run_root.mkdir()
+    e0_data_root = tmp_path / "synthetic-e0-data"
+    e0_data_root.mkdir()
+    _install_audit_mocks(monkeypatch, examples, dev)
+    paths = {
+        "claim": run_root / prepare.CHOICE_AUDIT_PUBLICATION_CLAIM_NAME,
+        "staging": run_root / ".choice_audit.staging",
+        "final": run_root / prepare.CHOICE_AUDIT_ROOT_NAME,
+        "receipt": run_root / prepare.CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME,
+    }
+    path = paths[preexisting]
+    if preexisting in {"staging", "final"}:
+        path.mkdir()
+    else:
+        path.write_bytes(b"preexisting-owner-state\n")
+    before = {
+        child.name: (child.lstat().st_mode, child.read_bytes() if child.is_file() else b"")
+        for child in run_root.iterdir()
+    }
+    with pytest.raises(prepare.A5R3PublicationOwnershipError):
+        prepare._run_a5r2_choice_cardinality_audit(
+            repo_root=REPO_ROOT,
+            e0_data_root=e0_data_root,
+            dev=dev,
+            execution_identity=_identity(run_root),
+            a5_contract={"synthetic": True},
+            formatter_class=_SyntheticFormatter,
+            reference_model_config={},
+        )
+    after = {
+        child.name: (child.lstat().st_mode, child.read_bytes() if child.is_file() else b"")
+        for child in run_root.iterdir()
+    }
+    assert after == before
+
+
+def test_claim_symlink_is_terminal_and_target_is_not_touched(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dev, examples = _synthetic_population()
+    run_root = tmp_path / "synthetic-a5r2-run"
+    run_root.mkdir()
+    e0_data_root = tmp_path / "synthetic-e0-data"
+    e0_data_root.mkdir()
+    target = tmp_path / "outside-claim-target"
+    target.write_bytes(b"outside\n")
+    claim_path = run_root / prepare.CHOICE_AUDIT_PUBLICATION_CLAIM_NAME
+    claim_path.symlink_to(target)
+    _install_audit_mocks(monkeypatch, examples, dev)
+    with pytest.raises(prepare.A5R3PublicationOwnershipError):
+        prepare._run_a5r2_choice_cardinality_audit(
+            repo_root=REPO_ROOT,
+            e0_data_root=e0_data_root,
+            dev=dev,
+            execution_identity=_identity(run_root),
+            a5_contract={"synthetic": True},
+            formatter_class=_SyntheticFormatter,
+            reference_model_config={},
+        )
+    assert claim_path.is_symlink()
+    assert target.read_bytes() == b"outside\n"
+
+
+def test_claim_owner_token_rejects_tamper_and_replacement(
+    tmp_path: Path,
+) -> None:
+    run_root = tmp_path / "synthetic-a5r2-run"
+    run_root.mkdir()
+    identity = _identity(run_root)
+    staging_root = run_root / ".choice_audit.staging"
+    audit_root = run_root / prepare.CHOICE_AUDIT_ROOT_NAME
+    _claim, payload, owner_token = prepare._acquire_choice_audit_publication_claim(
+        execution_identity=identity,
+        staging_root=staging_root,
+        audit_root=audit_root,
+    )
+    claim_path = run_root / prepare.CHOICE_AUDIT_PUBLICATION_CLAIM_NAME
+    claim_path.write_bytes(prepare.canonical_json_bytes({"tampered": True}))
+    claim_path.chmod(0o600)
+    with pytest.raises(RuntimeError, match="bytes changed"):
+        prepare._verify_owner_publication_file(
+            claim_path,
+            payload,
+            role="publication claim",
+            owner_token=owner_token,
+        )
+    claim_path.unlink()
+    replacement = tmp_path / "replacement-claim"
+    replacement.write_bytes(payload)
+    replacement.chmod(0o600)
+    claim_path.symlink_to(replacement)
+    with pytest.raises(RuntimeError, match="absent, replaced, or unsafe"):
+        prepare._verify_owner_publication_file(
+            claim_path,
+            payload,
+            role="publication claim",
+            owner_token=owner_token,
+        )
+
+
+def test_competing_claim_loser_mutates_nothing(
+    tmp_path: Path,
+) -> None:
+    run_root = tmp_path / "synthetic-a5r2-run"
+    run_root.mkdir()
+    identity = _identity(run_root)
+    staging_root = run_root / ".choice_audit.staging"
+    audit_root = run_root / prepare.CHOICE_AUDIT_ROOT_NAME
+    prepare._acquire_choice_audit_publication_claim(
+        execution_identity=identity,
+        staging_root=staging_root,
+        audit_root=audit_root,
+    )
+    before = sorted(
+        (path.name, path.lstat().st_mode, path.read_bytes() if path.is_file() else b"")
+        for path in run_root.iterdir()
+    )
+    with pytest.raises(prepare.A5R3PublicationOwnershipError):
+        prepare._acquire_choice_audit_publication_claim(
+            execution_identity=identity,
+            staging_root=staging_root,
+            audit_root=audit_root,
+        )
+    after = sorted(
+        (path.name, path.lstat().st_mode, path.read_bytes() if path.is_file() else b"")
+        for path in run_root.iterdir()
+    )
+    assert after == before
+
+
+def test_group_or_other_writable_run_root_is_rejected_before_claim(
+    tmp_path: Path,
+) -> None:
+    run_root = tmp_path / "synthetic-a5r2-run"
+    run_root.mkdir(mode=0o700)
+    run_root.chmod(0o722)
+    with pytest.raises(RuntimeError, match="group/other writable"):
+        prepare._acquire_choice_audit_publication_claim(
+            execution_identity=_identity(run_root),
+            staging_root=run_root / ".choice_audit.staging",
+            audit_root=run_root / prepare.CHOICE_AUDIT_ROOT_NAME,
+        )
+    assert list(run_root.iterdir()) == []
+
+
+def test_plain_rename_failure_retains_claim_and_staging_tombstones(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dev, examples = _synthetic_population()
+    run_root = tmp_path / "synthetic-a5r2-run"
+    run_root.mkdir()
+    e0_data_root = tmp_path / "synthetic-e0-data"
+    e0_data_root.mkdir()
+    _install_audit_mocks(monkeypatch, examples, dev)
+    monkeypatch.setattr(
+        prepare.os,
+        "rename",
+        lambda _source, _destination: (_ for _ in ()).throw(
+            OSError("injected portable rename failure")
+        ),
+    )
+    with pytest.raises(OSError, match="portable rename failure"):
+        prepare._run_a5r2_choice_cardinality_audit(
+            repo_root=REPO_ROOT,
+            e0_data_root=e0_data_root,
+            dev=dev,
+            execution_identity=_identity(run_root),
+            a5_contract={"synthetic": True},
+            formatter_class=_SyntheticFormatter,
+            reference_model_config={},
+        )
+    assert (run_root / prepare.CHOICE_AUDIT_PUBLICATION_CLAIM_NAME).is_file()
+    assert (run_root / ".choice_audit.staging").is_dir()
+    assert not (run_root / prepare.CHOICE_AUDIT_ROOT_NAME).exists()
+    assert not (run_root / prepare.CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME).exists()
+
+
+def test_post_rename_pre_receipt_crash_is_terminal_and_never_consumable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dev, examples = _synthetic_population()
+    run_root = tmp_path / "synthetic-a5r2-run"
+    run_root.mkdir()
+    e0_data_root = tmp_path / "synthetic-e0-data"
+    e0_data_root.mkdir()
+    _install_audit_mocks(monkeypatch, examples, dev)
+    original_create = prepare._create_exclusive_owner_publication_file
+
+    def crash_before_receipt(*args: Any, **kwargs: Any) -> Any:
+        if kwargs.get("role") == "publication receipt":
+            raise KeyboardInterrupt("injected post-rename crash")
+        return original_create(*args, **kwargs)
+
+    monkeypatch.setattr(
+        prepare, "_create_exclusive_owner_publication_file", crash_before_receipt
+    )
+    with pytest.raises(KeyboardInterrupt, match="post-rename crash"):
+        prepare._run_a5r2_choice_cardinality_audit(
+            repo_root=REPO_ROOT,
+            e0_data_root=e0_data_root,
+            dev=dev,
+            execution_identity=_identity(run_root),
+            a5_contract={"synthetic": True},
+            formatter_class=_SyntheticFormatter,
+            reference_model_config={},
+        )
+    assert (run_root / prepare.CHOICE_AUDIT_PUBLICATION_CLAIM_NAME).is_file()
+    assert (run_root / prepare.CHOICE_AUDIT_ROOT_NAME).is_dir()
+    assert not (run_root / ".choice_audit.staging").exists()
+    assert not (run_root / prepare.CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME).exists()
+    with pytest.raises(RuntimeError, match="receipt is absent, replaced, or unsafe"):
+        prepare._verify_a5r2_choice_audit(
+            repo_root=REPO_ROOT,
+            e0_data_root=e0_data_root,
+            execution_identity=_identity(run_root),
+            a5_contract={"synthetic": True},
+            require_go=False,
+        )
+    with pytest.raises(prepare.A5R3PublicationOwnershipError):
+        prepare._run_a5r2_choice_cardinality_audit(
+            repo_root=REPO_ROOT,
+            e0_data_root=e0_data_root,
+            dev=dev,
+            execution_identity=_identity(run_root),
+            a5_contract={"synthetic": True},
+            formatter_class=_SyntheticFormatter,
+            reference_model_config={},
+        )
+
+
+def test_receipt_parent_fsync_failure_poison_is_not_consumable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    dev, examples = _synthetic_population()
+    run_root = tmp_path / "synthetic-a5r2-run"
+    run_root.mkdir()
+    e0_data_root = tmp_path / "synthetic-e0-data"
+    e0_data_root.mkdir()
+    _install_audit_mocks(monkeypatch, examples, dev)
+    original_fsync_directory = prepare._fsync_directory
+    failed = False
+
+    def fail_receipt_parent_fsync(path: Path) -> None:
+        nonlocal failed
+        receipt = run_root / prepare.CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME
+        if path == run_root and receipt.exists() and not failed:
+            failed = True
+            raise OSError("injected receipt parent fsync failure")
+        original_fsync_directory(path)
+
+    monkeypatch.setattr(prepare, "_fsync_directory", fail_receipt_parent_fsync)
+    with pytest.raises(OSError, match="receipt parent fsync"):
+        prepare._run_a5r2_choice_cardinality_audit(
+            repo_root=REPO_ROOT,
+            e0_data_root=e0_data_root,
+            dev=dev,
+            execution_identity=_identity(run_root),
+            a5_contract={"synthetic": True},
+            formatter_class=_SyntheticFormatter,
+            reference_model_config={},
+        )
+    receipt = run_root / prepare.CHOICE_AUDIT_PUBLICATION_RECEIPT_NAME
+    assert receipt.lstat().st_mode & 0o777 == 0
+    assert (run_root / prepare.CHOICE_AUDIT_ROOT_NAME).is_dir()
+    assert (run_root / prepare.CHOICE_AUDIT_PUBLICATION_CLAIM_NAME).is_file()
+    with pytest.raises(RuntimeError, match="receipt is absent, replaced, or unsafe"):
+        prepare._verify_a5r2_choice_audit(
+            repo_root=REPO_ROOT,
+            e0_data_root=e0_data_root,
+            execution_identity=_identity(run_root),
+            a5_contract={"synthetic": True},
+            require_go=False,
+        )
+
+
+def test_runtime_has_no_renameat2_dependency() -> None:
+    source = (
+        REPO_ROOT / "script/experiment/fpct_e1_prepare_input_lock.py"
+    ).read_text(encoding="utf-8")
+    assert "renameat2" not in source
+    assert "RENAME_NOREPLACE" not in source
+
+
+def test_claim_and_receipt_strictly_validate_as_v10_publication_envelopes() -> None:
+    from script.analysis.fpct_e1_a5r3_portable_publication_gate import (
+        validate_a5r3_schema_artifact,
+    )
+    run_root = Path(SCHEMA_RUN_ROOT)
+    identity = {
+        "execution_sha": EXECUTION_SHA,
+        "run_uid": RUN_UID,
+        "run_root": str(run_root),
+        "source_snapshot_root": str(REPO_ROOT),
+    }
+    staging_root = run_root / ".choice_audit.staging"
+    audit_root = run_root / prepare.CHOICE_AUDIT_ROOT_NAME
+    claim = prepare._choice_audit_publication_claim_payload(
+        execution_identity=identity,
+        staging_root=staging_root,
+        audit_root=audit_root,
+    )
+    validate_a5r3_schema_artifact(claim, repo_root=REPO_ROOT)
+    descriptor = {
+        "relative_path": "choice_audit/synthetic.json",
+        "sha256": "9" * 64,
+        "bytes": 1,
+        "row_count": 1,
+    }
+    receipt = prepare._choice_audit_publication_receipt_payload(
+        execution_identity=identity,
+        claim_sha256=prepare.hashlib.sha256(
+            prepare.canonical_json_bytes(claim)
+        ).hexdigest(),
+        staging_root=staging_root,
+        audit_root=audit_root,
+        ledger_artifact=descriptor,
+        summary_artifact=descriptor,
+        lock_artifact=descriptor,
+    )
+    validate_a5r3_schema_artifact(receipt, repo_root=REPO_ROOT)
 
 
 def test_pre_audit_binding_recomputes_exact_receipt_file_sha_before_row_one(
@@ -728,7 +1111,10 @@ def test_independent_verifier_rejects_reordered_ledger_after_full_rehash(
         **frozen_identity,
     )
     lock_path.write_bytes(prepare.canonical_json_bytes(rebuilt))
-    with pytest.raises(RuntimeError, match="frozen membership/order"):
+    with pytest.raises(
+        RuntimeError,
+        match="publication receipt binding|frozen membership/order",
+    ):
         prepare._verify_a5r2_choice_audit(
             repo_root=REPO_ROOT,
             e0_data_root=tmp_path / "synthetic-e0-data",

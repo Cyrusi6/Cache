@@ -814,7 +814,7 @@ def test_compact_geometry_is_self_contained_and_pass_b_reads_only_parquet(
     monkeypatch.setattr(prepare, "validate_streaming_schema_artifact", lambda value: None)
     items = [_geometry_item(task, index) for index, task in enumerate(counts)]
     gate = {
-        "protocol_id": prepare.A5_PROTOCOL_ID,
+        "protocol_id": prepare.A5_SYNTHETIC_GATE_PROTOCOL_ID,
         "inherited_v8_streaming_evidence": _inherited_v8_streaming_evidence(),
     }
     asset_state = {"aggregate_sha256": "d" * 64}
@@ -903,7 +903,7 @@ def _completed_input_lock_fixture(
     gate_path.write_text('{"synthetic":"gate"}\n', encoding="utf-8")
     schema_sha256 = prepare.sha256_file(schema_path)
     gate = {
-        "protocol_id": prepare.A5_PROTOCOL_ID,
+        "protocol_id": prepare.A5_SYNTHETIC_GATE_PROTOCOL_ID,
         "artifact_type": prepare.A5_SYNTHETIC_GATE_ARTIFACT_TYPE,
         "status": prepare.A5_SYNTHETIC_GATE_STATUS,
         "checks": {
@@ -917,6 +917,9 @@ def _completed_input_lock_fixture(
         "inherited_v8_streaming_evidence": _inherited_v8_streaming_evidence(),
     }
     monkeypatch.setattr(a5_prompt_gate, "verify_gate", lambda *args, **kwargs: gate)
+    monkeypatch.setattr(
+        prepare, "_load_active_a5_synthetic_gate", lambda _root: gate
+    )
     monkeypatch.setattr(
         prepare, "load_e0_design_lock", lambda path: {"sha256": "1" * 64}
     )
