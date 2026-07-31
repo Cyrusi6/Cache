@@ -1830,3 +1830,28 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
 - 状态=`HUMAN REVIEW REQUIRED`。只提出未获批的 prospective A5R4 边界：owner 匹配且
   group/other permissions 全零时允许 inherited setgid，并新增真实 target-FS regression；
   不改 population/choice semantics/taxonomy/threshold/operator。E1-2 仍未授权。
+
+### 2026-07-31 FPCT-E1 A5R4 inherited-setgid mode pre-natural lock
+
+- 用户原文 `可以` 前瞻批准 v11 mode-predicate overlay。唯一变化是 staging/final
+  directory 接受 owner-private `00700` 或 parent-bound inherited `02700`；v9 choice
+  semantics 与 v10 claim/receipt/ordinary-rename publication envelope 不变。
+- 新 helper 冻结 `(dev,ino,uid,gid,mode)`，拒绝任何 G/O 权限、setuid/sticky、owner/
+  parent/GID/device/type/symlink 异常，并在写前、rename 前后、completed verifier 重验。
+  Changed enforcement AST 完整单独绑定，其余 A5R3 publication AST 与 scientific AST
+  均保持 predecessor hash。
+- Amendment/contract/schema/gate SHA256=`803884c0...` / `af4cf2af...` /
+  `cb90cec6...` / `0f347757...`。CPU/offline gate `78 passed`；tree=`753f8af5...`，
+  evidence=`7e3ee42b...`。真实 `/netdisk` synthetic probe 观察 `02700` inheritance、
+  same inode/device/UID/GID/mode、rename bytes/fsync 全过，evidence=`ad7bfe38...`，
+  scratch 已清理。
+- Supplementary inherited suites 为 `155 passed / 2 failed` 与 `254 passed / 2 failed`；
+  四个 failures 均在 immutable predecessor snapshot 精确复现，分别是历史 A5R1
+  blocked-receipt 参数漂移和 A5 prompt temp-repo fixture 缺 frozen population sources，
+  因此未归因于 A5R4，也未超范围修改历史 fixture。v11 normative gate 仍为独立完整
+  `78 passed / 0 failed`。
+- Formal sealed closure 补入 active A5R4 verifier 后，sealed-import/prepare/source-
+  snapshot targeted suite=`94 passed`；production active loader 与 frozen gate 双重验证 GO。
+- 尚未运行 successor natural audit/tokenizer/alignment；0 model/checkpoint/forward、
+  0 GPU/CUDA/K8s/training。下一步仅为 fresh clean pushed SHA/snapshot/UID/root 的 CPU
+  audit/input-lock；E1-2 仍未授权。

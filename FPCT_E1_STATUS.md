@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R3 post-reduction publication-mode integrity closure
-> 当前状态：`3263531e TERMINAL / UNPUBLISHED / HUMAN REVIEW REQUIRED / E1-2 NOT AUTHORIZED`
-> 下一步：人工决定是否批准仅针对 inherited setgid mode predicate 的前瞻性 A5R4；不得 resume/reuse 当前 root
+> 当前阶段：A5R4 inherited-setgid mode pre-natural execution lock
+> 当前状态：`A5R4 GATE GO / SUCCESSOR NATURAL AUDIT NOT RUN / E1-2 NOT AUTHORIZED`
+> 下一步：提交并推送 A5R4 execution SHA；用全新 snapshot/UID/root 从 group 1 重启
 > 更新时间：2026-07-31（Asia/Shanghai）
 
 ## 隔离身份
@@ -519,3 +519,32 @@ model/checkpoint，未运行 model forward、GPU、CUDA、Kubernetes 或 trainin
   pushed SHA/snapshot/UID/root，从 group 1 重启。尚未获批，未改实现。
 - 0 model/checkpoint load、0 forward、0 GPU/CUDA/K8s/training；E1-2/E1-3 未进入，
   E1-pilot/confirmatory 继续 sealed。
+
+## 2026-07-31 A5R4 inherited-setgid mode 前瞻锁
+
+- 用户在 `3263531e` terminal closure 已提交、推送且报告后，以原文 `可以` 前瞻批准
+  `APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R4_SETGID_MODE_PREDICATE`。本次唯一变化是
+  owner-created staging/final directory mode predicate；choice semantics/payload 仍为
+  v9，A5R3 claim/receipt/rename/fsync/crash/no-resume envelope 仍为 v10。
+- Predicate 只接受 `00700` 或合法继承的 `02700`：real directory、owner=euid、
+  owner bits=`0700`、group/other bits=`0`、无 setuid/sticky、same device；`02700`
+  额外要求 parent 预先 setgid、parent owner=euid、child GID=parent GID。Staging 创建后
+  冻结 `(dev,ino,uid,gid,mode)`，写入前、rename 前后及 completed verifier 均重验。
+- Amendment/contract/schema SHA256=`803884c0...` / `af4cf2af...` / `cb90cec6...`。
+  CPU/offline gate=`GO_PRE_NATURAL_A5R4_SETGID_MODE_HARD_GATE`，`78 passed`；tracked
+  tree=`753f8af50f409e199a943cb6b73b7f9f5553b5d2ab5344c77725384158a6e388`，
+  evidence=`7e3ee42b93325edc8a65e2cc7f25e013fe952ddd6bb3d4cda3622a8b7ad981c9`，
+  artifact SHA256=`0f3477575b8a75fb4b6028c0eeda19aa56885aca2fdb0addce0171a5e02c7ea8`。
+- 真实 `/netdisk/lijunsi/fpct-e1` synthetic scratch 观察 parent/staging/final mode
+  均=`02700`、UID/GID/device 一致、rename inode 保持、bytes/fsync 通过；probe evidence=
+  `ad7bfe38965840f93e5f27fb6706915a80380250edc4e269859dc509dc5fe69c`，scratch 已清理。
+- 补充 inherited suites：A=`155 passed / 2 failed`，B=`254 passed / 2 failed`。四项
+  failure 均在 immutable predecessor snapshot 原样复现：两项 A5R1 oracle 仍调用已移除
+  的 `e0_data_hash_domains` 参数，两项 A5 prompt 临时 repo fixture 未复制冻结 population
+  sources；不是 A5R4 regression，未修改这些历史 fixture，也未把它们计入 v11 GO。
+- 最终 sealed-import/prepare/source-snapshot targeted suite=`94 passed`；formal prepare
+  closure 同时绑定 immutable A5R3 verifier 与 active A5R4 verifier 的模块 origin/SHA。
+- 本锁未读取任何 successor natural row，未运行 tokenizer/alignment、model/checkpoint/
+  forward、GPU/CUDA/K8s/training。Gate GO 只授权下一 clean pushed SHA 用 fresh snapshot/
+  UID/root 从 group 1 运行 label-free audit，并在机械 GO 时运行 CPU input lock；E1-2/
+  E1-3/E1-pilot/confirmatory 仍未授权。

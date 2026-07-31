@@ -1,0 +1,729 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fpct.local/schema/e1_a5r4_setgid_mode_schema.json",
+  "title": "FPCT-E1 A5R4 inherited-setgid directory-mode artifacts",
+  "description": "Strict v11 operational-overlay schema. Choice-audit scientific payloads remain governed by immutable v9, and claim/receipt publication envelopes remain governed by immutable A5R3 v10.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/a5r4Contract"
+    },
+    {
+      "$ref": "#/$defs/a5r4SyntheticGate"
+    }
+  ],
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "gitSha40": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "protocolId": {
+      "const": "fpct_e1_mechanism_audit_v11_a5r4_setgid_mode_predicate"
+    },
+    "fileBinding": {
+      "type": "object",
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "approval": {
+      "const": {
+        "approved": true,
+        "decision_date": "2026-07-31",
+        "timezone": "Asia/Shanghai",
+        "user_response_verbatim": "可以",
+        "approval_id": "APPROVED_PROSPECTIVE_AMENDMENT_E1_A5R4_SETGID_MODE_PREDICATE",
+        "prospective_before_successor_natural_access": true,
+        "classification": "PROSPECTIVE_INHERITED_SETGID_DIRECTORY_MODE_ONLY"
+      }
+    },
+    "scope": {
+      "const": {
+        "sole_changed_dimension": "OWNER_CREATED_STAGING_DIRECTORY_INHERITED_SETGID_MODE_PREDICATE",
+        "protocol_contract_schema_code_tests": true,
+        "cpu_offline_no_natural_synthetic_gate": true,
+        "fresh_commit_push_snapshot_uid_root": true,
+        "label_free_326_row_choice_audit_from_group_one": true,
+        "conditional_cpu_input_lock_from_group_one": true,
+        "e1_2": false,
+        "e1_3": false,
+        "e1_pilot_or_confirmatory": false,
+        "model_or_checkpoint_load": false,
+        "model_forward": false,
+        "gpu_cuda_or_kubernetes": false,
+        "training": false
+      }
+    },
+    "predecessor": {
+      "const": {
+        "base_commit": "5f2e41148d9b923e1264e83d76106389c155a596",
+        "blocked_execution_sha": "3263531ed7137efd241de3c951bf7c5e9d37e669",
+        "blocked_run_uid": "fpct-e1-a5r2-choice-cardinality-3263531e-v1",
+        "blocked_run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-3263531e-v1",
+        "closure_path": "recipe/eval_recipe/fpct_e1/executions/3263531e/input_lock_failure_receipt.json",
+        "closure_sha256": "8ca3537914edb880b3436012841ec47b8d416345e2646fce22597c60d3bf4d17",
+        "failure_stage": "PRECOMPUTATION_AFTER_COMPLETE_IN_MEMORY_REDUCTION",
+        "failure_code": "A5R3_FIXED_STAGING_IDENTITY_OR_MODE_IS_UNSAFE",
+        "root_cause": "TARGET_FILESYSTEM_INHERITED_SETGID_ON_OWNER_CREATED_STAGING_PRODUCING_MODE_02700_WHILE_IMPLEMENTATION_REQUIRED_EXACT_00700",
+        "natural_rows_reduced_in_memory": 326,
+        "unpublished_natural_choice_statistics_human_or_reviewer_accessed": false,
+        "publication_claim_created": true,
+        "staging_mode_octal": "02700",
+        "staging_owner_uid": 20007,
+        "staging_group_or_other_permission_bits": "000",
+        "final_created": false,
+        "publication_receipt_created": false,
+        "resume_allowed": false,
+        "root_or_artifact_reuse_allowed": false,
+        "in_place_repair_allowed": false
+      }
+    },
+    "a5r3Objects": {
+      "const": {
+        "FPCT_E1_A5R3_PORTABLE_PUBLICATION_AMENDMENT.md": "ccfb73bdfd396d5941e975b09143450189e75fffd4884482ce613cf03feb6cd4",
+        "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_contract.json": "2ba72cfbccb5a1b7c9f46c02510f4763a2917210d3884c7b5d8223580db9e272",
+        "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_schema.json": "b24d197481c01c917ad9d4063441f96ac23979bdb4b3db24855e551c7fb91460",
+        "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_synthetic_gate.json": "004a8feb272af78c439f970b1ae637400e641a4fd93a412f29832f288871a4c2"
+      }
+    },
+    "a5r3GateEvidence": {
+      "const": {
+        "status": "GO_PRE_NATURAL_A5R3_PORTABLE_PUBLICATION_HARD_GATE",
+        "test_count": 43,
+        "test_output_sha256": "b5788fb2d770e31bae15967d968b49498dbae0e19bd96e45811291b800ed0ed3",
+        "execution_tree_sha256": "54f108bb07f3d10aa759e4eb93ee011915e5b93e91b864ae32da6923a06b1369",
+        "evidence_sha256": "907f3b6a631ed8a1c6bb13cf559097fc96fc9b5a2b2148ebf0c8eabcaeca63c9"
+      }
+    },
+    "scientificContract": {
+      "const": {
+        "population": "E0-design",
+        "distinct_content_groups": 326,
+        "task_order": [
+          "ai2-arc",
+          "openbookqa",
+          "mmlu-redux"
+        ],
+        "task_counts": {
+          "ai2-arc": 128,
+          "openbookqa": 70,
+          "mmlu-redux": 128
+        },
+        "restart_group_ordinal_one_based": 1,
+        "population_or_order_changed": false,
+        "choice_parsing_or_cardinality_changed": false,
+        "taxonomy_or_correction_actions_changed": false,
+        "threshold_changed": false,
+        "prompt_tokenizer_or_alignment_changed": false,
+        "operator_or_estimand_changed": false,
+        "a5r3_in_memory_reduction_may_be_used": false,
+        "label_free_firewall_unchanged": true
+      }
+    },
+    "versionBoundary": {
+      "const": {
+        "a5r4_operational_overlay_schema_version": 11,
+        "choice_semantics_version": 9,
+        "a5r3_publication_envelope_schema_version": 10,
+        "a5r3_publication_protocol_id": "fpct_e1_mechanism_audit_v10_a5r3_portable_publication",
+        "a5r3_success_status": "A5R3_CHOICE_AUDIT_PUBLICATION_GO",
+        "a5r2_choice_row_summary_lock_and_downstream_payload_schema_unchanged": true,
+        "a5r3_claim_receipt_and_publication_algorithm_unchanged": true,
+        "silent_v9_or_v10_mutation_allowed": false
+      }
+    },
+    "modePredicate": {
+      "const": {
+        "applies_to": [
+          "owner_created_fixed_choice_audit_staging",
+          "same_inode_after_rename_as_choice_audit_final"
+        ],
+        "requested_mkdir_mode_octal": "0700",
+        "accepted_complete_permission_modes_octal": [
+          "00700",
+          "02700"
+        ],
+        "real_directory_required": true,
+        "symlink_allowed": false,
+        "owner_uid_must_equal_effective_uid": true,
+        "owner_permission_bits_must_equal_octal": "0700",
+        "group_and_other_permission_mask_octal": "0077",
+        "group_and_other_permission_bits_must_equal_octal": "0000",
+        "optional_special_bit": "S_ISGID",
+        "setuid_allowed": false,
+        "sticky_allowed": false,
+        "same_device_as_run_root_required": true,
+        "setgid_acceptance_requires": [
+          "parent_is_real_non_symlink_directory",
+          "parent_owner_uid_equals_effective_uid",
+          "parent_has_setgid_before_child_creation",
+          "child_gid_equals_parent_gid",
+          "child_device_equals_parent_device",
+          "observation_immediately_after_mkdir_before_child_write"
+        ],
+        "chmod_or_mode_normalization_allowed": false,
+        "mode_retry_or_fallback_allowed": false,
+        "alternate_staging_name_allowed": false,
+        "claim_and_receipt_mode_remains_exact_octal": "0600",
+        "run_root_rule_changed": false,
+        "verification_boundaries": [
+          "immediately_after_staging_mkdir",
+          "before_first_staged_artifact_write",
+          "immediately_before_rename",
+          "immediately_after_rename_on_same_inode",
+          "completed_read_only_verification"
+        ],
+        "rename_must_preserve": [
+          "st_dev",
+          "st_ino",
+          "st_uid",
+          "st_gid",
+          "st_mode"
+        ]
+      }
+    },
+    "a5r3Publication": {
+      "const": {
+        "claim_basename": ".choice_audit.publication.claim.json",
+        "staging_basename": ".choice_audit.staging",
+        "final_basename": "choice_audit",
+        "receipt_basename": "choice_audit_publication_receipt.json",
+        "canonical_final_artifacts": [
+          "choice_cardinality_audit_rows.jsonl",
+          "choice_cardinality_audit_summary.json",
+          "choice_cardinality_audit_lock.json"
+        ],
+        "serialization_model": "EXCLUSIVE_CLAIM_SINGLE_COMPLIANT_WRITER",
+        "authorized_commit_operation": "ordinary_same_filesystem_rename(staging,final)",
+        "rename_call_count": 1,
+        "renameat2_allowed": false,
+        "os_replace_allowed": false,
+        "copy_delete_or_shutil_move_allowed": false,
+        "final_overwrite_allowed": false,
+        "claim_created_and_durable_before_natural_row_one": true,
+        "claim_retained_permanently": true,
+        "success_receipt_is_durable_go_point": true,
+        "failed_transaction_cleanup_allowed": false,
+        "resume_allowed": false,
+        "root_or_artifact_reuse_allowed": false,
+        "only_exact_claim_final_receipt_state_is_go": true
+      }
+    },
+    "syntheticGateContract": {
+      "const": {
+        "status_go": "GO_PRE_NATURAL_A5R4_SETGID_MODE_HARD_GATE",
+        "status_blocked": "A5R4_PRE_NATURAL_GATE_BLOCKED",
+        "natural_e0_design_accessed": false,
+        "target_filesystem_setgid_inheritance_scratch_test_required": true,
+        "synthetic_scratch_is_production_root": false,
+        "exact_predecessor_bindings_required": true,
+        "exact_0700_acceptance_required": true,
+        "inherited_02700_acceptance_required": true,
+        "unsafe_mode_rejection_matrix_required": true,
+        "parent_setgid_and_gid_binding_required": true,
+        "rename_identity_and_mode_preservation_required": true,
+        "completed_verifier_mode_check_required": true,
+        "all_inherited_a5r3_publication_tests_required": true,
+        "unchanged_a5r3_ast_projection_required": true,
+        "complete_changed_mode_enforcement_ast_closure_bound_separately": true,
+        "tokenizer_or_alignment_accessed": false,
+        "zero_model_gpu_training_or_later_stage_access_required": true,
+        "threshold_or_semantics_relaxation_after_natural_result_allowed": false
+      }
+    },
+    "mandatoryTests": {
+      "const": [
+        "exact_0700_directory_accepted",
+        "synthetic_inherited_02700_directory_accepted",
+        "real_netdisk_parent_child_setgid_inheritance_and_rename_preservation",
+        "setgid_without_setgid_parent_rejected",
+        "parent_child_gid_mismatch_rejected",
+        "every_group_or_other_permission_rejected",
+        "setuid_rejected",
+        "sticky_rejected",
+        "missing_owner_permission_rejected",
+        "wrong_owner_rejected",
+        "symlink_and_non_directory_rejected",
+        "device_mismatch_rejected",
+        "claim_and_receipt_remain_exact_v10_mode_0600",
+        "all_a5r3_concurrency_tamper_crash_reentry_and_receipt_tests_pass",
+        "zero_natural_tokenizer_alignment_model_gpu_training_or_e1_2_access"
+      ]
+    },
+    "freshExecution": {
+      "const": {
+        "commit": "PENDING_CLEAN_PUSHED_A5R4_COMMIT",
+        "uid_pattern": "^fpct-e1-a5r2-choice-cardinality-[0-9a-f]{8}-v1$",
+        "root_pattern": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-[0-9a-f]{8}-v1$",
+        "new_empty_root_required": true,
+        "new_immutable_source_snapshot_and_receipt_required": true,
+        "pre_row_one_source_and_data_binding_replay_required": true,
+        "publication_claim_acquired_before_natural_row_one": true,
+        "audit_restarts_from_group_one": true,
+        "input_lock_restarts_from_group_one": true,
+        "blocked_3263531_uid_root_snapshot_claim_staging_cursor_artifact_or_observation_reuse_allowed": false
+      }
+    },
+    "orderedAuthorization": {
+      "const": [
+        "v11_amendment_contract_schema_code_tests",
+        "v11_pre_natural_synthetic_gate_go",
+        "commit_and_push",
+        "clean_local_upstream_equality",
+        "fresh_snapshot_uid_and_empty_root",
+        "pre_row_one_source_and_data_binding_replay",
+        "durable_exclusive_claim_before_natural_row_one",
+        "label_free_326_row_choice_audit_from_group_one",
+        "unchanged_a5r3_portable_publication",
+        "unchanged_a5r2_mechanical_audit_decision",
+        "conditional_cpu_input_lock_from_group_one",
+        "independent_completed_verification",
+        "stop_before_e1_2"
+      ]
+    },
+    "postGoAuthorization": {
+      "const": {
+        "provenance_reporting": true,
+        "e1_2": false,
+        "e1_3": false,
+        "e1_pilot": false,
+        "confirmatory": false,
+        "model_or_checkpoint_load": false,
+        "model_forward": false,
+        "gpu_cuda_or_kubernetes": false,
+        "training": false,
+        "scientific_claim": false,
+        "next_state": "HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED"
+      }
+    },
+    "versionedArtifacts": {
+      "const": {
+        "amendment": "FPCT_E1_A5R4_SETGID_MODE_AMENDMENT.md",
+        "contract": "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_contract.json",
+        "schema": "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_schema.json",
+        "future_pre_natural_gate": "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_synthetic_gate.json",
+        "a5r3_or_v9_files_may_be_overwritten": false
+      }
+    },
+    "a5r4Contract": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "protocol_id",
+        "artifact_type",
+        "choice_semantics_version",
+        "approval",
+        "scope",
+        "immutable_predecessor",
+        "immutable_a5r3_objects",
+        "immutable_a5r3_gate_evidence",
+        "unchanged_scientific_contract",
+        "version_boundary",
+        "directory_mode_predicate",
+        "unchanged_a5r3_publication",
+        "synthetic_gate_contract",
+        "mandatory_test_matrix",
+        "fresh_execution",
+        "ordered_authorization",
+        "authorization_after_input_lock_go",
+        "versioned_artifacts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 11
+        },
+        "protocol_id": {
+          "$ref": "#/$defs/protocolId"
+        },
+        "artifact_type": {
+          "const": "a5r4_setgid_mode_contract"
+        },
+        "choice_semantics_version": {
+          "const": 9
+        },
+        "approval": {
+          "$ref": "#/$defs/approval"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "immutable_predecessor": {
+          "$ref": "#/$defs/predecessor"
+        },
+        "immutable_a5r3_objects": {
+          "$ref": "#/$defs/a5r3Objects"
+        },
+        "immutable_a5r3_gate_evidence": {
+          "$ref": "#/$defs/a5r3GateEvidence"
+        },
+        "unchanged_scientific_contract": {
+          "$ref": "#/$defs/scientificContract"
+        },
+        "version_boundary": {
+          "$ref": "#/$defs/versionBoundary"
+        },
+        "directory_mode_predicate": {
+          "$ref": "#/$defs/modePredicate"
+        },
+        "unchanged_a5r3_publication": {
+          "$ref": "#/$defs/a5r3Publication"
+        },
+        "synthetic_gate_contract": {
+          "$ref": "#/$defs/syntheticGateContract"
+        },
+        "mandatory_test_matrix": {
+          "$ref": "#/$defs/mandatoryTests"
+        },
+        "fresh_execution": {
+          "$ref": "#/$defs/freshExecution"
+        },
+        "ordered_authorization": {
+          "$ref": "#/$defs/orderedAuthorization"
+        },
+        "authorization_after_input_lock_go": {
+          "$ref": "#/$defs/postGoAuthorization"
+        },
+        "versioned_artifacts": {
+          "$ref": "#/$defs/versionedArtifacts"
+        }
+      }
+    },
+    "astMap": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/sha256"
+      }
+    },
+    "targetProbe": {
+      "type": "object",
+      "required": [
+        "probe_protocol",
+        "scratch_parent",
+        "scratch_only",
+        "natural_data_accessed",
+        "parent_mode_octal",
+        "staging_mode_octal",
+        "final_mode_octal",
+        "parent_uid",
+        "staging_uid",
+        "final_uid",
+        "parent_gid",
+        "staging_gid",
+        "final_gid",
+        "parent_device",
+        "staging_device",
+        "final_device",
+        "parent_inode",
+        "staging_inode",
+        "final_inode",
+        "setgid_inherited",
+        "group_or_other_permission_bits_zero",
+        "ordinary_rename_succeeded",
+        "rename_preserved_inode_uid_gid_device_and_mode",
+        "synthetic_bytes_preserved",
+        "scratch_removed_after_evidence",
+        "probe_evidence_sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "probe_protocol": {
+          "const": "a5r4_real_target_setgid_inheritance_v1"
+        },
+        "scratch_parent": {
+          "const": "/netdisk/lijunsi/fpct-e1"
+        },
+        "scratch_only": {
+          "const": true
+        },
+        "natural_data_accessed": {
+          "const": false
+        },
+        "parent_mode_octal": {
+          "const": "02700"
+        },
+        "staging_mode_octal": {
+          "const": "02700"
+        },
+        "final_mode_octal": {
+          "const": "02700"
+        },
+        "parent_uid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "staging_uid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "final_uid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "parent_gid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "staging_gid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "final_gid": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "parent_device": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "staging_device": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "final_device": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "parent_inode": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "staging_inode": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "final_inode": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "setgid_inherited": {
+          "const": true
+        },
+        "group_or_other_permission_bits_zero": {
+          "const": true
+        },
+        "ordinary_rename_succeeded": {
+          "const": true
+        },
+        "rename_preserved_inode_uid_gid_device_and_mode": {
+          "const": true
+        },
+        "synthetic_bytes_preserved": {
+          "const": true
+        },
+        "scratch_removed_after_evidence": {
+          "const": true
+        },
+        "probe_evidence_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "gateChecks": {
+      "const": {
+        "contract_validates": true,
+        "schema_self_consistent": true,
+        "approval_and_base_bound": true,
+        "blocked_3263531_closure_immutable": true,
+        "a5r3_four_objects_and_gate_evidence_immutable": true,
+        "choice_semantics_v9_unchanged": true,
+        "a5r3_v10_claim_receipt_and_algorithm_unchanged": true,
+        "exact_0700_accepted": true,
+        "inherited_02700_accepted": true,
+        "unsafe_mode_matrix_rejected": true,
+        "parent_setgid_and_gid_binding_enforced": true,
+        "real_target_setgid_inheritance_pass": true,
+        "rename_identity_and_mode_preserved": true,
+        "completed_verifier_mode_predicate_pass": true,
+        "chmod_mode_normalization_retry_and_fallback_absent": true,
+        "all_inherited_a5r3_publication_tests_pass": true,
+        "natural_e0_design_accessed": false,
+        "tokenizer_or_alignment_accessed": false,
+        "model_or_checkpoint_loaded": false,
+        "model_forward_run": false,
+        "gpu_cuda_or_kubernetes_used": false,
+        "training": false,
+        "e1_pilot_or_confirmatory_accessed": false,
+        "e1_2_or_e1_3_authorized": false
+      }
+    },
+    "a5r4SyntheticGate": {
+      "type": "object",
+      "required": [
+        "schema_version",
+        "choice_semantics_version",
+        "a5r3_publication_envelope_schema_version",
+        "protocol_id",
+        "artifact_type",
+        "status",
+        "base_commit",
+        "blocked_execution_sha",
+        "blocked_failure_closure_sha256",
+        "immutable_a5r3_objects",
+        "immutable_a5r3_gate_evidence",
+        "v11_artifacts",
+        "tracked_files",
+        "execution_tree_sha256",
+        "unchanged_a5r3_publication_ast_sha256",
+        "changed_mode_predicate_ast_sha256",
+        "target_filesystem_probe",
+        "checks",
+        "test_count",
+        "test_output_sha256",
+        "evidence_sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 11
+        },
+        "choice_semantics_version": {
+          "const": 9
+        },
+        "a5r3_publication_envelope_schema_version": {
+          "const": 10
+        },
+        "protocol_id": {
+          "$ref": "#/$defs/protocolId"
+        },
+        "artifact_type": {
+          "const": "a5r4_setgid_mode_synthetic_gate"
+        },
+        "status": {
+          "const": "GO_PRE_NATURAL_A5R4_SETGID_MODE_HARD_GATE"
+        },
+        "base_commit": {
+          "const": "5f2e41148d9b923e1264e83d76106389c155a596"
+        },
+        "blocked_execution_sha": {
+          "const": "3263531ed7137efd241de3c951bf7c5e9d37e669"
+        },
+        "blocked_failure_closure_sha256": {
+          "const": "8ca3537914edb880b3436012841ec47b8d416345e2646fce22597c60d3bf4d17"
+        },
+        "immutable_a5r3_objects": {
+          "$ref": "#/$defs/a5r3Objects"
+        },
+        "immutable_a5r3_gate_evidence": {
+          "$ref": "#/$defs/a5r3GateEvidence"
+        },
+        "v11_artifacts": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "$ref": "#/$defs/fileBinding"
+          }
+        },
+        "tracked_files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/fileBinding"
+          }
+        },
+        "execution_tree_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "unchanged_a5r3_publication_ast_sha256": {
+          "$ref": "#/$defs/astMap"
+        },
+        "changed_mode_predicate_ast_sha256": {
+          "type": "object",
+          "required": [
+            "_assert_secure_choice_audit_run_root",
+            "_publication_stat_identity_token",
+            "_assert_a5r4_owner_created_directory_mode",
+            "_create_choice_audit_staging_after_reduction",
+            "_assert_published_choice_audit_bytes",
+            "_verify_completed_choice_audit_publication",
+            "_publish_choice_audit_directory_with_claim",
+            "_run_a5r2_choice_cardinality_audit",
+            "input_asset_state",
+            "_a5r2_choice_audit_source_bindings",
+            "_load_a5_prompt_contract",
+            "_load_a5r3_publication_contract",
+            "_load_a5r4_setgid_mode_contract",
+            "_load_active_a5_synthetic_gate"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "_assert_a5r4_owner_created_directory_mode": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_create_choice_audit_staging_after_reduction": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_assert_secure_choice_audit_run_root": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_publication_stat_identity_token": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_assert_published_choice_audit_bytes": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_verify_completed_choice_audit_publication": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_publish_choice_audit_directory_with_claim": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_run_a5r2_choice_cardinality_audit": {
+              "$ref": "#/$defs/sha256"
+            },
+            "input_asset_state": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_a5r2_choice_audit_source_bindings": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_load_a5_prompt_contract": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_load_a5r3_publication_contract": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_load_a5r4_setgid_mode_contract": {
+              "$ref": "#/$defs/sha256"
+            },
+            "_load_active_a5_synthetic_gate": {
+              "$ref": "#/$defs/sha256"
+            }
+          }
+        },
+        "target_filesystem_probe": {
+          "$ref": "#/$defs/targetProbe"
+        },
+        "checks": {
+          "$ref": "#/$defs/gateChecks"
+        },
+        "test_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "test_output_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "evidence_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

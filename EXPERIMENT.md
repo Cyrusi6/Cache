@@ -711,3 +711,20 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
   unpublished natural choice statistics；0 model/checkpoint/forward、0 GPU/CUDA/K8s/
   training。E1-2 未授权，下一步需要人工决定是否批准最小 A5R4 mode-predicate
   amendment；当前未修改代码。
+
+### 2026-07-31 FPCT-E1 A5R4 inherited-setgid mode pre-natural gate
+
+- Human approval=`可以`；只改变 staging/final directory mode predicate，接受 `00700`
+  或严格 parent-bound inherited `02700`。v9 scientific choice semantics 与 A5R3 v10
+  claim/receipt/publication bytes 不变；`3263531e` root 永久 no-resume/no-reuse。
+- CPU/offline gate=`78 passed`，tree=`753f8af5...`，evidence=`7e3ee42b...`，artifact
+  SHA256=`0f347757...`。真实 target-FS probe evidence=`ad7bfe38...`，验证 setgid、
+  UID/GID/device/inode/mode、ordinary rename、bytes 与 fsync，唯一 scratch 已清理。
+- Supplementary inherited suites=`155 passed / 2 failed`、`254 passed / 2 failed`；四项
+  failure 在 immutable predecessor snapshot 原样复现，属于历史 fixture/API drift，
+  不属于 A5R4 regression，未修改也未纳入 v11 gate GO。
+- Sealed-import/prepare/source-snapshot targeted suite=`94 passed`；active loader 与 gate
+  verifier 均返回同一 `78/tree/evidence` 闭包。
+- 本记录生成前未运行 successor natural audit、tokenizer/alignment、model/checkpoint/
+  forward、GPU/CUDA/K8s/training；E1-2 未授权。下一执行必须使用新 clean pushed commit、
+  immutable snapshot、UID/root，从 group 1 重启。
