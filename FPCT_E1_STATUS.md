@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R3 portable publication pre-natural execution lock
-> 当前状态：`A5R3 PRE-NATURAL GATE GO / NATURAL AUDIT NOT RUN / E1-2 NOT AUTHORIZED`
-> 下一步：提交并推送 clean execution SHA；随后只在 fresh snapshot/UID/root 从 group 1 执行一次 326-row label-free audit
+> 当前阶段：A5R3 pre-natural verifier recovery execution lock
+> 当前状态：`b6109443 TERMINAL PRE-NATURAL / REPLACEMENT GATE GO / NATURAL AUDIT NOT RUN / E1-2 NOT AUTHORIZED`
+> 下一步：提交并推送 replacement SHA；用全新 snapshot/UID/root 从 group 1 重启
 > 更新时间：2026-07-31（Asia/Shanghai）
 
 ## 隔离身份
@@ -464,3 +464,32 @@ model/checkpoint，未运行 model forward、GPU、CUDA、Kubernetes 或 trainin
   `98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad`。
   0 model/checkpoint load、0 forward、0 GPU/CUDA/Kubernetes、0 training；E1-2/E1-3
   未授权，E1-pilot/confirmatory 继续 sealed。
+
+## 2026-07-31 A5R3 b6109443 pre-natural verifier closure
+
+- 首个 clean/pushed A5R3 execution SHA=`b6109443e1b4c35eef73c322f30e9aec37194ce7`，
+  UID=`fpct-e1-a5r2-choice-cardinality-b6109443-v1`，fresh root=
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-b6109443-v1`。665-entry snapshot 的 Git
+  tree=`edebc2a25e045baa52e0d2d559b8837eb6a86d08`，mounted-tree SHA256=
+  `28c63507264962c4fe5424d6429763b067ec23c8678a21767da7f4d360946f29`。
+- Sealed bootstrap 在 natural row 1、publication claim、tokenizer/alignment 前，因
+  A5R3 loader 调用了 A5R2 gate 的 live tracked-tree verifier 而 fail-closed。A5R2 gate
+  是 byte-immutable predecessor evidence；其历史 live tree 必然不同于 A5R3 prepare，
+  因此只能按 frozen SHA+strict schema 消费，不能再次要求 live A5R3 tree 等于 A5R2。
+- Terminal receipt status/stage/code=
+  `A5R2_INPUT_LOCK_BLOCKED / PRECOMPUTATION / A5R2_TRACKED_SOURCE_TEST_MAP_IS_STALE`；
+  blocked/identity SHA256=
+  `85f078749a1b36fca8c4101e62985e303c7e29a56b9bc7f53c1bcb0d10c369fb` /
+  `bce6e712ce2fc23bda9a78a300ee33794b72135801ec42b0c68ef4749a16c78a`。
+  Git closure=`recipe/eval_recipe/fpct_e1/executions/b6109443/input_lock_failure_receipt.json`，
+  SHA256=`efbecc09a9b5bb7933beb0c9bf87dc2dedf4eb17314eec3aa263f963de56ee56`。
+  Root/snapshot/identity/receipt 永久 no-resume/no-reuse。
+- 修复白名单只有 immutable predecessor gate consumption：保留 A5R2 gate file SHA 和
+  strict v9 schema/status 检查，移除其对 successor live source map 的错误要求。没有
+  修改 population/parser/taxonomy/threshold/publication algorithm/operator。Replacement
+  A5R3 synthetic gate=`43 passed`；tracked tree=`54f108bb07f3d10aa759e4eb93ee011915e5b93e91b864ae32da6923a06b1369`；
+  evidence=`907f3b6a631ed8a1c6bb13cf559097fc96fc9b5a2b2148ebf0c8eabcaeca63c9`；
+  artifact SHA256=`004a8feb272af78c439f970b1ae637400e641a4fd93a412f29832f288871a4c2`。
+- 自然 rows read=`0`，claim/staging/final/publication receipt=`0`，tokenizer/alignment=
+  `0`，model/checkpoint/forward/GPU/CUDA/K8s/training=`0`。下一执行必须新 commit、
+  snapshot、UID/root 并从 group 1 重启；E1-2/E1-3 仍未授权。

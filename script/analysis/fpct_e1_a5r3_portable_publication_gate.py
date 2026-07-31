@@ -55,6 +55,12 @@ GATE_RELATIVE = Path(
 BLOCKED_CLOSURE_RELATIVE = Path(
     "recipe/eval_recipe/fpct_e1/executions/e765d493/input_lock_failure_receipt.json"
 )
+PRENATURAL_FAILURE_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/executions/b6109443/input_lock_failure_receipt.json"
+)
+PRENATURAL_FAILURE_SHA256 = (
+    "efbecc09a9b5bb7933beb0c9bf87dc2dedf4eb17314eec3aa263f963de56ee56"
+)
 PREPARE_RELATIVE = Path("script/experiment/fpct_e1_prepare_input_lock.py")
 PROVENANCE_RELATIVE = Path("script/experiment/fpct_e1_a5_prompt_provenance.py")
 
@@ -133,6 +139,7 @@ TRACKED_SOURCE_FILES = tuple(
             CONTRACT_RELATIVE.as_posix(),
             SCHEMA_RELATIVE.as_posix(),
             BLOCKED_CLOSURE_RELATIVE.as_posix(),
+            PRENATURAL_FAILURE_RELATIVE.as_posix(),
             PREPARE_RELATIVE.as_posix(),
             PROVENANCE_RELATIVE.as_posix(),
             "script/analysis/fpct_e1_a5r3_portable_publication_gate.py",
@@ -225,6 +232,19 @@ def _verify_immutable_predecessors(repo_root: Path) -> dict[str, str]:
         or closure.get("reuse_allowed") is not False
     ):
         raise ValueError("e765d493 terminal disposition changed")
+    pre_natural_path = repo_root / PRENATURAL_FAILURE_RELATIVE
+    if sha256_file(pre_natural_path) != PRENATURAL_FAILURE_SHA256:
+        raise ValueError("immutable b6109443 pre-natural closure changed")
+    pre_natural = _load_json_unique(pre_natural_path)
+    if (
+        pre_natural.get("execution_sha")
+        != "b6109443e1b4c35eef73c322f30e9aec37194ce7"
+        or pre_natural.get("natural_e0_design_rows_read") != 0
+        or pre_natural.get("publication_claim_created") is not False
+        or pre_natural.get("resume_allowed") is not False
+        or pre_natural.get("root_or_artifact_reuse_allowed") is not False
+    ):
+        raise ValueError("b6109443 pre-natural terminal disposition changed")
     return observed
 
 

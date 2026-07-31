@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_a5r3_pre_natural_failure_closure_v1",
+  "artifact_type": "a5r3_pre_natural_execution_failure_closure",
+  "status": "A5R3_PRE_NATURAL_EXECUTION_BLOCKED",
+  "execution_sha": "b6109443e1b4c35eef73c322f30e9aec37194ce7",
+  "run_uid": "fpct-e1-a5r2-choice-cardinality-b6109443-v1",
+  "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-b6109443-v1",
+  "failure_stage": "PRECOMPUTATION",
+  "failure_code": "A5R2_TRACKED_SOURCE_TEST_MAP_IS_STALE",
+  "root_cause": "A5R3_LOADER_INCORRECTLY_CALLED_A5R2_LIVE_TREE_VERIFIER_INSTEAD_OF_CONSUMING_BYTE_IMMUTABLE_PREDECESSOR_EVIDENCE",
+  "scientific_contract_changed": false,
+  "publication_contract_changed": false,
+  "natural_e0_design_rows_read": 0,
+  "publication_claim_created": false,
+  "choice_audit_staging_created": false,
+  "choice_audit_final_created": false,
+  "choice_audit_publication_receipt_created": false,
+  "tokenizer_or_alignment_executed": false,
+  "input_lock_manifest_or_sidecar_persisted": false,
+  "model_or_checkpoint_loaded": false,
+  "model_forward_run": false,
+  "gpu_cuda_or_kubernetes_used": false,
+  "training": false,
+  "e1_pilot_or_confirmatory_accessed": false,
+  "e1_2_or_e1_3_authorized": false,
+  "blocked_receipt": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-b6109443-v1/input_lock/A5R2_INPUT_LOCK_BLOCKED.json",
+    "sha256": "85f078749a1b36fca8c4101e62985e303c7e29a56b9bc7f53c1bcb0d10c369fb"
+  },
+  "execution_identity": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-b6109443-v1/input_lock/a5r2_input_lock_execution_identity.json",
+    "sha256": "bce6e712ce2fc23bda9a78a300ee33794b72135801ec42b0c68ef4749a16c78a"
+  },
+  "source_snapshot": {
+    "entry_count": 665,
+    "git_tree_oid": "edebc2a25e045baa52e0d2d559b8837eb6a86d08",
+    "mounted_tree_canonical_sha256": "28c63507264962c4fe5424d6429763b067ec23c8678a21767da7f4d360946f29",
+    "receipt_file_sha256": "81186bbc031b0d3061b8991650eee95627e3b6ec81128f3989081f30ccad8cf5",
+    "receipt_sha256": "0c26d8af75d42eb4541980e44ad9658dc38d738a948b7a82f5210723fd348012"
+  },
+  "resume_allowed": false,
+  "root_or_artifact_reuse_allowed": false,
+  "in_place_repair_allowed": false,
+  "replacement_requirements": [
+    "fix_only_immutable_predecessor_gate_consumption",
+    "regenerate_and_verify_pre_natural_a5r3_gate",
+    "new_clean_pushed_execution_sha",
+    "new_immutable_source_snapshot",
+    "new_uid_and_fresh_root",
+    "restart_from_group_one"
+  ]
+}

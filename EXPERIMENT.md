@@ -688,3 +688,14 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
   修正或在规范 temp-domain 复验通过，没有改变 scientific rule/tolerance。
 - 本记录不含新的 natural audit result、tokenizer/alignment、model/checkpoint、
   forward、GPU/CUDA/Kubernetes 或 training；E1-2/E1-3/E1-pilot/confirmatory 未授权。
+
+### 2026-07-31 FPCT-E1 A5R3 pre-natural verifier recovery
+
+- Execution `b6109443...` 在 natural row 1 和 publication claim 前以
+  `A5R2_TRACKED_SOURCE_TEST_MAP_IS_STALE` 终止；原因是 successor 错用 immutable
+  A5R2 gate 的 live-tree verifier。该 root 永久 no-resume/no-reuse。
+- Closure SHA256=`efbecc09...`；natural/tokenizer/alignment/model/GPU/training 全为
+  0。修复只保留 frozen A5R2 gate SHA/schema/status 验证并移除错误的 successor-vs-
+  historical live-tree comparison。
+- Replacement synthetic gate `43 passed`；tracked tree=`54f108bb...`，evidence=
+  `907f3b6a...`，artifact SHA256=`004a8feb...`。下一次从新 SHA/root 的 group 1 重启。

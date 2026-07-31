@@ -1799,3 +1799,19 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
   root 从 group 1 运行一次 label-free audit；本记录尚未读取新的 natural row，尚未
   tokenizer/alignment。0 model/checkpoint/forward、0 GPU/CUDA/K8s/training；E1-2、
   E1-3、E1-pilot 和 confirmatory 均未授权。
+
+### 2026-07-31 FPCT-E1 A5R3 pre-natural verifier recovery
+
+- 首个 A5R3 execution `b6109443...` 在 sealed bootstrap 内、任何 natural row 和
+  claim 前 fail-closed：successor loader 错误调用 A5R2 gate 的 live-tree verifier，
+  因 A5R3 prepare 合法变化而得到 `A5R2_TRACKED_SOURCE_TEST_MAP_IS_STALE`。
+- 该 root 永久 no-resume/no-reuse；natural/tokenizer/alignment/model/GPU/training
+  计数均为 0。Closure SHA256=`efbecc09...`，blocked/identity SHA256=
+  `85f07874...` / `bce6e712...`。
+- 修复仅把 A5R2 gate 作为 byte-immutable predecessor evidence 消费：继续验证其
+  frozen file SHA、strict v9 schema/protocol/status，不再把 historical live-tree map
+  与 successor tree 比较。Population/parser/taxonomy/threshold/publication/operator
+  均未改变。
+- Replacement CPU/offline gate `43 passed`；target scratch probe仍为 GO；tracked
+  tree=`54f108bb...`，evidence=`907f3b6a...`，artifact SHA256=`004a8feb...`。
+  下一步必须新 clean push/snapshot/UID/root，从 group 1 重启；E1-2 未授权。

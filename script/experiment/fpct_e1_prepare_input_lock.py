@@ -2351,7 +2351,7 @@ def _load_active_a5_synthetic_gate(repo_root: Path) -> dict[str, Any]:
     """Verify v10 publication GO and attach immutable v8 stream evidence."""
 
     from script.analysis.fpct_e1_a5r2_choice_cardinality_gate import (
-        verify_gate as verify_a5r2_gate,
+        validate_a5r2_schema_artifact,
     )
     from script.analysis.fpct_e1_a5r3_portable_publication_gate import (
         verify_gate as verify_a5r3_gate,
@@ -2367,7 +2367,16 @@ def _load_active_a5_synthetic_gate(repo_root: Path) -> dict[str, Any]:
     ]
     if sha256_file(predecessor_path) != expected_sha256:
         raise ValueError("immutable A5R2 synthetic gate changed")
-    predecessor = verify_a5r2_gate(predecessor_path, repo_root=repo_root)
+    predecessor = json.loads(predecessor_path.read_text(encoding="utf-8"))
+    validate_a5r2_schema_artifact(predecessor, repo_root=repo_root)
+    if (
+        predecessor.get("protocol_id") != A5_PROTOCOL_ID
+        or predecessor.get("artifact_type")
+        != "a5r2_choice_cardinality_synthetic_gate"
+        or predecessor.get("status")
+        != "GO_PRE_NATURAL_A5R2_CHOICE_CARDINALITY_HARD_GATE"
+    ):
+        raise ValueError("immutable A5R2 synthetic-gate identity changed")
     inherited = predecessor.get("inherited_v8_streaming_evidence")
     if not isinstance(inherited, Mapping):
         raise ValueError("A5R2 inherited v8 streaming evidence is absent")

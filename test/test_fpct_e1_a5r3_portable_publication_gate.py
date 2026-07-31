@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 import copy
+import inspect
 import json
 from pathlib import Path
 
 import pytest
 
 from script.analysis import fpct_e1_a5r3_portable_publication_gate as gate
+
+
+def test_active_loader_does_not_replay_a5r2_live_tree_verifier() -> None:
+    from script.experiment import fpct_e1_prepare_input_lock as prepare
+
+    source = inspect.getsource(prepare._load_active_a5_synthetic_gate)
+    assert "validate_a5r2_schema_artifact" in source
+    assert "verify_a5r2_gate" not in source
 
 
 def test_v10_contract_binds_prospective_approval_and_v9_semantics() -> None:
@@ -120,6 +129,7 @@ def test_gate_tracked_closure_contains_normative_and_publication_sources() -> No
     assert gate.CONTRACT_RELATIVE.as_posix() in tracked
     assert gate.SCHEMA_RELATIVE.as_posix() in tracked
     assert gate.BLOCKED_CLOSURE_RELATIVE.as_posix() in tracked
+    assert gate.PRENATURAL_FAILURE_RELATIVE.as_posix() in tracked
     assert gate.PREPARE_RELATIVE.as_posix() in tracked
     assert set(gate.A5R2_OBJECT_SHA256) <= tracked
     assert set(gate.PUBLICATION_TEST_FILES) <= tracked
