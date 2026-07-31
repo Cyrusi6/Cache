@@ -699,3 +699,15 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
   historical live-tree comparison。
 - Replacement synthetic gate `43 passed`；tracked tree=`54f108bb...`，evidence=
   `907f3b6a...`，artifact SHA256=`004a8feb...`。下一次从新 SHA/root 的 group 1 重启。
+
+### 2026-07-31 FPCT-E1 A5R3 post-reduction publication-mode closure
+
+- Execution `3263531e...` 使用 fresh 666-entry immutable snapshot 与 sealed CPU
+  bootstrap。Claim 在 natural row 1 前创建；完整 326-row label-free reduction 后，
+  fixed staging 因 `/netdisk` setgid inheritance 得到 `02700`，exact-`00700` safety
+  predicate fail-closed。Final/receipt/tokenizer/alignment input-lock 均未生成。
+- Root 永久 no-cleanup/no-resume/no-reuse；tracked closure SHA256=`8ca35379...`。
+  程序已执行 label-free reduction，但 human/agent/reviewer 未打开、汇总或使用
+  unpublished natural choice statistics；0 model/checkpoint/forward、0 GPU/CUDA/K8s/
+  training。E1-2 未授权，下一步需要人工决定是否批准最小 A5R4 mode-predicate
+  amendment；当前未修改代码。

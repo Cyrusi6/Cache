@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R3 pre-natural verifier recovery execution lock
-> 当前状态：`b6109443 TERMINAL PRE-NATURAL / REPLACEMENT GATE GO / NATURAL AUDIT NOT RUN / E1-2 NOT AUTHORIZED`
-> 下一步：提交并推送 replacement SHA；用全新 snapshot/UID/root 从 group 1 重启
+> 当前阶段：A5R3 post-reduction publication-mode integrity closure
+> 当前状态：`3263531e TERMINAL / UNPUBLISHED / HUMAN REVIEW REQUIRED / E1-2 NOT AUTHORIZED`
+> 下一步：人工决定是否批准仅针对 inherited setgid mode predicate 的前瞻性 A5R4；不得 resume/reuse 当前 root
 > 更新时间：2026-07-31（Asia/Shanghai）
 
 ## 隔离身份
@@ -25,6 +25,7 @@
 | A5 selected prompt contract | `ACTUAL_E0_PRODUCTION_RUNTIME_PROMPT` |
 | A5 successor execution SHA | `9b248d2094b684f5d9e9a218919a354b7d97468e`；pre-group-1 provenance failure；永久禁止 resume/reuse |
 | A5R1 execution SHA | `37be816ad611b8b0d916bd98c840c5f31efe2b50`；choice-cardinality failure；永久禁止 resume/reuse |
+| A5R3 terminal execution SHA | `3263531ed7137efd241de3c951bf7c5e9d37e669`；complete in-memory reduction 后、publication 前 mode failure；永久禁止 resume/reuse |
 | Consolidated gate SHA256 | `d17b4b7f35e2384abfbd300cf109484d6aacc91dd84cd3f2573a8d5dd36d4b17` |
 
 ## 人工决策锁
@@ -493,3 +494,28 @@ model/checkpoint，未运行 model forward、GPU、CUDA、Kubernetes 或 trainin
 - 自然 rows read=`0`，claim/staging/final/publication receipt=`0`，tokenizer/alignment=
   `0`，model/checkpoint/forward/GPU/CUDA/K8s/training=`0`。下一执行必须新 commit、
   snapshot、UID/root 并从 group 1 重启；E1-2/E1-3 仍未授权。
+
+## 2026-07-31 A5R3 3263531e post-reduction publication-mode closure
+
+- Clean/pushed execution SHA=`3263531ed7137efd241de3c951bf7c5e9d37e669`；fresh
+  root=`/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-3263531e-v1`。666-entry snapshot
+  Git tree=`8293de1da48eb7e9109d4e858923f5ebfd4f99c4`，mounted tree=
+  `5c43edbf7ff916929d75876ae156390f722eded86b07741eb64d29fb65e51e74`，
+  receipt=`ed9df4ddfacbcc9c3d1ccfe37d19d07e7b8862ac434d9d050ee7107fdaef06d0`。
+- Sealed CPU execution 按 v10 在 natural row 1 前创建并持久化 claim。完整 326-row
+  label-free reduction 留在内存后，fixed staging 由目标文件系统继承 setgid，实际
+  mode=`02700`；实现冻结为 exact `00700`，因此在任何 final/receipt 生成前 fail-closed，
+  code=`A5R3_FIXED_STAGING_IDENTITY_OR_MODE_IS_UNSAFE`。
+- Claim SHA256=`91834557...`；blocked/identity SHA256=`c7065a61...` /
+  `4243e8ac...`。Final choice audit、publication receipt、tokenizer/alignment input lock
+  均未生成；程序执行了 label-free reduction，但 human/agent/reviewer 未打开、汇总或
+  将 unpublished natural choice statistics 用于 recovery。
+- Git closure=`recipe/eval_recipe/fpct_e1/executions/3263531e/input_lock_failure_receipt.json`，
+  SHA256=`8ca3537914edb880b3436012841ec47b8d416345e2646fce22597c60d3bf4d17`。
+  Claim/staging/root 永久保留作 forensic tombstone；禁止 cleanup/resume/reuse。
+- 当前状态=`HUMAN REVIEW REQUIRED`。候选 A5R4 只能前瞻性改变 mode safety predicate：
+  owner 必须匹配、group/other permission bits 必须全为 0，允许目标文件系统继承的
+  setgid bit；并必须新增真实 target-FS inheritance regression、新 gate、新 clean
+  pushed SHA/snapshot/UID/root，从 group 1 重启。尚未获批，未改实现。
+- 0 model/checkpoint load、0 forward、0 GPU/CUDA/K8s/training；E1-2/E1-3 未进入，
+  E1-pilot/confirmatory 继续 sealed。

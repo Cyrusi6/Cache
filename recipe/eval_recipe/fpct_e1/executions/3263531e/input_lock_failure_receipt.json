@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_a5r3_post_reduction_failure_closure_v1",
+  "artifact_type": "a5r3_post_reduction_pre_publication_execution_failure_closure",
+  "status": "A5R3_POST_REDUCTION_PRE_PUBLICATION_EXECUTION_BLOCKED",
+  "execution_sha": "3263531ed7137efd241de3c951bf7c5e9d37e669",
+  "run_uid": "fpct-e1-a5r2-choice-cardinality-3263531e-v1",
+  "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-3263531e-v1",
+  "failure_stage": "PRECOMPUTATION_AFTER_COMPLETE_IN_MEMORY_REDUCTION",
+  "failure_code": "A5R3_FIXED_STAGING_IDENTITY_OR_MODE_IS_UNSAFE",
+  "root_cause": "TARGET_FILESYSTEM_INHERITED_SETGID_ON_OWNER_CREATED_STAGING_PRODUCING_MODE_02700_WHILE_IMPLEMENTATION_REQUIRED_EXACT_00700",
+  "scientific_contract_changed": false,
+  "choice_semantics_version": 9,
+  "natural_e0_design_rows_reduced_in_memory": 326,
+  "unpublished_natural_choice_statistics_human_or_reviewer_accessed": false,
+  "publication_claim_created": true,
+  "publication_claim": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-3263531e-v1/.choice_audit.publication.claim.json",
+    "sha256": "91834557efc59796b3af94da719593194e401510961ed9f13903ffa0366b11ca",
+    "mode_octal": "0600"
+  },
+  "choice_audit_staging_created": true,
+  "choice_audit_staging": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-3263531e-v1/.choice_audit.staging",
+    "mode_octal": "02700",
+    "owner_uid": 20007,
+    "group_or_other_permission_bits": "000"
+  },
+  "choice_audit_final_created": false,
+  "choice_audit_publication_receipt_created": false,
+  "tokenizer_or_alignment_executed": false,
+  "input_lock_manifest_or_sidecar_persisted": false,
+  "model_or_checkpoint_loaded": false,
+  "model_forward_run": false,
+  "gpu_cuda_or_kubernetes_used": false,
+  "training": false,
+  "e1_pilot_or_confirmatory_accessed": false,
+  "e1_2_or_e1_3_authorized": false,
+  "blocked_receipt": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-3263531e-v1/input_lock/A5R2_INPUT_LOCK_BLOCKED.json",
+    "sha256": "c7065a613b20daa884d6d5d2d5fff99d26e2a7baeef5f4877c2021a98d18cd58"
+  },
+  "execution_identity": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-3263531e-v1/input_lock/a5r2_input_lock_execution_identity.json",
+    "sha256": "4243e8ace31c4f782942391c9b65ed183ef953e9f09ca3e1eca88e60853697e8"
+  },
+  "source_snapshot": {
+    "entry_count": 666,
+    "git_tree_oid": "8293de1da48eb7e9109d4e858923f5ebfd4f99c4",
+    "mounted_tree_canonical_sha256": "5c43edbf7ff916929d75876ae156390f722eded86b07741eb64d29fb65e51e74",
+    "receipt_file_sha256": "24ba237a3948915d639d03150c11652a5d30ab10b08442ab40b1dc9a3737fecb",
+    "receipt_sha256": "ed9df4ddfacbcc9c3d1ccfe37d19d07e7b8862ac434d9d050ee7107fdaef06d0"
+  },
+  "sealed_bootstrap_stable_fingerprint_sha256": "86cffd86c77851de03ac961398d7fc9c37646044b983e67a1c4b4670e46fe99e",
+  "resume_allowed": false,
+  "root_or_artifact_reuse_allowed": false,
+  "in_place_repair_allowed": false,
+  "next_state": "HUMAN_REVIEW_REQUIRED_E1_2_NOT_AUTHORIZED",
+  "prospective_recovery_not_yet_approved": true,
+  "candidate_recovery_boundary": [
+    "do_not_modify_or_clean_terminal_root",
+    "do_not_human_or_reviewer_access_unpublished_natural_choice_statistics",
+    "if_human_approved_allow_setgid_only_when_owner_matches_and_all_group_other_permission_bits_are_zero",
+    "add_real_target_filesystem_setgid_inheritance_regression",
+    "regenerate_pre_natural_gate",
+    "new_clean_pushed_execution_sha_snapshot_uid_and_root",
+    "restart_from_group_one"
+  ]
+}

@@ -1815,3 +1815,18 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
 - Replacement CPU/offline gate `43 passed`；target scratch probe仍为 GO；tracked
   tree=`54f108bb...`，evidence=`907f3b6a...`，artifact SHA256=`004a8feb...`。
   下一步必须新 clean push/snapshot/UID/root，从 group 1 重启；E1-2 未授权。
+
+### 2026-07-31 FPCT-E1 A5R3 post-reduction publication-mode closure
+
+- Clean/pushed `3263531e...` 的 666-entry immutable snapshot 与 sealed bootstrap 均
+  通过。A5R3 claim 已在 natural row 1 前持久化；完整 326-row label-free reduction
+  后，`/netdisk` 为 fixed staging 继承 setgid，mode=`02700`，与实现的 exact `00700`
+  predicate 不同，故在 final rename/receipt 前 fail-closed。
+- Terminal root 永久 no-cleanup/no-resume/no-reuse；claim/blocked/identity SHA256=
+  `91834557...` / `c7065a61...` / `4243e8ac...`。未生成 choice-audit final、
+  publication receipt、tokenizer/alignment sidecar 或 manifest。程序执行了 label-free
+  reduction，但 human/agent/reviewer 未打开、汇总或使用 unpublished natural
+  statistics。Tracked closure SHA256=`8ca35379...`。
+- 状态=`HUMAN REVIEW REQUIRED`。只提出未获批的 prospective A5R4 边界：owner 匹配且
+  group/other permissions 全零时允许 inherited setgid，并新增真实 target-FS regression；
+  不改 population/choice semantics/taxonomy/threshold/operator。E1-2 仍未授权。
