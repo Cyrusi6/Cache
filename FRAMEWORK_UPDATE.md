@@ -1855,3 +1855,20 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
 - 尚未运行 successor natural audit/tokenizer/alignment；0 model/checkpoint/forward、
   0 GPU/CUDA/K8s/training。下一步仅为 fresh clean pushed SHA/snapshot/UID/root 的 CPU
   audit/input-lock；E1-2 仍未授权。
+## 2026-08-14 — FPCT-E1 A5R5 fresh-root interruption recovery
+
+- 研究目标：不重新解释 E0，永久封存 `a47d52f8` 的外部中断 partial root，并为完整
+  E0-design mechanism/topology audit 建立一次性、可脱离交互会话的 CPU execution。
+- 核心改动：新增 v12 amendment/manifest、hash-only interruption observation、detached
+  controller、gate 与 tests。Controller 在 run-root/worker 前依次写 O_EXCL
+  materialization/launch/worker-start claims，以 PID/starttime/cmdline SHA 绑定唯一 Popen
+  child，state/log 位于 hidden sibling root；success 还需 snapshot 内完整 producer verifier
+  独立重放，任何中断不得 relaunch/resume。
+- 实验配置：本阶段仅 CPU/offline synthetic 与只读 forensic hashing；旧 root 708 files、
+  39,278,548 bytes、tree=`30276236...`，23 个 row-template files，不导入 successor。
+- 验证结果：A5R5+inherited regression=`147 passed`；test output=`a4c9e7fb...`，
+  gate evidence=`f2da57e2...`，artifact=`6190db2d...`；A5R4/prepare/math SHA exact
+  unchanged；JSON 与 gate verify GO；controller 红队 P0/P1 清零。
+- 结论：A5R5 pre-natural lock GO，尚未 commit/push 或启动新自然输入。下一步只允许
+  clean pushed SHA 的 fresh snapshot/UID/root 从 group 1 完整重算；E1-2 必须另有
+  pre-output intervention lock 后才可加载六个 E0 checkpoints。

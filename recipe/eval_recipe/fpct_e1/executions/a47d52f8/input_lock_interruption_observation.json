@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_mechanism_audit_v12_a5r5_fresh_root_recovery",
+  "artifact_type": "human_observed_input_lock_interruption",
+  "status": "HUMAN_OBSERVED_EXTERNAL_INTERRUPTION_NO_TERMINAL_PRODUCER_RECEIPT",
+  "observed_date": "2026-08-14",
+  "timezone": "Asia/Shanghai",
+  "execution_sha": "a47d52f8adf5ada79919d39ac42d7b9fe655595f",
+  "run_uid": "fpct-e1-a5r2-choice-cardinality-a47d52f8-v1",
+  "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-a47d52f8-v1",
+  "active_process_present": false,
+  "external_termination_cause_verified": false,
+  "producer_native_blocked_receipt_present": false,
+  "producer_native_go_receipt_present": false,
+  "choice_audit": {
+    "publication_status": "A5R3_CHOICE_AUDIT_PUBLICATION_GO",
+    "publication_receipt_sha256": "6280cbc6d8f9cdff916b2d22a100242c94001ee90ddcdd7492e9f165b80660f4",
+    "ledger_sha256": "33383836553f5c32e07c807042363232a1b34753c32fa8ed2016e5195d2c0dca",
+    "summary_sha256": "49dc8296fd1c46ded2235f877aed923ca9b8f87ba1f6b03e3869bde86ca222e3",
+    "lock_sha256": "546d0ef17c1c1ba62eb826593c6565b1e65e0ac267e1a0d86fcbae55bda27ce1"
+  },
+  "partial_input_lock": {
+    "geometry_manifest_sha256": "70cff980eaf7d00dba9ff81fe751cd0b6cb6a4b922ffff0f29c587938543a15a",
+    "geometry_receipt_sha256": "475a0d6ab45f4b5a1641ba278af6ce77588bae5df9b4784430676343472a5680",
+    "geometry_parquet_sha256": "f387c04c342fbc256a982eddb01255ac4338f3c6e4f46fe9d2db22c0b2960029",
+    "row_template_file_count": 23,
+    "row_template_total_bytes": 11843150,
+    "row_template_tree_sha256": "a91791872422899bfafb274fb0c4be5fff8c4b4fb8019b90002efd9ff45d04df",
+    "global_chunk_index_present": false,
+    "streaming_receipt_present": false,
+    "canonical_sidecar_present": false,
+    "canonical_manifest_present": false
+  },
+  "full_root_fingerprint": {
+    "file_count": 708,
+    "total_bytes": 39278548,
+    "tree_sha256": "302762365c964e93a3f3fe3ad063447998b51207f6f9ab57b0594c4132184187",
+    "filesystem_entry_count": 812,
+    "filesystem_inventory_sha256": "c480ecfa6b508fa1cad028ae54dc18b64f18295e0ce4239a598386b36131ebdc"
+  },
+  "closure": {
+    "logical_forensic_seal_only": true,
+    "filesystem_is_worm": false,
+    "resume_allowed": false,
+    "repair_allowed": false,
+    "artifact_import_allowed": false,
+    "cleanup_allowed": false,
+    "scientific_result": false,
+    "next_action": "NEW_COMMIT_SNAPSHOT_UID_ROOT_FROM_GROUP_ONE"
+  }
+}

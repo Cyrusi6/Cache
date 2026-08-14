@@ -1,9 +1,9 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R4 inherited-setgid mode pre-natural execution lock
-> 当前状态：`A5R4 GATE GO / SUCCESSOR NATURAL AUDIT NOT RUN / E1-2 NOT AUTHORIZED`
-> 下一步：提交并推送 A5R4 execution SHA；用全新 snapshot/UID/root 从 group 1 重启
-> 更新时间：2026-07-31（Asia/Shanghai）
+> 当前阶段：A5R5 fresh-root interruption recovery pre-natural lock
+> 当前状态：`A5R5 GATE GO / COMMIT+PUSH PENDING / SUCCESSOR NATURAL ACCESS=0`
+> 下一步：提交并推送 A5R5 execution SHA；用一次性 detached controller 建立全新 snapshot/UID/root
+> 更新时间：2026-08-14（Asia/Shanghai）
 
 ## 隔离身份
 
@@ -51,12 +51,12 @@
 | Commit A2 execution lock | `INCONCLUSIVE / ABANDONED` | E1-1 GO + operational closure | CPU input lock | d169 在自然 alignment 中因 slot-order taxonomy bug fail-closed；0 artifact/model/GPU |
 | Commit A3 correctness lock | `GO` | d169 receipt + synthetic permutation regression | 文档、单一 classifier 修复、tests only | clean/pushed execution=`612697df...`；只排序派生 intersections；未改 candidate/A/operator/threshold/split |
 | E1-2 input/topology/provenance lock | `INCONCLUSIVE_RESOURCE_CEILING / ABANDONED` | clean pushed A3 | CPU tokenizer/alignment only | observed logical rows `616448 > 262144`；0 artifact/model/GPU；禁止 resume/reuse |
-| E1-2 C_post baselines | `BLOCKED / NOT STARTED` | human-approved successor protocol + new complete input lock | 目前无授权资源 | 未创建 runtime probe/plan/ConfigMap/Job，未运行 checkpoint inference |
-| E1-2 F endpoints | `BLOCKED / NOT STARTED` | 18 C_post closure | 目前无授权资源 | 只识别同 checkpoint F-C_post mechanism；无性能 GO |
-| E1-2 analyzer/finalized receipt | `BLOCKED / NOT STARTED` | C_post+F endpoints complete | 目前无授权资源 | 必须产生 deep-verified immutable `FINALIZED_E1_2` |
-| E1-3 centered-lambda sweep | `BLOCKED / NOT STARTED` | immutable finalized receipt | 目前无授权资源 | grid `{0,0.25,0.5,1,2}`；最终 closure=108；无训练 |
-| E1 root-cause/operator freeze | `NOT AUTHORIZED` | E1-3 complete + frozen report | protocol only | 只允许新的前瞻性 amendment 选择一个因素 |
-| E1-pilot | `SEALED / NOT RUN / NOT READ` | 新 operator amendment + 单独授权 | 未授权 | exploratory only；永无 confirmatory eligibility |
+| E1-2 C_post baselines | `CONDITIONALLY AUTHORIZED / NOT STARTED` | A5R5 input-lock GO + independent verifier + pre-output lock | 最多 6 个 GPU workers；具体资源须在新锁中冻结 | 未创建 runtime probe/plan/ConfigMap/Job，未运行 checkpoint inference |
+| E1-2 F endpoints | `CONDITIONALLY AUTHORIZED / NOT STARTED` | 18 C_post closure + same pre-output lock | 同上 | 只识别同 checkpoint F-C_post mechanism；无性能 GO |
+| E1-2 analyzer/finalized receipt | `CONDITIONALLY AUTHORIZED / NOT STARTED` | C_post+F endpoints complete | CPU analysis | 必须产生 deep-verified immutable `FINALIZED_E1_2` |
+| E1-3 frozen interventions | `CONDITIONALLY AUTHORIZED / NOT STARTED` | complete baseline/F closure + pre-output intervention DAG | frozen fixed-checkpoint inference only | centered λ、RoPE、K/V、parent-mass、partition hybrid；无训练 |
+| E1 root-cause/operator freeze | `CONDITIONALLY AUTHORIZED / NOT STARTED` | E1-3 complete + mechanical eligibility/ranking | protocol + one production factor | 无合格 intervention 时机械停止训练 |
+| E1-pilot | `SEALED / NOT RUN / NOT READ` | unique operator freeze + implementation/oracle/CPU/HF/GPU/training lock GO | 条件式 matched training | exploratory only；永无 confirmatory eligibility |
 | Confirmatory | `SEALED / NOT AUTHORIZED` | 后续完整阶段链 | 未授权 | model-selection/test/formal seeds 不得读取 |
 
 ## Instrumentation hard gate
@@ -548,3 +548,29 @@ model/checkpoint，未运行 model forward、GPU、CUDA、Kubernetes 或 trainin
   forward、GPU/CUDA/K8s/training。Gate GO 只授权下一 clean pushed SHA 用 fresh snapshot/
   UID/root 从 group 1 运行 label-free audit，并在机械 GO 时运行 CPU input lock；E1-2/
   E1-3/E1-pilot/confirmatory 仍未授权。
+
+## 2026-08-14 A5R5 fresh-root interruption recovery 前瞻锁
+
+- `a47d52f8...` A5R4 execution 的 choice audit 已 durable GO，但 downstream input
+  lock 在首个 sample 的 21 个 row-template chunks 后被外部中断；终止原因本身未验证。
+  它没有 canonical sidecar/main manifest/A5R2 GO/A5R2 BLOCKED，不能补造 producer
+  failure receipt，也不能解释为 mechanism/performance result。
+- Hash-only forensic closure：708 files、39,278,548 bytes、tree SHA256=
+  `302762365c964e93a3f3fe3ad063447998b51207f6f9ab57b0594c4132184187`；observation
+  SHA256=`fa2a28107d6dfd84b99152ca99dc312cf509059b6376851ad6323c871fe6f10e`。
+  旧 root/snapshot/partial artifacts 永久 no-cleanup/no-resume/no-repair/no-reuse。
+- 用户以 `PLEASE IMPLEMENT THIS PLAN` 批准 A5R5 fresh-root recovery、后续条件式
+  E1-2/E1-3、单因素修复及单 seed→条件三 seed；仍不授权 confirmatory、native null、
+  selector、新 gate、跨模型或 36-run。
+- A5R5 controller 使用 hidden sibling control root、run-root 前 O_EXCL materialization
+  claim、worker 前 O_EXCL launch/worker-start claims、CPU/offline allowlist environment 与
+  `start_new_session=True`。Worker 必须等到 launch receipt 并以 PID/starttime/cmdline SHA
+  证明自己是 Popen child；任何中断或 PID reuse 均 terminal，不自动 retry/resume。
+  Scientific root 不含 log/PID/controller state；GO 还需 snapshot 内完整 producer verifier
+  独立重放。
+- Pre-natural gate=`GO_PRE_NATURAL_A5R5_FRESH_ROOT_RECOVERY`；`147 passed`，test
+  output SHA256=`a4c9e7fb841d924c29b109a7cdc19742a0017f33f26d6a8ec07438e810eac500`，
+  evidence=`f2da57e24b13e1ac2f712b764c5cecf6c6b44e27c0a2eda37c1960ce6fa395e9`，
+  gate artifact SHA256=`6190db2d26ad55c8a467c880ff0050c1e3c7bd0cff2bec83d8a320bc9afc21f9`。
+- 本锁冻结时 successor natural/tokenizer/alignment/model/checkpoint/forward/GPU/CUDA/
+  K8s/training/E1-pilot/confirmatory 均为 0。只有 clean pushed SHA 与全新 root 可执行。

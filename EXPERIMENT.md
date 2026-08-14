@@ -728,3 +728,15 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
 - 本记录生成前未运行 successor natural audit、tokenizer/alignment、model/checkpoint/
   forward、GPU/CUDA/K8s/training；E1-2 未授权。下一执行必须使用新 clean pushed commit、
   immutable snapshot、UID/root，从 group 1 重启。
+### 2026-08-14 FPCT-E1 A5R5 fresh-root interruption recovery
+
+- `a47d52f8...` root 的 choice audit 已发布，但 input lock 仅完成 geometry 与首个 sample
+  的 21 chunks；无 sidecar/main manifest/GO/BLOCKED。External termination cause 未验证，
+  该 root 作为 hash-only forensic evidence 永久 no-resume/no-reuse。
+- 用户批准完整 root-cause→单因素修复→单 seed→条件三 seed计划，并选择全新 A5R5
+  root。A5R5 不改 prepare、A5R4、math、population、alignment、operator 或 threshold。
+- 新 detached controller 使用外置 sibling state、O_EXCL materialization/launch/worker-start
+  claims、Popen PID/starttime/cmdline binding、snapshot-origin deep verifier、CPU/offline env 和
+  no-relaunch terminal semantics。新 run 必须从 group 1 重算。
+- Pre-natural tests=`147 passed`；test SHA=`a4c9e7fb...`，gate evidence=`f2da57e2...`，
+  artifact=`6190db2d...`。本记录生成时 0 successor natural/model/GPU/training/output。
