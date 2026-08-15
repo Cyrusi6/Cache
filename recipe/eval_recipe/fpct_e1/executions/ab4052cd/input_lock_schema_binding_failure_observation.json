@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_mechanism_audit_v13_a5r6_schema_binding_recovery",
+  "artifact_type": "a5r5_input_lock_schema_binding_failure_observation",
+  "status": "TERMINAL_ENGINEERING_FAILURE_NOT_SCIENTIFIC_RESULT",
+  "execution_sha": "ab4052cd0f97c248e674ed4f7b2e0a4fa23d87f5",
+  "run_uid": "fpct-e1-a5r2-choice-cardinality-ab4052cd-v1",
+  "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-ab4052cd-v1",
+  "completed_at": "2026-08-15T01:16:32+08:00",
+  "worker": {
+    "status": "WORKER_TERMINAL_FAILURE",
+    "exit_code": 1,
+    "result_bytes": 727,
+    "result_sha256": "ab34009378db74259da22c92f1c2eb3a6c4222a32ceec598fdc5732bc090e628",
+    "log_bytes": 14889,
+    "log_sha256": "c7cbe5812ba13189a3fe6ee1b088dd066c4895df23f12f43763831e2af1393b9"
+  },
+  "completed_preprocessing": {
+    "content_groups": 326,
+    "expected_logical_rows": 30370816,
+    "emitted_logical_rows": 30370816,
+    "physical_chunks": 7564,
+    "missing_rows": 0,
+    "duplicate_rows": 0,
+    "geometry_status": "GO",
+    "streaming_status": "GO",
+    "whole_table_materialization_detected": false
+  },
+  "terminal_artifacts": {
+    "blocked_receipt": {
+      "bytes": 1915,
+      "sha256": "9fc9c3a6f533d19ea9611c89828302eb8a6fb18ba725b210382e8499a51c4101"
+    },
+    "sidecar": {
+      "bytes": 25524396,
+      "sha256": "9c35e8c652360629eda1b6cef4618e5b227e51c688d3a95259cf191b1bad84aa"
+    },
+    "streaming_receipt": {
+      "bytes": 1837,
+      "sha256": "ec543abb13448484ecd7368860f2e1cf9b4067c927b8ca6b646fe9d9968ed827"
+    },
+    "canonical_manifest_present": false,
+    "go_receipt_present": false
+  },
+  "root_cause": {
+    "constructor_field": "choice_audit.publication",
+    "schema_path": "$defs.choiceAuditBinding",
+    "schema_additional_properties": false,
+    "failure": "JSON schema oneOf matched 0 branches",
+    "five_field_projection_validates": true,
+    "publication_injection_reproduces_failure": true,
+    "natural_data_dependent": false
+  },
+  "portable_forensic_closure": {
+    "algorithm": "kind_path_mode_size_content_v2_no_numeric_owner",
+    "entry_count": 9343,
+    "inventory_sha256": "67c572aa55d421338b9ee8725b8bd12944fa194cc8e34dabefac175504a32daf",
+    "regular_file_count": 8913,
+    "regular_file_bytes": 4426202802,
+    "regular_file_tree_sha256": "b8d39a970eb8f3d4bd6f2c5070f475cce4c7f96fd9a2cc6cae6a7e9cf7d26b4a",
+    "numeric_uid_or_gid_in_digest": false,
+    "environment_local_owner_mode_safety_passed": true
+  },
+  "closure": {
+    "scientific_result": false,
+    "resume_allowed": false,
+    "repair_allowed": false,
+    "artifact_reuse_allowed": false,
+    "cleanup_allowed": false,
+    "model_or_checkpoint_loaded": false,
+    "model_forward_run": false,
+    "gpu_cuda_or_kubernetes_used": false,
+    "training": false,
+    "e1_2_or_e1_3_authorized": false,
+    "next_action": "NEW_COMMIT_SNAPSHOT_UID_ROOT_FROM_GROUP_ONE"
+  }
+}

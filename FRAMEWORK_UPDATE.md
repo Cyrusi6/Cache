@@ -1872,3 +1872,24 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
 - 结论：A5R5 pre-natural lock GO，尚未 commit/push 或启动新自然输入。下一步只允许
   clean pushed SHA 的 fresh snapshot/UID/root 从 group 1 完整重算；E1-2 必须另有
   pre-output intervention lock 后才可加载六个 E0 checkpoints。
+
+## 2026-08-15 — FPCT-E1 A5R6 schema-binding recovery
+
+- 研究目标：封存 A5R5 `ab4052cd...` 的 terminal schema-integration failure，以最小
+  projection 修复完成合法 input lock；不重新解释其 label-free preprocessing。
+- 核心改动：immutable v9/A5R3 schemas 原字节不变；`_choice_audit_binding()` 固定
+  strict v9 五字段，A5R3 publication 继续独立验证。新增 A5R6 one-shot controller、
+  amendment/manifest/observation/gate/tests；failed-root portable digest 排除 numeric
+  UID/GID，owner/group/mode 改为环境内 fail-closed 检查。
+- 实验配置：本阶段仅 CPU synthetic/integration 与 4.43GB failed-root read-only hashing；
+  successor natural/model/checkpoint/GPU/training 均未访问。
+- 验证结果：operative suite=`318 passed, 4 deselected`；完整 publication→five-field→v9
+  manifest 正控通过，publication reinjection 负控失败；gate evidence=`c6402176...`，
+  artifact=`9f4787a6...`，test output=`92e4a68c...`。四项 deselected 为历史
+  temp-repo/API drift；其 exact node list 与 `322/4/318` collection summary 已冻结；历史 A5R5 gate
+  对新 prepare SHA 的三项拒绝是预期 immutable guard。
+- Hardening：gate 在任何 successor root 前被严格验证并绑定到 claim/lock/snapshot；
+  tracked/immutable map 必须 exact，旧 worker result/log live SHA replay；deep verifier 以
+  strict、幂等、no-overwrite receipt 封口。
+- 结论：A5R6 pre-natural GO，等待 clean commit/push 后以新 snapshot/UID/root 从 group 1
+  重建。A5R5 root 永久不可复用；A5R6 deep verifier GO 前不得进入 E1-2/3。

@@ -1,0 +1,98 @@
+{
+  "schema_version": 13,
+  "protocol_id": "fpct_e1_mechanism_audit_v13_a5r6_schema_binding_recovery",
+  "artifact_type": "a5r6_schema_binding_recovery_manifest",
+  "status": "APPROVED_PRE_SUCCESSOR_NATURAL_ACCESS",
+  "decision_date": "2026-08-15",
+  "timezone": "Asia/Shanghai",
+  "base_commit": "ab4052cd0f97c248e674ed4f7b2e0a4fa23d87f5",
+  "immutable_schemas": {
+    "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_schema.json": "9cb387628e4b8fcf6c978e082b8c3380dbc62406c6aa460892c679872d656d7f",
+    "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_schema.json": "b24d197481c01c917ad9d4063441f96ac23979bdb4b3db24855e551c7fb91460"
+  },
+  "failed_execution": {
+    "execution_sha": "ab4052cd0f97c248e674ed4f7b2e0a4fa23d87f5",
+    "run_uid": "fpct-e1-a5r2-choice-cardinality-ab4052cd-v1",
+    "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-ab4052cd-v1",
+    "status": "A5R2_INPUT_LOCK_BLOCKED",
+    "failure_stage": "V9_INPUT_LOCK",
+    "failure_code": "VALUEERROR",
+    "scientific_result": false,
+    "resume_repair_reuse_cleanup_allowed": false
+  },
+  "sole_semantic_code_change": {
+    "function": "script.experiment.fpct_e1_prepare_input_lock._choice_audit_binding",
+    "output_keys_exact": [
+      "lock",
+      "ledger",
+      "status",
+      "audit_semantic_sha256",
+      "correction_actions_selected"
+    ],
+    "publication_embedded_in_v9_binding": false,
+    "publication_independently_verified": true,
+    "publication_receipt_retained_in_verified_audit": true
+  },
+  "portable_forensic_identity": {
+    "algorithm": "kind_path_mode_size_content_v2_no_numeric_owner",
+    "included_fields": ["kind", "relative_path", "mode", "size", "content_sha256"],
+    "numeric_uid_in_digest": false,
+    "numeric_gid_in_digest": false,
+    "entry_count": 9343,
+    "inventory_sha256": "67c572aa55d421338b9ee8725b8bd12944fa194cc8e34dabefac175504a32daf",
+    "regular_file_count": 8913,
+    "regular_file_bytes": 4426202802,
+    "regular_file_tree_sha256": "b8d39a970eb8f3d4bd6f2c5070f475cce4c7f96fd9a2cc6cae6a7e9cf7d26b4a",
+    "environment_local_owner_mode_safety_required": true,
+    "raw_numeric_owner_value_frozen": false,
+    "filesystem_is_worm": false
+  },
+  "fresh_execution": {
+    "branch": "research/fpct-e1-mechanism-audit",
+    "uid_pattern": "^fpct-e1-a5r2-choice-cardinality-[0-9a-f]{8}-v1$",
+    "root_pattern": "^/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-[0-9a-f]{8}-v1$",
+    "controller_root_pattern": "^/netdisk/lijunsi/fpct-e1/\\.fpct-e1-a5r6-controller-[0-9a-f]{8}-v1$",
+    "restart_group": 1,
+    "old_artifact_import_allowed": false,
+    "launch_count": 1,
+    "resume_allowed": false,
+    "cpu_offline": true
+  },
+  "unchanged_science": {
+    "population": "E0-design",
+    "distinct_content_groups": 326,
+    "task_counts": {"ai2-arc": 128, "openbookqa": 70, "mmlu-redux": 128},
+    "prompt_tokenizer_alignment_candidate_prior_changed": false,
+    "operator_checkpoint_endpoint_threshold_claim_changed": false,
+    "model_or_checkpoint_load": false,
+    "model_forward": false,
+    "gpu_cuda_kubernetes": false,
+    "training": false,
+    "e1_pilot_consumed": false,
+    "confirmatory_consumed": false
+  },
+  "success_contract": {
+    "worker_exit_code": 0,
+    "canonical_manifest_and_go_required": true,
+    "blocked_receipt_forbidden": true,
+    "snapshot_deep_verifier_required": true,
+    "durable_no_overwrite_deep_verifier_receipt_required": true,
+    "publication_independent_verifier_required": true,
+    "choice_binding_exact_five_fields": true,
+    "next_state": "FREEZE_E1_2_E1_3_DIAGNOSTIC_PRE_OUTPUT_LOCK"
+  },
+  "authorization": {
+    "successor_cpu_input_lock_after_clean_push": true,
+    "e1_2_e1_3_before_deep_go_and_pre_output_lock": false,
+    "e1_pilot_model_selection_test_confirmatory": false
+  },
+  "pre_natural_gate_binding": {
+    "gate_path": "recipe/eval_recipe/fpct_e1/e1_a5r6_schema_binding_recovery_gate.json",
+    "verified_before_successor_state_root_creation": true,
+    "bound_into_materialization_claim_and_controller_lock": true,
+    "reverified_from_source_snapshot_at_launch_worker_and_deep_verify": true,
+    "tracked_operative_manifest": "recipe/eval_recipe/fpct_e1/e1_manifest.json",
+    "retained_a5r5_controller_result_sha256": "ab34009378db74259da22c92f1c2eb3a6c4222a32ceec598fdc5732bc090e628",
+    "retained_a5r5_worker_log_sha256": "c7cbe5812ba13189a3fe6ee1b088dd066c4895df23f12f43763831e2af1393b9"
+  }
+}

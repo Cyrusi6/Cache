@@ -1,9 +1,9 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R5 fresh-root interruption recovery pre-natural lock
-> 当前状态：`A5R5 GATE GO / COMMIT+PUSH PENDING / SUCCESSOR NATURAL ACCESS=0`
-> 下一步：提交并推送 A5R5 execution SHA；用一次性 detached controller 建立全新 snapshot/UID/root
-> 更新时间：2026-08-14（Asia/Shanghai）
+> 当前阶段：A5R6 schema-binding recovery pre-natural lock
+> 当前状态：`A5R6 GATE GO / COMMIT+PUSH PENDING / SUCCESSOR NATURAL ACCESS=0`
+> 下一步：提交并推送 A5R6 execution SHA；用一次性 detached controller 建立全新 snapshot/UID/root
+> 更新时间：2026-08-15（Asia/Shanghai）
 
 ## 隔离身份
 
@@ -574,3 +574,32 @@ model/checkpoint，未运行 model forward、GPU、CUDA、Kubernetes 或 trainin
   gate artifact SHA256=`6190db2d26ad55c8a467c880ff0050c1e3c7bd0cff2bec83d8a320bc9afc21f9`。
 - 本锁冻结时 successor natural/tokenizer/alignment/model/checkpoint/forward/GPU/CUDA/
   K8s/training/E1-pilot/confirmatory 均为 0。只有 clean pushed SHA 与全新 root 可执行。
+
+## 2026-08-15 A5R6 schema-binding recovery 前瞻锁
+
+- A5R5 execution `ab4052cd...` 完成 326/326 groups、30,370,816 logical rows 和
+  7,564 chunks；geometry/streaming GO、missing/duplicate=`0/0`。最终 v9 manifest
+  validation 因 `choice_audit.publication` 不在 strict five-field schema 中而 fail-closed；
+  worker exit=`1`，canonical BLOCKED receipt 已发布，无 manifest/GO。该 root 永久
+  no-resume/no-repair/no-reuse/no-cleanup，且不是科学结果。
+- A5R6 不修改 immutable v9 schema（SHA=`9cb38762...`）或 A5R3 publication schema
+  （SHA=`b24d1974...`）。`_choice_audit_binding()` 固定五字段；publication claim/receipt
+  仍由 A5R3 verifier 独立严格验证并保留在 verified audit 中。
+- Full integration regression 真实生成 326-row audit+publication；五字段完整 v9
+  manifest 通过，重新注入 publication 必须复现 `oneOf=0`。
+- Failed-root portable inventory 使用 `kind/path/mode/size/content`，排除 numeric UID/GID：
+  9,343 entries、SHA=`67c572aa...`；ownership/group/mode 改为当前 namespace 内安全检查。
+- Operative aggregate suite=`318 passed, 4 deselected`。四项 deselected 是已记录的
+  historical fixture/API drift；另三项 A5R5 gate 在后继 prepare SHA 上按设计 fail-closed，
+  不计入 A5R6 operative suite，也未修改历史 gate。
+- A5R6 gate=`GO_PRE_NATURAL_A5R6_SCHEMA_BINDING_RECOVERY`；test output SHA=
+  `92e4a68c0480d41f1c92b012c8f5b3a3b8ae59f0d8bedf7428abb24253333a32`；evidence=
+  `c6402176b1d6b8ec0e2a95569a8356d2c6081c0d0be1018a48c6689490be35f6`；gate artifact=
+  `9f4787a63edfe4c0d80079fb7ff9165fd5dc24ee878e2753f20fb28caea56d4a`。
+- Gate 的 exact tracked/immutable universe、required test nodes、四个历史 deselection、
+  A5R5 worker result/log bytes 与 portable failed-root closure 已冻结；controller 在创建
+  successor state root 前强制验证并将 gate 绑定到 claim/lock。Deep GO 必须额外发布
+  可幂等严格复核的 no-overwrite `deep_verifier_receipt.json`。
+- 本锁生成时 successor natural/model/checkpoint/forward/GPU/K8s/training=`0`；只有新
+  clean pushed commit/snapshot/UID/root 可从 group 1 重建。Deep verifier GO 前禁止
+  E1-2/E1-3；GO 后仍必须先冻结独立 diagnostic/intervention pre-output lock。

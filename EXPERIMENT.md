@@ -740,3 +740,18 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
   no-relaunch terminal semantics。新 run 必须从 group 1 重算。
 - Pre-natural tests=`147 passed`；test SHA=`a4c9e7fb...`，gate evidence=`f2da57e2...`，
   artifact=`6190db2d...`。本记录生成时 0 successor natural/model/GPU/training/output。
+
+### 2026-08-15 FPCT-E1 A5R6 schema-binding recovery
+
+- A5R5 `ab4052cd...` 完成 326 groups/30,370,816 rows/7,564 chunks 后，在 final
+  manifest schema validation 因额外 `choice_audit.publication` fail-closed；BLOCKED=
+  `9fc9c3a6...`，不是机制或性能结果。
+- A5R6 唯一 producer 修复为 five-field v9 binding；A5R3 publication receipt 保持独立
+  strict verification。v9/A5R3 schema SHA 不变。
+- Failed-root portable inventory=`9,343 entries / 67c572aa...`，跨 namespace digest 不含
+  numeric UID/GID，环境内 owner/group/mode safety GO。
+- Pre-natural operative suite=`318 passed, 4 deselected`；gate evidence=`c6402176...`，
+  artifact=`9f4787a6...`，test output=`92e4a68c...`。Exact tracked/immutable map、
+  required test nodes、四个 historical deselection 和旧 worker result/log live SHA 均已
+  冻结；controller 在 root 创建前强制 gate，deep GO 以 strict durable receipt 封口。
+  本记录生成时尚未创建 successor root，0 model/GPU/training。

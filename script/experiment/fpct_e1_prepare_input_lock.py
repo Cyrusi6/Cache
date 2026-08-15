@@ -2951,8 +2951,6 @@ def _choice_audit_binding(
             choice_audit["lock"]["correction_actions_selected"]
         ),
     }
-    if "publication" in choice_audit:
-        binding["publication"] = dict(choice_audit["publication"])
     return binding
 
 

@@ -748,6 +748,161 @@ def test_claim_and_receipt_strictly_validate_as_v10_publication_envelopes() -> N
     validate_a5r3_schema_artifact(receipt, repo_root=REPO_ROOT)
 
 
+def _complete_v9_input_manifest(
+    choice_binding: Mapping[str, Any],
+) -> dict[str, Any]:
+    hard_checks = {
+        name: True
+        for name in (
+            "historical_min4_projection_anchor_unchanged",
+            "e0_design_membership_unchanged",
+            "renderer_source_identity_attested",
+            "production_renderer_exactly_attested",
+            "production_data_tree_exactly_attested",
+            "all_326_groups_resolved",
+            "all_task_cardinalities_valid",
+            "all_gold_answers_within_runtime_choices",
+            "all_prompt_differences_classified",
+            "historical_to_runtime_mapping_complete",
+            "production_prompt_replay_equal",
+            "production_alignment_replay_equal",
+            "source_choice_order_preserved",
+            "label_free_runtime_row_hashes_complete",
+            "choice_audit_lock_bound_and_unchanged",
+            "choice_corrections_match_locked_taxonomy",
+            "logical_row_coverage_exact",
+            "streaming_semantic_replay_equal",
+            "bounded_peak_rss",
+        )
+    }
+    hash_checks = {
+        "e0_declared_domain_present": True,
+        "e0_declared_algorithm_exact": True,
+        "e0_declared_sha_matches_frozen_e0": True,
+        "a5_generic_domain_present": True,
+        "a5_generic_algorithm_exact": True,
+        "a5_generic_sha_matches_same_domain_predecessor": True,
+        "a5_generic_before_equals_after": True,
+        "completed_verifier_recomputes_both_domains": True,
+        "cross_domain_comparison_detected": False,
+        "old_v7_artifact_modified": False,
+        "blocked_execution_artifact_reused": False,
+    }
+    firewall = {
+        "old_execution_artifact_reused": False,
+        "model_instantiated": False,
+        "model_or_checkpoint_loaded": False,
+        "model_forward_run": False,
+        "gpu_or_cuda_used": False,
+        "kubernetes_used": False,
+        "training": False,
+        "e1_pilot_consumed": False,
+        "confirmatory_consumed": False,
+        "e1_2_or_e1_3_authorized": False,
+    }
+    sha = "7" * 64
+    return {
+        "schema_version": 9,
+        "protocol_id": "fpct_e1_mechanism_audit_v9_a5r2_choice_cardinality",
+        "input_lock_protocol_id": "fpct_e1_e0_design_input_lock_v5_a5r2_choice_cardinality",
+        "artifact_type": "a5r2_input_lock_manifest",
+        "status": "A5R2_INPUT_LOCK_GO_NO_MODEL_OUTPUT",
+        "split_role": "e0_design",
+        "execution": {
+            "execution_sha": EXECUTION_SHA,
+            "run_uid": RUN_UID,
+            "run_root": SCHEMA_RUN_ROOT,
+            "source_snapshot_receipt_sha256": sha,
+            "source_snapshot_tree_sha256": sha,
+        },
+        "task_counts": {"ai2-arc": 128, "openbookqa": 70, "mmlu-redux": 128},
+        "inherited_v8_contract_binding": prepare._inherited_v8_contract_binding(),
+        "choice_audit": dict(choice_binding),
+        "provenance": {
+            "renderer_source_identity_sha256": sha,
+            "prompt_config_identity_sha256": sha,
+            "runtime_prompt_assets_sha256": sha,
+            "e0_declared_tree_algorithm": "relative_path_nul_file_sha256_bytes_v1",
+            "e0_declared_tree_sha256": "f3dcf2c77e6c5f90946994488fcb86f67dcdc590510a9f469f32e86773492c73",
+            "generic_asset_tree_algorithm": "canonical_json_file_manifest_v1",
+            "generic_asset_tree_sha256": "12f537cade1a30f6fd4e7a146c58311412f8824a6845ea4e6f7a6b5651bcb405",
+            "input_assets_before_sha256": sha,
+            "input_assets_after_sha256": sha,
+            "input_assets_unchanged": True,
+        },
+        "census": {
+            "manifest": {"path": "/synthetic/census.json", "bytes": 1, "sha256": sha},
+            "records": {"path": "/synthetic/census.jsonl", "bytes": 1, "sha256": sha},
+            "record_count": 326,
+            "canonical_semantic_stream_sha256": sha,
+            "choice_audit_lock_sha256": choice_binding["lock"]["sha256"],
+        },
+        "sidecar": {
+            "contract_version": 5,
+            "path": "/synthetic/e0_design_input_lock.pt",
+            "bytes": 1,
+            "file_sha256": sha,
+            "semantic_sha256": sha,
+            "item_count": 326,
+            "choice_audit_lock_sha256": choice_binding["lock"]["sha256"],
+            "expanded_logical_rows_present": False,
+            "custom_verifier": {
+                "exact_top_level_key_set_verified": True,
+                "exact_item_key_set_verified": True,
+                "semantic_sha256_recomputed_after_cpu_reload": True,
+                "choice_audit_lock_sha256_recomputed_and_equal": True,
+                "expanded_logical_rows_present": False,
+                "model_or_checkpoint_tensor_present": False,
+            },
+        },
+        "streaming": {
+            "protocol_id": "fpct_e1_mechanism_audit_v6_representation_preserving_streaming",
+            "schema_sha256": sha,
+            "physical_chunk_rows": 4096,
+            "synthetic_gate_sha256": sha,
+            "geometry_lock_receipt_sha256": sha,
+            "streaming_template_lock_receipt_sha256": sha,
+            "logical_row_coverage_exact": True,
+            "streaming_semantic_replay_equal": True,
+            "whole_table_materialization_detected": False,
+        },
+        "hard_gate_checks": hard_checks,
+        "hash_domain_checks": hash_checks,
+        "zero_counts": {
+            "unexpected_prompt_difference_count": 0,
+            "missing_rows": 0,
+            "duplicate_rows": 0,
+        },
+        "firewall": firewall,
+        "e1_2_or_e1_3_authorized": False,
+    }
+
+
+def test_a5r3_publication_is_independently_verified_but_v9_manifest_binding_is_exact_five_fields(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    verified, _dev, _examples = _run_synthetic_audit(tmp_path, monkeypatch)
+    assert "publication" in verified
+    _strict_tmp_aware_a5r3_validator(verified["publication"], _identity(tmp_path))
+    binding = prepare._choice_audit_binding(
+        verified, _identity(tmp_path / "synthetic-a5r2-run")
+    )
+    assert set(binding) == {
+        "lock",
+        "ledger",
+        "status",
+        "audit_semantic_sha256",
+        "correction_actions_selected",
+    }
+    assert "publication" not in binding
+    manifest = _complete_v9_input_manifest(binding)
+    a5r2_gate.validate_a5r2_schema_artifact(manifest, repo_root=REPO_ROOT)
+    contaminated = copy.deepcopy(manifest)
+    contaminated["choice_audit"]["publication"] = verified["publication"]
+    with pytest.raises(ValueError, match="oneOf matched 0 branches"):
+        a5r2_gate.validate_a5r2_schema_artifact(contaminated, repo_root=REPO_ROOT)
+
+
 def test_pre_audit_binding_recomputes_exact_receipt_file_sha_before_row_one(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
