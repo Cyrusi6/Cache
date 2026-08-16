@@ -15,7 +15,7 @@ def test_execution_identity_is_fresh_and_deterministic() -> None:
     value = controller.execution_identity(sha)
     assert value["run_uid"] == "fpct-e1-a5r2-choice-cardinality-11111111-v1"
     assert value["run_root"].endswith("/fpct-e1-a5r2-11111111-v1")
-    assert value["state_root"].endswith("/.fpct-e1-a5r6-controller-11111111-v1")
+    assert value["state_root"].endswith("/.fpct-e1-a5r7-controller-11111111-v1")
     assert "a47d52f8" not in value["run_root"]
     with pytest.raises(ValueError):
         controller.execution_identity("1" * 8)
@@ -78,9 +78,9 @@ def test_pre_natural_gate_rejects_dropped_tracked_or_immutable_binding(
         "collection_summary": controller.GATE_EXPECTED_COLLECTION_SUMMARY,
     }
     value = {
-        "schema_version": 13,
+        "schema_version": 14,
         "protocol_id": controller.PROTOCOL_ID,
-        "artifact_type": "a5r6_pre_natural_synthetic_gate",
+        "artifact_type": "a5r7_pre_natural_synthetic_gate",
         "status": controller.GATE_STATUS,
         "base_commit": controller.BASE_COMMIT,
         "test_count": controller.GATE_EXPECTED_TEST_COUNT,
@@ -472,8 +472,8 @@ def test_deep_verifier_receipt_is_strict_and_replayable(
     value = {
         "schema_version": 1,
         "protocol_id": controller.PROTOCOL_ID,
-        "artifact_type": "a5r6_deep_verifier_receipt",
-        "status": "A5R6_INPUT_LOCK_GO_VERIFIED",
+        "artifact_type": "a5r7_deep_verifier_receipt",
+        "status": "A5R7_INPUT_LOCK_GO_VERIFIED",
         "execution_sha": execution_sha,
         "run_uid": lock["run_uid"],
         "controller_lock_sha256": controller.sha256_file(lock_path),
@@ -481,7 +481,7 @@ def test_deep_verifier_receipt_is_strict_and_replayable(
         "source_snapshot_receipt_sha256": lock["source_snapshot_receipt_sha256"],
         "pre_natural_gate": lock["pre_natural_gate"],
         "deep_verifier": {
-            "status": "A5R6_DEEP_COMPLETED_VERIFIER_GO",
+            "status": "A5R7_DEEP_COMPLETED_VERIFIER_GO",
             "execution_sha": execution_sha,
             "run_uid": lock["run_uid"],
             "manifest_sha256": controller.sha256_file(artifact_paths["manifest"]),

@@ -370,10 +370,13 @@ def test_a5r3_claim_receipt_envelope_and_publication_primitive_are_unchanged() -
     }
 
 
-def test_active_loader_consumes_a5r4_and_not_a5r3_live_tree_verifier() -> None:
+def test_active_loader_consumes_static_a5r4_and_current_a5r7_gate() -> None:
     source = inspect.getsource(prepare._load_active_a5_synthetic_gate)
-    assert "verify_a5r4_gate" in source
+    assert "verify_a5r4_gate" not in source
     assert "verify_a5r3_gate" not in source
+    assert "validate_a5r4_schema_artifact" in source
+    assert "verify_current_gate" in source
+    assert "A5R4_SYNTHETIC_GATE_SHA256" in source
 
 
 def test_synthetic_gate_source_has_zero_natural_or_later_stage_access() -> None:

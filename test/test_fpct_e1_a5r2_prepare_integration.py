@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import ast
 import copy
+import hashlib
+import inspect
 import json
 from pathlib import Path
 from typing import Any, Mapping
@@ -1277,3 +1279,151 @@ def test_independent_verifier_rejects_reordered_ledger_after_full_rehash(
             a5_contract={"synthetic": True},
             require_go=False,
         )
+
+
+def _stub_a5r7_current_gate(monkeypatch: pytest.MonkeyPatch) -> None:
+    from script.analysis import fpct_e1_a5r7_gate
+
+    monkeypatch.setattr(
+        fpct_e1_a5r7_gate,
+        "verify_gate",
+        lambda *_args, **_kwargs: {
+            "checks": {
+                "historical_a5r4_gate_consumed_without_live_tree_replay": True,
+                "successor_natural_accessed": False,
+            }
+        },
+    )
+
+
+def test_a5r7_production_preflight_uses_current_gate_and_immutable_a5r4_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from script.analysis import fpct_e1_a5r4_setgid_mode_gate as a5r4_gate
+    from script.analysis import fpct_e1_a5r7_gate
+
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "")
+    monkeypatch.setenv("HF_HUB_OFFLINE", "1")
+    monkeypatch.setenv("TRANSFORMERS_OFFLINE", "1")
+    monkeypatch.setenv("HF_DATASETS_OFFLINE", "1")
+    monkeypatch.setattr(
+        fpct_e1_a5r7_gate,
+        "verify_gate",
+        lambda _path, repo_root: fpct_e1_a5r7_gate.verify_pre_output_candidate(
+            repo_root
+        ),
+    )
+    active = prepare._load_active_a5_synthetic_gate(REPO_ROOT)
+    assert active["schema_version"] == 11
+    assert active["choice_semantics_version"] == 9
+    assert active["status"] == prepare.A5_SYNTHETIC_GATE_STATUS
+    assert active["inherited_v8_streaming_evidence"]
+    source = inspect.getsource(prepare._load_active_a5_synthetic_gate)
+    assert "verify_current_gate" in source
+    assert "verify_a5r4_gate" not in source
+    assert prepare.A5R4_SYNTHETIC_GATE_SHA256 == prepare.sha256_file(
+        REPO_ROOT / prepare.A5R4_HISTORICAL_GATE_RELATIVE
+    )
+    assert a5r4_gate.verify_mode_predicate_static(REPO_ROOT)
+
+
+def test_a5r7_historical_live_verifier_is_never_called(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from script.analysis import fpct_e1_a5r4_setgid_mode_gate as a5r4_gate
+
+    _stub_a5r7_current_gate(monkeypatch)
+    monkeypatch.setattr(
+        a5r4_gate,
+        "verify_gate",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("historical live-tree verifier must not run")
+        ),
+    )
+    assert prepare._load_active_a5_synthetic_gate(REPO_ROOT)["schema_version"] == 11
+
+
+def test_a5r7_historical_gate_tamper_precedes_schema_validation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from script.analysis import fpct_e1_a5r4_setgid_mode_gate as a5r4_gate
+
+    _stub_a5r7_current_gate(monkeypatch)
+    historical = REPO_ROOT / prepare.A5R4_HISTORICAL_GATE_RELATIVE
+    tampered = tmp_path / "tampered-a5r4.json"
+    tampered.write_bytes(historical.read_bytes() + b" ")
+    monkeypatch.setattr(prepare, "A5R4_HISTORICAL_GATE_RELATIVE", tampered)
+    monkeypatch.setattr(prepare, "_load_a5r4_setgid_mode_contract", lambda _root: {})
+    called = False
+
+    def forbidden_validator(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("schema validator must follow exact byte check")
+
+    monkeypatch.setattr(a5r4_gate, "validate_a5r4_schema_artifact", forbidden_validator)
+    with pytest.raises(ValueError, match="immutable A5R4 synthetic gate changed"):
+        prepare._load_active_a5_synthetic_gate(REPO_ROOT)
+    assert called is False
+
+
+def test_a5r7_historical_gate_alias_and_nonregular_rejected(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _stub_a5r7_current_gate(monkeypatch)
+    historical = REPO_ROOT / prepare.A5R4_HISTORICAL_GATE_RELATIVE
+    alias = tmp_path / "alias.json"
+    alias.symlink_to(historical)
+    monkeypatch.setattr(prepare, "A5R4_HISTORICAL_GATE_RELATIVE", alias)
+    with pytest.raises(RuntimeError, match="non-symlink regular file"):
+        prepare._load_active_a5_synthetic_gate(REPO_ROOT)
+    directory = tmp_path / "directory"
+    directory.mkdir()
+    monkeypatch.setattr(prepare, "A5R4_HISTORICAL_GATE_RELATIVE", directory)
+    with pytest.raises(RuntimeError, match="non-symlink regular file"):
+        prepare._load_active_a5_synthetic_gate(REPO_ROOT)
+
+
+def test_a5r7_strict_schema_and_identity_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from script.analysis import fpct_e1_a5r4_setgid_mode_gate as a5r4_gate
+
+    _stub_a5r7_current_gate(monkeypatch)
+    historical = json.loads(
+        (REPO_ROOT / prepare.A5R4_HISTORICAL_GATE_RELATIVE).read_text(encoding="utf-8")
+    )
+    candidate = tmp_path / "candidate.json"
+    candidate.write_bytes(prepare.canonical_json_bytes(historical))
+    monkeypatch.setattr(prepare, "A5R4_HISTORICAL_GATE_RELATIVE", candidate)
+    monkeypatch.setattr(prepare, "_load_a5r4_setgid_mode_contract", lambda _root: {})
+    monkeypatch.setattr(
+        prepare, "A5R4_SYNTHETIC_GATE_SHA256", prepare.sha256_file(candidate)
+    )
+    monkeypatch.setattr(
+        a5r4_gate,
+        "validate_a5r4_schema_artifact",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(ValueError("strict-v11")),
+    )
+    with pytest.raises(ValueError, match="strict-v11"):
+        prepare._load_active_a5_synthetic_gate(REPO_ROOT)
+
+    wrong = dict(historical)
+    wrong["status"] = "WRONG"
+    candidate.write_bytes(prepare.canonical_json_bytes(wrong))
+    monkeypatch.setattr(
+        prepare, "A5R4_SYNTHETIC_GATE_SHA256", prepare.sha256_file(candidate)
+    )
+    monkeypatch.setattr(a5r4_gate, "validate_a5r4_schema_artifact", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        a5r4_gate, "_evidence_sha256", lambda value: value["evidence_sha256"]
+    )
+    with pytest.raises(ValueError, match="identity changed"):
+        prepare._load_active_a5_synthetic_gate(REPO_ROOT)
+
+
+def test_a5r7_creation_and_completed_replay_share_preflight() -> None:
+    creation = inspect.getsource(prepare._prepare_input_lock_after_identity)
+    completed = inspect.getsource(prepare._verify_completed_input_lock)
+    assert creation.count("_load_active_a5_synthetic_gate(") == 1
+    assert completed.count("_load_active_a5_synthetic_gate(") == 1

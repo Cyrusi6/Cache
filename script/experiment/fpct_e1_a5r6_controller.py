@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""One-shot detached controller for the FPCT-E1 A5R6 fresh-root recovery."""
+"""One-shot detached controller for the FPCT-E1 A5R7 active-gate recovery."""
 
 from __future__ import annotations
 
@@ -19,47 +19,61 @@ import time
 from typing import Any, Mapping, Sequence
 
 
-PROTOCOL_ID = "fpct_e1_mechanism_audit_v13_a5r6_schema_binding_recovery"
+PROTOCOL_ID = "fpct_e1_mechanism_audit_v14_a5r7_active_gate_recovery"
 BRANCH = "research/fpct-e1-mechanism-audit"
-BASE_COMMIT = "ab4052cd0f97c248e674ed4f7b2e0a4fa23d87f5"
+BASE_COMMIT = "b2e349990eecef2aeb870baf82bbc81340fd49d7"
 PREDECESSOR_EXECUTION_SHAS = frozenset({
     "a47d52f8adf5ada79919d39ac42d7b9fe655595f",
+    "ab4052cd0f97c248e674ed4f7b2e0a4fa23d87f5",
     BASE_COMMIT,
 })
 GATE_RELATIVE_PATH = Path(
-    "recipe/eval_recipe/fpct_e1/e1_a5r6_schema_binding_recovery_gate.json"
+    "recipe/eval_recipe/fpct_e1/e1_a5r7_active_gate_recovery_gate.json"
 )
-GATE_STATUS = "GO_PRE_NATURAL_A5R6_SCHEMA_BINDING_RECOVERY"
-GATE_EXPECTED_TEST_COUNT = 318
-GATE_EXPECTED_COLLECTION_SUMMARY = "collected 322 items / 4 deselected / 318 selected"
+GATE_STATUS = "GO_PRE_NATURAL_A5R7_ACTIVE_GATE_RECOVERY"
+GATE_EXPECTED_TEST_COUNT = 326
+GATE_EXPECTED_COLLECTION_SUMMARY = "collected 330 items / 4 deselected / 326 selected"
 GATE_REQUIRED_TEST_NODES = (
     "test/test_fpct_e1_a5r2_prepare_integration.py::test_a5r3_publication_is_independently_verified_but_v9_manifest_binding_is_exact_five_fields",
+    "test/test_fpct_e1_a5r2_prepare_integration.py::test_a5r7_production_preflight_uses_current_gate_and_immutable_a5r4_evidence",
+    "test/test_fpct_e1_a5r2_prepare_integration.py::test_a5r7_historical_live_verifier_is_never_called",
+    "test/test_fpct_e1_a5r2_prepare_integration.py::test_a5r7_historical_gate_tamper_precedes_schema_validation",
+    "test/test_fpct_e1_a5r2_prepare_integration.py::test_a5r7_historical_gate_alias_and_nonregular_rejected",
+    "test/test_fpct_e1_a5r2_prepare_integration.py::test_a5r7_strict_schema_and_identity_fail_closed",
+    "test/test_fpct_e1_a5r2_prepare_integration.py::test_a5r7_creation_and_completed_replay_share_preflight",
     "test/test_fpct_e1_a5r6_controller.py::test_materialize_requires_current_pre_natural_gate_before_creating_state",
     "test/test_fpct_e1_a5r6_controller.py::test_filesystem_portable_digest_and_local_safety_accept_uniform_gid_namespace_remap",
     "test/test_fpct_e1_a5r6_controller.py::test_environment_local_safety_rejects_owner_and_unauthorized_root_group",
     "test/test_fpct_e1_a5r6_controller.py::test_pre_natural_gate_rejects_dropped_tracked_or_immutable_binding",
     "test/test_fpct_e1_a5r6_controller.py::test_deep_verifier_receipt_is_strict_and_replayable",
-    "test/test_fpct_e1_a5r6_gate.py::test_gate_tracks_operative_e1_manifest",
-    "test/test_fpct_e1_a5r6_gate.py::test_verify_gate_rejects_weakened_checks_even_with_recomputed_evidence",
-    "test/test_fpct_e1_a5r6_gate.py::test_gate_replays_old_controller_terminal_bytes",
+    "test/test_fpct_e1_a5r7_gate.py::test_a5r7_gate_tracks_operative_e1_manifest",
+    "test/test_fpct_e1_a5r7_gate.py::test_a5r7_verify_gate_rejects_weakened_checks_even_with_recomputed_evidence",
+    "test/test_fpct_e1_a5r7_gate.py::test_a5r7_gate_replays_old_controller_terminal_bytes",
+    "test/test_fpct_e1_a5r7_gate.py::test_a5r7_gate_rejects_rehashed_continuity_tamper",
+    "test/test_fpct_e1_a5r7_gate.py::test_a5r7_gate_rejects_symlink_path",
 )
 GATE_REQUIRED_TRACKED_PATHS = (
-    "FPCT_E1_A5R6_SCHEMA_BINDING_RECOVERY_AMENDMENT.md",
-    "recipe/eval_recipe/fpct_e1/e1_a5r6_schema_binding_recovery_manifest.json",
-    "recipe/eval_recipe/fpct_e1/executions/ab4052cd/input_lock_schema_binding_failure_observation.json",
+    "FPCT_E1_A5R7_ACTIVE_GATE_RECOVERY_AMENDMENT.md",
+    "recipe/eval_recipe/fpct_e1/e1_a5r7_active_gate_recovery_manifest.json",
+    "recipe/eval_recipe/fpct_e1/executions/b2e34999/precomputation_active_gate_failure_observation.json",
     "recipe/eval_recipe/fpct_e1/e1_manifest.json",
     "script/experiment/fpct_e1_prepare_input_lock.py",
     "script/experiment/fpct_e1_a5r6_controller.py",
-    "script/analysis/fpct_e1_a5r6_gate.py",
+    "script/analysis/fpct_e1_a5r7_gate.py",
+    "script/analysis/fpct_e1_a5r4_setgid_mode_gate.py",
     "test/test_fpct_e1_a5r6_controller.py",
-    "test/test_fpct_e1_a5r6_gate.py",
+    "test/test_fpct_e1_a5r7_gate.py",
+    "test/test_fpct_e1_a5r4_setgid_mode_gate.py",
     "test/test_fpct_e1_a5r2_prepare_integration.py",
 )
 GATE_REQUIRED_IMMUTABLE_SHA256 = {
     "math.md": "98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad",
     "recipe/eval_recipe/fpct_e1/e1_a5r2_choice_cardinality_schema.json": "9cb387628e4b8fcf6c978e082b8c3380dbc62406c6aa460892c679872d656d7f",
     "recipe/eval_recipe/fpct_e1/e1_a5r3_portable_publication_schema.json": "b24d197481c01c917ad9d4063441f96ac23979bdb4b3db24855e551c7fb91460",
-    "recipe/eval_recipe/fpct_e1/e1_a5r5_interruption_recovery_gate.json": "6190db2d26ad55c8a467c880ff0050c1e3c7bd0cff2bec83d8a320bc9afc21f9",
+    "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_synthetic_gate.json": "0f3477575b8a75fb4b6028c0eeda19aa56885aca2fdb0addce0171a5e02c7ea8",
+    "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_schema.json": "cb90cec6c79388bf0712d238961086c108fe6ae523bb83eb3f8c84cd88473a21",
+    "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_contract.json": "af4cf2af2eeb240db0951f0d1a24dc952ee54144c9a9f732a8bb4ffd2f0f4303",
+    "recipe/eval_recipe/fpct_e1/e1_a5r6_schema_binding_recovery_gate.json": "9f4787a63edfe4c0d80079fb7ff9165fd5dc24ee878e2753f20fb28caea56d4a",
 }
 GATE_HISTORICAL_DESELECTED_NODES = (
     "test/test_fpct_e1_a5_prompt_gate.py::test_all_config_attestation_rejects_index_or_config_tamper[config_index]",
@@ -92,6 +106,7 @@ GATE_REQUIRED_CHECKS = {
     "failed_root_no_resume_repair_reuse_cleanup": True,
     "failed_controller_terminal_evidence_replayed": True,
     "controller_requires_current_gate_before_natural_access": True,
+    "historical_a5r4_gate_consumed_without_live_tree_replay": True,
     "successor_natural_accessed": False,
     "model_or_checkpoint_loaded": False,
     "model_forward_run": False,
@@ -99,23 +114,22 @@ GATE_REQUIRED_CHECKS = {
     "training": False,
     "e1_2_e1_3_or_pilot_accessed": False,
 }
-OLD_ROOT = Path("/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-ab4052cd-v1")
-OLD_TREE_SHA256 = "b8d39a970eb8f3d4bd6f2c5070f475cce4c7f96fd9a2cc6cae6a7e9cf7d26b4a"
-OLD_FILE_COUNT = 8913
-OLD_TOTAL_BYTES = 4426202802
-OLD_INVENTORY_ENTRY_COUNT = 9343
-OLD_INVENTORY_SHA256 = "67c572aa55d421338b9ee8725b8bd12944fa194cc8e34dabefac175504a32daf"
+OLD_ROOT = Path("/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-b2e34999-v1")
+OLD_TREE_SHA256 = "6c308644a65f0922f81d1c52663cdf209606a4a213a88818e0af040be9630906"
+OLD_FILE_COUNT = 692
+OLD_TOTAL_BYTES = 25300782
+OLD_INVENTORY_ENTRY_COUNT = 795
+OLD_INVENTORY_SHA256 = "a33f85d2b4110043e8a76a69b981932c9845792526c1f0df005ff8f59f392ca4"
 PORTABLE_INVENTORY_ALGORITHM = "kind_path_mode_size_content_v2_no_numeric_owner"
-OLD_BLOCKED_SHA256 = "9fc9c3a6f533d19ea9611c89828302eb8a6fb18ba725b210382e8499a51c4101"
-OLD_SIDECAR_SHA256 = "9c35e8c652360629eda1b6cef4618e5b227e51c688d3a95259cf191b1bad84aa"
-OLD_STREAMING_RECEIPT_SHA256 = "ec543abb13448484ecd7368860f2e1cf9b4067c927b8ca6b646fe9d9968ed827"
+OLD_BLOCKED_SHA256 = "df2a6b9c2cd11144099dae42782889974037207f9a93fb7e7ea190696255da22"
+OLD_IDENTITY_SHA256 = "dfbdaa92dc629a25a24dc18e016b1ab990e5facbf6499ca4703859d8bcb95c05"
 OLD_CONTROLLER_ROOT = Path(
-    "/netdisk/lijunsi/fpct-e1/.fpct-e1-a5r5-controller-ab4052cd-v1"
+    "/netdisk/lijunsi/fpct-e1/.fpct-e1-a5r6-controller-b2e34999-v1"
 )
-OLD_WORKER_RESULT_BYTES = 727
-OLD_WORKER_RESULT_SHA256 = "ab34009378db74259da22c92f1c2eb3a6c4222a32ceec598fdc5732bc090e628"
-OLD_WORKER_LOG_BYTES = 14889
-OLD_WORKER_LOG_SHA256 = "c7cbe5812ba13189a3fe6ee1b088dd066c4895df23f12f43763831e2af1393b9"
+OLD_WORKER_RESULT_BYTES = 731
+OLD_WORKER_RESULT_SHA256 = "99fc02459191de72b1fef2bc8cfa40c519d09f8742d838604fd87d72340e65cc"
+OLD_WORKER_LOG_BYTES = 2575
+OLD_WORKER_LOG_SHA256 = "44a6052c7de06647bba0f58db9738fd172bb0f65c14ef4bf63372ec1697ea6ca"
 RUN_PARENT = Path("/netdisk/lijunsi/fpct-e1")
 PYTHON = Path("/home/lijunsi/miniconda3/envs/c2c-py310-cu124/bin/python3.10")
 E0_DATA_ROOT = Path("/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1/dev_data")
@@ -340,7 +354,7 @@ def verify_old_forensic_root() -> dict[str, Any]:
         "tree_sha256": OLD_TREE_SHA256,
     }
     if observed != expected:
-        raise RuntimeError(f"immutable ab4052cd forensic root changed: {observed}")
+        raise RuntimeError(f"immutable b2e34999 forensic root changed: {observed}")
     inventory = filesystem_inventory_fingerprint(OLD_ROOT)
     if inventory != {
         "algorithm": PORTABLE_INVENTORY_ALGORITHM,
@@ -349,42 +363,36 @@ def verify_old_forensic_root() -> dict[str, Any]:
         "numeric_uid_in_digest": False,
         "numeric_gid_in_digest": False,
     }:
-        raise RuntimeError(f"immutable ab4052cd portable inventory changed: {inventory}")
+        raise RuntimeError(f"immutable b2e34999 portable inventory changed: {inventory}")
     local_safety = environment_local_owner_mode_safety(OLD_ROOT)
     input_root = OLD_ROOT / "input_lock"
     required = [
-        OLD_ROOT / "choice_audit_publication_receipt.json",
-        OLD_ROOT / "choice_audit/choice_cardinality_audit_lock.json",
-        input_root / "input_geometry_receipt.json",
-        input_root / "streaming_input_lock_receipt.json",
-        input_root / "e0_design_input_lock.pt",
+        input_root / "a5r2_input_lock_execution_identity.json",
         input_root / "A5R2_INPUT_LOCK_BLOCKED.json",
     ]
     if not all(path.is_file() and not path.is_symlink() for path in required):
-        raise RuntimeError("ab4052cd forensic closure lost a required retained artifact")
+        raise RuntimeError("b2e34999 forensic closure lost a required retained artifact")
     if (
         sha256_file(input_root / "A5R2_INPUT_LOCK_BLOCKED.json") != OLD_BLOCKED_SHA256
-        or sha256_file(input_root / "e0_design_input_lock.pt") != OLD_SIDECAR_SHA256
-        or sha256_file(input_root / "streaming_input_lock_receipt.json")
-        != OLD_STREAMING_RECEIPT_SHA256
+        or sha256_file(input_root / "a5r2_input_lock_execution_identity.json")
+        != OLD_IDENTITY_SHA256
     ):
-        raise RuntimeError("ab4052cd terminal retained artifact bytes changed")
-    forbidden = [
-        input_root / "e0_design_input_lock_manifest.json",
-        input_root / "A5R2_INPUT_LOCK_GO.json",
-    ]
-    if any(path.exists() for path in forbidden):
-        raise RuntimeError("ab4052cd forensic root acquired a forbidden GO artifact")
+        raise RuntimeError("b2e34999 terminal retained artifact bytes changed")
+    if {path.name for path in input_root.iterdir()} != {
+        "a5r2_input_lock_execution_identity.json", "A5R2_INPUT_LOCK_BLOCKED.json",
+    }:
+        raise RuntimeError("b2e34999 input root acquired an unexpected artifact")
     blocked = json.loads((input_root / "A5R2_INPUT_LOCK_BLOCKED.json").read_text(encoding="utf-8"))
     if (
         blocked.get("status") != "A5R2_INPUT_LOCK_BLOCKED"
-        or blocked.get("failure_stage") != "V9_INPUT_LOCK"
-        or blocked.get("failure_code") != "VALUEERROR"
+        or blocked.get("failure_stage") != "PRECOMPUTATION"
+        or blocked.get("failure_code") != "A5R4_TRACKED_SOURCE_TEST_MAP_IS_STALE"
         or blocked.get("resume_allowed") is not False
         or blocked.get("artifact_reuse_allowed") is not False
         or blocked.get("scientific_result") is not False
+        or blocked.get("e1_2_or_e1_3_authorized") is not False
     ):
-        raise RuntimeError("ab4052cd terminal blocked semantics changed")
+        raise RuntimeError("b2e34999 terminal blocked semantics changed")
     return {**observed, **inventory, "environment_local_safety": local_safety}
 
 
@@ -399,9 +407,9 @@ def expected_forensic_closure() -> dict[str, Any]:
         "numeric_uid_in_digest": False,
         "numeric_gid_in_digest": False,
         "environment_local_safety": {
-            "entry_count": 9343,
-            "directory_count": 430,
-            "regular_file_count": 8913,
+            "entry_count": 795,
+            "directory_count": 103,
+            "regular_file_count": 692,
             "owner_mismatch_count": 0,
             "root_local_group_mismatch_count": 0,
             "unsupported_entry_count": 0,
@@ -446,7 +454,7 @@ def verify_old_controller_evidence() -> dict[str, Any]:
     log_path = OLD_CONTROLLER_ROOT / "worker.log"
     for path in (result_path, log_path):
         if not path.is_file() or path.is_symlink():
-            raise RuntimeError(f"A5R5 terminal controller evidence is unsafe: {path}")
+            raise RuntimeError(f"A5R6 terminal controller evidence is unsafe: {path}")
     result = json.loads(result_path.read_text(encoding="utf-8"))
     observed = {
         "controller_root": str(OLD_CONTROLLER_ROOT),
@@ -462,14 +470,14 @@ def verify_old_controller_evidence() -> dict[str, Any]:
         },
     }
     if observed != expected_old_controller_evidence():
-        raise RuntimeError(f"A5R5 terminal controller evidence changed: {observed}")
+        raise RuntimeError(f"A5R6 terminal controller evidence changed: {observed}")
     if (
         result.get("execution_sha") != BASE_COMMIT
         or result.get("run_uid")
-        != "fpct-e1-a5r2-choice-cardinality-ab4052cd-v1"
+        != "fpct-e1-a5r2-choice-cardinality-b2e34999-v1"
         or result.get("resume_allowed") is not False
     ):
-        raise RuntimeError("A5R5 terminal controller semantics changed")
+        raise RuntimeError("A5R6 terminal controller semantics changed")
     return observed
 
 
@@ -482,16 +490,16 @@ def _canonical_without_evidence(value: Mapping[str, Any]) -> bytes:
 def verify_pre_natural_gate(
     repo_root: Path, *, replay_retained_evidence: bool = False,
 ) -> dict[str, Any]:
-    """Verify the committed A5R6 gate before any successor root can exist."""
+    """Verify the committed A5R7 gate before any successor root can exist."""
 
     gate_path = repo_root / GATE_RELATIVE_PATH
     if not gate_path.is_file() or gate_path.is_symlink():
         raise RuntimeError("A5R6 pre-natural gate is absent or unsafe")
     gate = json.loads(gate_path.read_text(encoding="utf-8"))
     if (
-        gate.get("schema_version") != 13
+        gate.get("schema_version") != 14
         or gate.get("protocol_id") != PROTOCOL_ID
-        or gate.get("artifact_type") != "a5r6_pre_natural_synthetic_gate"
+        or gate.get("artifact_type") != "a5r7_pre_natural_synthetic_gate"
         or gate.get("status") != GATE_STATUS
         or gate.get("base_commit") != BASE_COMMIT
         or gate.get("test_count") != GATE_EXPECTED_TEST_COUNT
@@ -585,7 +593,7 @@ def execution_identity(execution_sha: str) -> dict[str, str]:
         "run_root": str(root),
         "snapshot_root": str(root / "source_snapshot"),
         "input_root": str(root / "input_lock"),
-        "state_root": str(RUN_PARENT / f".fpct-e1-a5r6-controller-{prefix}-v1"),
+        "state_root": str(RUN_PARENT / f".fpct-e1-a5r7-controller-{prefix}-v1"),
     }
 
 
@@ -655,7 +663,7 @@ def _validate_controller_lock(
     required = {
         "schema_version": 1,
         "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_controller_lock",
+        "artifact_type": "a5r7_controller_lock",
         "status": "READY_TO_LAUNCH_ONCE",
         "launch_count": 0,
         "resume_allowed": False,
@@ -686,7 +694,7 @@ def _validate_controller_lock(
     claim = _read_canonical_controller_json(claim_path, "A5R6 materialization claim")
     if (
         claim.get("protocol_id") != PROTOCOL_ID
-        or claim.get("artifact_type") != "a5r6_materialization_claim"
+        or claim.get("artifact_type") != "a5r7_materialization_claim"
         or any(claim.get(key) != value for key, value in identity.items())
         or lock.get("materialization_claim_sha256") != sha256_file(claim_path)
         or claim.get("pre_natural_gate") != gate_binding
@@ -733,7 +741,7 @@ def _validate_launch_chain(lock: Mapping[str, Any], lock_path: Path) -> dict[str
     worker_command_sha = hashlib.sha256("\0".join(worker_command).encode()).hexdigest()
     if (
         claim.get("protocol_id") != PROTOCOL_ID
-        or claim.get("artifact_type") != "a5r6_launch_claim"
+        or claim.get("artifact_type") != "a5r7_launch_claim"
         or claim.get("execution_sha") != lock["execution_sha"]
         or claim.get("run_uid") != lock["run_uid"]
         or claim.get("controller_lock_sha256") != lock_sha
@@ -753,7 +761,7 @@ def _validate_launch_receipt(
     required = {
         "schema_version": 1,
         "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_launch_receipt",
+        "artifact_type": "a5r7_launch_receipt",
         "execution_sha": lock["execution_sha"],
         "run_uid": lock["run_uid"],
         "command_sha256": hashlib.sha256(
@@ -789,7 +797,7 @@ def _validate_worker_start(
     required = {
         "schema_version": 1,
         "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_worker_start_claim",
+        "artifact_type": "a5r7_worker_start_claim",
         "execution_sha": lock["execution_sha"],
         "run_uid": lock["run_uid"],
         "controller_lock_sha256": sha256_file(lock_path),
@@ -827,7 +835,7 @@ def _validate_worker_result(
     required = {
         "schema_version": 1,
         "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_worker_result",
+        "artifact_type": "a5r7_worker_result",
         "execution_sha": lock["execution_sha"],
         "run_uid": lock["run_uid"],
         "command_sha256": command_sha,
@@ -854,8 +862,8 @@ def _validate_deep_verifier_receipt(
     required = {
         "schema_version": 1,
         "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_deep_verifier_receipt",
-        "status": "A5R6_INPUT_LOCK_GO_VERIFIED",
+        "artifact_type": "a5r7_deep_verifier_receipt",
+        "status": "A5R7_INPUT_LOCK_GO_VERIFIED",
         "execution_sha": lock["execution_sha"],
         "run_uid": lock["run_uid"],
         "controller_lock_sha256": sha256_file(lock_path),
@@ -882,7 +890,7 @@ def _validate_deep_verifier_receipt(
             "status", "execution_sha", "run_uid", "manifest_sha256",
             "sidecar_sha256", "manifest_status",
         }
-        or deep.get("status") != "A5R6_DEEP_COMPLETED_VERIFIER_GO"
+        or deep.get("status") != "A5R7_DEEP_COMPLETED_VERIFIER_GO"
         or deep.get("execution_sha") != lock["execution_sha"]
         or deep.get("run_uid") != lock["run_uid"]
     ):
@@ -990,7 +998,7 @@ def materialize(repo: Path) -> dict[str, Any]:
     materialization_claim = {
         "schema_version": 1,
         "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_materialization_claim",
+        "artifact_type": "a5r7_materialization_claim",
         **identity,
         "pre_natural_gate": gate_binding,
         "claimed_at_utc": utc_now(),
@@ -1030,7 +1038,7 @@ def materialize(repo: Path) -> dict[str, Any]:
     lock = {
         "schema_version": 1,
         "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_controller_lock",
+        "artifact_type": "a5r7_controller_lock",
         "status": "READY_TO_LAUNCH_ONCE",
         **identity,
         "source_snapshot_receipt": str(receipt),
@@ -1076,7 +1084,7 @@ def worker(lock_path: Path) -> int:
     worker_start = {
         "schema_version": 1,
         "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_worker_start_claim",
+        "artifact_type": "a5r7_worker_start_claim",
         "execution_sha": lock["execution_sha"],
         "run_uid": lock["run_uid"],
         "controller_lock_sha256": sha256_file(lock_path),
@@ -1094,7 +1102,7 @@ def worker(lock_path: Path) -> int:
     result = subprocess.run(command, cwd=lock["snapshot_root"], env=environment, check=False)
     payload = {
         "schema_version": 1, "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_worker_result", "execution_sha": lock["execution_sha"],
+        "artifact_type": "a5r7_worker_result", "execution_sha": lock["execution_sha"],
         "run_uid": lock["run_uid"], "command_sha256": command_sha,
         "controller_lock_sha256": sha256_file(lock_path),
         "launch_claim_sha256": launch["claim_sha256"],
@@ -1132,7 +1140,7 @@ def launch(repo: Path) -> dict[str, Any]:
     command_sha = hashlib.sha256("\0".join(command).encode()).hexdigest()
     claim = {
         "schema_version": 1, "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_launch_claim", "execution_sha": execution_sha,
+        "artifact_type": "a5r7_launch_claim", "execution_sha": execution_sha,
         "run_uid": lock["run_uid"], "command_sha256": command_sha,
         "controller_lock_sha256": sha256_file(lock_path),
         "claimed_at_utc": utc_now(), "launch_count": 1, "resume_allowed": False,
@@ -1148,7 +1156,7 @@ def launch(repo: Path) -> dict[str, Any]:
     process_identity = _process_identity(process.pid)
     receipt = {
         "schema_version": 1, "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_launch_receipt", "execution_sha": execution_sha,
+        "artifact_type": "a5r7_launch_receipt", "execution_sha": execution_sha,
         "run_uid": lock["run_uid"], "pid": process.pid,
         "command_sha256": command_sha,
         "controller_lock_sha256": sha256_file(lock_path),
@@ -1244,7 +1252,7 @@ def _deep_verify_completed(lock_path: Path) -> dict[str, Any]:
         expect_go_receipt=True,
     )
     return {
-        "status": "A5R6_DEEP_COMPLETED_VERIFIER_GO",
+        "status": "A5R7_DEEP_COMPLETED_VERIFIER_GO",
         "execution_sha": lock["execution_sha"],
         "run_uid": lock["run_uid"],
         "manifest_sha256": sha256_file(manifest_path),
@@ -1257,7 +1265,7 @@ def verify_success(repo: Path) -> dict[str, Any]:
     execution_sha = verify_repo(repo)
     current = status(repo)
     if current["status"] not in (
-        "WORKER_EXIT_ZERO", "A5R6_INPUT_LOCK_GO_VERIFIED",
+        "WORKER_EXIT_ZERO", "A5R7_INPUT_LOCK_GO_VERIFIED",
     ):
         raise RuntimeError(f"A5R6 worker is not successful: {current['status']}")
     identity = execution_identity(current["execution_sha"])
@@ -1287,7 +1295,7 @@ def verify_success(repo: Path) -> dict[str, Any]:
         text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
     deep = json.loads(verified.stdout)
-    if deep.get("status") != "A5R6_DEEP_COMPLETED_VERIFIER_GO":
+    if deep.get("status") != "A5R7_DEEP_COMPLETED_VERIFIER_GO":
         raise RuntimeError("A5R6 independent deep verifier did not return GO")
     input_root = Path(current["input_root"])
     required = {
@@ -1311,8 +1319,8 @@ def verify_success(repo: Path) -> dict[str, Any]:
     receipt = {
         "schema_version": 1,
         "protocol_id": PROTOCOL_ID,
-        "artifact_type": "a5r6_deep_verifier_receipt",
-        "status": "A5R6_INPUT_LOCK_GO_VERIFIED",
+        "artifact_type": "a5r7_deep_verifier_receipt",
+        "status": "A5R7_INPUT_LOCK_GO_VERIFIED",
         "execution_sha": current["execution_sha"], "run_uid": current["run_uid"],
         "controller_lock_sha256": sha256_file(lock_path),
         "worker_result_sha256": sha256_file(

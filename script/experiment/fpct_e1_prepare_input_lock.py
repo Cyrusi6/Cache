@@ -218,6 +218,15 @@ A5R4_SCHEMA_RELATIVE = Path(
 A5_SYNTHETIC_GATE_RELATIVE = Path(
     "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_synthetic_gate.json"
 )
+A5R4_HISTORICAL_GATE_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_synthetic_gate.json"
+)
+A5R4_SYNTHETIC_GATE_SHA256 = (
+    "0f3477575b8a75fb4b6028c0eeda19aa56885aca2fdb0addce0171a5e02c7ea8"
+)
+A5R7_CURRENT_GATE_RELATIVE = Path(
+    "recipe/eval_recipe/fpct_e1/e1_a5r7_active_gate_recovery_gate.json"
+)
 A5R2_POPULATION_SOURCE_SHA256 = {
     "recipe/eval_recipe/fpct_e1/e1_data_split_manifest.json": (
         "030b4236ed9bec82b145227259733b32a8c76af63adf2fa0f1282e3638b5b11d"
@@ -2523,20 +2532,49 @@ def _load_a5_prompt_contract(repo_root: Path) -> dict[str, Any]:
 
 
 def _load_active_a5_synthetic_gate(repo_root: Path) -> dict[str, Any]:
-    """Verify v11 mode-predicate GO and attach immutable v8 evidence."""
+    """Verify current-source GO plus immutable v11 scientific evidence."""
 
     from script.analysis.fpct_e1_a5r2_choice_cardinality_gate import (
         validate_a5r2_schema_artifact,
     )
     from script.analysis.fpct_e1_a5r4_setgid_mode_gate import (
-        verify_gate as verify_a5r4_gate,
+        _evidence_sha256 as a5r4_evidence_sha256,
+        validate_a5r4_schema_artifact,
+    )
+    from script.analysis.fpct_e1_a5r7_gate import (
+        verify_gate as verify_current_gate,
     )
 
     a5r3_overlay = _load_a5r3_publication_contract(repo_root)
     _load_a5r4_setgid_mode_contract(repo_root)
-    active = verify_a5r4_gate(
-        repo_root / A5_SYNTHETIC_GATE_RELATIVE, repo_root=repo_root
+    current = verify_current_gate(
+        repo_root / A5R7_CURRENT_GATE_RELATIVE, repo_root
     )
+    if (
+        current.get("checks", {}).get(
+            "historical_a5r4_gate_consumed_without_live_tree_replay"
+        )
+        is not True
+        or current.get("checks", {}).get("successor_natural_accessed") is not False
+    ):
+        raise ValueError("A5R7 current-source gate is incompatible")
+    active_path = _canonical_regular_file(
+        repo_root / A5R4_HISTORICAL_GATE_RELATIVE,
+        "immutable A5R4 synthetic gate",
+    )
+    if sha256_file(active_path) != A5R4_SYNTHETIC_GATE_SHA256:
+        raise ValueError("immutable A5R4 synthetic gate changed")
+    active = json.loads(active_path.read_text(encoding="utf-8"))
+    validate_a5r4_schema_artifact(active, repo_root=repo_root)
+    if (
+        active.get("schema_version") != 11
+        or active.get("choice_semantics_version") != 9
+        or active.get("protocol_id") != A5_SYNTHETIC_GATE_PROTOCOL_ID
+        or active.get("artifact_type") != A5_SYNTHETIC_GATE_ARTIFACT_TYPE
+        or active.get("status") != A5_SYNTHETIC_GATE_STATUS
+        or active.get("evidence_sha256") != a5r4_evidence_sha256(active)
+    ):
+        raise ValueError("immutable A5R4 synthetic-gate identity changed")
     predecessor_path = repo_root / A5R2_SYNTHETIC_GATE_RELATIVE
     expected_sha256 = a5r3_overlay["immutable_a5r2_objects"][
         A5R2_SYNTHETIC_GATE_RELATIVE.as_posix()

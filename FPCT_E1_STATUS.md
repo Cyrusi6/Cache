@@ -1,9 +1,9 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R6 schema-binding recovery pre-natural lock
-> 当前状态：`A5R6 GATE GO / COMMIT+PUSH PENDING / SUCCESSOR NATURAL ACCESS=0`
-> 下一步：提交并推送 A5R6 execution SHA；用一次性 detached controller 建立全新 snapshot/UID/root
-> 更新时间：2026-08-15（Asia/Shanghai）
+> 当前阶段：A5R7 active-gate recovery pre-natural lock
+> 当前状态：`A5R7 GATE GO / SUCCESSOR NATURAL ACCESS=0`
+> 下一步：提交并推送 A5R7 execution SHA；用一次性 detached controller 建立全新 snapshot/UID/root
+> 更新时间：2026-08-16（Asia/Shanghai）
 
 ## 隔离身份
 
@@ -603,3 +603,29 @@ model/checkpoint，未运行 model forward、GPU、CUDA、Kubernetes 或 trainin
 - 本锁生成时 successor natural/model/checkpoint/forward/GPU/K8s/training=`0`；只有新
   clean pushed commit/snapshot/UID/root 可从 group 1 重建。Deep verifier GO 前禁止
   E1-2/E1-3；GO 后仍必须先冻结独立 diagnostic/intervention pre-output lock。
+
+## 2026-08-15 A5R7 active-gate recovery 前瞻锁
+
+- A5R6 execution `b2e34999...` 在任何 natural row 前终止：
+  `PRECOMPUTATION / A5R4_TRACKED_SOURCE_TEST_MAP_IS_STALE`。Input root 仅有
+  execution identity 与 canonical BLOCKED；无 choice audit、geometry、sidecar、
+  manifest 或 GO。Root/UID/controller 永久 no-resume/no-relaunch/no-reuse。
+- 根因是 production loader 对 immutable A5R4 gate 调用了 historical full live-tree
+  verifier；successor prepare 已合法变化，因此 tracked map 必然 stale。该失败与自然
+  ambiguity、FPCT mechanism 或 accuracy 无关。
+- 用户已前瞻批准 A5R7。历史 A5R4 gate 固定 SHA=`0f347757...`，只按 canonical
+  file、whole-file SHA、strict v11 schema、identity/status/evidence 消费；当前源码改由
+  独立 v14 A5R7 gate 验证。
+- Current-source continuity 已机械验证：A5R3 publication AST `10/10` 不变；A5R4
+  mode/publication AST 除 loader 外 `13/13` 不变；新 loader AST 单独冻结；mode static
+  checks 全部 GO。
+- Targeted production-preflight/controller/gate/A5R4 suite=`103 passed`；最终冻结 suite=
+  `326 passed, 4 deselected`，test output SHA256=
+  `cfac8e707d5f561cf13f0ce0cf54b2f0eec8a7aba4f7b9210f3120f39c5b7b3a`。
+  Final gate status=`GO_PRE_NATURAL_A5R7_ACTIVE_GATE_RECOVERY`，evidence SHA256=
+  `728cfb0f07be59270d364d877357e586135e416942df07dade04cd420b7c8543`，
+  artifact SHA256=`15da7e33db7b967873c4a9d6f1e23f507435756343d58341a126475450f10eb4`。
+  独立 verifier 与真实 production loader 均已无 monkeypatch 重放通过；successor natural
+  access 仍为零。
+- `E1-2/E1-3=NOT AUTHORIZED`，直到新 A5R7 root canonical GO、无 BLOCKED、strict
+  durable deep receipt 与独立 pre-output lock 全部成立。

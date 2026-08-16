@@ -1,0 +1,58 @@
+{
+  "schema_version": 14,
+  "protocol_id": "fpct_e1_mechanism_audit_v14_a5r7_active_gate_recovery",
+  "artifact_type": "a5r7_active_gate_recovery_manifest",
+  "status": "APPROVED_PRE_SUCCESSOR_NATURAL_ACCESS",
+  "decision_date": "2026-08-15",
+  "base_commit": "b2e349990eecef2aeb870baf82bbc81340fd49d7",
+  "failed_execution": {
+    "run_uid": "fpct-e1-a5r2-choice-cardinality-b2e34999-v1",
+    "failure_stage": "PRECOMPUTATION",
+    "failure_code": "A5R4_TRACKED_SOURCE_TEST_MAP_IS_STALE",
+    "natural_rows_read": 0,
+    "scientific_result": false,
+    "resume_relaunch_repair_reuse_cleanup_allowed": false
+  },
+  "historical_a5r4_evidence": {
+    "gate_path": "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_synthetic_gate.json",
+    "gate_sha256": "0f3477575b8a75fb4b6028c0eeda19aa56885aca2fdb0addce0171a5e02c7ea8",
+    "schema_path": "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_schema.json",
+    "schema_sha256": "cb90cec6c79388bf0712d238961086c108fe6ae523bb83eb3f8c84cd88473a21",
+    "contract_path": "recipe/eval_recipe/fpct_e1/e1_a5r4_setgid_mode_contract.json",
+    "contract_sha256": "af4cf2af2eeb240db0951f0d1a24dc952ee54144c9a9f732a8bb4ffd2f0f4303",
+    "full_live_tree_replay_allowed": false,
+    "strict_byte_schema_identity_evidence_validation_required": true
+  },
+  "current_source_gate": {
+    "path": "recipe/eval_recipe/fpct_e1/e1_a5r7_active_gate_recovery_gate.json",
+    "verifier": "script/analysis/fpct_e1_a5r7_gate.py",
+    "verified_before_successor_state_root_creation": true,
+    "bound_into_materialization_claim_controller_lock_and_snapshot": true,
+    "a5r3_publication_ast_unchanged_count": 10,
+    "a5r4_mode_ast_unchanged_except_loader_count": 13,
+    "a5r7_loader_ast_frozen": true
+  },
+  "unchanged_science": {
+    "population": "E0-design",
+    "distinct_content_groups": 326,
+    "task_counts": {"ai2-arc": 128, "openbookqa": 70, "mmlu-redux": 128},
+    "start_group_ordinal": 1,
+    "prompt_tokenizer_alignment_candidate_prior_operator_threshold_changed": false,
+    "model_or_checkpoint_load": false,
+    "model_forward": false,
+    "gpu_cuda_kubernetes": false,
+    "training": false
+  },
+  "success_contract": {
+    "worker_exit_code": 0,
+    "canonical_manifest_and_go_required": true,
+    "blocked_receipt_forbidden": true,
+    "strict_durable_deep_verifier_receipt_required": true,
+    "next_state": "FREEZE_E1_2_E1_3_DIAGNOSTIC_PRE_OUTPUT_LOCK"
+  },
+  "authorization": {
+    "successor_cpu_input_lock_after_clean_push": true,
+    "e1_2_e1_3_before_deep_go_and_pre_output_lock": false,
+    "e1_pilot_model_selection_test_confirmatory": false
+  }
+}

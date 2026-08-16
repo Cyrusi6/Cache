@@ -1893,3 +1893,21 @@ A4 synthetic gate 已 `GO`，但 clean pushed A4 commit 与 successor execution 
   strict、幂等、no-overwrite receipt 封口。
 - 结论：A5R6 pre-natural GO，等待 clean commit/push 后以新 snapshot/UID/root 从 group 1
   重建。A5R5 root 永久不可复用；A5R6 deep verifier GO 前不得进入 E1-2/3。
+
+## 2026-08-15 — FPCT-E1 A5R7 active-gate recovery
+
+- 研究目标：封存 `b2e34999...` 的 precomputation terminal failure，并只修复
+  historical A5R4 gate 与 current successor gate 的职责混淆；不改任何科学对象。
+- 根因：`_load_active_a5_synthetic_gate()` 调用 historical `verify_a5r4_gate()`，把
+  A5R4 的旧 tracked tree 与 A5R6 successor tree 比较，机械得到
+  `A5R4_TRACKED_SOURCE_TEST_MAP_IS_STALE`。Failure 在 natural row 1 前，非科学结果。
+- 核心改动：A5R4 gate 仅按 exact SHA/strict v11/identity/evidence 静态消费；独立 v14
+  A5R7 gate 验证当前 tree。A5R3 publication AST 10/10、A5R4 mode AST 除 loader 外
+  13/13 不变，新 loader AST 单独冻结，mode static checks 保持 GO。
+- 验证：production preflight 与 byte tamper、symlink/nonregular、strict schema、wrong
+  identity、historical live-verifier 禁用、creation/completed replay controls 已加入；
+  targeted suite=`103 passed`，最终冻结 suite=`326 passed, 4 deselected`。Test output /
+  gate evidence / gate artifact SHA256=`cfac8e70...` / `728cfb0f...` / `15da7e33...`；
+  final verifier 与真实 production loader 均无 monkeypatch 重放通过。
+- 结论：当前仍 PRE-NATURAL；新 commit/push/fresh UID/root 前不得读取自然数据，A5R7
+  deep GO 与独立 pre-output lock 前不得进入 E1-2/3。

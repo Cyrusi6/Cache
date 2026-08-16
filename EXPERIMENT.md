@@ -755,3 +755,18 @@ Qwen2.5-0.5B→Qwen3-0.6B B6 seed 44 异常诊断：
   required test nodes、四个 historical deselection 和旧 worker result/log live SHA 均已
   冻结；controller 在 root 创建前强制 gate，deep GO 以 strict durable receipt 封口。
   本记录生成时尚未创建 successor root，0 model/GPU/training。
+
+### 2026-08-15 FPCT-E1 A5R7 active-gate recovery
+
+- A5R6 `b2e34999...` terminal=`PRECOMPUTATION /
+  A5R4_TRACKED_SOURCE_TEST_MAP_IS_STALE`；natural rows=`0`，input root 只有 identity 与
+  BLOCKED。Worker result/log SHA=`99fc0245...` / `44a6052c...`，root tree=
+  `6c308644...`；永久 no-resume/no-relaunch/no-reuse。
+- A5R7 configuration：historical A5R4 gate SHA=`0f347757...`，strict v11 static
+  consumption；current-source v14 gate；A5R3 AST unchanged=`10`，A5R4 mode AST
+  unchanged except loader=`13`；新 loader AST 单独冻结。
+- CPU/offline targeted production-preflight/tamper/controller suite=`103 passed`；最终
+  frozen suite=`326 passed, 4 deselected`。Test output SHA=`cfac8e70...`，final gate
+  evidence=`728cfb0f...`，artifact SHA=`15da7e33...`；独立 verifier 与真实 production
+  loader 均通过。生成 gate 时未运行 natural tokenizer/alignment、模型、GPU 或训练，
+  未进入 E1-2/3。

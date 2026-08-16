@@ -1,0 +1,54 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_mechanism_audit_v14_a5r7_active_gate_recovery",
+  "artifact_type": "a5r6_precomputation_active_gate_failure_observation",
+  "status": "TERMINAL_ENGINEERING_FAILURE_NOT_SCIENTIFIC_RESULT",
+  "execution_sha": "b2e349990eecef2aeb870baf82bbc81340fd49d7",
+  "run_uid": "fpct-e1-a5r2-choice-cardinality-b2e34999-v1",
+  "run_root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-b2e34999-v1",
+  "controller_root": "/netdisk/lijunsi/fpct-e1/.fpct-e1-a5r6-controller-b2e34999-v1",
+  "worker": {
+    "status": "WORKER_TERMINAL_FAILURE",
+    "exit_code": 1,
+    "result_bytes": 731,
+    "result_sha256": "99fc02459191de72b1fef2bc8cfa40c519d09f8742d838604fd87d72340e65cc",
+    "log_bytes": 2575,
+    "log_sha256": "44a6052c7de06647bba0f58db9738fd172bb0f65c14ef4bf63372ec1697ea6ca"
+  },
+  "terminal_artifacts": {
+    "blocked_receipt_sha256": "df2a6b9c2cd11144099dae42782889974037207f9a93fb7e7ea190696255da22",
+    "execution_identity_sha256": "dfbdaa92dc629a25a24dc18e016b1ab990e5facbf6499ca4703859d8bcb95c05",
+    "input_root_exact_entries": [
+      "A5R2_INPUT_LOCK_BLOCKED.json",
+      "a5r2_input_lock_execution_identity.json"
+    ],
+    "choice_audit_geometry_sidecar_manifest_or_go_present": false
+  },
+  "root_cause": {
+    "failure_stage": "PRECOMPUTATION",
+    "failure_code": "A5R4_TRACKED_SOURCE_TEST_MAP_IS_STALE",
+    "call_chain": "_load_active_a5_synthetic_gate -> historical verify_a5r4_gate",
+    "historical_a5r4_live_tree_replay_invalid": true,
+    "natural_data_dependent": false
+  },
+  "portable_forensic_closure": {
+    "algorithm": "kind_path_mode_size_content_v2_no_numeric_owner",
+    "entry_count": 795,
+    "inventory_sha256": "a33f85d2b4110043e8a76a69b981932c9845792526c1f0df005ff8f59f392ca4",
+    "regular_file_count": 692,
+    "regular_file_bytes": 25300782,
+    "regular_file_tree_sha256": "6c308644a65f0922f81d1c52663cdf209606a4a213a88818e0af040be9630906",
+    "numeric_uid_or_gid_in_digest": false
+  },
+  "closure": {
+    "natural_rows_read": 0,
+    "scientific_result": false,
+    "resume_relaunch_repair_reuse_cleanup_allowed": false,
+    "model_or_checkpoint_loaded": false,
+    "model_forward_run": false,
+    "gpu_cuda_or_kubernetes_used": false,
+    "training": false,
+    "e1_2_or_e1_3_authorized": false,
+    "next_action": "NEW_A5R7_COMMIT_SNAPSHOT_UID_ROOT_FROM_GROUP_ONE"
+  }
+}
