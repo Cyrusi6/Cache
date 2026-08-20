@@ -50,6 +50,9 @@ E0-design groups 定位 F 相对 C_post 的负增益根因，并只允许一个�
 - `2c1f79a6...` r6 在首个 forward 前发现浅层 device mover 不能保留 nested prompt
   metadata；改为与既有 runtime backend 相同的递归 tensor-only mover，并以新 SHA/root
   重启。没有产生 logits 或 accuracy。
+- `df6629f7...` r7 揭示 wrapper 分段坐标：全局 117 tokens=`3/97/17`，真实 capture/logits
+  只覆盖 final 17。后继 runner 从 frozen `kv_cache_index[-1]` 机械投影 labels/mask，
+  response target 集合不变；旧 forward 无持久 logp row。
 
 ### 结论
 

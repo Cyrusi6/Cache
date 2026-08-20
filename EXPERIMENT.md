@@ -30,6 +30,9 @@
 - `2c1f79a6...` r6 已加载模型/checkpoint，但在任何 forward/logits 前因 collator metadata
   的 nested dict device move 停止，JSONL 为 0 bytes。只修复递归 tensor movement 后以
   new commit/root 重启，旧 temp 保留为工程记录。
+- `df6629f7...` r7 的首个 forward 后、logp row 前，capture 发现 global labels 与 final
+  wrapper section 坐标不一致（117 vs 17）。修复使用冻结 `kv_cache_index[-1]` 同时切分
+  capture mask 和 logits labels；8 个 answer targets 不变，旧 forward 不进入分析。
 
 ## 2026-07-24 FPCT-E0 TMPDIR closure recovery
 

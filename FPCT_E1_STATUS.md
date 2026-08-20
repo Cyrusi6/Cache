@@ -37,6 +37,10 @@
 - `2c1f79a6...` r6 完成真实 model/checkpoint load 后、首个 forward 前因浅层 batch
   device mover 遇到 `messages:list[dict]` 停止；sample metrics 文件为空。后继只复用仓库
   已有递归 tensor mover 语义，旧 root/temp 不进入分析，仍需 new commit/root。
+- `df6629f7...` r7 完成首个 forward 后在 capture finalize fail-closed，0 logp rows。
+  诊断确认 wrapper 的 global receiver 117 tokens 被分为 `3/97/17`，capture/output 只对应
+  final 17-token section，而 runner 错传 117-token mask。后继只把 labels 机械投影到
+  `kv_cache_index[-1]` section；gold answer token membership 不变，new commit/root 重跑。
 
 ## 隔离身份
 

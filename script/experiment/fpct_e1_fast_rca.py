@@ -295,6 +295,20 @@ def _gold_logp(outputs: Any, labels: Any) -> dict[str, Any]:
     }
 
 
+def _active_section_labels(labels: Any, kv_cache_index: Any) -> Any:
+    """Project global labels into the wrapper's final returned/captured section."""
+
+    if not isinstance(kv_cache_index, list) or not kv_cache_index:
+        raise ValueError("fast RCA requires sectioned kv_cache_index")
+    section_length = int(kv_cache_index[-1].shape[1])
+    if section_length <= 1 or section_length > labels.shape[1]:
+        raise ValueError("invalid final wrapper section length")
+    active = labels[:, -section_length:]
+    if int((active[:, 1:] != -100).sum()) <= 0:
+        raise ValueError("final wrapper section contains no answer targets")
+    return active
+
+
 def _move_to_device(value: Any, device: Any) -> Any:
     """Recursively move tensors while preserving prompt metadata containers."""
 
@@ -477,9 +491,12 @@ def run_shard(
                 batch = collator([feature])
                 labels = batch.pop("labels").to(device)
                 batch = _move_to_device(batch, device)
+                active_labels = _active_section_labels(
+                    labels, batch.get("kv_cache_index")
+                )
                 capture = variant != "partition_composition"
                 if capture:
-                    query_mask = model.fpct_teacher_forced_query_mask(labels)
+                    query_mask = model.fpct_teacher_forced_query_mask(active_labels)
                     model.begin_fpct_capture(
                         mode="teacher_forced_response",
                         metadata={
@@ -507,7 +524,7 @@ def run_shard(
                     "content_group_sha256": item["content_group_sha256"],
                     "variant": variant,
                     "topology": "partition_compositional",
-                    **_gold_logp(outputs, labels),
+                    **_gold_logp(outputs, active_labels),
                     "capture": _compact_capture(report) if report is not None else None,
                     "mechanism_metric_semantics": (
                         "counterfactual_global_f_diagnostics"
@@ -517,7 +534,7 @@ def run_shard(
                 }
                 handle.write(canonical_json_bytes(row).decode("utf-8"))
                 handle.flush()
-                del outputs, labels, batch
+                del outputs, labels, active_labels, batch
     layer_head_path = temporary / "layer_head_summary.json"
     atomic_write(
         layer_head_path,

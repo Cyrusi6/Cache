@@ -20,6 +20,7 @@ from script.experiment.fpct_e1_fast_rca import (
     read_manifest,
     git_head,
     _move_to_device,
+    _active_section_labels,
 )
 from script.analysis import fpct_e1_fast_rca_analysis as fast_analysis
 
@@ -194,3 +195,16 @@ def test_recursive_device_move_preserves_message_metadata() -> None:
     actual = _move_to_device(value, torch.device("cpu"))
     assert actual["input_ids"][0].device.type == "cpu"
     assert actual["messages"] == value["messages"]
+
+
+def test_active_section_labels_match_wrapper_returned_logits() -> None:
+    labels = torch.full((1, 12), -100, dtype=torch.long)
+    labels[:, 9:] = torch.tensor([4, 5, 6])
+    sections = [
+        torch.zeros(1, 3, 2, dtype=torch.long),
+        torch.zeros(1, 4, 2, dtype=torch.long),
+        torch.zeros(1, 5, 2, dtype=torch.long),
+    ]
+    active = _active_section_labels(labels, sections)
+    assert active.shape == (1, 5)
+    assert active.tolist() == [[-100, -100, 4, 5, 6]]
