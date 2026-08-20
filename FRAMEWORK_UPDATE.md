@@ -47,6 +47,9 @@ E0-design groups 定位 F 相对 C_post 的负增益根因，并只允许一个�
 - `70f64c78...` 的 K8s pre-model smoke 暴露 node path、bootstrap 和 Git/GLIBC 运行环境
   问题；最终 operational contract 允许 K8s manifest 注入严格 full execution SHA，runner
   机械要求其等于 plan。科学代码、checkpoint、population 和 estimand 未变化。
+- `2c1f79a6...` r6 在首个 forward 前发现浅层 device mover 不能保留 nested prompt
+  metadata；改为与既有 runtime backend 相同的递归 tensor-only mover，并以新 SHA/root
+  重启。没有产生 logits 或 accuracy。
 
 ### 结论
 

@@ -295,6 +295,22 @@ def _gold_logp(outputs: Any, labels: Any) -> dict[str, Any]:
     }
 
 
+def _move_to_device(value: Any, device: Any) -> Any:
+    """Recursively move tensors while preserving prompt metadata containers."""
+
+    import torch
+
+    if isinstance(value, torch.Tensor):
+        return value.to(device)
+    if isinstance(value, list):
+        return [_move_to_device(child, device) for child in value]
+    if isinstance(value, tuple):
+        return tuple(_move_to_device(child, device) for child in value)
+    if isinstance(value, dict):
+        return {key: _move_to_device(child, device) for key, child in value.items()}
+    return value
+
+
 def _compact_capture(report: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "metrics": report.get("metrics", {}),
@@ -460,14 +476,7 @@ def run_shard(
                 )
                 batch = collator([feature])
                 labels = batch.pop("labels").to(device)
-                batch = {
-                    key: (
-                        [child.to(device) for child in value]
-                        if isinstance(value, list)
-                        else value.to(device) if hasattr(value, "to") else value
-                    )
-                    for key, value in batch.items()
-                }
+                batch = _move_to_device(batch, device)
                 capture = variant != "partition_composition"
                 if capture:
                     query_mask = model.fpct_teacher_forced_query_mask(labels)

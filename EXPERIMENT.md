@@ -27,6 +27,9 @@
 - `70f64c78...` smoke 的 path/bootstrap/Git failures 全部发生在 model load 前。后继仅新增
   container execution-SHA injection contract：40-hex、与 plan exact equal；不改变任何
   scientific field。六 checkpoint stage 可按原 tree SHA 复用，新 plan/root 重新冻结。
+- `2c1f79a6...` r6 已加载模型/checkpoint，但在任何 forward/logits 前因 collator metadata
+  的 nested dict device move 停止，JSONL 为 0 bytes。只修复递归 tensor movement 后以
+  new commit/root 重启，旧 temp 保留为工程记录。
 
 ## 2026-07-24 FPCT-E0 TMPDIR closure recovery
 

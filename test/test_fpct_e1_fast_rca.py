@@ -19,6 +19,7 @@ from script.experiment.fpct_e1_fast_rca import (
     overlap_composition_weights,
     read_manifest,
     git_head,
+    _move_to_device,
 )
 from script.analysis import fpct_e1_fast_rca_analysis as fast_analysis
 
@@ -183,3 +184,13 @@ def test_container_execution_sha_fallback_is_strict(monkeypatch, tmp_path) -> No
         pass
     else:
         raise AssertionError("invalid injected execution SHA was accepted")
+
+
+def test_recursive_device_move_preserves_message_metadata() -> None:
+    value = {
+        "input_ids": [torch.tensor([1, 2])],
+        "messages": [[{"role": "user", "content": "x"}]],
+    }
+    actual = _move_to_device(value, torch.device("cpu"))
+    assert actual["input_ids"][0].device.type == "cpu"
+    assert actual["messages"] == value["messages"]

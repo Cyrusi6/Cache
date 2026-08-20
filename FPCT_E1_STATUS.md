@@ -34,6 +34,9 @@
   不存在，r3 为无关依赖 bootstrap backtracking，r4/r5 为容器无 Git/宿主 Git GLIBC
   不兼容。唯一后继修复是允许 manifest 注入严格 full SHA，并要求它与 plan execution
   SHA 完全一致；科学干预、input、checkpoint、endpoint 不变。
+- `2c1f79a6...` r6 完成真实 model/checkpoint load 后、首个 forward 前因浅层 batch
+  device mover 遇到 `messages:list[dict]` 停止；sample metrics 文件为空。后继只复用仓库
+  已有递归 tensor mover 语义，旧 root/temp 不进入分析，仍需 new commit/root。
 
 ## 隔离身份
 
