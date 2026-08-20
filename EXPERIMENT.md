@@ -1,5 +1,26 @@
 # EXPERIMENT.md
 
+## 2026-08-21 FPCT-E1-FAST-RCA fixed-checkpoint result
+
+- Execution/root：`07b2a3f5...` /
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-fast-rca-07b2a3f5-v1`。
+- Job：`fpct-e1-fast-formal-07b2a3f5-20260820-233130-701513`；node=
+  `4090-24gx4`；restart=`0`；Succeeded。
+- Coverage：18/18 shards；17,604 compact rows；1,956 matched group cells；expanded rows=`0`。
+- Verifier：`GO_ALL_SHARDS_COMPLETE`；formal inventory SHA256=
+  `f12d8b7da233f437916b98a9e796c68c30ca9531d5698ce3eed281d0ee1eb275`。
+- Root-cause result SHA256=
+  `4467bf4b8c6966c838f66e2f4548b4e4650717a8f2e41bae9380281a40789c1f`。
+- Preregistered decision=`NO_EXPLOITABLE_FIXED_CHECKPOINT_HEADROOM`；all selectable
+  interventions ineligible；winner/root-cause=`null`；training authorization=`false`。
+- Original F-C_post task-macro `delta logp(y*)=-0.00011850`；ARC/OBQA/MMLU=
+  `-0.00010409/-0.00038335/+0.00013196`；positive group-cell=`0.49847`。
+- Mechanism descriptive summary SHA256=
+  `a7a869ae239dc29c4d9a961428942ba9d95299b951947a0af7ccf4ee340b09c2`；
+  source→fused relative-dispersion retention K/V=`0.000302/0.0000170`，parent mass=
+  `0.002056`，output delta L2=`0.0006855`。
+- No winner implementation；0 training steps；E1-pilot/model-selection/test/confirmatory sealed。
+
 ## 2026-08-20 FPCT-E1-FAST-RCA pre-output lock
 
 - Goal：直接回答当前 F 的负增益来自 candidate contraction、Jensen parent evidence、

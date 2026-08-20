@@ -1,5 +1,50 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-08-21：FPCT-E1-FAST-RCA 无可利用 fixed-checkpoint headroom
+
+### 研究目标
+
+在六个 E0 checkpoints 和冻结的 326 个 E0-design groups 上，直接检验 centered lambda、
+parent-mass、partition composition 等单因素能否修复 F 的负增益，并按前瞻规则只冻结一个
+production winner。
+
+### 核心改动
+
+- 完成 18 个 checkpoint×task compact teacher-forced shards；不物化 30M long-form rows。
+- 使用 summary-only capture 记录 source/fused dispersion、KL/TV、跨 answer-query gamma
+  variance、Jensen gap、parent mass 和 output delta。
+- 运行冻结的 20,000-replicate hierarchical paired bootstrap；顶层按三个 training seeds，
+  两个 checkpoint arms 在 seed 内配对。
+- 新增 `FPCT_E1_FAST_RCA_REPORT.md` 与 compact result manifest；大型 rows 留在 `/netdisk`。
+
+### 实验配置
+
+- Execution=`07b2a3f5...`；ARC/OBQA/MMLU=`128/70/128` groups。
+- K8s Job=`fpct-e1-fast-formal-07b2a3f5-20260820-233130-701513`，node=
+  `4090-24gx4`，18 shards、17,604 rows。
+- Candidate selection：lambda=.25/.5、parent-mass、partition composition；lambda=2 和
+  K-only 仅诊断；exact RoPE 在输出前标记为 frozen-checkpoint structurally unavailable。
+
+### 验证结果
+
+- K8s terminal=`Succeeded`、restart=`0`；deep verifier=`GO_ALL_SHARDS_COMPLETE`。
+- Formal inventory 54 files，SHA256=`f12d8b7d...275`；lambda0 exact delta=`0.0`。
+- 四个 selectable interventions 均未通过完整 gate。最接近的 lambda=.25 mean=
+  `+0.00025335`，但 95% LCB=`-0.00031074` 且 ARC mean `<0`。
+- 原 F-C_post task-macro teacher-forced delta logp=`-0.00011850`，正向 group-cell=
+  `49.85%`。
+- Source relative dispersion K/V=`7.50%/28.0%`；fused 仅=`0.00227%/0.000476%`；
+  posterior top-1 可随 query 改变，但 parent mass 均值仅=`0.206%`，机制指标与 logp效应
+  Pearson 相关绝对值 `<0.055`。
+
+### 结论
+
+终态=`NO_EXPLOITABLE_FIXED_CHECKPOINT_HEADROOM`。机制被激活，但现有 projector/fuser
+强烈收缩 candidate 差异，残余 query-time变化没有形成任务对齐收益；没有一个已冻结的
+单因素足以被确认为唯一修复。按协议不实现 winner、不运行 320-step training。若继续，
+必须另开前瞻性 candidate-distinction-preserving fuser/separable projection 协议；本轮不能
+事后把该方向追认为 winner。
+
 ## 2026-08-20：FPCT-E1 轻量固定-checkpoint根因路线
 
 ### 研究目标

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_fast_rca_v1",
+  "status": "NO_EXPLOITABLE_FIXED_CHECKPOINT_HEADROOM",
+  "execution_sha": "07b2a3f5f1437d382ce1b548661200ac0fb2ea61",
+  "branch": "research/fpct-e1-mechanism-audit",
+  "population": {
+    "ai2-arc": 128,
+    "openbookqa": 70,
+    "mmlu-redux": 128,
+    "population_sha256": "a31aa114a725269d1d19f0fb06b3dcd76fcaea88ba0b9d75f376083ccadb2374"
+  },
+  "provenance": {
+    "operative_manifest_sha256": "caf6efb8eda05a78db1b3b8678dba327f4820b74a5241a3f981b81a1b46805f5",
+    "plan_declared_sha256": "321790bc1a8516edd4ce623a41bce508fd259d5334e4846cab17a571766b6501",
+    "plan_file_sha256": "1f5aa2991a89b36eccc50061e273661d25f58844a2f3271807c78f4e46b9050b",
+    "compact_input_sha256": "d843512b7e446efd229fe3097030407e59acb20b4de591a84b88176bd8b0eec9",
+    "math_md_sha256": "98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad"
+  },
+  "execution": {
+    "kubernetes_job": "fpct-e1-fast-formal-07b2a3f5-20260820-233130-701513",
+    "node": "4090-24gx4",
+    "restart_count": 0,
+    "terminal_status": "Succeeded",
+    "start_time_utc": "2026-08-20T15:31:30Z",
+    "completion_time_utc": "2026-08-20T18:33:18Z",
+    "shard_count": 18,
+    "compact_row_count": 17604,
+    "matched_group_cells": 1956,
+    "expanded_rows_materialized": false,
+    "deep_verifier_status": "GO_ALL_SHARDS_COMPLETE"
+  },
+  "results": {
+    "selected_variant": null,
+    "root_cause": null,
+    "training_authorized": false,
+    "controls_go": true,
+    "lambda0_maximum_absolute_logp_delta": 0.0,
+    "original_f_minus_cpost_task_macro_delta_logp": -0.00011849683414621967,
+    "all_selectable_interventions_eligible": false
+  },
+  "artifacts": {
+    "root": "/netdisk/lijunsi/fpct-e1/fpct-e1-fast-rca-07b2a3f5-v1",
+    "formal_shard_inventory": {
+      "relative_path": "formal_shard_sha256.txt",
+      "sha256": "f12d8b7da233f437916b98a9e796c68c30ca9531d5698ce3eed281d0ee1eb275",
+      "file_count": 54,
+      "byte_size": 6471
+    },
+    "formal_shard_tree_byte_size": 159832676,
+    "root_cause_result": {
+      "relative_path": "root_cause_result.json",
+      "sha256": "4467bf4b8c6966c838f66e2f4548b4e4650717a8f2e41bae9380281a40789c1f",
+      "byte_size": 4163
+    },
+    "mechanism_descriptive_summary": {
+      "relative_path": "mechanism_descriptive_summary.json",
+      "sha256": "a7a869ae239dc29c4d9a961428942ba9d95299b951947a0af7ccf4ee340b09c2",
+      "byte_size": 14617,
+      "role": "POST_HOC_DESCRIPTIVE_NONSELECTIVE"
+    }
+  },
+  "firewall": {
+    "e1_pilot_consumed": false,
+    "model_selection_consumed": false,
+    "test_consumed": false,
+    "confirmatory_consumed": false,
+    "training_started": false,
+    "winner_implemented": false
+  },
+  "claim_boundary": "No fixed-checkpoint intervention passed the prospective winner gate. The descriptive contraction localization does not alter the null root-cause label or authorize training."
+}

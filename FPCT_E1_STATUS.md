@@ -1,9 +1,31 @@
 # FPCT-E1 状态
 
-> 当前阶段：E1-FAST-RCA prospective pre-output lock
-> 当前状态：`PRE-OUTPUT TARGETED GATE GO / COMMIT+PUSH PENDING / MODEL OUTPUT=0`
-> 下一步：commit/push 当前 lightweight executor；随后创建 18-shard fixed-checkpoint plan
-> 更新时间：2026-08-20（Asia/Shanghai）
+> 当前阶段：E1-FAST-RCA fixed-checkpoint root-cause decision
+> 当前状态：`NO_EXPLOITABLE_FIXED_CHECKPOINT_HEADROOM / TRAINING NOT AUTHORIZED`
+> 下一步：人工决定是否另开 candidate-distinction-preserving fuser 前瞻研究线
+> 更新时间：2026-08-21（Asia/Shanghai）
+
+## 2026-08-21 E1-FAST-RCA 终态
+
+- Operative execution=`07b2a3f5f1437d382ce1b548661200ac0fb2ea61`；18/18
+  checkpoint×task shards、17,604 compact rows、1,956 matched group cells 完成。
+- K8s Job=`fpct-e1-fast-formal-07b2a3f5-20260820-233130-701513`，node=
+  `4090-24gx4`，restart=`0`，terminal=`Succeeded`。
+- Deep verifier=`GO_ALL_SHARDS_COMPLETE`；54-file formal inventory SHA256=
+  `f12d8b7da233f437916b98a9e796c68c30ca9531d5698ce3eed281d0ee1eb275`。
+- 20,000-replicate preregistered selection 的四个可选 intervention 全部 `eligible=false`；
+  `selected_variant=null`、`root_cause=null`、`training_authorized=false`。
+- 最接近的 centered `lambda=0.25` 为 `+0.00025335`，但 95% CI=
+  `[-0.00031074,+0.00085394]` 且 ARC `<0`，不能实现或训练。
+- 原 F 相对 C_post 的 teacher-forced task-macro `delta logp(y*)=-0.00011850`；正向
+  group-cell fraction=`0.49847`。
+- 描述性 localization：source relative K/V dispersion=`0.0750/0.2800`，fused=
+  `0.0000227/0.00000476`，保留率=`0.000302/0.0000170`。Query posterior 确实变化，
+  但 parent mass=`0.00206`、output delta L2=`0.000685`，且机制量与 logp效应相关接近 0。
+- 报告=`FPCT_E1_FAST_RCA_REPORT.md`；result manifest=
+  `recipe/eval_recipe/fpct_e1_fast_rca/fast_rca_result_manifest.json`。
+- 未实现 winner，未运行 320-step seed `2026081401`，未解封另外两 seeds；E1-pilot、
+  model-selection、test、confirmatory、native null 和跨模型仍 sealed。
 
 ## 2026-08-20 E1-FAST-RCA 路线切换
 
@@ -88,12 +110,12 @@
 | Commit A2 execution lock | `INCONCLUSIVE / ABANDONED` | E1-1 GO + operational closure | CPU input lock | d169 在自然 alignment 中因 slot-order taxonomy bug fail-closed；0 artifact/model/GPU |
 | Commit A3 correctness lock | `GO` | d169 receipt + synthetic permutation regression | 文档、单一 classifier 修复、tests only | clean/pushed execution=`612697df...`；只排序派生 intersections；未改 candidate/A/operator/threshold/split |
 | E1-2 input/topology/provenance lock | `INCONCLUSIVE_RESOURCE_CEILING / ABANDONED` | clean pushed A3 | CPU tokenizer/alignment only | observed logical rows `616448 > 262144`；0 artifact/model/GPU；禁止 resume/reuse |
-| E1-2 C_post baselines | `CONDITIONALLY AUTHORIZED / NOT STARTED` | A5R5 input-lock GO + independent verifier + pre-output lock | 最多 6 个 GPU workers；具体资源须在新锁中冻结 | 未创建 runtime probe/plan/ConfigMap/Job，未运行 checkpoint inference |
-| E1-2 F endpoints | `CONDITIONALLY AUTHORIZED / NOT STARTED` | 18 C_post closure + same pre-output lock | 同上 | 只识别同 checkpoint F-C_post mechanism；无性能 GO |
-| E1-2 analyzer/finalized receipt | `CONDITIONALLY AUTHORIZED / NOT STARTED` | C_post+F endpoints complete | CPU analysis | 必须产生 deep-verified immutable `FINALIZED_E1_2` |
-| E1-3 frozen interventions | `CONDITIONALLY AUTHORIZED / NOT STARTED` | complete baseline/F closure + pre-output intervention DAG | frozen fixed-checkpoint inference only | centered λ、RoPE、K/V、parent-mass、partition hybrid；无训练 |
-| E1 root-cause/operator freeze | `CONDITIONALLY AUTHORIZED / NOT STARTED` | E1-3 complete + mechanical eligibility/ranking | protocol + one production factor | 无合格 intervention 时机械停止训练 |
-| E1-pilot | `SEALED / NOT RUN / NOT READ` | unique operator freeze + implementation/oracle/CPU/HF/GPU/training lock GO | 条件式 matched training | exploratory only；永无 confirmatory eligibility |
+| E1-2 C_post baselines | `COMPLETE / VERIFIED` | E1-FAST-RCA pre-output lock | GPU 1/2；compact rows | 六 checkpoints×三 tasks 全覆盖 |
+| E1-2 F endpoints | `COMPLETE / VERIFIED` | same 18-shard execution | 同上 | 同 checkpoint F-C_post；teacher-forced only |
+| E1-2 analyzer/finalized receipt | `GO` | 18/18 receipts | CPU analysis | 17,604 rows；all SHA/row-count verified |
+| E1-3 frozen interventions | `COMPLETE / VERIFIED` | same execution | fixed-checkpoint inference only | lambda/K-only/parent-mass/partition 全部完成；RoPE pre-output unavailable |
+| E1 root-cause/operator freeze | `NO-GO / NO WINNER` | 20k bootstrap + mechanical ranking | CPU analysis | `NO_EXPLOITABLE_FIXED_CHECKPOINT_HEADROOM` |
+| E1-pilot | `SEALED / NOT AUTHORIZED / NOT RUN` | unique eligible winner（未满足） | 无 | 0 training steps；exploratory data 未读取 |
 | Confirmatory | `SEALED / NOT AUTHORIZED` | 后续完整阶段链 | 未授权 | model-selection/test/formal seeds 不得读取 |
 
 ## Instrumentation hard gate
