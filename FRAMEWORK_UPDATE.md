@@ -39,6 +39,8 @@ E0-design groups 定位 F 相对 C_post 的负增益根因，并只允许一个�
   allowlist；它们在 successor source 上按设计 fail-closed，未修改旧 gate 绕过。
 - `git diff --check`、JSON syntax、Python compile 和 FPCT attention hot-path host-sync
   static scan 通过。
+- 首个 pre-output SHA `1c74a522...` 的 direct-file `prepare` 在 root/model 前因
+  repo-root import path 缺失停止；只修复 CLI bootstrap 后以新 SHA/root 重启。
 
 ### 结论
 

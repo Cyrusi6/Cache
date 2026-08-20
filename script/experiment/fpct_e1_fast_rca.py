@@ -17,10 +17,15 @@ import math
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from collections import Counter
 from pathlib import Path
 from typing import Any, Iterable, Mapping
+
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 
 PROTOCOL_ID = "fpct_e1_fast_rca_v1"

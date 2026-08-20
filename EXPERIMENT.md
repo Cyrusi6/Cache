@@ -19,6 +19,8 @@
 - Pre-output verification：六 checkpoint tree hash 全匹配；targeted suite=`99/99`；full
   CPU-safe suite=`1082 passed + 42 expected historical fail-closed guards`。旧 A4/A5/R2
   immutable gates 保持不变，没有为 successor source 回写或放宽。
+- Execution `1c74a522...` 的首次 `prepare` 在创建 root/model load 前因 direct-file
+  `sys.path` bootstrap 缺失而终止；natural/model output=0，旧目标 root 不复用。
 
 ## 2026-07-24 FPCT-E0 TMPDIR closure recovery
 

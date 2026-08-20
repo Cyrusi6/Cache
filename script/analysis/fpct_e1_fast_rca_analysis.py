@@ -7,10 +7,15 @@ import argparse
 import json
 import math
 import random
+import sys
 from collections import defaultdict
 from pathlib import Path
 from statistics import mean
 from typing import Any, Iterable, Mapping
+
+
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from script.experiment.fpct_e1_fast_rca import (
     PROTOCOL_ID,

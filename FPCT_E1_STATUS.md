@@ -24,6 +24,9 @@
   frozen tracked-tree/live-source gates、已记录旧 fixture API drift 或 R2l/R2m historical
   production allowlist。它们在合法 successor source 上按设计 fail-closed，不是本修订的
   operator/runtime regression，也未通过修改旧 gate 来绕过。
+- 首个 pushed pre-output SHA `1c74a522...` 的 `prepare` 在 root 创建和任何 model
+  output 前因 direct-file CLI 缺少 repo-root `sys.path` 而停止；目标 root 未创建。
+  仅允许后继 commit 修复 CLI bootstrap，并以新 SHA/new root 重启。
 
 ## 隔离身份
 
