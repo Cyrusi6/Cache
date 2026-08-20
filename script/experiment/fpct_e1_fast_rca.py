@@ -15,6 +15,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -96,9 +97,25 @@ def atomic_write(path: Path, payload: bytes) -> None:
 
 
 def git_head(repo: Path) -> str:
-    return subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], cwd=repo, text=True
-    ).strip()
+    injected = os.environ.get("FPCT_EXECUTION_SHA")
+    if injected is not None and re.fullmatch(r"[0-9a-f]{40}", injected) is None:
+        raise ValueError("FPCT_EXECUTION_SHA is not a full lowercase Git SHA")
+    try:
+        observed = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        if injected is None:
+            raise RuntimeError(
+                "runtime has no usable Git binary and no injected execution SHA"
+            )
+        return injected
+    if injected is not None and observed != injected:
+        raise ValueError("Git HEAD differs from injected execution SHA")
+    return observed
 
 
 def read_manifest(repo: Path) -> dict[str, Any]:

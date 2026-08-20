@@ -24,6 +24,9 @@
 - `86b4b240...` plan 已验证全部输入/checkpoint，但 model load 前新增 1-sample smoke
   namespace；smoke 永不进入分析，完整 shard 仍从 group 1 重跑。因 executor 变化，
   `86b4...` root 只作 pre-model plan record。
+- `70f64c78...` smoke 的 path/bootstrap/Git failures 全部发生在 model load 前。后继仅新增
+  container execution-SHA injection contract：40-hex、与 plan exact equal；不改变任何
+  scientific field。六 checkpoint stage 可按原 tree SHA 复用，新 plan/root 重新冻结。
 
 ## 2026-07-24 FPCT-E0 TMPDIR closure recovery
 

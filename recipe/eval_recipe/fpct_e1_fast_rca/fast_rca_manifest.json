@@ -4,6 +4,7 @@
   "classification": "EXPLORATORY_FIXED_CHECKPOINT_ROOT_CAUSE_NOT_CONFIRMATORY",
   "prospective_parent_commit": "1c64b60624b96e9bb1e3f4962509d70f43f36ffa",
   "execution_commit": "CURRENT_CLEAN_PUSHED_HEAD_AT_PREPARE_TIME",
+  "container_execution_sha_contract": "GIT_HEAD_OR_EXACT_40_HEX_FPCT_EXECUTION_SHA_EQUAL_TO_PLAN",
   "historical_a5r7": {
     "root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-1c64b606-v1",
     "classification": "ENGINEERING_RECORD_NOT_DEEP_VERIFIER_GO",

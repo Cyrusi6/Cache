@@ -30,6 +30,10 @@
 - `86b4b240...` 成功生成 18-shard plan（SHA=`30f779d9...`），但在任何 model load
   前决定增加独立 one-sample/non-scientific smoke namespace；该 plan 因 executor
   successor 而封存，未运行 shard。新 plan 必须绑定后继 commit/new root。
+- `70f64c78...` 的前四次 smoke 均未到 model load：r1/r2 为 node-local hostPath
+  不存在，r3 为无关依赖 bootstrap backtracking，r4/r5 为容器无 Git/宿主 Git GLIBC
+  不兼容。唯一后继修复是允许 manifest 注入严格 full SHA，并要求它与 plan execution
+  SHA 完全一致；科学干预、input、checkpoint、endpoint 不变。
 
 ## 隔离身份
 

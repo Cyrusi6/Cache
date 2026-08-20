@@ -44,6 +44,9 @@ E0-design groups 定位 F 相对 C_post 的负增益根因，并只允许一个�
 - `86b4b240...` 已闭合 18-shard plan；在 model load 前新增隔离的 one-sample smoke
   子命令，smoke 不可进入科学分析，完整 shard 必须从 group 1 重启。因此以新 commit/root
   重新冻结最终 execution plan。
+- `70f64c78...` 的 K8s pre-model smoke 暴露 node path、bootstrap 和 Git/GLIBC 运行环境
+  问题；最终 operational contract 允许 K8s manifest 注入严格 full execution SHA，runner
+  机械要求其等于 plan。科学代码、checkpoint、population 和 estimand 未变化。
 
 ### 结论
 

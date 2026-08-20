@@ -18,6 +18,7 @@ from script.experiment.fpct_e1_fast_rca import (
     VARIANTS,
     overlap_composition_weights,
     read_manifest,
+    git_head,
 )
 from script.analysis import fpct_e1_fast_rca_analysis as fast_analysis
 
@@ -163,3 +164,22 @@ def test_hierarchical_bootstrap_treats_three_seeds_as_top_level(monkeypatch) -> 
     monkeypatch.setattr(fast_analysis, "BOOTSTRAP_REPLICATES", 200)
     lower, center, upper = fast_analysis.hierarchical_lcb(rows, "positive")
     assert 0 < lower <= center <= upper
+
+
+def test_container_execution_sha_fallback_is_strict(monkeypatch, tmp_path) -> None:
+    import script.experiment.fpct_e1_fast_rca as runner
+
+    monkeypatch.setenv("FPCT_EXECUTION_SHA", "a" * 40)
+    monkeypatch.setattr(
+        runner.subprocess,
+        "check_output",
+        lambda *args, **kwargs: (_ for _ in ()).throw(FileNotFoundError()),
+    )
+    assert git_head(tmp_path) == "a" * 40
+    monkeypatch.setenv("FPCT_EXECUTION_SHA", "not-a-sha")
+    try:
+        git_head(tmp_path)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("invalid injected execution SHA was accepted")
