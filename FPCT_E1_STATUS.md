@@ -27,6 +27,9 @@
 - 首个 pushed pre-output SHA `1c74a522...` 的 `prepare` 在 root 创建和任何 model
   output 前因 direct-file CLI 缺少 repo-root `sys.path` 而停止；目标 root 未创建。
   仅允许后继 commit 修复 CLI bootstrap，并以新 SHA/new root 重启。
+- `86b4b240...` 成功生成 18-shard plan（SHA=`30f779d9...`），但在任何 model load
+  前决定增加独立 one-sample/non-scientific smoke namespace；该 plan 因 executor
+  successor 而封存，未运行 shard。新 plan 必须绑定后继 commit/new root。
 
 ## 隔离身份
 

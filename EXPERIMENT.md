@@ -21,6 +21,9 @@
   immutable gates 保持不变，没有为 successor source 回写或放宽。
 - Execution `1c74a522...` 的首次 `prepare` 在创建 root/model load 前因 direct-file
   `sys.path` bootstrap 缺失而终止；natural/model output=0，旧目标 root 不复用。
+- `86b4b240...` plan 已验证全部输入/checkpoint，但 model load 前新增 1-sample smoke
+  namespace；smoke 永不进入分析，完整 shard 仍从 group 1 重跑。因 executor 变化，
+  `86b4...` root 只作 pre-model plan record。
 
 ## 2026-07-24 FPCT-E0 TMPDIR closure recovery
 

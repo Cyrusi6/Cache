@@ -150,6 +150,13 @@
     "expanded_long_form_rows_materialized": false,
     "raw_kv_saved": false
   },
+  "pre_scientific_smoke": {
+    "sample_count": 1,
+    "variant_count": 9,
+    "output_namespace": "smoke",
+    "scientific_analysis_eligible": false,
+    "full_shard_must_restart_from_group_one": true
+  },
   "selection": {
     "bootstrap_replicates": 20000,
     "bootstrap_seed": 20260820,

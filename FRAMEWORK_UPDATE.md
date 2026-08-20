@@ -41,6 +41,9 @@ E0-design groups 定位 F 相对 C_post 的负增益根因，并只允许一个�
   static scan 通过。
 - 首个 pre-output SHA `1c74a522...` 的 direct-file `prepare` 在 root/model 前因
   repo-root import path 缺失停止；只修复 CLI bootstrap 后以新 SHA/root 重启。
+- `86b4b240...` 已闭合 18-shard plan；在 model load 前新增隔离的 one-sample smoke
+  子命令，smoke 不可进入科学分析，完整 shard 必须从 group 1 重启。因此以新 commit/root
+  重新冻结最终 execution plan。
 
 ### 结论
 

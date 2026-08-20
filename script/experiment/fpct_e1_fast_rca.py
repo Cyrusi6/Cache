@@ -368,7 +368,14 @@ def _finalize_layer_head(
     return rows
 
 
-def run_shard(repo: Path, plan_path: Path, shard_id: str, device_name: str) -> dict[str, Any]:
+def run_shard(
+    repo: Path,
+    plan_path: Path,
+    shard_id: str,
+    device_name: str,
+    *,
+    smoke_samples: int | None = None,
+) -> dict[str, Any]:
     os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
     import torch
     import yaml
@@ -385,7 +392,14 @@ def run_shard(repo: Path, plan_path: Path, shard_id: str, device_name: str) -> d
     checkpoint = _checkpoint_by_id(manifest, shard["checkpoint_id"])
     task = shard["task"]
     items = [item for item in compact_sidecar_items(manifest) if item["task"] == task]
-    output = Path(plan["output_root"]) / shard["output_relative"]
+    smoke = smoke_samples is not None
+    if smoke:
+        if smoke_samples != 1:
+            raise ValueError("pre-registered smoke must contain exactly one sample")
+        items = items[:1]
+        output = Path(plan["output_root"]) / "smoke" / f"{shard_id}--n1"
+    else:
+        output = Path(plan["output_root"]) / shard["output_relative"]
     if (output / "receipt.json").exists():
         return json.loads((output / "receipt.json").read_text(encoding="utf-8"))
     if output.exists():
@@ -492,7 +506,7 @@ def run_shard(repo: Path, plan_path: Path, shard_id: str, device_name: str) -> d
     receipt = {
         "schema_version": 1,
         "protocol_id": PROTOCOL_ID,
-        "status": "COMPLETE",
+        "status": "SMOKE_COMPLETE_NOT_SCIENTIFIC" if smoke else "COMPLETE",
         "execution_sha": plan["execution_sha"],
         "plan_sha256": plan["plan_sha256"],
         "shard_id": shard_id,
@@ -506,6 +520,7 @@ def run_shard(repo: Path, plan_path: Path, shard_id: str, device_name: str) -> d
         "e1_pilot_consumed": False,
         "model_selection_consumed": False,
         "test_consumed": False,
+        "scientific_analysis_eligible": not smoke,
     }
     atomic_write(temporary / "receipt.json", canonical_json_bytes(receipt))
     os.replace(temporary, output)
@@ -546,6 +561,7 @@ def main() -> None:
     run.add_argument("--plan", type=Path, required=True)
     run.add_argument("--shard-id", required=True)
     run.add_argument("--device", default="cuda:0")
+    run.add_argument("--smoke-samples", type=int)
     verify = sub.add_parser("verify")
     verify.add_argument("--plan", type=Path, required=True)
     args = parser.parse_args()
@@ -553,7 +569,13 @@ def main() -> None:
     if args.command == "prepare":
         result = prepare_plan(repo, args.output_root)
     elif args.command == "run-shard":
-        result = run_shard(repo, args.plan, args.shard_id, args.device)
+        result = run_shard(
+            repo,
+            args.plan,
+            args.shard_id,
+            args.device,
+            smoke_samples=args.smoke_samples,
+        )
     else:
         result = verify_outputs(args.plan)
     print(json.dumps(result, ensure_ascii=False, sort_keys=True))
