@@ -157,6 +157,10 @@ class RosettaModel(nn.Module):
         self.fpct_centered_lambda = _normalize_fpct_centered_lambda(
             fpct_centered_lambda
         )
+        # Parameter-free fixed-checkpoint diagnostics.  This runtime-only field
+        # is intentionally absent from __init__/state_dict until E1 selects one
+        # production repair prospectively.
+        self.fpct_diagnostic_intervention = "none"
         self._fpct_candidate_trace_tensors: Dict[
             int, List[Dict[str, torch.Tensor]]
         ] = {}
@@ -196,6 +200,8 @@ class RosettaModel(nn.Module):
             config["instrumentation"] = True
         if self.fpct_centered_lambda != 1.0:
             config["centered_lambda"] = self.fpct_centered_lambda
+        if self.fpct_diagnostic_intervention != "none":
+            config["diagnostic_intervention"] = self.fpct_diagnostic_intervention
         return config
 
     @property
@@ -211,6 +217,21 @@ class RosettaModel(nn.Module):
         if self._fpct_capture is not None:
             raise RuntimeError("cannot change centered lambda during an active capture")
         self.fpct_centered_lambda = normalized
+
+    def set_fpct_diagnostic_intervention(self, value: str) -> None:
+        """Bind one parameter-free E1 fixed-checkpoint intervention."""
+
+        normalized = str(value).strip().lower()
+        allowed = {"none", "k_only_v_collapse", "parent_mass_preserving"}
+        if normalized not in allowed:
+            raise ValueError(
+                f"FPCT diagnostic intervention must be one of {sorted(allowed)}"
+            )
+        if normalized != "none" and self.fpct_operator != "f":
+            raise ValueError("FPCT diagnostic interventions require operator='f'")
+        if self._fpct_capture is not None:
+            raise RuntimeError("cannot change FPCT intervention during an active capture")
+        self.fpct_diagnostic_intervention = normalized
 
     def begin_fpct_capture(
         self,
@@ -396,6 +417,7 @@ class RosettaModel(nn.Module):
         fpct_layer_metric_sink: Optional[Dict[int, Dict[str, torch.Tensor]]] = None,
         fpct_capture_sink: Optional[FPCTCaptureAccumulator] = None,
         fpct_collapse_to_parent_bypass: bool = False,
+        fpct_parent_mass_preserving: bool = False,
         fpct_profile_scopes: bool = False,
         fpct_attention_trace_sink: Optional[
             Dict[int, List[Dict[str, torch.Tensor]]]
@@ -676,6 +698,7 @@ class RosettaModel(nn.Module):
                                     else self.attention_dropout
                                 ),
                                 scaling=self.scaling,
+                                preserve_parent_mass=fpct_parent_mass_preserving,
                                 sliding_window=self.sliding_window,
                                 **kwargs,
                             )
@@ -833,6 +856,10 @@ class RosettaModel(nn.Module):
                 fpct_collapse_to_parent_bypass=(
                     self.fpct_operator == "c_post"
                     or self.fpct_collapse_to_parent_bypass
+                ),
+                fpct_parent_mass_preserving=(
+                    self.fpct_diagnostic_intervention
+                    == "parent_mass_preserving"
                 ),
                 fpct_profile_scopes=self.fpct_profile_scopes,
                 fpct_attention_trace_sink=(
@@ -1369,6 +1396,8 @@ class RosettaModel(nn.Module):
             collapsed_key,
             collapsed_value,
         )
+        if self.fpct_diagnostic_intervention == "k_only_v_collapse":
+            fused_value = collapsed_value.unsqueeze(3).expand_as(fused_value)
         candidate_count = legal.sum(dim=-1)
         first_candidate = legal.to(torch.long).argmax(dim=-1)
         gather_index = first_candidate[:, None, :, None, None].expand(

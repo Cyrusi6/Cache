@@ -21,7 +21,7 @@ FPCT_CAPTURE_DEFAULT_MAX_LONG_FORM_ROWS = 262_144
 # Production streaming may lower this value for tests, but may never increase
 # it without a new protocol version.
 FPCT_CAPTURE_MAX_PRIMITIVE_CHUNK_ROWS = 4_096
-FPCT_CAPTURE_DETAIL_MODES = frozenset({"full", "aggregate_only"})
+FPCT_CAPTURE_DETAIL_MODES = frozenset({"full", "aggregate_only", "summary_only"})
 LONG_FORM_GEOMETRY_NAMES = (
     "source_d_k",
     "source_d_v",
@@ -293,6 +293,7 @@ class _LayerCapture:
         primitive_sink: Any | None = None,
         primitive_chunk_rows: int = FPCT_CAPTURE_MAX_PRIMITIVE_CHUNK_ROWS,
         retain_detail_rows: bool = True,
+        emit_primitive_rows: bool = True,
     ) -> int:
         gamma, prior, gamma_valid, duplicate_count, source_indices = self._dense_candidates(payload)
         if primitive_sink is not None and payload.get("source_indices_certified") is not True:
@@ -395,6 +396,22 @@ class _LayerCapture:
             query_metrics, Mapping
         ):
             raise ValueError("FPCT capture primitive payload must be mappings")
+        # Geometry is query-independent.  Preserve a compact, parent-weighted
+        # summary for E1-FAST-RCA even when the Cartesian long-form universe is
+        # deliberately not emitted.
+        geometry_parent_valid = parent_valid.any(dim=2)
+        for name in LONG_FORM_GEOMETRY_NAMES:
+            value = parent_geometry.get(name)
+            if value is None:
+                continue
+            if value.shape != (b, h, source_length):
+                raise ValueError(f"FPCT capture {name} must be [B,H,N]")
+            valid = geometry_parent_valid
+            scalar = torch.where(valid, value, torch.zeros_like(value)).sum()
+            scalar = scalar / valid.sum().clamp_min(1)
+            self.scalar_metrics.setdefault(name, _ScalarMoments()).update(scalar)
+        if not emit_primitive_rows:
+            return 0
         compact_index = parent_valid.nonzero(as_tuple=False)
         if compact_index.numel() == 0:
             return 0
@@ -610,6 +627,12 @@ class FPCTCaptureAccumulator:
             )
         if detail_mode == "aggregate_only" and primitive_sink is None:
             raise ValueError("aggregate_only capture requires a primitive sink")
+        if detail_mode == "summary_only" and (
+            primitive_sink is not None or expected_long_form_rows is not None
+        ):
+            raise ValueError(
+                "summary_only capture forbids primitive sinks and expanded-row contracts"
+            )
         if (
             isinstance(primitive_chunk_rows, bool)
             or not isinstance(primitive_chunk_rows, int)
@@ -697,6 +720,7 @@ class FPCTCaptureAccumulator:
                 primitive_sink=self.primitive_sink,
                 primitive_chunk_rows=self.primitive_chunk_rows,
                 retain_detail_rows=self.detail_mode == "full",
+                emit_primitive_rows=self.detail_mode != "summary_only",
             )
         except BaseException as error:
             self.failure_reason = str(error)
@@ -1070,7 +1094,8 @@ class FPCTCaptureAccumulator:
             "stores_raw_kv": False,
         }
         if self.expected_long_form_rows is None:
-            report["long_form_primitives"] = long_form_primitives
+            if self.detail_mode != "summary_only":
+                report["long_form_primitives"] = long_form_primitives
             return report
 
         finalizer = getattr(self.primitive_sink, "finalize", None)

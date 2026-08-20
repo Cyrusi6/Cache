@@ -850,6 +850,7 @@ def fpct_qwen_hierarchical_attention_forward(
     parent_attention_mask: Optional[Tensor],
     scaling: float,
     dropout: float = 0.0,
+    preserve_parent_mass: bool = False,
     **_kwargs,
 ) -> tuple[Tensor, Tensor]:
     """Global-equivalent flat-atom attention with exact parent reuse."""
@@ -859,7 +860,7 @@ def fpct_qwen_hierarchical_attention_forward(
     # native while a parent matmul executed after the grouped atom kernels can
     # still accumulate a deep FP32 deviation.  Compute the shared adapter first;
     # the tensor-only final selection remains valid for mixed batches.
-    parent_output, _parent_probability, parent_logits = (
+    parent_output, parent_probability, parent_logits = (
         fpct_qwen_eager_attention_forward(
         module,
         query,
@@ -926,18 +927,56 @@ def fpct_qwen_hierarchical_attention_forward(
         atom_active, atom_logits, torch.full_like(atom_logits, -torch.inf)
     )
     any_active = atom_active.any(dim=-1, keepdim=True)
-    atom_probability = nn.functional.softmax(
-        torch.where(any_active, masked_logits, torch.zeros_like(masked_logits)),
-        dim=-1,
-        dtype=torch.float32,
-    )
-    atom_probability = torch.where(
-        atom_active, atom_probability, torch.zeros_like(atom_probability)
-    )
-    if module.training and dropout > 0:
-        atom_probability = nn.functional.dropout(
-            atom_probability, p=dropout, training=True
+    if preserve_parent_mass:
+        # C_post fixes the parent-level attention mass.  Query-dependent gamma
+        # only redistributes that mass among the parent's legal candidate atoms.
+        # Thus this diagnostic removes Jensen parent-evidence inflation while
+        # retaining candidate-specific K/V routing.
+        group_max = torch.full_like(parent_logits, -torch.inf).scatter_reduce(
+            3,
+            parent_index,
+            torch.where(
+                atom_active, atom_logits, torch.full_like(atom_logits, -torch.inf)
+            ),
+            reduce="amax",
+            include_self=True,
         )
+        gathered_max = torch.gather(group_max, 3, parent_index)
+        shifted = torch.where(
+            atom_active,
+            torch.exp(atom_logits - gathered_max),
+            torch.zeros_like(atom_logits),
+        )
+        group_sum = torch.zeros_like(parent_logits).scatter_add_(
+            3, parent_index, shifted
+        )
+        gamma = torch.where(
+            atom_active,
+            shifted
+            / torch.gather(group_sum, 3, parent_index).clamp_min(
+                torch.finfo(torch.float32).tiny
+            ),
+            torch.zeros_like(shifted),
+        )
+        atom_probability = (
+            torch.gather(parent_probability.float(), 3, parent_index) * gamma
+        )
+        atom_probability = torch.where(
+            atom_active, atom_probability, torch.zeros_like(atom_probability)
+        )
+    else:
+        atom_probability = nn.functional.softmax(
+            torch.where(any_active, masked_logits, torch.zeros_like(masked_logits)),
+            dim=-1,
+            dtype=torch.float32,
+        )
+        atom_probability = torch.where(
+            atom_active, atom_probability, torch.zeros_like(atom_probability)
+        )
+        if module.training and dropout > 0:
+            atom_probability = nn.functional.dropout(
+                atom_probability, p=dropout, training=True
+            )
     flat_output = torch.matmul(
         atom_probability, atom_value
     ).to(query.dtype).transpose(

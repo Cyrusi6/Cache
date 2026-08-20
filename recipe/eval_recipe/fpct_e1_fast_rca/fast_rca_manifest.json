@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "protocol_id": "fpct_e1_fast_rca_v1",
+  "classification": "EXPLORATORY_FIXED_CHECKPOINT_ROOT_CAUSE_NOT_CONFIRMATORY",
+  "prospective_parent_commit": "1c64b60624b96e9bb1e3f4962509d70f43f36ffa",
+  "execution_commit": "CURRENT_CLEAN_PUSHED_HEAD_AT_PREPARE_TIME",
+  "historical_a5r7": {
+    "root": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-1c64b606-v1",
+    "classification": "ENGINEERING_RECORD_NOT_DEEP_VERIFIER_GO",
+    "reuse": "COMPACT_INPUT_CACHE_ONLY_BY_EXACT_SHA",
+    "expanded_row_templates_reused": false,
+    "scientific_result_reused": false
+  },
+  "compact_input": {
+    "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-1c64b606-v1/input_lock/e0_design_input_lock.pt",
+    "sha256": "d843512b7e446efd229fe3097030407e59acb20b4de591a84b88176bd8b0eec9",
+    "bytes": 25522924,
+    "split_role": "e0_design",
+    "group_count": 326,
+    "role": "INPUT_ONLY_NO_A5R7_SCIENTIFIC_GO_INHERITED"
+  },
+  "tasks": {
+    "order": ["ai2-arc", "openbookqa", "mmlu-redux"],
+    "counts": {"ai2-arc": 128, "openbookqa": 70, "mmlu-redux": 128},
+    "statistical_unit": "distinct_content_group",
+    "primary_aggregation": "equal_weight_task_macro_of_group_equal_answer_token_mean_logp"
+  },
+  "checkpoints": [
+    {
+      "checkpoint_id": "2026072201-c_post_trained",
+      "seed": 2026072201,
+      "checkpoint_arm": "c_post_trained",
+      "path": "/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1/seeds/2026072201/attempt_4/c_post/final",
+      "tree_sha256": "3e93988cdf82c67153c0a8d01ac9b18b7b87893bb87f7b51e368d749ef7a716c",
+      "projector_set_sha256": "3ba45cfa7e41eba4db0837c1db289a041a0029b60760f068731ada37c37aaa81",
+      "file_count": 57,
+      "bytes": 971752996,
+      "config_by_task": {
+        "ai2-arc": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072201_Y_CF_ai2-arc.yaml",
+        "openbookqa": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072201_Y_CF_openbookqa.yaml",
+        "mmlu-redux": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072201_Y_CF_mmlu-redux.yaml"
+      }
+    },
+    {
+      "checkpoint_id": "2026072201-f_trained",
+      "seed": 2026072201,
+      "checkpoint_arm": "f_trained",
+      "path": "/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1/seeds/2026072201/attempt_4/f/final",
+      "tree_sha256": "0df39e936467c8b65334b078d7fdf4e6ae3bf7be0c6c9d372a1808d4d844c6bd",
+      "projector_set_sha256": "c648d6fcb4bff5ddb5b383f372a860c38d6982e2bc3ba6d16019440f5241b2a2",
+      "file_count": 57,
+      "bytes": 971752996,
+      "config_by_task": {
+        "ai2-arc": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072201_Y_FF_ai2-arc.yaml",
+        "openbookqa": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072201_Y_FF_openbookqa.yaml",
+        "mmlu-redux": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072201_Y_FF_mmlu-redux.yaml"
+      }
+    },
+    {
+      "checkpoint_id": "2026072202-c_post_trained",
+      "seed": 2026072202,
+      "checkpoint_arm": "c_post_trained",
+      "path": "/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1/seeds/2026072202/attempt_2/c_post/final",
+      "tree_sha256": "f72eacb5f52424c0c9a7f29445865488404371f55baa95722c7a9670e131e292",
+      "projector_set_sha256": "4db0086bbd28505c4b6710a88f707feee7e8b1babd656d105ac123718ce0c5ab",
+      "file_count": 57,
+      "bytes": 971752996,
+      "config_by_task": {
+        "ai2-arc": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072202_Y_CF_ai2-arc.yaml",
+        "openbookqa": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072202_Y_CF_openbookqa.yaml",
+        "mmlu-redux": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072202_Y_CF_mmlu-redux.yaml"
+      }
+    },
+    {
+      "checkpoint_id": "2026072202-f_trained",
+      "seed": 2026072202,
+      "checkpoint_arm": "f_trained",
+      "path": "/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1/seeds/2026072202/attempt_2/f/final",
+      "tree_sha256": "480d56ef91715ac989edce5ac6cc03735b0338ceb9157ff12a10e8bb57084348",
+      "projector_set_sha256": "aa1459a85b4b47dcda8f3ffb41bc9314b8170e437d965a9be878eb076d325b0b",
+      "file_count": 57,
+      "bytes": 971752996,
+      "config_by_task": {
+        "ai2-arc": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072202_Y_FF_ai2-arc.yaml",
+        "openbookqa": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072202_Y_FF_openbookqa.yaml",
+        "mmlu-redux": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072202_Y_FF_mmlu-redux.yaml"
+      }
+    },
+    {
+      "checkpoint_id": "2026072203-c_post_trained",
+      "seed": 2026072203,
+      "checkpoint_arm": "c_post_trained",
+      "path": "/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1/seeds/2026072203/attempt_2/c_post/final",
+      "tree_sha256": "c8e380886889d7882b1f247b1eb3a177cba28b326b5e184ef106455aa0133c86",
+      "projector_set_sha256": "46b96d3e900158d884a8b57bc911bb128dec61c748e716f6e3580f16a9d5b873",
+      "file_count": 57,
+      "bytes": 971752996,
+      "config_by_task": {
+        "ai2-arc": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072203_Y_CF_ai2-arc.yaml",
+        "openbookqa": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072203_Y_CF_openbookqa.yaml",
+        "mmlu-redux": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072203_Y_CF_mmlu-redux.yaml"
+      }
+    },
+    {
+      "checkpoint_id": "2026072203-f_trained",
+      "seed": 2026072203,
+      "checkpoint_arm": "f_trained",
+      "path": "/netdisk/lijunsi/fpct-e0/fpct-e0-20260722-v1/seeds/2026072203/attempt_2/f/final",
+      "tree_sha256": "9763c5f7f22322e318bcacaa64c12fc147359879d3af18ca892fe29aa6bf6635",
+      "projector_set_sha256": "ba16a8d47b351cc57c861c47d11f5c6e0e7d35124231c6747adb252a74015ecf",
+      "file_count": 57,
+      "bytes": 971752996,
+      "config_by_task": {
+        "ai2-arc": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072203_Y_FF_ai2-arc.yaml",
+        "openbookqa": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072203_Y_FF_openbookqa.yaml",
+        "mmlu-redux": "recipe/eval_recipe/fpct_e0/rendered/eval_2026072203_Y_FF_mmlu-redux.yaml"
+      }
+    }
+  ],
+  "interventions": {
+    "execution_order": [
+      "c_post", "f", "lambda_0", "lambda_025", "lambda_05", "lambda_2",
+      "k_only_v_collapse", "parent_mass_preserving", "partition_composition"
+    ],
+    "selectable": ["lambda_025", "lambda_05", "parent_mass_preserving", "partition_composition"],
+    "diagnostic_only": ["lambda_0", "lambda_2", "k_only_v_collapse"],
+    "centered_lambda": [0.0, 0.25, 0.5, 1.0, 2.0],
+    "lambda_0_role": "EXACT_CPOST_CONTROL_NOT_SELECTABLE",
+    "lambda_2_role": "EXTRAPOLATIVE_DIAGNOSTIC_NOT_SELECTABLE",
+    "k_only_role": "JENSEN_V_ROUTING_DIAGNOSTIC_NOT_SELECTABLE",
+    "parent_mass_definition": "CPOST_PARENT_PROBABILITY_TIMES_QUERY_CONDITIONAL_GAMMA",
+    "partition_composition_definition": "CERTIFIED_PARTITION_ROWS_USE_INTERSECTION_LENGTH_WEIGHTS_AND_PREFUSION_COMPOSITION",
+    "rope_frame_correction": {
+      "status": "STRUCTURALLY_UNAVAILABLE_AT_FIXED_CHECKPOINT",
+      "selectable": false,
+      "reason": "C2CProjector concatenates source/receiver K before its first nonlinear map and exposes no separable P_K; source/receiver head dimensions differ. No approximation is permitted to stand in for R_r P_K R_s^-1."
+    }
+  },
+  "capture": {
+    "mode": "teacher_forced_response",
+    "response_template": "The correct answer is {answer}.",
+    "primary_endpoint": "per_group_mean_answer_token_delta_logp_y_star",
+    "compact_fields": [
+      "gold_logp_sum", "gold_logp_mean", "gamma_kl_prior", "gamma_tv_prior",
+      "gamma_query_variance", "candidate_logit_range", "candidate_logit_variance",
+      "jensen_gap", "parent_attention_mass", "source_d_k", "source_d_v",
+      "source_energy_k", "source_energy_v", "fused_d_k", "fused_d_v",
+      "fused_energy_k", "fused_energy_v", "output_delta_l2"
+    ],
+    "expanded_long_form_rows_materialized": false,
+    "raw_kv_saved": false
+  },
+  "selection": {
+    "bootstrap_replicates": 20000,
+    "bootstrap_seed": 20260820,
+    "bootstrap_top_level": "three_training_seeds_with_checkpoint_arms_paired_within_seed",
+    "eligibility": [
+      "hierarchical_paired_bootstrap_95_lcb_delta_logp_vs_original_f_gt_0",
+      "at_least_5_of_6_checkpoint_arm_directions_positive",
+      "all_three_task_means_nonnegative",
+      "all_exact_null_mask_and_provenance_controls_go"
+    ],
+    "winner": "largest_task_macro_mean_delta_logp",
+    "tie_tolerance": 0.000001,
+    "tie_order": ["lambda_025", "lambda_05", "parent_mass_preserving", "partition_composition"],
+    "no_winner_status": "NO_EXPLOITABLE_FIXED_CHECKPOINT_HEADROOM"
+  },
+  "conditional_training": {
+    "single_seed": 2026081401,
+    "optimizer_steps": 320,
+    "arms": ["c_post", "f", "selected_new_operator"],
+    "unlock_additional_seeds": [2026081402, 2026081403],
+    "unlock_rule": "T_new_gt_0_AND_O_new_gt_0_AND_teacher_forced_delta_logp_gt_0_AND_integrity_GO",
+    "authorized_before_single_factor_selection": false
+  },
+  "firewall": {
+    "e0_design": "AUTHORIZED_EXPLORATORY_MECHANISM_ONLY",
+    "e1_pilot": "SEALED_NOT_RUN_NOT_READ",
+    "model_selection": "SEALED_NOT_RUN_NOT_READ",
+    "test": "SEALED_NOT_RUN_NOT_READ",
+    "confirmatory": "NOT_AUTHORIZED",
+    "native_null": "NOT_AUTHORIZED",
+    "cross_model": "NOT_AUTHORIZED",
+    "formal_36_run": "NOT_AUTHORIZED"
+  }
+}

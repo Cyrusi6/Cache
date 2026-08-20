@@ -1,5 +1,50 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-08-20：FPCT-E1 轻量固定-checkpoint根因路线
+
+### 研究目标
+
+在不重做 30M-row 基础设施的前提下，用六个现有 E0 checkpoints 和冻结的 326 个
+E0-design groups 定位 F 相对 C_post 的负增益根因，并只允许一个前瞻选择的修复进入
+320-step matched training。
+
+### 核心改动
+
+- 停止 A5R7/A5R8 expanded input-lock 重跑，旧 root 只作工程记录。
+- 新增 `FPCT_E1_FAST_RCA_AMENDMENT.md` 与 v1 machine manifest。
+- 新增 compact teacher-forced executor/analyzer；每样本只保存 log-prob 和在线 moments，
+  不物化逐 query/parent/layer/head rows。
+- instrumentation 增加 `summary_only` lifecycle；加入 parameter-free K-only 和
+  parent-mass fixed-checkpoint干预。
+- 冻结 partition overlap-length composition；RoPE exact correction 因当前 projector
+  不暴露可分离 `P_K` 而在输出前判为不可执行、不可选择。
+
+### 实验配置
+
+- Population：ARC 128、OpenBookQA 70、MMLU-Redux 128 distinct groups。
+- Checkpoints：三 seed × C_post-trained/F-trained step-64/final。
+- Primary diagnostic：group 内 answer-token mean `Δlogp(y*)`，三任务等权。
+- Interventions：C_post、F、λ=`0/.25/.5/1/2`、K-only/V-collapse、parent-mass、
+  partition composition。
+- Bootstrap：20,000 replicates，seed `20260820`，顶层单位为三个 training seeds。
+
+### 验证结果
+
+- 本记录创建时新自然 model output、GPU、Kubernetes 和 training 均为 0。
+- Compact sidecar SHA256=`d843512b...ec9`，大小 25,522,924 bytes，326 groups。
+- 六个 checkpoint 的 57-file/971,752,996-byte tree SHA 全部与 manifest 一致。
+- Targeted CPU/reference/random-small-Qwen/runtime suite：`99 passed / 0 failed`。
+- CPU-safe full suite：`1082 passed / 42 failed`。42 项均是 A4/A5R1–R7 immutable
+  tracked-tree/live-source guards、旧 fixture API drift 或 R2l/R2m historical production
+  allowlist；它们在 successor source 上按设计 fail-closed，未修改旧 gate 绕过。
+- `git diff --check`、JSON syntax、Python compile 和 FPCT attention hot-path host-sync
+  static scan 通过。
+
+### 结论
+
+只有 fixed-checkpoint干预满足预注册 LCB、5/6 arm、三任务非负和 exact controls，才冻结
+唯一 production factor；否则记录 `NO_EXPLOITABLE_FIXED_CHECKPOINT_HEADROOM` 并停止训练。
+
 ## 2026-07-16：建立 ICLR 2027 研究协作规范
 
 ### 研究目标

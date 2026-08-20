@@ -1,9 +1,29 @@
 # FPCT-E1 状态
 
-> 当前阶段：A5R7 active-gate recovery pre-natural lock
-> 当前状态：`A5R7 GATE GO / SUCCESSOR NATURAL ACCESS=0`
-> 下一步：提交并推送 A5R7 execution SHA；用一次性 detached controller 建立全新 snapshot/UID/root
-> 更新时间：2026-08-16（Asia/Shanghai）
+> 当前阶段：E1-FAST-RCA prospective pre-output lock
+> 当前状态：`PRE-OUTPUT TARGETED GATE GO / COMMIT+PUSH PENDING / MODEL OUTPUT=0`
+> 下一步：commit/push 当前 lightweight executor；随后创建 18-shard fixed-checkpoint plan
+> 更新时间：2026-08-20（Asia/Shanghai）
+
+## 2026-08-20 E1-FAST-RCA 路线切换
+
+- A5R7/A5R8 的 30,370,816-row input-lock 路线停止；已有 root 保留为工程记录，
+  不追认为 deep-verifier GO，不继续 resume/rebuild。
+- 前瞻性 operative addendum 为 `FPCT_E1_FAST_RCA_AMENDMENT.md`，machine manifest 为
+  `recipe/eval_recipe/fpct_e1_fast_rca/fast_rca_manifest.json`。
+- 只按精确 SHA 复用 25.5MB compact E0-design input cache；不读取或物化 30M row
+  templates。Population 固定为 ARC/OpenBookQA/MMLU-Redux=`128/70/128`。
+- 六个 E0 checkpoints × 三 tasks 构成 18 个可并行 shard；每个 shard 内按冻结顺序
+  比较 C_post、F、centered λ、K-only、parent-mass 和 partition composition。
+- Exact RoPE correction 在固定 checkpoint 的不可分离 nonlinear C2CProjector 上结构性
+  不可执行，已在自然输出前标记为不可选择；禁止以近似旋转冒充 math.md 公式。
+- 当前没有运行新 model forward/GPU/K8s/training；E1-pilot、model-selection、test、
+  confirmatory、native null、跨模型和 36-run 仍 sealed/not authorized。
+- Targeted CPU/reference/random-small-Qwen/runtime suite=`99 passed / 0 failed`。
+  CPU-safe full suite=`1082 passed / 42 historical guards failed`；42 项均来自 A4/A5R1–R7
+  frozen tracked-tree/live-source gates、已记录旧 fixture API drift 或 R2l/R2m historical
+  production allowlist。它们在合法 successor source 上按设计 fail-closed，不是本修订的
+  operator/runtime regression，也未通过修改旧 gate 来绕过。
 
 ## 隔离身份
 

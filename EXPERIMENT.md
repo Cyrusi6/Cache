@@ -1,5 +1,25 @@
 # EXPERIMENT.md
 
+## 2026-08-20 FPCT-E1-FAST-RCA pre-output lock
+
+- Goal：直接回答当前 F 的负增益来自 candidate contraction、Jensen parent evidence、
+  partition topology 还是不可识别因素；当前阶段不训练。
+- Inputs：六个 E0 step-64/final checkpoints；冻结 E0-design groups
+  ARC/OpenBookQA/MMLU-Redux=`128/70/128`。
+- Compact input cache：
+  `/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-1c64b606-v1/input_lock/e0_design_input_lock.pt`，
+  SHA256=`d843512b7e446efd229fe3097030407e59acb20b4de591a84b88176bd8b0eec9`。
+- Representation：运行时 full-response teacher forcing；one sample/intervention row + online
+  layer/head moments；expanded 30M rows=`forbidden`。
+- Frozen interventions：C_post、F、centered λ、K-only/V-collapse、parent-mass preserving、
+  partition overlap-length composition。Exact RoPE formula 在当前 frozen projector 上不可分离，
+  所以不运行近似替代。
+- Output root 将在 clean pushed execution SHA 后生成；本记录时 model/GPU/K8s/training=0，
+  E1-pilot/model-selection/test/confirmatory 均 sealed。
+- Pre-output verification：六 checkpoint tree hash 全匹配；targeted suite=`99/99`；full
+  CPU-safe suite=`1082 passed + 42 expected historical fail-closed guards`。旧 A4/A5/R2
+  immutable gates 保持不变，没有为 successor source 回写或放宽。
+
 ## 2026-07-24 FPCT-E0 TMPDIR closure recovery
 
 - Seed `2026072201` attempt 3 completed C_post training but failed the final sealed closure check; no F arm or accuracy evaluation ran.
