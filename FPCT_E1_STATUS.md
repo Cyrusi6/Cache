@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
 > 当前阶段：math.md direct implementation and matched training
-> 当前状态：`IMPLEMENTATION GATE GO / REAL TRAINING LOCK PENDING`
-> 下一步：冻结并推送单 seed math-C_post/math-F matched recipe，随后启动真实双卡训练
+> 当前状态：`IMPLEMENTATION GATE GO / REAL TRAINING PRE-OUTPUT LOCK READY`
+> 下一步：提交并推送 pre-output lock，以 immutable snapshot 在同一双卡节点串行训练两臂
 > 更新时间：2026-08-21（Asia/Shanghai）
 
 ## 2026-08-21 math.md 直接实现授权
@@ -21,6 +21,21 @@
   instrumentation 和 legacy 回归共 `105 passed`；hot path 没有新增 host-sync API。
 - 当前尚未运行 pretrained forward 或训练；下一步先 commit/push implementation，再冻结
   64-step、2,048-example、单 seed双臂 matched recipe。
+
+## 2026-08-21 FPCT-MATH-DIRECT 真实训练前瞻锁
+
+- Operative protocol=`FPCT_MATH_DIRECT_PROTOCOL.md`，machine manifest=
+  `recipe/eval_recipe/fpct_math_direct/manifest.json`；implementation anchor=
+  `5903dcb4892e400cbbee194357c057e21957ad7f`。
+- 冻结 seed/projector-init=`2026082101`，fresh math-C_post → math-F，同一双卡节点串行；
+  2,048 examples、64 optimizer steps、BF16/eager、dropout=0.1，旧 checkpoint 不初始化。
+- 两臂 formal integrity 必须具有完全相同的 trainable keys、step-0 tensor、data order、
+  pre-training RNG、optimizer structure 与 scheduler initial state，否则结果 INCONCLUSIVE。
+- 只评测已公开 E0-design ARC/OBQA/MMLU=`128/70/128` groups 的 Y_CC/Y_CF/Y_FC/Y_FF；
+  `T=Y_FF-Y_CC`、`O=((Y_CF-Y_CC)+(Y_FF-Y_FC))/2`。仅 T/O 同时为正才允许另行决定补
+  两个 seeds。
+- E1-pilot、model-selection、test、confirmatory 仍 sealed。锁定时尚未加载 pretrained
+  weights、未运行真实 forward/GPU/K8s/training/accuracy。
 
 ## 2026-08-21 E1-FAST-RCA 终态
 

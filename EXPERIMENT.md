@@ -1,5 +1,21 @@
 # EXPERIMENT.md
 
+## 2026-08-21 FPCT-MATH-DIRECT pre-output lock
+
+- Protocol：`FPCT_MATH_DIRECT_PROTOCOL.md`；manifest：
+  `recipe/eval_recipe/fpct_math_direct/manifest.json`。
+- Implementation anchor：`5903dcb4892e400cbbee194357c057e21957ad7f`；math.md SHA256=
+  `98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad`。
+- Seed/order：`2026082101`，math-C_post → math-F；same two-GPU node；fresh identical
+  projector initialization and frozen data order。
+- Budget：2,048 MMLU auxiliary_train examples；1 epoch / 64 optimizer steps；global batch
+  32；LR=1e-4；BF16/eager；dropout=0.1；sender/receiver frozen。
+- Evaluation：Y_CC/Y_CF/Y_FC/Y_FF on already-open E0-design ARC/OBQA/MMLU=
+  `128/70/128` groups；primary outputs T and O。
+- Sidecar SHA=`48caee80...2d990`；dev-data tree SHA=`f3dcf2c7...c73`。
+- Pre-output checks：14 configs parsed；targeted=`18 passed`；pretrained forward/GPU/K8s/
+  training/accuracy=`0`。E1-pilot/model-selection/test remain sealed。
+
 ## 2026-08-21 FPCT math.md direct implementation
 
 - New mode：`fpct_position_mode=math`；default=`legacy`。

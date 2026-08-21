@@ -1,5 +1,37 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-08-21：FPCT-MATH-DIRECT 单 seed真实训练锁
+
+### 研究目标
+
+用最短 matched 闭环直接回答完整第一阶段 `math.md` operator 是否带来真实增益，不再等待
+全量 input-lock 或 fixed-checkpoint intervention 选择。
+
+### 核心改动
+
+- 新增独立 protocol、machine manifest、两份训练配置、12 份四-cell评测配置和严格结果
+  reducer；全部在任何 pretrained output 前冻结。
+- reducer 独立验证 E0-design group membership、四个 cell、artifact SHA，并比较两臂的
+  step-0/data-order/RNG/optimizer/scheduler formal integrity。
+
+### 实验配置
+
+- TinyLlama-1.1B → Qwen3-0.6B；seed=`2026082101`；math-C_post 与 math-F fresh matched
+  training；2,048 examples、64 steps、2 GPUs、BF16/eager。
+- 评测 E0-design 326 groups，计算 `T` 系统效应与 `O` 同-checkpoint即时 operator 效应。
+  单 seed T/O 都为正才考虑两个额外 seeds。
+
+### 验证结果
+
+- 14 份 JSON/YAML 配置可解析；新增 result reducer synthetic regression 与 math/Qwen
+  targeted suite=`18 passed`；`git diff --check` GO。
+- 锁定时 pretrained/model output、GPU、K8s、training、accuracy 均为 0。
+
+### 结论
+
+pre-output lock ready；下一步只需 clean commit/push、immutable snapshot、asset SHA 复核，
+随后可在同一双卡节点串行执行两臂真实训练与四-cell评测。
+
 ## 2026-08-21：完整实现 math.md content-space FPCT
 
 ### 研究目标
