@@ -34,6 +34,12 @@ from rosetta.model.fpct_instrumentation import (
     FPCTCaptureAccumulator,
     teacher_forced_query_mask,
 )
+from rosetta.model.fpct_position import (
+    apply_fpct_rope,
+    model_rotary_cos_sin,
+    normalize_fpct_position_mode,
+    remove_fpct_rope,
+)
 from transformers.utils import ModelOutput
 
 
@@ -115,6 +121,7 @@ class RosettaModel(nn.Module):
         fpct_profile_scopes: bool = False,
         fpct_trace: bool = False,
         fpct_centered_lambda: float = 1.0,
+        fpct_position_mode: str = "legacy",
     ):
         super().__init__()
         # model list: a list of model, model 0 by default is the base model
@@ -157,6 +164,7 @@ class RosettaModel(nn.Module):
         self.fpct_centered_lambda = _normalize_fpct_centered_lambda(
             fpct_centered_lambda
         )
+        self.fpct_position_mode = normalize_fpct_position_mode(fpct_position_mode)
         # Parameter-free fixed-checkpoint diagnostics.  This runtime-only field
         # is intentionally absent from __init__/state_dict until E1 selects one
         # production repair prospectively.
@@ -173,6 +181,11 @@ class RosettaModel(nn.Module):
             raise ValueError("collapse-to-parent bypass is an F-only control")
         if self.fpct_centered_lambda != 1.0 and self.fpct_operator != "f":
             raise ValueError("non-default centered lambda is an F-only diagnostic")
+        if self.fpct_position_mode == "math" and self.fpct_operator not in {
+            "c_post",
+            "f",
+        }:
+            raise ValueError("FPCT math position mode requires c_post or f")
         if self.fpct_operator in {"c_post", "f"}:
             for projector in self.projector_list:
                 projector.suppress_host_diagnostics = True
@@ -190,7 +203,12 @@ class RosettaModel(nn.Module):
         self.multi_source_fusion_mode = multi_source_fusion_mode
 
     def fpct_config_dict(self) -> Dict[str, Any]:
-        config = {"operator": self.fpct_operator, "position_mode": "legacy", "a": "1", "g": "1"}
+        config = {
+            "operator": self.fpct_operator,
+            "position_mode": self.fpct_position_mode,
+            "a": "1",
+            "g": "1",
+        }
         if self.fpct_replicated_collapse:
             config["replicated_atoms"] = True
             config["replicated_collapse"] = True
@@ -1222,12 +1240,14 @@ class RosettaModel(nn.Module):
         self,
         *,
         projector: Projector,
+        source_model_idx: int = 1,
         source_key_cache: torch.Tensor,
         source_value_cache: torch.Tensor,
         base_kv: tuple,
         source_indices: torch.Tensor,
         source_weights: torch.Tensor,
         soft_section: dict,
+        target_position_ids: Optional[torch.Tensor] = None,
         target_layer_idx: Optional[int] = None,
     ) -> tuple:
         if not self._fpct_projector_is_supported(projector):
@@ -1250,6 +1270,55 @@ class RosettaModel(nn.Module):
             certified=soft_section.get("fpct_prior_certified") is True,
         )
         legal = legal & index_valid.to(device=legal.device)
+        fusion_base_kv = base_kv
+        target_cosine = None
+        target_sine = None
+        if self.fpct_position_mode == "math":
+            batch_size, _, target_length, _ = base_kv[0].shape
+            if target_position_ids is None:
+                raise ValueError(
+                    "FPCT math position mode requires exact receiver position_ids"
+                )
+            target_position_ids = target_position_ids.to(
+                device=base_kv[0].device, dtype=torch.long
+            )
+            if target_position_ids.shape[0] == 1 and batch_size > 1:
+                target_position_ids = target_position_ids.expand(batch_size, -1)
+            if target_position_ids.shape != (batch_size, target_length):
+                raise ValueError(
+                    "FPCT receiver position_ids do not match the parent cache: "
+                    f"positions={tuple(target_position_ids.shape)}, "
+                    f"cache={tuple(base_kv[0].shape)}"
+                )
+            target_cosine, target_sine = model_rotary_cos_sin(
+                self.model_list[self.base_model_idx],
+                base_kv[0],
+                target_position_ids,
+            )
+            receiver_content_key = remove_fpct_rope(
+                base_kv[0], target_cosine, target_sine
+            )
+            fusion_base_kv = (receiver_content_key, base_kv[1])
+
+            safe_source_positions = source_indices.to(
+                device=source_key_cache.device, dtype=torch.long
+            ).clamp(min=0, max=source_key_cache.shape[2] - 1)
+            flat_source_positions = safe_source_positions.reshape(batch_size, -1)
+            source_cosine, source_sine = model_rotary_cos_sin(
+                self.model_list[source_model_idx],
+                source_key_cache,
+                flat_source_positions,
+            )
+            source_cosine = source_cosine.reshape(
+                batch_size,
+                target_length,
+                source_indices.shape[-1],
+                source_key_cache.shape[-1],
+            )
+            source_sine = source_sine.reshape_as(source_cosine)
+            source_candidates_k = remove_fpct_rope(
+                source_candidates_k, source_cosine, source_sine
+            )
         capture_geometry = (
             self._fpct_candidate_geometry(
                 source_candidates_k,
@@ -1286,7 +1355,7 @@ class RosettaModel(nn.Module):
             }
         parent_projected = projector.forward(
             averaged_source,
-            base_kv,
+            fusion_base_kv,
             fpct_capture_parent_nuisance=True,
             **projector_kwargs,
         )
@@ -1303,8 +1372,8 @@ class RosettaModel(nn.Module):
             parent_projected = self._apply_source_confidence_to_projected_kv(
                 parent_projected[0],
                 parent_projected[1],
-                base_kv[0],
-                base_kv[1],
+                fusion_base_kv[0],
+                fusion_base_kv[1],
                 soft_section,
             )
 
@@ -1316,7 +1385,7 @@ class RosettaModel(nn.Module):
                     source_candidates_k[:, :, :, candidate_idx, :],
                     source_candidates_v[:, :, :, candidate_idx, :],
                 ),
-                base_kv,
+                fusion_base_kv,
                 fpct_parent_nuisance=nuisance,
                 **projector_kwargs,
             )
@@ -1325,8 +1394,8 @@ class RosettaModel(nn.Module):
                     self._apply_source_confidence_to_projected_kv(
                         projected_key,
                         projected_value,
-                        base_kv[0],
-                        base_kv[1],
+                        fusion_base_kv[0],
+                        fusion_base_kv[1],
                         soft_section,
                     )
                 )
@@ -1334,16 +1403,16 @@ class RosettaModel(nn.Module):
             candidate_values.append(projected_value)
         fused_key = torch.stack(candidate_keys, dim=3)
         fused_value = torch.stack(candidate_values, dim=3)
-        expected_gate_shape = (*base_kv[0].shape[:-1], 1)
+        expected_gate_shape = (*fusion_base_kv[0].shape[:-1], 1)
         key_gate = torch.broadcast_to(
             nuisance["legacy_key_gate"].to(
-                device=base_kv[0].device, dtype=base_kv[0].dtype
+                device=fusion_base_kv[0].device, dtype=fusion_base_kv[0].dtype
             ),
             expected_gate_shape,
         )
         value_gate = torch.broadcast_to(
             nuisance["legacy_value_gate"].to(
-                device=base_kv[1].device, dtype=base_kv[1].dtype
+                device=fusion_base_kv[1].device, dtype=fusion_base_kv[1].dtype
             ),
             expected_gate_shape,
         )
@@ -1354,23 +1423,42 @@ class RosettaModel(nn.Module):
         # unchanged, so candidate-specific fusion remains active there.
         fused_key = torch.where(
             (key_gate == 0).unsqueeze(3),
-            base_kv[0].unsqueeze(3),
+            fusion_base_kv[0].unsqueeze(3),
             fused_key,
         )
         fused_value = torch.where(
             (value_gate == 0).unsqueeze(3),
-            base_kv[1].unsqueeze(3),
+            fusion_base_kv[1].unsqueeze(3),
             fused_value,
         )
         parent_projected = (
-            torch.where(key_gate == 0, base_kv[0], parent_projected[0]),
-            torch.where(value_gate == 0, base_kv[1], parent_projected[1]),
+            torch.where(key_gate == 0, fusion_base_kv[0], parent_projected[0]),
+            torch.where(value_gate == 0, fusion_base_kv[1], parent_projected[1]),
         )
         parent_force_native = (key_gate == 0).all(dim=(1, 3)) & (
             value_gate == 0
         ).all(dim=(1, 3))
         projector._last_alignment_confidence_aux_loss = parent_confidence_aux
         projector._last_alignment_residual_scale_aux_loss = parent_residual_aux
+        if self.fpct_position_mode == "math":
+            if target_cosine is None or target_sine is None:
+                raise RuntimeError("FPCT math target rotary state was not initialized")
+            candidate_cosine = target_cosine.unsqueeze(2).expand(
+                target_cosine.shape[0],
+                target_cosine.shape[1],
+                source_indices.shape[-1],
+                target_cosine.shape[-1],
+            )
+            candidate_sine = target_sine.unsqueeze(2).expand_as(candidate_cosine)
+            fused_key = apply_fpct_rope(
+                fused_key, candidate_cosine, candidate_sine
+            )
+            parent_projected = (
+                apply_fpct_rope(
+                    parent_projected[0], target_cosine, target_sine
+                ),
+                parent_projected[1],
+            )
         collapsed_key = (fused_key.float() * weights).sum(dim=3).to(
             dtype=base_kv[0].dtype
         )
@@ -1892,6 +1980,7 @@ class RosettaModel(nn.Module):
                                             ):
                                                 fpct_record = self._project_fpct_candidates(
                                                     projector=projector,
+                                                    source_model_idx=source_model_idx,
                                                     source_key_cache=source_key_cache,
                                                     source_value_cache=source_value_cache,
                                                     base_kv=new_base_kv_cache,
@@ -1900,6 +1989,7 @@ class RosettaModel(nn.Module):
                                                     ],
                                                     source_weights=source_weights,
                                                     soft_section=soft_section,
+                                                    target_position_ids=prefill_position_ids,
                                                     target_layer_idx=target_layer_idx,
                                                 )
                                             projected_kv_list.append(

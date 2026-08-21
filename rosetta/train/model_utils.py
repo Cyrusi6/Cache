@@ -160,6 +160,7 @@ def setup_models(
         ),
         fpct_profile_scopes=model_config.get("fpct_profile_scopes", False),
         fpct_trace=model_config.get("fpct_trace", False),
+        fpct_position_mode=model_config.get("fpct_position_mode", "legacy"),
     ).to(device)
 
     # Configure projector mappings

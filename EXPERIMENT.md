@@ -1,5 +1,19 @@
 # EXPERIMENT.md
 
+## 2026-08-21 FPCT math.md direct implementation
+
+- New mode：`fpct_position_mode=math`；default=`legacy`。
+- Equations implemented：source `R_s(j)^-1`、receiver `R_r(i)^-1`、shared
+  candidate-specific fuser、receiver-parent `R_r(i)`、existing log-A global softmax。
+- First-round boundary：`a=1,g=1`；no native null、selector、new gate、Route3 router or
+  confidence/entropy change。
+- Matched arms：math-C_post vs math-F；same fresh initialization/data/RNG/budget。
+- Planned budget：seed `2026082101`，2,048 MMLU auxiliary_train examples，64 optimizer
+  steps，two processes/two GPUs，BF16 eager，dropout=0.1。
+- Planned evaluation：four inference cells on frozen 326 E0-design groups；single-seed
+  exploratory only。
+- Pretrained/model output at this record=`0`；implementation gate=`105 passed`。
+
 ## 2026-08-21 FPCT-E1-FAST-RCA fixed-checkpoint result
 
 - Execution/root：`07b2a3f5...` /

@@ -1,5 +1,44 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-08-21：完整实现 math.md content-space FPCT
+
+### 研究目标
+
+不再依赖 legacy-position fixed-checkpoint干预，直接实现 `math.md` 的 source/receiver
+de-RoPE、candidate-specific content-space fusion、receiver-parent re-RoPE 和全局
+factorized attention，并立即进入真实 matched training。
+
+### 核心改动
+
+- 新增 `rosetta/model/fpct_position.py`，使用真实模型 rotary module 和真实 position IDs
+  计算 cos/sin，支持 attention scaling 下的 exact inverse 与 forward RoPE。
+- `fpct_position_mode=math` 在 gather 后去除 source RoPE，同时去除 receiver parent RoPE；
+  共享 C2C projector 在 content space 逐 candidate 运行，再对所有 fused candidate 应用
+  receiver parent position。
+- C_post/F 共用相同候选张量、fuser、nuisance、dropout/RNG 和参数；默认 legacy path、
+  state_dict 和未设置 flag 的行为不变。
+- training/evaluation loaders 全部透传 position mode；第一轮仍固定 `a=1,g=1`。
+
+### 实验配置
+
+- 计划 pair：TinyLlama-1.1B sender → Qwen3-0.6B receiver。
+- 计划训练：fresh matched projector，2,048 MMLU auxiliary_train examples，64 optimizer
+  steps，2 processes/2 GPUs，BF16/eager；math-C_post 与 math-F 两臂。
+- 计划评测：冻结 E0-design 326 groups 的四个同 checkpoint cells，计算 T 与 O；单 seed
+  同时为正才考虑补两个 seeds。
+
+### 验证结果
+
+- FP32/FP64 RoPE round-trip 与 gradient、candidate content-space oracle、C_post/F candidate
+  bitwise identity、state_dict identity、真实随机小 Qwen3 prefill/response/backward 全通过。
+- Targeted reference/production/Qwen/instrumentation/runner suite=`105 passed`。
+- 新 position hot path 无 `.item/.tolist/.cpu/.numpy`；`git diff --check` 通过。
+
+### 结论
+
+math.md 第一阶段 operator 已具备进入 pretrained smoke 和真实 matched training 的代码
+条件。本变更是 FAST-RCA 之后的新实验，不把此前无 winner 的结果事后改写为正向选择。
+
 ## 2026-08-21：FPCT-E1-FAST-RCA 无可利用 fixed-checkpoint headroom
 
 ### 研究目标

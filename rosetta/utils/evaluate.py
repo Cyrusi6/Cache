@@ -552,6 +552,9 @@ def load_rosetta_model(model_config: Dict[str, Any], eval_config: Dict[str, Any]
         ),
         fpct_profile_scopes=rosetta_config.get("fpct_profile_scopes", False),
         fpct_trace=rosetta_config.get("fpct_trace", False),
+        fpct_position_mode=rosetta_config.get(
+            "fpct_position_mode", "legacy"
+        ),
     ).to(device).eval()
     rosetta_model._projector_load_attestation = {
         "mode": projector_load_mode,

@@ -1,9 +1,26 @@
 # FPCT-E1 状态
 
-> 当前阶段：E1-FAST-RCA fixed-checkpoint root-cause decision
-> 当前状态：`NO_EXPLOITABLE_FIXED_CHECKPOINT_HEADROOM / TRAINING NOT AUTHORIZED`
-> 下一步：人工决定是否另开 candidate-distinction-preserving fuser 前瞻研究线
+> 当前阶段：math.md direct implementation and matched training
+> 当前状态：`IMPLEMENTATION GATE GO / REAL TRAINING LOCK PENDING`
+> 下一步：冻结并推送单 seed math-C_post/math-F matched recipe，随后启动真实双卡训练
 > 更新时间：2026-08-21（Asia/Shanghai）
+
+## 2026-08-21 math.md 直接实现授权
+
+- 用户在 FAST-RCA `NO_EXPLOITABLE_FIXED_CHECKPOINT_HEADROOM` 已公开后，明确要求停止继续
+  扩展审计，完整实现 `math.md` 并运行真实训练。本阶段是新的前瞻性 operator 实验，不能
+  追认为 FAST-RCA 中任何 intervention 的 winner，也不回写其 null root-cause 结论。
+- 新 `fpct_position_mode=math` 使用 source/receiver 各自真实 rotary module 和真实
+  position IDs：先 inverse RoPE，在 content space 逐 candidate 调用共享 C2C fuser，
+  再按 receiver parent position re-RoPE。
+- C_post 与 F 使用相同 candidate fuser、参数、call order、prior 和 position correction；
+  唯一区别仍是 attention 前 collapse 与保留 candidate axis。
+- 第一轮按 `math.md` 固定 `a=1,g=1`；不加入 native null、selector、新 gate 或 entropy
+  改动。默认 `legacy` 模式、旧 state_dict 与旧输出路径保持不变。
+- 随机小 Qwen3 的真实 source-cache/prefill/response/backward、公式、production、reference、
+  instrumentation 和 legacy 回归共 `105 passed`；hot path 没有新增 host-sync API。
+- 当前尚未运行 pretrained forward 或训练；下一步先 commit/push implementation，再冻结
+  64-step、2,048-example、单 seed双臂 matched recipe。
 
 ## 2026-08-21 E1-FAST-RCA 终态
 
