@@ -6,8 +6,8 @@
   "implementation_commit": "5903dcb4892e400cbbee194357c057e21957ad7f",
   "math_md_sha256": "98d1b61f84d046548d5ba0070d6858c7080cb14fdef9169b08ad167461b809ad",
   "protocol_sha256": "dd40296dd796f00a4b5975f8154446cc0c52a78fe1c0f12cb5cd8aea014948fc",
-  "result_code_sha256": "8e4085c65cf98b97a995cf11067f35e89cf66a0d7f5d7b8f620a363c81b793c7",
-  "result_test_sha256": "8516411bd7a275b757e05d9ef5c0c4639d296770fe129c84d88a06789f6c6821",
+  "result_code_sha256": "ed70d30a263dadb42b9487e9b128d975319dc243702f425d13c680a5fdec563b",
+  "result_test_sha256": "533c9b3326fadf253796d4aa477bbb4e744b550cbef2893c8a667ba9d96046ab",
   "pair": {
     "sender": "TinyLlama/TinyLlama-1.1B-Chat-v1.0",
     "sender_revision": "fe8a4ea1ffedaf415f4da2f062534de366a451e6",

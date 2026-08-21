@@ -18,9 +18,13 @@ MATCHED_FIELDS = (
     "step0_trainable_sha256",
     "trainable_keys_sha256",
     "data_order_sha256",
+    "training_examples",
     "rng_state_before_training_sha256",
     "optimizer_class",
     "optimizer_group_count",
+    "optimizer_learning_rates",
+    "optimizer_weight_decay",
+    "scheduler_class",
     "scheduler_initial_state_sha256",
 )
 
@@ -79,7 +83,12 @@ def _matched_integrity(run_root: Path) -> dict[str, Any]:
     mismatches = {
         field: {arm: record.get(field) for arm, record in records.items()}
         for field in MATCHED_FIELDS
-        if len({record.get(field) for record in records.values()}) != 1
+        if len(
+            {
+                json.dumps(record.get(field), sort_keys=True, separators=(",", ":"))
+                for record in records.values()
+            }
+        ) != 1
     }
     for arm, record in records.items():
         if record.get("operator") != arm:
