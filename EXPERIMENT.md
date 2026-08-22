@@ -1,5 +1,14 @@
 # EXPERIMENT.md
 
+## 2026-08-22 FPCT-MATH-DIRECT sealed bootstrap recovery
+
+- R2/R3/R4：C_post 均完成 64/64，loss trajectory/final loss 完全一致；post-attestation
+  fail-closed，F/evaluation/accuracy=`0`。
+- Root cause：rank0 W&B offline initialization 后新增唯一 `ImportHookFinder`，rank1没有；
+  source/mandatory module hashes 未改变。
+- Recovery：preseal同一 finder 后运行原 bootstrap；new commit/snapshot/root，fresh C_post→F。
+- Scientific recipe、seed、model/operator/alignment/budget/evaluation不变；旧 checkpoint 不复用。
+
 ## 2026-08-21 FPCT-MATH-DIRECT pre-output lock
 
 - Protocol：`FPCT_MATH_DIRECT_PROTOCOL.md`；manifest：

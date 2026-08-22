@@ -1,8 +1,8 @@
 # FPCT-E1 状态
 
 > 当前阶段：math.md direct implementation and matched training
-> 当前状态：`IMPLEMENTATION GATE GO / REAL TRAINING PRE-OUTPUT LOCK READY`
-> 下一步：提交并推送 pre-output lock，以 immutable snapshot 在同一双卡节点串行训练两臂
+> 当前状态：`SEALED W&B FINDER RECOVERY IN PROGRESS / NO ACCURACY OUTPUT`
+> 下一步：验证 presealed launcher，使用新 commit/snapshot/root fresh 重跑 C_post→F
 > 更新时间：2026-08-21（Asia/Shanghai）
 
 ## 2026-08-21 math.md 直接实现授权

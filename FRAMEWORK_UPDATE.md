@@ -1,5 +1,34 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-08-22：FPCT-MATH-DIRECT sealed W&B finder recovery
+
+### 研究目标
+
+修复 math-direct 训练完成后仅 rank0 因 W&B 动态安装 `ImportHookFinder` 导致的 sealed
+post-attestation false positive；不改变 operator、模型、数据、seed、训练或评测配置。
+
+### 核心改动
+
+- 新增 snapshot-aware bootstrap launcher，在 fingerprint 前注册并注销一个永不触发的
+  W&B hook，使唯一 `ImportHookFinder` 在 pre/post 两侧都存在。
+- launcher 强制 bootstrap 位于声明的 `--repo-root` 下，仍由原 sealed bootstrap 执行全部
+  source/module/protected-path验证。
+
+### 实验配置
+
+- R2/R3/R4 均完整跑完 C_post 64 steps，但在 post-attestation 后停止；F/accuracy 均未运行。
+- successor 必须使用新 commit、fresh snapshot/root，从 C_post step 0 重新开始。
+
+### 验证结果
+
+- 两次环境修复未解决问题后，attestation 字段级 diff 机械定位为 E0 已知 W&B finder；
+  mandatory module/source SHA 未变化，rank1 pre/post fingerprint 相同。
+
+### 结论
+
+允许仅以 presealed launcher 做一次 infrastructure recovery；不得复用三个失败 root 的
+checkpoint，也不得据其 loss 解释性能。
+
 ## 2026-08-21：FPCT-MATH-DIRECT 单 seed真实训练锁
 
 ### 研究目标
