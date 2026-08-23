@@ -1,5 +1,39 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-08-23：FPCT-MATH-DIRECT 单 seed真实结果
+
+### 研究目标
+
+直接检验完整第一轮 `math.md` position-corrected factorized transport 在 fresh matched
+training 后是否同时改善系统性能与 query-time operator effect。
+
+### 核心改动
+
+- 未改 operator；完成 C_post/F 两臂训练与 Y_CC/Y_CF/Y_FC/Y_FF 四-cell评测。
+- 修复纯 evaluation wiring：MMLU recovery YAML显式恢复 E0 已冻结的49-subject allowlist；
+  原 pre-output YAML/manifest保持不变。
+- 新增 eval recovery addendum、compact versioned result和终态报告。
+
+### 实验配置
+
+- TinyLlama-1.1B → Qwen3-0.6B；seed=`2026082101`；每臂2,048 examples、64 steps、
+  双GPU BF16/eager；sender/receiver frozen。
+- 已公开 E0-design ARC/OpenBookQA/MMLU=`128/70/128` distinct groups；三任务等权。
+
+### 验证结果
+
+- 两臂 formal matched-integrity GO；12/12 evaluation cells和326/326 groups通过 reducer。
+- Y_CC/Y_CF/Y_FC/Y_FF=`41.153274/40.892857/42.581845/42.581845%`。
+- `T=+1.428571 pp`；`O=-0.130208 pp`；result SHA256=
+  `7a3902e7a386e553de8228491f4b22e409c7c4ae3e78083ed042d2d97a36e9dd`。
+- r8 evaluation-only recovery job Complete，pod restart=0；main/Phase2A 未修改。
+
+### 结论
+
+单 seed 下 F-trained system 分数更高，但同-checkpoint query-time factorization 没有正
+增益。预注册 `T>0 AND O>0` 门槛失败，停止追加 seeds；不能把系统差异归因为 headline
+mechanism，也不能作 confirmatory、跨pair或普适性 claim。
+
 ## 2026-08-22：FPCT-MATH-DIRECT sealed W&B finder recovery
 
 ### 研究目标

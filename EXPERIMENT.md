@@ -1,5 +1,20 @@
 # EXPERIMENT.md
 
+## 2026-08-23 FPCT-MATH-DIRECT single-seed result
+
+- Pair/seed：TinyLlama-1.1B → Qwen3-0.6B / `2026082101`。
+- Training：C_post 与 F 各 64/64 steps；matched integrity GO；checkpoint SHA256=
+  `85ab3482...359de` / `27f6793c...03ca7`。
+- Evaluation：已公开 E0-design ARC/OBQA/MMLU=`128/70/128` groups；12/12 cells。
+- Task-macro：Y_CC/Y_CF/Y_FC/Y_FF=`41.153274/40.892857/42.581845/42.581845%`。
+- Estimands：`T=+1.428571 pp`，`D_C=-0.260417 pp`，`D_F=0`，
+  `O=-0.130208 pp`，`I=+0.260417 pp`。
+- Decision：`SINGLE_SEED_NOT_POSITIVE`；`T>0 AND O>0` 不成立，不补 seeds。
+- Recovery：MMLU原 YAML 漏 E0 的49-subject allowlist；只做 eval-only wiring 修复，
+  未重训、未改样本/operator/threshold。r8 job在 `4090-48gx2` 11分钟完成、restart=0。
+- Full local result SHA256=`7a3902e7...a36e9dd`；Git保存 compact result，不提交
+  checkpoints、predictions 或逐样本文件。
+
 ## 2026-08-22 FPCT-MATH-DIRECT sealed bootstrap recovery
 
 - R2/R3/R4：C_post 均完成 64/64，loss trajectory/final loss 完全一致；post-attestation

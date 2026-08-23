@@ -1,9 +1,22 @@
 # FPCT-E1 状态
 
-> 当前阶段：math.md direct implementation and matched training
-> 当前状态：`SEALED W&B FINDER RECOVERY IN PROGRESS / NO ACCURACY OUTPUT`
-> 下一步：验证 presealed launcher，使用新 commit/snapshot/root fresh 重跑 C_post→F
-> 更新时间：2026-08-21（Asia/Shanghai）
+> 当前阶段：math.md direct implementation and matched single-seed evaluation complete
+> 当前状态：`SINGLE_SEED_NOT_POSITIVE / ADDITIONAL SEEDS NOT AUTHORIZED`
+> 下一步：保留结果；如需新机制修复或更多训练，必须另行前瞻授权
+> 更新时间：2026-08-23（Asia/Shanghai）
+
+## 2026-08-23 FPCT-MATH-DIRECT 终态
+
+- C_post 与 F 均完成 64/64 steps；step-0、trainable keys、data order、RNG、optimizer、
+  scheduler matched-integrity=`GO`。
+- 冻结 326-group E0-design 上 12/12 evaluation cells 完成；result SHA256=
+  `7a3902e7a386e553de8228491f4b22e409c7c4ae3e78083ed042d2d97a36e9dd`。
+- `T=+1.428571 pp`，但 headline `O=-0.130208 pp`；`D_C=-0.260417 pp`、
+  `D_F=0.000000 pp`。
+- 预注册的 additional-seed condition `T>0 AND O>0` 为 false；不补另外两 seeds。
+- 结论仅为单 seed exploratory system/training trajectory 正向；query-time factorization
+  没有观察到正增益，不能作 mechanism-supported claim。
+- E1-pilot、model-selection、test、confirmatory、native null 与跨模型继续 sealed。
 
 ## 2026-08-21 math.md 直接实现授权
 
