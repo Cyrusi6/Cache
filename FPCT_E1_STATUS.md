@@ -1,9 +1,21 @@
 # FPCT-E1 状态
 
-> 当前阶段：math.md direct implementation and matched single-seed evaluation complete
-> 当前状态：`SINGLE_SEED_NOT_POSITIVE / ADDITIONAL SEEDS NOT AUTHORIZED`
-> 下一步：保留结果；如需新机制修复或更多训练，必须另行前瞻授权
-> 更新时间：2026-08-23（Asia/Shanghai）
+> 当前阶段：math.md direct three-seed replication pre-output lock
+> 当前状态：`R2 PRE-OUTPUT LOCK / NEW MODEL OUTPUT = 0`
+> 下一步：commit/push immutable source，运行step-0 gradient及两个matched seeds
+> 更新时间：2026-08-24（Asia/Shanghai）
+
+## 2026-08-24 FPCT-MATH-DIRECT-R2 前瞻复现锁
+
+- 用户已授权完全复现当前math recipe，补 seeds `2026082102/2026082103`；不改变代码、
+  数据、64-step预算或旧E0阈值。
+- 每seed内C_post→F同节点串行；两seeds可跨节点并行。seed `2026082101` 只读。
+- 新增step-0固定microbatch逐层K/V gradient cosine/norm和全四-cell teacher-forced
+  `Δlogp(y*)`；两者只诊断，不替代accuracy gate。
+- 决策固定为：system GO且mechanism GO=`QUERY_TIME_FPCT_CONTINUE`；仅system GO=
+  `FACTORIZED_TRAINING_COLLAPSED_INFERENCE`；system failure=`STOP_CURRENT_OPERATOR`。
+- 当前新pretrained forward/gradient/training/evaluation=`0`；E1-pilot、model-selection、
+  test和confirmatory继续sealed。
 
 ## 2026-08-23 FPCT-MATH-DIRECT 终态
 

@@ -1,0 +1,241 @@
+{
+  "assets": {
+    "dev_manifest": {
+      "path": "recipe/eval_recipe/fpct_e0/exploratory_dev_manifest.json",
+      "sha256": "25fe8c4dceeaa1174e1433a02ec86f312d909d7d58c3c9a8c7f2caa9d908216a"
+    },
+    "teacher_forced_input": {
+      "path": "/netdisk/lijunsi/fpct-e1/fpct-e1-a5r2-1c64b606-v1/input_lock/e0_design_input_lock.pt",
+      "sha256": "d843512b7e446efd229fe3097030407e59acb20b4de591a84b88176bd8b0eec9"
+    },
+    "training_sidecar": {
+      "path": "/netdisk/lijunsi/fpct-math-direct-r5/assets/mmlu_auxiliary_train_2048_certified.pt",
+      "sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990"
+    }
+  },
+  "classification": "EXPLORATORY_THREE_SEED_REPLICATION_NOT_CONFIRMATORY",
+  "configs": [
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_CC_ai2-arc.yaml",
+      "sha256": "d9a895b8b6fa91effa35b237f536a1f49fe34ad42acf01976486db5e7e6ee442"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_CC_mmlu-redux.yaml",
+      "sha256": "2a4c25ac2748d1bda7b3aa089c8eb53649ac6bfa3e1280fea2fd1a73153735f4"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_CC_openbookqa.yaml",
+      "sha256": "e5007d9c07f6dbf98849ee98fe54ce6232489267352f4c75de4ec5330e584946"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_CF_ai2-arc.yaml",
+      "sha256": "bfbb5527bfbf595348960fd8b89f0be09abfe553381f4174fc6b6b5f2cfb46d4"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_CF_mmlu-redux.yaml",
+      "sha256": "06121055b2058c72a7bc0d6ddc396c48e01bfabbee308853e40d24a35176a168"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_CF_openbookqa.yaml",
+      "sha256": "4774a2998a978b8d944a50fab7cb6af7bc7c33e79533ab7b9c399c880cf3b04d"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_FC_ai2-arc.yaml",
+      "sha256": "f9b4ce6fce045aa588ef0f82307a1de905a63813438e4b53bafec05e81f6901e"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_FC_mmlu-redux.yaml",
+      "sha256": "a0b113b0d99ccc1ce49246cec51dfbd9254a5a192204202a1196ba1e40eb8007"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_FC_openbookqa.yaml",
+      "sha256": "7e3b10ff2000c3abffc54b026de4016c0009924a08835b3b356233b9e7147f0d"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_FF_ai2-arc.yaml",
+      "sha256": "0e85604e747681040fba46e536d21252fb8e5176a22b519001d1aee329472886"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_FF_mmlu-redux.yaml",
+      "sha256": "0ab21390556ef69c423530439791feeb4e5f8f467d2623de7a2b3ce1716649ac"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082102_Y_FF_openbookqa.yaml",
+      "sha256": "ee7599069a9edd704a5d4396ebd4baed9799f0d5616331877db6b948d4da5995"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_CC_ai2-arc.yaml",
+      "sha256": "aa101db28a1ec7fcad1fb77a9fe2426b2360f4096b380bbd491bc68d3566c3a1"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_CC_mmlu-redux.yaml",
+      "sha256": "60e89ec41f5c0a4f4f8b01fb358889dfe6b092b9432eda23ef9f078efdef5cd7"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_CC_openbookqa.yaml",
+      "sha256": "3453fe33f6cd9d02622fcf0b1c31f0b2e033fa856b82f6ee7d6dd8bdeadaef64"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_CF_ai2-arc.yaml",
+      "sha256": "cf3e5a46f62c3b50fa3f3ee38f50fb9725453aca60509c837d61125292c440a6"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_CF_mmlu-redux.yaml",
+      "sha256": "b7ee2cd4bf0831a7e8fab2310a59c814101e6c6652284dc6ccb7956969df418b"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_CF_openbookqa.yaml",
+      "sha256": "b9fbdf3aa913bd7e52446c912a4d4861e358bbdf1d9413844ce33d67c55398cf"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_FC_ai2-arc.yaml",
+      "sha256": "8ac331b6b26708ed4bc8393526e621ce05a3749b809ae743b3eb4d2c79d50276"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_FC_mmlu-redux.yaml",
+      "sha256": "069995817593efe0bafca93bbd8789d0f358ce510f23c4c5b1932452b8fbbb4d"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_FC_openbookqa.yaml",
+      "sha256": "f8590a69d10a3879c163323e8f3d17f0a9a2aa09daf06ba43ddc81f6d57519a9"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_FF_ai2-arc.yaml",
+      "sha256": "d27584ace5ad68362188e043cd67cc92446d842b23fbc48977e069d0fde419ac"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_FF_mmlu-redux.yaml",
+      "sha256": "924b7947ccbde5bb31671d8f0e9e9c20efa12edc44f9eb87548b9e28398edee6"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/eval_2026082103_Y_FF_openbookqa.yaml",
+      "sha256": "1dd08c28624fffd88256f81359d2520ae9417a8c87be56bf408b0cc1788ddc6c"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/train_2026082102_c_post.json",
+      "sha256": "7860ef7cf02bb6ab4590aace63738bb7a00ded82c2d8924874d2c0c4de745fd8"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/train_2026082102_f.json",
+      "sha256": "8d9a02c8a1a663b95a64a7b12b8924c1a19d8df3e86c8992b8246e51be44d787"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/train_2026082103_c_post.json",
+      "sha256": "e3dadfdc18231ad3493b4ff45d6e224f23c22989f7a4f13f507331d19a3dd272"
+    },
+    {
+      "path": "recipe/eval_recipe/fpct_math_direct_r2/train_2026082103_f.json",
+      "sha256": "e347602a202f017ddcf34fc718d96c18fc81f3559663bdda576e384f77f3e962"
+    }
+  ],
+  "decision": {
+    "classifications": [
+      "QUERY_TIME_FPCT_CONTINUE",
+      "FACTORIZED_TRAINING_COLLAPSED_INFERENCE",
+      "STOP_CURRENT_OPERATOR"
+    ],
+    "mechanism": {
+      "mean_O_strictly_positive": true,
+      "positive_O_seeds_min": 2
+    },
+    "system": {
+      "integrity_all_go": true,
+      "mean_T_pp_min": 1.0,
+      "per_task_mean_T_pp_min": -2.0,
+      "positive_T_seeds_min": 2
+    }
+  },
+  "diagnostics": {
+    "step0_gradient": {
+      "groups": [
+        "key_path",
+        "value_path",
+        "nuisance_gate_confidence"
+      ],
+      "optimizer_steps": 0,
+      "sampler_rank": 0,
+      "seed": 2026082102,
+      "world_size_contract": 2
+    },
+    "teacher_forced": {
+      "all_four_cells": true,
+      "all_seeds": true
+    }
+  },
+  "evaluation": {
+    "cells": [
+      "Y_CC",
+      "Y_CF",
+      "Y_FC",
+      "Y_FF"
+    ],
+    "population": "E0-design_already_open",
+    "primary": "accuracy_task_macro_equal_weight",
+    "tasks_and_groups": {
+      "ai2-arc": 128,
+      "mmlu-redux": 128,
+      "openbookqa": 70
+    },
+    "teacher_forced_diagnostic": "answer_token_mean_logp_task_macro"
+  },
+  "execution_commit": "CLEAN_PUSHED_HEAD_CAPTURED_AT_RUNTIME",
+  "firewall": {
+    "confirmatory": "NOT_AUTHORIZED",
+    "e1_pilot": "SEALED_NOT_RUN_NOT_READ",
+    "model_selection": "SEALED_NOT_RUN_NOT_READ",
+    "test": "SEALED_NOT_RUN_NOT_READ"
+  },
+  "immutable_existing_seed": 2026082101,
+  "new_seeds": [
+    2026082102,
+    2026082103
+  ],
+  "normative_files": {
+    "FPCT_MATH_DIRECT_REPLICATION_PROTOCOL.md": "a356d6262cac522c2a15b9cdbe6f6535fd5822a3a51cb7972406d28b0a6c33a3",
+    "script/analysis/fpct_math_direct_replication_diagnostics.py": "c864d6da7501877e366a39f76224c1adfe8004df2c018ad4dfdcaa33f186b2d3",
+    "script/analysis/fpct_math_direct_replication_results.py": "02ca7afc526d809fbd74c9ad0f1dea1effff1c61033f3508fdef1577b0add8de",
+    "script/experiment/fpct_math_direct_replication_configs.py": "09b277ba8d51f099159a29d81eb1a57f32ecc61a087f14ad48ce1205ec754321",
+    "test/test_fpct_math_direct_replication.py": "cef353393fb63d3a013531883e0d73d856ddf0b22ad2fae32c0eda424d60c901"
+  },
+  "operator": {
+    "a": 1,
+    "arms": [
+      "c_post",
+      "f"
+    ],
+    "attention_backend": "eager",
+    "g": 1,
+    "headline": "F-C_post",
+    "native_null": false,
+    "position_mode": "math",
+    "selector": false
+  },
+  "output_root": "/netdisk/lijunsi/fpct-math-direct-r2/math-direct-replication-20260824-v1",
+  "pair": "TinyLlama-1.1B-Chat-v1.0__to__Qwen3-0.6B",
+  "parent_result_commit": "1e46734eaf433fd61c6cb036544a9766fd6e36c8",
+  "protocol_id": "fpct_math_direct_replication_v1",
+  "schema_version": 1,
+  "status": "PRE_OUTPUT_LOCK",
+  "training": {
+    "arm_order": [
+      "c_post",
+      "f"
+    ],
+    "dropout": 0.1,
+    "effective_global_batch": 32,
+    "epochs": 1,
+    "examples": 2048,
+    "gpus_per_seed": 2,
+    "gradient_accumulation": 16,
+    "learning_rate": 0.0001,
+    "optimizer_steps": 64,
+    "parallel_across_seeds_allowed": true,
+    "per_device_batch_size": 1,
+    "precision": "bf16",
+    "processes": 2,
+    "same_node_serial_within_seed": true,
+    "scheduler": "linear",
+    "warmup_ratio": 0.1,
+    "weight_decay": 0.01
+  }
+}

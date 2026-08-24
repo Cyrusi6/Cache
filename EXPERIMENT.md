@@ -1,5 +1,17 @@
 # EXPERIMENT.md
 
+## 2026-08-24 FPCT-MATH-DIRECT-R2 pre-output replication lock
+
+- New seeds：`2026082102/2026082103`；existing `2026082101` immutable。
+- Exact recipe：TinyLlama→Qwen3、math C_post/F、2,048 examples、64 steps、2 GPUs、
+  BF16/eager、dropout=0.1；每seed两臂matched。
+- Diagnostics：seed2102 step-0 fixed rank-0 microbatch exact gradient comparison；三seeds
+  四-cell full-response teacher-forced answer-token logp。
+- Accuracy gate复用旧E0：mean T≥1pp、≥2/3 T>0、task mean T≥-2pp、integrity all GO。
+- Mechanism gate：mean O>0且≥2/3 O>0。
+- Pre-output validation：28 configs生成；MMLU frozen49-subject allowlist；targeted=
+  `11 passed`；new model/GPU/training/output=`0`。
+
 ## 2026-08-23 FPCT-MATH-DIRECT single-seed result
 
 - Pair/seed：TinyLlama-1.1B → Qwen3-0.6B / `2026082101`。

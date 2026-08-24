@@ -1,5 +1,34 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-08-24：FPCT-MATH-DIRECT 三 seed复现与机制诊断锁
+
+### 研究目标
+
+判断单 seed `T=+1.4286 pp` 是可复现的factorized-training适应，还是少量边界样本与
+seed variance；同时独立判断query-time `O` 是否转正。
+
+### 核心改动
+
+- 新增两seed exact-replication protocol、machine manifest、28份训练/评测配置和机械
+  三分类reducer。
+- 新增不更新参数的step-0 exact gradient诊断，记录逐层K/V/nuisance norm和cosine。
+- 新增完整gold-response teacher-forced四-cell logp诊断；不保存raw KV。
+
+### 实验配置
+
+- Seeds=`2026082102/2026082103`；每seed C_post→F，同双卡节点串行；seeds可并行。
+- 训练、alignment sidecar、E0-design 326 groups和全部accuracy阈值与当前math-direct一致。
+
+### 验证结果
+
+- 28份配置与49个MMLU subject闭包通过；targeted math/operator/result tests=`11 passed`。
+- 记录时新pretrained forward、gradient、GPU、K8s、training和evaluation output均为0。
+
+### 结论
+
+pre-output source尚待clean commit/push；完成后仅按immutable snapshot执行，不允许根据
+中途loss、单seed accuracy或teacher-forced结果修改recipe/threshold。
+
 ## 2026-08-23：FPCT-MATH-DIRECT 单 seed真实结果
 
 ### 研究目标
