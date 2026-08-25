@@ -1,0 +1,105 @@
+{
+  "artifacts": {
+    "full_result": {
+      "bytes": 48130,
+      "path": "/netdisk/lijunsi/fpct-math-direct-r2/math-direct-replication-20260824-v1/fpct_math_direct_replication_result.json",
+      "sha256": "1ee5dbb6e5012d8cb4839bf53949db3a226c3364c5b20c6e02c9aa363efc023c"
+    },
+    "step0_gradient": {
+      "bytes": 20623,
+      "path": "/netdisk/lijunsi/fpct-math-direct-r2/math-direct-replication-20260824-v1/diagnostics/step0_gradient.json",
+      "sha256": "ddee436d885ef7afeed28e9ae6eec23162662c8dcd311bd2870d911288369651"
+    },
+    "teacher_forced_root": "/netdisk/lijunsi/fpct-math-direct-r2/math-direct-replication-20260824-v1/diagnostics/teacher_forced"
+  },
+  "assets": {
+    "dev_manifest_sha256": "25fe8c4dceeaa1174e1433a02ec86f312d909d7d58c3c9a8c7f2caa9d908216a",
+    "teacher_forced_input_sha256": "d843512b7e446efd229fe3097030407e59acb20b4de591a84b88176bd8b0eec9",
+    "training_sidecar_sha256": "48caee80b31925a6074c9c5304bd861163f4e2e21adb55ebec9bf00237e2d990"
+  },
+  "checkpoints": {
+    "2026082101": {
+      "c_post": "85ab34828aec2d3014c4c125deafbf92e067ce686f9ba154a7da7af9933359de",
+      "f": "27f6793c3ef00896457fa5fc5859f8e3ced93053ca45db67fe0b0cffe0f03ca7"
+    },
+    "2026082102": {
+      "c_post": "7da21a19d154d268e65a11c934b522b89de8adf154a677e2cc9fb8b8334d82fe",
+      "f": "a8f333a6a15b8cda58522f445793f6fe2dc60ec1342305d65e825da9ef8ee7aa"
+    },
+    "2026082103": {
+      "c_post": "96fc4769432c456433cf942fc8a581c5b9f43ec4b45d94ab6c4655a058d350a0",
+      "f": "dc062ffd81509081bca9e1120572748206eaee13bf0e4639aff531b455f27658"
+    }
+  },
+  "decision": {
+    "classification": "STOP_CURRENT_OPERATOR",
+    "integrity_all_go": true,
+    "mechanism_gate": false,
+    "mean_O_pp": -0.05084325396825425,
+    "mean_T_pp": -0.6671626984126988,
+    "positive_O_seeds": 1,
+    "positive_T_seeds": 2,
+    "system_gate": false,
+    "task_mean_T_pp": {
+      "ai2-arc": -2.0833333333333335,
+      "mmlu-redux": -1.8229166666666667,
+      "openbookqa": 1.9047619047619015
+    }
+  },
+  "execution": {
+    "branch": "research/fpct-e1-mechanism-audit",
+    "image": "docker.io/library/fpct-gpu-r2m:80fb295@sha256:0ea40657a38dbe8778ef492474f28ef2360156f4c9b0f8287e2bb0988d695851",
+    "node": "4090-48gx2",
+    "source_commit": "d234546d6596628a55e28d6586930019d8c8ce3f",
+    "source_snapshot": "/netdisk/lijunsi/fpct-math-direct-r2/source_d234546d6596628a55e28d6586930019d8c8ce3f"
+  },
+  "firewall": {
+    "confirmatory": "NOT_RUN",
+    "e1_pilot": "SEALED_NOT_READ",
+    "model_selection": "SEALED_NOT_READ",
+    "test": "SEALED_NOT_READ"
+  },
+  "jobs": [
+    {
+      "name": "fpct-math-r2-gradient-r2-d234546",
+      "restarts": 0,
+      "status": "Complete"
+    },
+    {
+      "name": "fpct-math-r2-s2102-d234546",
+      "restarts": 0,
+      "status": "Complete"
+    },
+    {
+      "name": "fpct-math-r2-s2103-d234546",
+      "restarts": 0,
+      "status": "Complete"
+    },
+    {
+      "name": "fpct-math-r2-s2101-teacher-d234546",
+      "restarts": 0,
+      "status": "Complete"
+    }
+  ],
+  "protocol_id": "fpct_math_direct_replication_result_v1",
+  "schema_version": 1,
+  "status": "COMPLETE",
+  "teacher_forced_summary": {
+    "D_C": {
+      "mean": 0.00016648529777191223,
+      "positive_seeds": 2
+    },
+    "D_F": {
+      "mean": -0.00018244532168591268,
+      "positive_seeds": 1
+    },
+    "O": {
+      "mean": -0.00000798001195700023,
+      "positive_seeds": 1
+    },
+    "T": {
+      "mean": 0.018539636273699072,
+      "positive_seeds": 3
+    }
+  }
+}

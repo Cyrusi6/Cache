@@ -1,5 +1,29 @@
 # EXPERIMENT.md
 
+## 2026-08-25 FPCT-MATH-DIRECT-R2 three-seed terminal result
+
+- Execution SHA=`d234546d6596628a55e28d6586930019d8c8ce3f`；seeds=
+  `2026082101/02/03`；所有matched integrity、checkpoint reload和provenance controls GO。
+- Accuracy cells：
+  - 2101：Y_CC/Y_CF/Y_FC/Y_FF=`41.153274/40.892857/42.581845/42.581845%`，
+    `T=+1.428571 pp`，`O=-0.130208 pp`；
+  - 2102：`42.500000/42.239583/43.363095/43.102679%`，
+    `T=+0.602679 pp`，`O=-0.260417 pp`；
+  - 2103：`44.620536/45.357143/40.848214/40.587798%`，
+    `T=-4.032738 pp`，`O=+0.238095 pp`。
+- Three-seed：mean `T=-0.667163 pp`、2/3正；mean `O=-0.050843 pp`、1/3正；
+  ARC/OBQA/MMLU mean T=`-2.083333/+1.904762/-1.822917 pp`。
+- Teacher-forced：mean `T_logp=+0.018539636`、3/3正；mean
+  `O_logp=-0.000007980`、1/3正。每个gold response固定8 tokens；该改善不能替代accuracy。
+- Step-0：gradient cosine=`0.9992233935`，norm F/C_post=`0.9494860769`，
+  loss delta=`+0.00222683`，optimizer updates=`0`。
+- K8s：new-seed jobs及old-seed teacher/reducer job均`Complete`、restart=0、node=
+  `4090-48gx2`。
+- Decision=`STOP_CURRENT_OPERATOR`。当前F不进入额外seed、长预算、E1-pilot、
+  model-selection/test或confirmatory；下一路线需新锁。
+- Full result=`/netdisk/lijunsi/fpct-math-direct-r2/math-direct-replication-20260824-v1/fpct_math_direct_replication_result.json`，
+  SHA256=`1ee5dbb6e5012d8cb4839bf53949db3a226c3364c5b20c6e02c9aa363efc023c`。
+
 ## 2026-08-24 FPCT-MATH-DIRECT-R2 pre-output replication lock
 
 - New seeds：`2026082102/2026082103`；existing `2026082101` immutable。

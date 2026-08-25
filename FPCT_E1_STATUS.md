@@ -1,9 +1,30 @@
 # FPCT-E1 状态
 
-> 当前阶段：math.md direct three-seed replication pre-output lock
-> 当前状态：`R2 PRE-OUTPUT LOCK / NEW MODEL OUTPUT = 0`
-> 下一步：commit/push immutable source，运行step-0 gradient及两个matched seeds
-> 更新时间：2026-08-24（Asia/Shanghai）
+> 当前阶段：math.md direct three-seed replication terminal closure
+> 当前状态：`STOP_CURRENT_OPERATOR`
+> 下一步：停止当前F；native-null/harm-avoidance或partition-aware需要新前瞻锁
+> 更新时间：2026-08-25（Asia/Shanghai）
+
+## 2026-08-25 FPCT-MATH-DIRECT-R2 三 seed终态
+
+- Seeds `2026082101/02/03` 的6个训练臂、36个accuracy task-cells、18个
+  teacher-forced shards全部完成；matched integrity=`GO`，K8s restart=`0`。
+- Accuracy：各seed `T=+1.428571/+0.602679/-4.032738 pp`，mean
+  `T=-0.667163 pp`；2/3为正，但mean `+1 pp` floor失败，ARC mean
+  `-2.083333 pp`也越过`-2 pp` harm boundary。
+- Query-time：各seed `O=-0.130208/-0.260417/+0.238095 pp`，mean
+  `O=-0.050843 pp`，仅1/3为正；mechanism gate失败。
+- Teacher-forced：`T_logp`三seed全正、mean=`+0.018539636`；但
+  `O_logp=-0.000007980`且仅1/3为正。F训练改变了trajectory，但没有稳定即时F效应，
+  且logp改善未转化为accuracy。
+- Step-0 C_post/F gradient cosine=`0.999223`，F/C_post norm=`0.949486`，无
+  optimizer update、无missing gradient。seed2103的负accuracy主要来自训练trajectory，
+  非query-time switch。
+- Mechanical classification=`STOP_CURRENT_OPERATOR`。不推荐继续query-time F，也不满足
+  factorized-training/collapsed-inference的accuracy条件。E1-pilot/model-selection/test/
+  confirmatory均保持sealed。
+- Full result SHA256=`1ee5dbb6e5012d8cb4839bf53949db3a226c3364c5b20c6e02c9aa363efc023c`；
+  报告=`FPCT_MATH_DIRECT_REPLICATION_RESULTS.md`。
 
 ## 2026-08-24 FPCT-MATH-DIRECT-R2 前瞻复现锁
 

@@ -1,5 +1,48 @@
 # FRAMEWORK_UPDATE.md
 
+## 2026-08-25：FPCT-MATH-DIRECT 三 seed复现终态
+
+### 研究目标
+
+检验单 seed `T=+1.4286 pp` 是否可复现，并用step-0梯度与完整gold-response四-cell
+`Δlogp(y*)`分离训练trajectory和query-time factorization。
+
+### 核心改动
+
+- 未修改math operator、数据、64-step预算或阈值；按pre-output commit `d234546d...`
+  完成两个新matched seeds。
+- 三seed全部计算Y_CC/Y_CF/Y_FC/Y_FF accuracy与teacher-forced logp；step-0固定
+  microbatch记录全局/逐层K/V/nuisance梯度。
+- 新增terminal report、aggregate CSV与compact result manifest；大checkpoint/rows继续
+  保存在`/netdisk`，不提交Git。
+
+### 实验配置
+
+- TinyLlama-1.1B→Qwen3-0.6B；seeds=`2026082101/02/03`；每新seed C_post→F，
+  2,048 examples、64 steps、2×48GB GPU、BF16/eager、dropout=0.1。
+- Accuracy使用已公开E0-design ARC/OBQA/MMLU=`128/70/128` groups；teacher-forced
+  使用同一population的固定8-token gold response。
+
+### 验证结果
+
+- 新两seed jobs和旧seed diagnostic job均在`4090-48gx2` Complete，restart=`0`；
+  matched init/data/RNG/optimizer/scheduler integrity全部GO。
+- `T=+1.428571/+0.602679/-4.032738 pp`，mean=`-0.667163 pp`；ARC task mean=
+  `-2.083333 pp`。system gate失败。
+- `O=-0.130208/-0.260417/+0.238095 pp`，mean=`-0.050843 pp`，仅1/3正；
+  mechanism gate失败。
+- `T_logp` mean=`+0.018539636`且3/3正，但`O_logp=-0.000007980`且1/3正。
+- Step-0 gradient cosine=`0.999223`、norm ratio F/C_post=`0.949486`；无missing gradient。
+- Full result SHA256=`1ee5dbb6e5012d8cb4839bf53949db3a226c3364c5b20c6e02c9aa363efc023c`。
+
+### 结论
+
+Mechanical classification=`STOP_CURRENT_OPERATOR`。单seed正accuracy来自不稳定训练trajectory，
+不是可复现query-time mechanism；F训练虽提高平均gold-response logp，却没有稳定提高任务
+accuracy。停止当前math-F，不扩seed/预算/confirmatory。后续仅值得以新前瞻协议研究
+receiver-native null/harm avoidance，或partition-aware composition；不得将本结果写成
+query-time FPCT增益。
+
 ## 2026-08-24：FPCT-MATH-DIRECT 三 seed复现与机制诊断锁
 
 ### 研究目标
